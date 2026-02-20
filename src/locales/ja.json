@@ -1,0 +1,221 @@
+{
+    "nav": {
+        "home": "ホーム",
+        "products": "ツアー商品",
+        "travel_mates": "同行者募集",
+        "custom_estimate": "見積もり",
+        "my_page": "マイページ"
+    },
+    "header": {
+        "notification": "通知"
+    },
+    "footer": {
+        "kakao_inquiry": "カカオトーク 1:1 お問い合わせ",
+        "partnership_inquiry": "提携お問い合わせ bolor1@hanmail.net",
+        "terms_of_service": "利用規約",
+        "privacy_policy": "個人情報処理方針",
+        "mongolia_office": "[モンゴル本社]",
+        "mongolia_office_info_1": "商号 : Mongolia Milky Way (SUUN ZAM) | 代表 : Davaasuren Bilguun",
+        "mongolia_office_info_2": "事業者登録番号 : 9011640064 | 観光事業登録番号 : 6124313",
+        "mongolia_office_info_3": "電話番号 : +976 9594 5838 | Tel: +976-8010-7766",
+        "mongolia_office_info_4": "所在地 : ウランバートル バヤンズル区 13棟 DACOセンター 3階 306号",
+        "korea_office": "[韓国代理店]",
+        "korea_office_info_1": "商号 : Hello Bola | 代表者: Davaasuren Bolor",
+        "korea_office_info_2": "事業者登録番号: 730-54-00614 | 通信販売業番号: 第2022-ソウル中浪-1776号",
+        "korea_office_info_3": "| メール: bolor1@hanmail.net",
+        "korea_office_info_4": "お問い合わせ : カカオトークチャンネルでお問い合わせください。",
+        "disclaimer_1": "本旅行商品の販売者はモンゴル現地旅行会社(モンゴル本社)である「Mongolia Milky Way」です。",
+        "disclaimer_2": "「韓国代理店」である「Hello Bola」は通信販売仲介者であり、通信販売の当事者ではありません。したがって、商品/取引情報および取引について責任を負いません。",
+        "disclaimer_3": "やむを得ない事情により確定した旅行日程が変更される場合、旅行者の事前同意を得ます。"
+    },
+    "home": {
+        "seo_title": "モンゴリア銀河系 | モンゴル現地専門旅行会社 & パッケージツアー推薦",
+        "seo_description": "モンゴル現地専門旅行会社モンゴリア銀河系。モンゴルパッケージ旅行、ゴビ砂漠、テレルジ、フブスグルツアーなど、差別化されたオーダーメイド旅行を提供します。",
+        "seo_keywords": "モンゴル旅行, モンゴル現地旅行会社, モンゴル専門旅行会社, モンゴルパッケージ旅行, ゴビ砂漠ツアー",
+        "hero": {
+            "banner1_tag": "Premium Trip",
+            "banner1_title": "地平線の果てで出会う\n太古の大自然、モンゴル",
+            "banner1_subtitle": "今一番人気のテレルジヒーリングコース",
+            "banner2_tag": "Gobi Adventure",
+            "banner2_title": "夜空を彩る\n降り注ぐ星空探検",
+            "banner2_subtitle": "ゴビ砂漠銀河ツアー アーリーバード"
+        },
+        "quick_links": {
+            "products": "ツアー商品",
+            "custom_estimate": "見積もり",
+            "travel_mates": "同行者募集",
+            "business": "ビジネス",
+            "guide": "旅行ガイド",
+            "reviews": "旅行レビュー"
+        },
+        "theme": {
+            "price_inquiry": "価格お問い合わせ",
+            "won_from": "ウォン~",
+            "won": "ウォン",
+            "more_items_prefix": "もっと見る",
+            "more_items_suffix": "商品を見る",
+            "no_items": "登録された旅行商品がありません。",
+            "recommendation": "おすすめ"
+        },
+        "adventure": {
+            "title": "アドベンチャートレッキング"
+        },
+        "magazine": {
+            "title": "今すぐ出発したい旅行コースのおすすめ！",
+            "subtitle": "モンゴリア銀河系が厳選した最高の旅行先",
+            "view_all": "すべて見る",
+            "default_category": "旅行"
+        },
+        "reviews": {
+            "title": "実際の旅行者のレビュー",
+            "view_all": "すべて見る",
+            "default_product": "モンゴルツアーパッケージ",
+            "user_suffix": "様",
+            "anonymous": "匿名"
+        }
+    },
+    "products": {
+        "seo_title": "ツアー商品 | モンゴリア銀河系",
+        "seo_description": "ゴビ砂漠、テレルジ、フブスグルなど、多様なモンゴルツアー商品をご覧ください。専門ガイドと共にする安全なモンゴル旅行！",
+        "seo_keywords": "モンゴルツアー, ゴビ砂漠ツアー, テレルジツアー, モンゴル旅行商品",
+        "header_title": "ツアー商品",
+        "search_placeholder": "モンゴルの旅行先を検索してみてください",
+        "popular_products": "人気ツアー商品",
+        "explore_all": "全商品を見る",
+        "explore_category": "商品を見る",
+        "total_count": "全 {{count}}個",
+        "sort_filter_title": "並び替え & フィルター",
+        "sort_label": "並び替え基準",
+        "sort_recommended": "おすすめ順",
+        "sort_price_low": "価格が安い順",
+        "sort_price_high": "価格が高い順",
+        "apply_button": "適用する",
+        "popular_badge": "人気",
+        "details_button": "詳細",
+        "custom_banner": {
+            "text": "自分だけの旅行を作りたいなら？",
+            "title": "見積もりを依頼する",
+            "button": "1分で申請"
+        }
+    },
+    "product_detail": {
+        "error_not_found": "商品が見つかりません。",
+        "header_title": "商品詳細",
+        "no_images": "画像がありません",
+        "tab_intro": "商品紹介",
+        "tab_itinerary": "詳細日程",
+        "tab_guide": "利用案内",
+        "highlights_title": "旅行ポイント",
+        "itinerary_title": "日別詳細日程",
+        "no_itinerary_images": "登録された日程画像がありません。",
+        "inclusions_title": "含まれるもの",
+        "exclusions_title": "含まれないもの",
+        "consult_button": "ご相談",
+        "book_button": "予約する"
+    },
+    "auth": {
+        "login_error": "ログインエラー: ",
+        "title_line1": "私が夢見たモンゴル",
+        "title_line2": "旅の始まり",
+        "subtitle": "今すぐ登録して、モンゴルの様々な\\n旅行商品をご覧ください。",
+        "google_login": "Googleログインで5秒で開始",
+        "terms_agreement": "ログイン時に利用規約および個人情報処理方針に同意したことになります。"
+    },
+    "mypage": {
+        "title": "マイページ",
+        "notifications": "通知",
+        "mark_all_read": "すべて既読にする",
+        "view_all": "すべて見る",
+        "no_notifications": "新しい通知はありません。",
+        "guest": "ゲスト",
+        "login_required": "ログインが必要です",
+        "logout": "ログアウト",
+        "login": "ログイン",
+        "my_reservations": "MY予約",
+        "preparing_trip": "D-{{days}} 旅行準備中",
+        "quote_requests": "💡 見積もりリクエスト {{count}}件",
+        "no_reservations": "予約なし",
+        "no_upcoming_trips": "予定された旅行はありません",
+        "check_quote_status": "見積もりリクエストの状況を確認してください",
+        "book_trip_msg": "モンゴルの美しい旅を予約してみてください",
+        "my_activities": "私のアクティビティ",
+        "travel_mate_posts": "同行者募集の投稿",
+        "check_posts": "登録された投稿を確認",
+        "wishlist": "ウィッシュリスト",
+        "wishlist_items": "気になった商品",
+        "recently_viewed": "最近見た商品",
+        "my_reviews": "MYレビュー",
+        "customer_support": "カスタマーサポート",
+        "faq": "FAQ",
+        "contact_us": "お問い合わせ"
+    },
+    "wishlist": {
+        "title": "気になった商品",
+        "total_count": "全 {{count}}個",
+        "delete_failed": "削除に失敗しました。",
+        "won_suffix": "ウォン~",
+        "empty_title": "気になった商品がありません",
+        "empty_subtitle": "気に入った商品を登録してみてください",
+        "browse_products": "商品を見る"
+    },
+    "my_reservations": {
+        "title": "私の旅行",
+        "tab_reservations": "予約内訳",
+        "tab_quotes": "見積り要請",
+        "empty_reservations": "予約内訳がありません",
+        "empty_reservations_sub": "モンゴル旅行を予約して思い出を作ってみてください",
+        "browse_products": "旅行商品を見る",
+        "empty_quotes": "要請した見積もりがありません",
+        "empty_quotes_sub": "自分だけのオーダーメイド旅行を計画してみてください",
+        "request_quote": "オーダーメイド見積もり要請",
+        "status": {
+            "pending_payment": "入金待機",
+            "paid": "決済完了",
+            "confirmed": "予約確定",
+            "completed": "旅行完了",
+            "cancelled": "キャンセル済み",
+            "answered": "回答完了",
+            "waiting": "回答待機",
+            "reservation_requested": "予約要請中",
+            "converted": "予約転換済み"
+        },
+        "labels": {
+            "itinerary": "旅行日程",
+            "people": "予約人数",
+            "people_count": "{{count}}名",
+            "people_undefined": "人数未定",
+            "payment_info": "決済情報",
+            "deposit": "予約金",
+            "local_payment": "現地支払い",
+            "bank_info": "入金案内",
+            "deposit_amount": "入金する予約金",
+            "bank": "銀行",
+            "account_number": "口座番号",
+            "account_holder": "預金主",
+            "view_contract": "契約書を見る",
+            "view_itinerary": "日程表を見る",
+            "timeline": "タイムライン",
+            "guide": "担当ガイド",
+            "custom_quote": "オーダーメイド見積もり要請",
+            "mongolia": "モンゴル",
+            "new_status": "回答待機",
+            "answered_status": "見積もり到着 (確認必要)",
+            "consulting_status": "相談中"
+        },
+        "time": {
+            "just_now": "たった今",
+            "mins_ago": "{{count}}分前",
+            "hours_ago": "{{count}}時間前",
+            "days_ago": "{{count}}日前"
+        }
+    },
+    "my_reviews": {
+        "title": "MYレビュー",
+        "login_required": "ログインが必要なサービスです",
+        "go_login": "ログインしに行く",
+        "total_count": "全 {{count}}件のレビュー",
+        "empty_title": "まだ作成したレビューがありません",
+        "empty_sub": "旅行後の大切な経験を共有してください",
+        "write_review": "レビューを作成する"
+    }
+}

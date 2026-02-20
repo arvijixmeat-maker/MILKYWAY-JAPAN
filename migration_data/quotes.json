@@ -1,0 +1,38 @@
+[
+  {
+    "id": "706ff9df-7e29-4c3b-ac60-cb1707328df6",
+    "user_id": "88f8c831-9b26-4ba4-9cb9-d26d4e082ce8",
+    "type": "personal",
+    "name": "강토",
+    "phone": "01057177901",
+    "email": "gantumaidar@gmail.com",
+    "destination": "중앙몽골",
+    "headcount": "성인 3명",
+    "period": "2026-01-16 ~ 2026-01-23",
+    "budget": "223만원",
+    "travel_types": [
+      "힐링/휴식",
+      "호캉스"
+    ],
+    "accommodations": [
+      "4성급 호텔",
+      "고급 게르",
+      "일반 게르",
+      "5성급 호텔"
+    ],
+    "vehicle": "푸르공",
+    "additional_request": "가족 몽골 여행",
+    "attachment_url": null,
+    "status": "converted",
+    "admin_note": "견적을 보내드립니다. ",
+    "estimate_url": "https://docs.google.com/document/d/1us0L5dHVblGf7WNX3-tFm95sga3Qs-8rI42uftON9Cc/edit?tab=t.0",
+    "created_at": "2026-01-18T08:32:10.115+00:00",
+    "updated_at": "2026-01-18T08:57:08.908+00:00",
+    "confirmed_start_date": null,
+    "confirmed_end_date": null,
+    "confirmed_price": null,
+    "deposit": null,
+    "deposit_status": "unpaid",
+    "balance_status": "unpaid"
+  }
+]

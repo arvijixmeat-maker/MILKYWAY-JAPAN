@@ -1,0 +1,48 @@
+[
+  {
+    "id": "e2035a2e-ac84-4080-8230-c06e4ea51c89",
+    "user_id": "a96479d7-9efb-4a81-9711-b892a182c772",
+    "quote_id": null,
+    "product_name": "중앙몽골, 고비사막 여행 견적",
+    "start_date": null,
+    "end_date": null,
+    "duration": "2026-02-06 ~ 2026-02-06",
+    "total_people": 2,
+    "customer_name": null,
+    "customer_phone": null,
+    "customer_email": null,
+    "total_price": null,
+    "deposit_price": null,
+    "local_price": null,
+    "status": "pending_payment",
+    "bank_name": null,
+    "account_number": null,
+    "account_holder": null,
+    "history": [],
+    "created_at": "2026-02-05T09:42:35.55+00:00",
+    "updated_at": "2026-02-05T09:41:46.595128+00:00",
+    "assigned_guide_id": null,
+    "assigned_guide_data": null,
+    "daily_accommodations": [],
+    "deposit_amount": 0,
+    "bank_account": "{\"bankName\":\"우리은행\",\"accountHolder\":\"DAVAASUREN BOLOR\",\"accountNumber\":\"1002-245-516496\"}",
+    "contract_url": null,
+    "itinerary_url": null,
+    "assigned_guide": null,
+    "are_assignments_visible_to_user": false,
+    "customer_info": {
+      "name": "tour jay",
+      "email": "jaytour247@gmail.com",
+      "phone": "01057177901"
+    },
+    "price_breakdown": {
+      "local": 4700000,
+      "total": 5000000,
+      "deposit": 300000
+    },
+    "type": "quote",
+    "product_id": null,
+    "deposit_status": "unpaid",
+    "balance_status": "unpaid"
+  }
+]

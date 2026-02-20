@@ -1,0 +1,135 @@
+import { Hono } from 'hono';
+import { generateState, generateCodeVerifier, Google } from 'arctic';
+import { initializeLucia } from '../lib/auth';
+import { setCookie, getCookie } from 'hono/cookie';
+import { drizzle } from 'drizzle-orm/d1';
+import { users } from '../../src/db/schema/auth';
+import { eq } from 'drizzle-orm';
+
+const app = new Hono<{ Bindings: Env }>();
+
+// GET /api/auth/login/google
+app.get('/login/google', async (c) => {
+    const google = new Google(c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173/api/auth/login/google/callback"); // TODO: Update callback URL for production
+
+    const state = generateState();
+    const codeVerifier = generateCodeVerifier();
+
+    const url = await google.createAuthorizationURL(state, codeVerifier, ["profile", "email"]);
+
+    setCookie(c, "google_oauth_state", state, {
+        path: "/",
+        secure: c.env.ENVIRONMENT === "production",
+        httpOnly: true,
+        maxAge: 60 * 10,
+        sameSite: "Lax"
+    });
+
+    setCookie(c, "google_code_verifier", codeVerifier, {
+        path: "/",
+        secure: c.env.ENVIRONMENT === "production",
+        httpOnly: true,
+        maxAge: 60 * 10,
+        sameSite: "Lax"
+    });
+
+    return c.redirect(url.toString());
+});
+
+// GET /api/auth/login/google/callback
+app.get('/login/google/callback', async (c) => {
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+    const storedState = getCookie(c, "google_oauth_state");
+    const storedCodeVerifier = getCookie(c, "google_code_verifier");
+
+    if (!code || !state || !storedState || !storedCodeVerifier || state !== storedState) {
+        return c.json({ error: "Invalid state" }, 400);
+    }
+
+    const google = new Google(c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173/api/auth/login/google/callback"); // TODO: Production URL
+
+    try {
+        const tokens = await google.validateAuthorizationCode(code, storedCodeVerifier);
+        const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+            headers: {
+                Authorization: `Bearer ${tokens.accessToken}`
+            }
+        });
+        const googleUser: any = await response.json();
+
+        const lucia = initializeLucia(c.env.DB);
+        const db = drizzle(c.env.DB);
+
+        // Check if user exists
+        const existingUser = await db.select().from(users).where(eq(users.googleId, googleUser.sub)).get();
+
+        let userId = "";
+
+        if (existingUser) {
+            userId = existingUser.id;
+        } else {
+            userId = crypto.randomUUID();
+            await db.insert(users).values({
+                id: userId,
+                googleId: googleUser.sub,
+                email: googleUser.email,
+                name: googleUser.name,
+                avatarUrl: googleUser.picture, // Fixed mapping
+                role: 'user' // Default role
+            }).run();
+        }
+
+        const session = await lucia.createSession(userId, {});
+        const sessionCookie = lucia.createSessionCookie(session.id);
+
+        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+
+        return c.redirect("/"); // Redirect to home on success
+    } catch (e) {
+        console.error(e);
+        return c.json({ error: "Authentication failed" }, 500);
+    }
+});
+
+// GET /api/auth/me
+app.get('/me', async (c) => {
+    const lucia = initializeLucia(c.env.DB);
+    const sessionId = getCookie(c, lucia.sessionCookieName);
+
+    if (!sessionId) {
+        return c.json({ user: null });
+    }
+
+    const { session, user } = await lucia.validateSession(sessionId);
+
+    if (session && session.fresh) {
+        const sessionCookie = lucia.createSessionCookie(session.id);
+        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+    }
+
+    if (!session) {
+        const sessionCookie = lucia.createBlankSessionCookie();
+        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+    }
+
+    return c.json({ user });
+});
+
+// POST /api/auth/logout
+app.post('/logout', async (c) => {
+    const lucia = initializeLucia(c.env.DB);
+    const sessionId = getCookie(c, lucia.sessionCookieName);
+
+    if (!sessionId) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    await lucia.invalidateSession(sessionId);
+    const sessionCookie = lucia.createBlankSessionCookie();
+    c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+
+    return c.json({ success: true });
+});
+
+export default app;
