@@ -25,11 +25,10 @@ export const Home: React.FC = () => {
                 structuredData={{
                     "@context": "https://schema.org",
                     "@type": "TravelAgency",
-                    "name": "mongolia-milkyway",
-                    "image": "https://www.mongolia-milkyway.com/og-image.jpg",
-                    "@id": "https://www.mongolia-milkyway.com",
-                    "url": "https://www.mongolia-milkyway.com",
-                    "telephone": "+82-10-0000-0000",
+                    "name": "Milkyway Japan",
+                    "image": "https://mongolryokou.com/og-image.jpg",
+                    "@id": "https://mongolryokou.com",
+                    "url": "https://mongolryokou.com",
                     "address": {
                         "@type": "PostalAddress",
                         "addressCountry": "MN",

@@ -84,9 +84,9 @@ export const TravelGuide: React.FC = () => {
     return (
         <div className="bg-[#f8f7f8] dark:bg-background-dark text-text-primary dark:text-white pb-24 min-h-screen font-display">
             <SEO
-                title={`${t('travel_guide.title')} | 몽골리아 은하수`}
-                description="몽골 여행 필수 정보! 몽골 기본 정보, 여행 팁, 지역별 가이드, 문화와 음식 정보를 확인하세요."
-                keywords="몽골 여행 가이드, 몽골 정보, 몽골 문화, 몽골 음식"
+                title={`${t('travel_guide.title')} | Milkyway Japan`}
+                description="モンゴル旅行の必須情報！モンゴルの基本情報、旅行のヒント、地域別ガイド、文化やグルメ情報をチェックしましょう。"
+                keywords="モンゴル旅行ガイド, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備"
             />
             {/* Sticky Header Container */}
             <div className="sticky top-0 z-50 bg-[#f8f7f8]/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200">
