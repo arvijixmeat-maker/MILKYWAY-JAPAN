@@ -22,6 +22,8 @@ import accommodations from './accommodations';
 import categories from './categories';
 import guides from './guides';
 import quotes from './quotes';
+import upload from './upload';
+import images from './images/[...path]';
 
 // Register routes
 app.route('/products', products);
@@ -38,5 +40,7 @@ app.route('/accommodations', accommodations);
 app.route('/categories', categories);
 app.route('/guides', guides);
 app.route('/quotes', quotes);
+app.route('/upload', upload);
+app.route('/images', images);
 
 export const onRequest = handle(app);

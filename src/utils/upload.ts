@@ -10,27 +10,22 @@ import imageCompression from 'browser-image-compression';
  */
 export const uploadFile = async (file: File, bucket: string = 'images', folder: string = 'common'): Promise<string> => {
     try {
-        // 1. Generate a unique file name
-        // pattern: folder/timestamp_randomString_filename
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const filePath = `${folder}/${fileName}`;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', folder);
 
-        // 2. Upload to specified bucket
-        const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(filePath, file);
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+        });
 
-        if (uploadError) {
-            throw uploadError;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to upload to R2');
         }
 
-        // 3. Get Public URL
-        const { data } = supabase.storage
-            .from(bucket)
-            .getPublicUrl(filePath);
-
-        return data.publicUrl;
+        const data = await response.json();
+        return data.url; // This returns /api/images/folder/filename.webp
     } catch (error) {
         console.error('File upload failed:', error);
         throw error;
