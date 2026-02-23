@@ -38,9 +38,9 @@ export const uploadFile = async (file: File, bucket: string = 'images', folder: 
 };
 
 /**
- * Uploads an image file to Supabase Storage without client-side compression.
- * The original quality is preserved, and Supabase Image Transformation (SIT) 
- * will handle dynamic optimization on-the-fly.
+ * Uploads an image file with client-side WebP compression.
+ * The original image is compressed and converted to WebP format before uploading,
+ * preventing large file sizes and Base64 storage.
  * 
  * @param file The original image file
  * @param folder The folder path within the 'images' bucket
@@ -48,8 +48,32 @@ export const uploadFile = async (file: File, bucket: string = 'images', folder: 
  */
 export const uploadImage = async (file: File, folder: string = 'common'): Promise<string> => {
     try {
-        // We now upload the original file. SIT handles optimization during serving.
-        return uploadFile(file, 'images', folder);
+        // Enforce WebP conversion and apply high quality compression
+        const options = {
+            maxSizeMB: 1, // Max file size 1MB (aggressive compression)
+            maxWidthOrHeight: 1920, // Keep dimensions reasonable for web (max 1080p width/height)
+            useWebWorker: true,
+            fileType: 'image/webp', // Force WebP output format
+            initialQuality: 0.85 // High quality WebP
+        };
+
+        let processedFile = file;
+
+        // Only compress if the file is an image and not already highly optimized or small
+        if (file.type.startsWith('image/')) {
+            try {
+                const compressedBlob = await imageCompression(file, options);
+                // Create a new File from the compressed Blob with .webp extension
+                const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+                processedFile = new File([compressedBlob], newFileName, { type: 'image/webp' });
+            } catch (compressionError) {
+                console.warn('Image compression failed, falling back to original file:', compressionError);
+                // Fallback to original file if compression fails unexpectedly
+            }
+        }
+
+        // Upload the processed (WebP) file
+        return await uploadFile(processedFile, 'images', folder);
     } catch (error) {
         console.error('Image upload failed:', error);
         throw error;
