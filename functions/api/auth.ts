@@ -28,18 +28,30 @@ app.post('/login', async (c) => {
         return c.json({ error: 'Access denied' }, 403);
     }
 
-    const isValid = await verifyPassword(password, existingUser.passwordHash);
+    let isValid = false;
+    try {
+        isValid = await verifyPassword(password, existingUser.passwordHash);
+    } catch (verifyError) {
+        console.error('Password verification failed internally:', verifyError);
+        return c.json({ error: 'Internal server error during authentication' }, 500);
+    }
+
     if (!isValid) {
         return c.json({ error: 'Invalid email or password' }, 401);
     }
 
-    const lucia = initializeLucia(c.env.DB);
-    const session = await lucia.createSession(existingUser.id, {});
-    const sessionCookie = lucia.createSessionCookie(session.id);
+    try {
+        const lucia = initializeLucia(c.env.DB);
+        const session = await lucia.createSession(existingUser.id, {});
+        const sessionCookie = lucia.createSessionCookie(session.id);
 
-    c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
 
-    return c.json({ success: true, user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role } });
+        return c.json({ success: true, user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role } });
+    } catch (sessionError) {
+        console.error('Session creation failed:', sessionError);
+        return c.json({ error: 'Internal server error during session creation' }, 500);
+    }
 });
 
 // GET /api/auth/login/google
