@@ -3,11 +3,6 @@ name = "milkyway-japan"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "./dist"
 
-# D1 Database Binding
-[[d1_databases]]
-binding = "DB"
-database_name = "milkyway-db"
-database_id = "533ef74d-a941-4af3-ae8f-04a7c282288a"
 
 # R2 Bucket Binding
 [[r2_buckets]]
