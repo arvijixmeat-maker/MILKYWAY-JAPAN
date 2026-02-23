@@ -1,81 +1,105 @@
 import { Hono } from 'hono';
-import { drizzle } from 'drizzle-orm/d1';
-import { products } from '../../src/db/schema/products';
-import { eq } from 'drizzle-orm';
+
+type Env = {
+    DB: any;
+};
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Helper to safely parse JSON
+const safeParse = (val: any, fallback: any = []) => {
+    if (!val) return fallback;
+    if (typeof val === 'string') {
+        try { return JSON.parse(val); } catch { return fallback; }
+    }
+    return val;
+};
+
 // GET /api/products
 app.get('/', async (c) => {
-    const db = drizzle(c.env.DB);
-    const result = await db.select().from(products).all();
-
-    // Parse JSON fields
-    const parsed = result.map(p => ({
-        ...p,
-        mainImages: JSON.parse(p.mainImages),
-        galleryImages: JSON.parse(p.galleryImages),
-        detailImages: JSON.parse(p.detailImages),
-        itineraryImages: JSON.parse(p.itineraryImages),
-        tags: JSON.parse(p.tags),
-        included: JSON.parse(p.included),
-        excluded: JSON.parse(p.excluded),
-    }));
-
-    return c.json(parsed);
+    const db = c.env.DB;
+    try {
+        const result = await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+        const parsed = (result.results || []).map((p: any) => ({
+            ...p,
+            mainImages: safeParse(p.main_images),
+            galleryImages: safeParse(p.gallery_images),
+            detailImages: safeParse(p.detail_images),
+            itineraryImages: safeParse(p.itinerary_images),
+            tags: safeParse(p.tags),
+            included: safeParse(p.included),
+            excluded: safeParse(p.excluded),
+            images: safeParse(p.images),
+        }));
+        return c.json(parsed);
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
 });
 
 // GET /api/products/:id
 app.get('/:id', async (c) => {
     const id = c.req.param('id');
-    const db = drizzle(c.env.DB);
-    const result = await db.select().from(products).where(eq(products.id, id)).get();
+    const db = c.env.DB;
+    try {
+        const result = await db.prepare('SELECT * FROM products WHERE id = ?').bind(id).first();
+        if (!result) return c.json({ error: 'Product not found' }, 404);
 
-    if (!result) return c.json({ error: 'Product not found' }, 404);
-
-    // Parse JSON fields
-    const parsed = {
-        ...result,
-        mainImages: JSON.parse(result.mainImages),
-        galleryImages: JSON.parse(result.galleryImages),
-        detailImages: JSON.parse(result.detailImages),
-        itineraryImages: JSON.parse(result.itineraryImages),
-        tags: JSON.parse(result.tags),
-        included: JSON.parse(result.included),
-        excluded: JSON.parse(result.excluded),
-    };
-
-    return c.json(parsed);
+        const parsed = {
+            ...result,
+            mainImages: safeParse(result.main_images),
+            galleryImages: safeParse(result.gallery_images),
+            detailImages: safeParse(result.detail_images),
+            itineraryImages: safeParse(result.itinerary_images),
+            tags: safeParse(result.tags),
+            included: safeParse(result.included),
+            excluded: safeParse(result.excluded),
+            images: safeParse(result.images),
+        };
+        return c.json(parsed);
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
 });
 
 // POST /api/products
 app.post('/', async (c) => {
     try {
         const data = await c.req.json();
-        const db = drizzle(c.env.DB);
+        const db = c.env.DB;
         const id = data.id || `prod-${Date.now()}`;
 
-        await db.insert(products).values({
+        await db.prepare(`
+            INSERT INTO products (id, name, description, category, duration, price, original_price,
+                main_images, gallery_images, detail_images, itinerary_images, images, thumbnail,
+                status, is_featured, is_popular, featured, popular,
+                tags, included, excluded, view_count, booking_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
             id,
-            name: data.name || '',
-            description: data.description || '',
-            category: data.category || '',
-            duration: data.duration || '',
-            price: data.price || 0,
-            originalPrice: data.originalPrice || data.original_price || null,
-            mainImages: JSON.stringify(data.mainImages || []),
-            galleryImages: JSON.stringify(data.galleryImages || []),
-            detailImages: JSON.stringify(data.detailImages || []),
-            itineraryImages: JSON.stringify(data.itineraryImages || []),
-            status: data.status || 'active',
-            isFeatured: data.isFeatured ?? false,
-            isPopular: data.isPopular ?? false,
-            tags: JSON.stringify(data.tags || []),
-            included: JSON.stringify(data.included || []),
-            excluded: JSON.stringify(data.excluded || []),
-            viewCount: data.viewCount || 0,
-            bookingCount: data.bookingCount || 0,
-        });
+            data.name || '',
+            data.description || '',
+            data.category || '',
+            data.duration || '',
+            data.price || 0,
+            data.originalPrice || data.original_price || 0,
+            JSON.stringify(data.mainImages || []),
+            JSON.stringify(data.galleryImages || []),
+            JSON.stringify(data.detailImages || []),
+            JSON.stringify(data.itineraryImages || []),
+            JSON.stringify(data.images || data.mainImages || []),
+            data.thumbnail || (data.mainImages && data.mainImages[0]) || '',
+            data.status || 'active',
+            data.isFeatured ? 1 : 0,
+            data.isPopular ? 1 : 0,
+            data.isFeatured ? 1 : 0,
+            data.isPopular ? 1 : 0,
+            JSON.stringify(data.tags || []),
+            JSON.stringify(data.included || []),
+            JSON.stringify(data.excluded || []),
+            data.viewCount || 0,
+            data.bookingCount || 0
+        ).run();
 
         return c.json({ success: true, id });
     } catch (e: any) {
@@ -89,26 +113,40 @@ app.put('/:id', async (c) => {
     try {
         const id = c.req.param('id');
         const data = await c.req.json();
-        const db = drizzle(c.env.DB);
+        const db = c.env.DB;
 
-        await db.update(products).set({
-            name: data.name || '',
-            description: data.description || '',
-            category: data.category || '',
-            duration: data.duration || '',
-            price: data.price || 0,
-            originalPrice: data.originalPrice || data.original_price || null,
-            mainImages: JSON.stringify(data.mainImages || []),
-            galleryImages: JSON.stringify(data.galleryImages || []),
-            detailImages: JSON.stringify(data.detailImages || []),
-            itineraryImages: JSON.stringify(data.itineraryImages || []),
-            status: data.status || 'active',
-            isFeatured: data.isFeatured ?? false,
-            isPopular: data.isPopular ?? false,
-            tags: JSON.stringify(data.tags || []),
-            included: JSON.stringify(data.included || []),
-            excluded: JSON.stringify(data.excluded || []),
-        }).where(eq(products.id, id));
+        await db.prepare(`
+            UPDATE products SET
+                name = ?, description = ?, category = ?, duration = ?, price = ?, original_price = ?,
+                main_images = ?, gallery_images = ?, detail_images = ?, itinerary_images = ?,
+                images = ?, thumbnail = ?,
+                status = ?, is_featured = ?, is_popular = ?, featured = ?, popular = ?,
+                tags = ?, included = ?, excluded = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+        `).bind(
+            data.name || '',
+            data.description || '',
+            data.category || '',
+            data.duration || '',
+            data.price || 0,
+            data.originalPrice || data.original_price || 0,
+            JSON.stringify(data.mainImages || []),
+            JSON.stringify(data.galleryImages || []),
+            JSON.stringify(data.detailImages || []),
+            JSON.stringify(data.itineraryImages || []),
+            JSON.stringify(data.images || data.mainImages || []),
+            data.thumbnail || (data.mainImages && data.mainImages[0]) || '',
+            data.status || 'active',
+            data.isFeatured ? 1 : 0,
+            data.isPopular ? 1 : 0,
+            data.isFeatured ? 1 : 0,
+            data.isPopular ? 1 : 0,
+            JSON.stringify(data.tags || []),
+            JSON.stringify(data.included || []),
+            JSON.stringify(data.excluded || []),
+            id
+        ).run();
 
         return c.json({ success: true });
     } catch (e: any) {
@@ -121,8 +159,8 @@ app.put('/:id', async (c) => {
 app.delete('/:id', async (c) => {
     try {
         const id = c.req.param('id');
-        const db = drizzle(c.env.DB);
-        await db.delete(products).where(eq(products.id, id));
+        const db = c.env.DB;
+        await db.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
         return c.json({ success: true });
     } catch (e: any) {
         console.error('Product delete error:', e);
