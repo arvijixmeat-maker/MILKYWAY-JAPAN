@@ -28,7 +28,7 @@ export const QuickLinks: React.FC = () => {
         { id: 'link-2', icon: 'receipt_long', image: estimateIcon, label: t('home.quick_links.custom_estimate'), path: '/custom-estimate' },
         { id: 'link-3', icon: 'groups', image: companionIcon, label: t('home.quick_links.travel_mates'), path: '/travel-mates' },
 
-        { id: 'link-5', icon: 'auto_stories', label: t('home.quick_links.guide'), path: '/travel-guide' },
+        { id: 'link-5', icon: 'auto_stories', image: '/assets/icons/travel guide.png', label: t('home.quick_links.guide'), path: '/travel-guide' },
         { id: 'link-6', icon: 'star', image: reviewsIcon, label: t('home.quick_links.reviews'), path: '/reviews' },
     ], [t]);
 
