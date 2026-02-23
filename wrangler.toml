@@ -7,7 +7,7 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "milkyway-db"
-database_id = "2bb5ded7-f902-41b2-a00b-9f1fe9aa25ac"
+database_id = "533ef74d-a941-4af3-ae8f-04a7c282288a"
 
 # R2 Bucket Binding
 [[r2_buckets]]
