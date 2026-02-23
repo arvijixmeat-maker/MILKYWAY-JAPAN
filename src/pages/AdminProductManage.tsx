@@ -106,6 +106,7 @@ export const AdminProductManage: React.FC = () => {
     const saveProducts = async (updatedProducts: TourProduct[], productToSave?: TourProduct): Promise<boolean> => {
         if (!productToSave) return false;
         try {
+            console.log('Sending payload to API:', productToSave);
             const dbPayload = {
                 id: productToSave.id,
                 name: productToSave.name,
@@ -132,16 +133,28 @@ export const AdminProductManage: React.FC = () => {
                 accommodation_options: productToSave.accommodationOptions,
                 vehicle_options: productToSave.vehicleOptions,
             };
+
+            // If ID matches an existing one in our list, it's an update. Otherwise, it's a create.
+            const isEditing = products.some(p => p.id === productToSave.id);
+            console.log('Is editing?', isEditing);
+
             try {
-                await api.products.update(productToSave.id, dbPayload);
-            } catch {
-                await api.products.create(dbPayload);
+                if (isEditing) {
+                    await api.products.update(productToSave.id, dbPayload);
+                } else {
+                    await api.products.create(dbPayload);
+                }
+            } catch (apiError: any) {
+                console.error('API call failed:', apiError);
+                throw apiError; // Throw up so the outer catch can alert it
             }
+
+            console.log('Save successful, fetching latest products...');
             await fetchProducts();
             return true;
         } catch (error: any) {
             console.error('Failed to save product:', error);
-            alert('상품 저장 중 오류가 발생했습니다: ' + error.message);
+            alert('상품 저장 중 오류가 발생했습니다: ' + (error.message || JSON.stringify(error)));
             return false;
         }
     };
