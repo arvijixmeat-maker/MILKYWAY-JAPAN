@@ -43,18 +43,16 @@ export const HeroSection: React.FC = () => {
         queryFn: async () => {
             try {
                 const data = await api.banners.get();
-                if (Array.isArray(data) && data.length > 0) {
-                    const heroBanners = data.filter((b: any) => b.type === 'hero');
-                    if (heroBanners.length > 0) {
-                        return heroBanners.map((b: any) => ({
-                            id: b.id,
-                            image: b.image_url,
-                            tag: b.tag || 'Premium Trip',
-                            title: b.title,
-                            subtitle: b.subtitle,
-                            link: b.link
-                        }));
-                    }
+                // The API now returns { banners: [], quickLinks: [], eventBanners: [], categoryTabs: [] }
+                if (data && Array.isArray(data.banners) && data.banners.length > 0) {
+                    return data.banners.map((b: any) => ({
+                        id: b.id,
+                        image: b.image || b.image_url,
+                        tag: b.tag || 'Premium Trip',
+                        title: b.title,
+                        subtitle: b.subtitle,
+                        link: b.link
+                    }));
                 }
             } catch (error) {
                 console.error('Error fetching banners:', error);

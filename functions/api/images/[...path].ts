@@ -6,7 +6,7 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get('/', async (c) => {
+app.get('/*', async (c) => {
     // The path will be something like `/api/images/banners/1234.webp`
     // We can extract the relative path from the request URL
     const url = new URL(c.req.url);
@@ -30,7 +30,7 @@ app.get('/', async (c) => {
         const headers = new Headers();
         object.writeHttpMetadata(headers);
         headers.set('etag', object.httpEtag);
-        // Add cache control for better performance (cache for 1 year since names are unique)
+        // Add cache control for better performance
         headers.set('Cache-Control', 'public, max-age=31536000');
 
         return new Response(object.body, {
