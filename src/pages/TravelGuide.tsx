@@ -31,7 +31,7 @@ export const TravelGuide: React.FC = () => {
         const fetchData = async () => {
             // Fetch magazine categories
             try {
-                const catData = await api.categories.list();
+                const catData = await api.categories.list('magazine');
                 if (Array.isArray(catData)) {
                     const magazineCats = catData
                         .filter((c: any) => c.type === 'magazine' && (c.is_active ?? true))

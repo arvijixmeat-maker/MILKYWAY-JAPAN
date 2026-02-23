@@ -13,7 +13,7 @@ export const EstimateComplete: React.FC = () => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const data = await api.categories.list();
+                const data = await api.categories.list('product');
                 if (Array.isArray(data) && data.length > 0) {
                     setCategories(data.filter((c: any) => c.type === 'product' || !c.type).map((c: any) => ({
                         id: c.id,

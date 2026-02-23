@@ -10,8 +10,14 @@ const app = new Hono<{ Bindings: Env }>();
 // GET /api/categories
 app.get('/', async (c) => {
     const db = c.env.DB;
+    const type = c.req.query('type');
     try {
-        const result = await db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
+        let result;
+        if (type) {
+            result = await db.prepare('SELECT * FROM categories WHERE type = ? ORDER BY sort_order ASC').bind(type).all();
+        } else {
+            result = await db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
+        }
         return c.json(result.results);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);

@@ -80,7 +80,7 @@ export const AdminProductManage: React.FC = () => {
 
     const fetchCategories = async () => {
         try {
-            const data = await api.categories.list();
+            const data = await api.categories.list('product');
             if (Array.isArray(data)) {
                 setCategories(data.map((c: any) => ({
                     id: c.id,

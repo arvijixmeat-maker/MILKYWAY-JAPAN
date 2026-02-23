@@ -291,7 +291,7 @@ export const AdminMagazineManage: React.FC = () => {
 
     const fetchCategories = async () => {
         try {
-            const data = await api.categories.list();
+            const data = await api.categories.list('magazine');
             if (Array.isArray(data)) {
                 const magazineCats = data.filter((c: any) => c.type === 'magazine');
                 setMagazineCategories(magazineCats.map((c: any) => ({

@@ -191,7 +191,7 @@ export const api = {
         }),
     },
     categories: {
-        list: async () => request(`${API_BASE}/categories`),
+        list: async (type?: string) => request(`${API_BASE}/categories${type ? `?type=${type}` : ''}`),
         create: async (data: any) => request(`${API_BASE}/categories`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

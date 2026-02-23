@@ -41,7 +41,7 @@ export const TourProducts: React.FC = () => {
         queryKey: ['categories'],
         queryFn: async () => {
             try {
-                const data = await api.categories.list();
+                const data = await api.categories.list('product');
                 if (!Array.isArray(data) || data.length === 0) return [];
                 return data.filter((c: any) => c.type === 'product' || !c.type).map((c: any) => ({
                     id: c.id,
