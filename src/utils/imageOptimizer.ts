@@ -23,13 +23,14 @@ export const optimizeImage = (url: string, options: OptimizeOptions = {}): strin
     if (!url) return '';
 
     // Skip optimization for data URLs (base64) or local assets
-    // - Starts with '/', 'data:', 'localhost'
-    // - Does NOT start with 'http' (relative path)
+    // - Ends with .mp4 or similar local paths
+    // - R2 storage URLs which might block wsrv.nl proxy
     if (
         url.startsWith('data:') ||
         url.startsWith('/') ||
         url.includes('localhost') ||
         url.includes('127.0.0.1') ||
+        url.includes('r2.dev') ||
         !url.startsWith('http')
     ) {
         return url;

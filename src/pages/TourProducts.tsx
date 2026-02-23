@@ -294,9 +294,9 @@ export const TourProducts: React.FC = () => {
                                         </p>
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-lg font-bold text-primary">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</p>
+                                                <p className="text-lg font-bold text-primary">¥{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</p>
                                                 {product.originalPrice && (
-                                                    <p className="text-xs text-gray-400 line-through">₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</p>
+                                                    <p className="text-xs text-gray-400 line-through">¥{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</p>
                                                 )}
                                             </div>
                                             <button className="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">

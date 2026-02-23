@@ -104,7 +104,7 @@ export const ReservationComplete: React.FC = () => {
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-3xl p-6 border border-gray-100 dark:border-zinc-800">
                         <div className="mb-6">
                             <p className="text-[13px] font-bold text-gray-400 mb-1 uppercase tracking-wider">입금하실 금액</p>
-                            <p className="text-3xl font-bold text-[#0e1a18] dark:text-white">{formatPrice(price_breakdown?.deposit)}원</p>
+                            <p className="text-3xl font-bold text-[#0e1a18] dark:text-white">{formatPrice(price_breakdown?.deposit)}円</p>
                         </div>
                         <div className="h-px bg-gray-200 dark:bg-zinc-700 w-full mb-6"></div>
                         <div className="space-y-5">

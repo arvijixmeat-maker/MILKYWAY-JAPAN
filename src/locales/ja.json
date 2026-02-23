@@ -50,8 +50,8 @@
         },
         "theme": {
             "price_inquiry": "価格お問い合わせ",
-            "won_from": "ウォン~",
-            "won": "ウォン",
+            "won_from": "円~",
+            "won": "円",
             "more_items_prefix": "もっと見る",
             "more_items_suffix": "商品を見る",
             "no_items": "登録された旅行商品がありません。",
@@ -153,7 +153,7 @@
         "title": "気になった商品",
         "total_count": "全 {{count}}個",
         "delete_failed": "削除に失敗しました。",
-        "won_suffix": "ウォン~",
+        "won_suffix": "円~",
         "empty_title": "気になった商品がありません",
         "empty_subtitle": "気に入った商品を登録してみてください",
         "browse_products": "商品を見る"

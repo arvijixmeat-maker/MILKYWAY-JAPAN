@@ -39,7 +39,7 @@ export const ProductCard = memo(({ product, className = '', imageHeight = 'aspec
                     {product.name}
                 </p>
                 <p className="text-sm font-bold text-primary">
-                    ₩{product.price.toLocaleString()}~
+                    ¥{product.price.toLocaleString()}~
                 </p>
             </div>
         </div>

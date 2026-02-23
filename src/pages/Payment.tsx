@@ -387,19 +387,19 @@ export const Payment: React.FC = () => {
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">총 여행 경비</span>
-                                <span className="text-[#0e1a18] dark:text-white font-bold text-lg">{formatPrice(priceBreakdown.total)}원</span>
+                                <span className="text-[#0e1a18] dark:text-white font-bold text-lg">{formatPrice(priceBreakdown.total)}円</span>
                             </div>
                             <div className="flex justify-between items-center py-4 px-4 bg-primary/5 rounded-2xl border border-primary/10">
                                 <div className="flex items-center gap-2">
                                     <span className="text-primary font-bold">지금 결제할 예약금</span>
                                     <span className="material-symbols-outlined text-primary text-sm">help_outline</span>
                                 </div>
-                                <span className="text-primary font-bold text-xl">{formatPrice(priceBreakdown.deposit)}원</span>
+                                <span className="text-primary font-bold text-xl">{formatPrice(priceBreakdown.deposit)}円</span>
                             </div>
                             {priceBreakdown.local > 0 && (
                                 <div className="flex justify-between items-center py-3 px-4 bg-gray-50 dark:bg-zinc-800/30 rounded-xl">
                                     <span className="text-gray-600 dark:text-gray-300 font-medium text-sm">현지 지불 잔금</span>
-                                    <span className="text-gray-700 dark:text-gray-200 font-bold text-base">{formatPrice(priceBreakdown.local)}원</span>
+                                    <span className="text-gray-700 dark:text-gray-200 font-bold text-base">{formatPrice(priceBreakdown.local)}円</span>
                                 </div>
                             )}
                         </div>
@@ -482,7 +482,7 @@ export const Payment: React.FC = () => {
                             </>
                         ) : (
                             <>
-                                {formatPrice(priceBreakdown.deposit)}원 결제하기
+                                {formatPrice(priceBreakdown.deposit)}円 결제하기
                                 <span className="material-symbols-outlined text-lg transition-transform group-hover:translate-x-1">payments</span>
                             </>
                         )}

@@ -68,7 +68,7 @@ export const CustomEstimate: React.FC = () => {
                 destination: selectedDestinations.join(', '),
                 period: `${startDate} ~ ${endDate}`,
                 headcount: `성인 ${adultCount}명${childCount > 0 ? `, 아동 ${childCount}명` : ''}`,
-                budget: `${priceRange}만원`,
+                budget: `${priceRange}万円`,
                 travel_types: selectedThemes,
                 accommodations: selectedAccommodations,
                 vehicle: selectedVehicle,
@@ -387,8 +387,8 @@ export const CustomEstimate: React.FC = () => {
                     </div>
                     <div className="p-5 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-100 dark:border-zinc-700 mt-2">
                         <div className="flex justify-between items-end mb-5">
-                            <span className="text-2xl font-bold text-slate-900 dark:text-white">{priceRange}만원</span>
-                            <span className="text-sm text-slate-500 dark:text-slate-400">~ {priceRange + 50}만원</span>
+                            <span className="text-2xl font-bold text-slate-900 dark:text-white">{priceRange}万円</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-400">~ {priceRange + 50}万円</span>
                         </div>
                         <input
                             type="range"
@@ -400,7 +400,7 @@ export const CustomEstimate: React.FC = () => {
                         />
                         <div className="flex justify-between mt-2.5 text-xs text-slate-400 font-medium px-0.5">
                             <span>최소</span>
-                            <span>500만원+</span>
+                            <span>500万円+</span>
                         </div>
                     </div>
                 </div>

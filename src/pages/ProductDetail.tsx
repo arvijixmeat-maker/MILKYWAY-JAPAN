@@ -280,9 +280,9 @@ export const ProductDetail: React.FC = () => {
                 </div>
                 <h1 className="text-[28px] font-bold leading-tight pt-2">{product.name}</h1>
                 <div className="flex items-baseline gap-2 pt-2">
-                    <p className="text-2xl font-bold text-primary">₩{product.price.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-primary">¥{product.price.toLocaleString()}</p>
                     {product.originalPrice && (
-                        <p className="text-sm text-gray-500 line-through">₩{product.originalPrice.toLocaleString()}</p>
+                        <p className="text-sm text-gray-500 line-through">¥{product.originalPrice.toLocaleString()}</p>
                     )}
                 </div>
             </div>
