@@ -1,4 +1,9 @@
 import { Hono } from 'hono';
+import type { D1PreparedStatement } from '@cloudflare/workers-types';
+
+type Env = {
+    DB: any; // Using any for simplicity or you can use D1Database if imported
+};
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -18,10 +23,11 @@ app.post('/', async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
+    const type = data.type || 'product'; // Default to product
     try {
         await db.prepare(
-            "INSERT INTO categories (id, name, description, icon, image, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)"
-        ).bind(id, data.name, data.description || '', data.icon || '', data.image || '', data.sort_order || 0, data.is_active ?? 1).run();
+            "INSERT INTO categories (id, name, description, icon, image, sort_order, is_active, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(id, data.name, data.description || '', data.icon || '', data.image || '', data.sort_order || 0, data.is_active ?? 1, type).run();
         return c.json({ id, ...data });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -37,6 +43,7 @@ app.put('/:id', async (c) => {
         await db.prepare(
             "UPDATE categories SET name=?, description=?, icon=?, image=?, sort_order=?, is_active=? WHERE id=?"
         ).bind(data.name, data.description || '', data.icon || '', data.image || '', data.sort_order || 0, data.is_active ?? 1, id).run();
+        // Note: intentionally not updating 'type' as it shouldn't change, but if needed, we'll keep it simple for now.
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -63,9 +70,10 @@ app.put('/bulk', async (c) => {
         const stmts: D1PreparedStatement[] = [db.prepare('DELETE FROM categories')];
         for (let i = 0; i < categories.length; i++) {
             const cat = categories[i];
+            const type = cat.type || 'product';
             stmts.push(db.prepare(
-                "INSERT INTO categories (id, name, description, icon, image, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)"
-            ).bind(cat.id || crypto.randomUUID(), cat.name, cat.description || '', cat.icon || '', cat.image || '', i, cat.is_active ?? 1));
+                "INSERT INTO categories (id, name, description, icon, image, sort_order, is_active, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            ).bind(cat.id || crypto.randomUUID(), cat.name, cat.description || '', cat.icon || '', cat.image || '', i, cat.is_active ?? 1, type));
         }
         await db.batch(stmts);
         return c.json({ success: true });
