@@ -11,46 +11,62 @@ const app = new Hono<{ Bindings: Env }>();
 
 // POST /api/auth/login - Admin email/password login
 app.post('/login', async (c) => {
-    const { email, password } = await c.req.json();
-
-    if (!email || !password) {
-        return c.json({ error: 'Email and password are required' }, 400);
-    }
-
-    const db = drizzle(c.env.DB);
-    const existingUser = await db.select().from(users).where(eq(users.email, email)).get();
-
-    if (!existingUser || !existingUser.passwordHash) {
-        return c.json({ error: 'Invalid email or password' }, 401);
-    }
-
-    if (existingUser.role !== 'admin') {
-        return c.json({ error: 'Access denied' }, 403);
-    }
-
-    let isValid = false;
     try {
-        isValid = await verifyPassword(password, existingUser.passwordHash);
-    } catch (verifyError) {
-        console.error('Password verification failed internally:', verifyError);
-        return c.json({ error: 'Internal server error during authentication' }, 500);
-    }
+        const { email, password } = await c.req.json();
 
-    if (!isValid) {
-        return c.json({ error: 'Invalid email or password' }, 401);
-    }
+        if (!email || !password) {
+            return c.json({ error: 'Email and password are required' }, 400);
+        }
 
-    try {
-        const lucia = initializeLucia(c.env.DB);
-        const session = await lucia.createSession(existingUser.id, {});
-        const sessionCookie = lucia.createSessionCookie(session.id);
+        if (!c.env.DB) {
+            return c.json({ error: 'Database binding (DB) is missing in environment' }, 500);
+        }
 
-        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+        const db = drizzle(c.env.DB);
 
-        return c.json({ success: true, user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role } });
-    } catch (sessionError) {
-        console.error('Session creation failed:', sessionError);
-        return c.json({ error: 'Internal server error during session creation' }, 500);
+        let existingUser;
+        try {
+            existingUser = await db.select().from(users).where(eq(users.email, email)).get();
+        } catch (dbError: any) {
+            console.error('Database query failed:', dbError);
+            return c.json({ error: `Database error: ${dbError.message || 'Unknown DB error'}` }, 500);
+        }
+
+        if (!existingUser || !existingUser.passwordHash) {
+            return c.json({ error: 'Invalid email or password' }, 401);
+        }
+
+        if (existingUser.role !== 'admin') {
+            return c.json({ error: 'Access denied' }, 403);
+        }
+
+        let isValid = false;
+        try {
+            isValid = await verifyPassword(password, existingUser.passwordHash);
+        } catch (verifyError: any) {
+            console.error('Password verification failed internally:', verifyError);
+            return c.json({ error: `Crypto error: ${verifyError.message || 'Unknown crypto error'}` }, 500);
+        }
+
+        if (!isValid) {
+            return c.json({ error: 'Invalid email or password' }, 401);
+        }
+
+        try {
+            const lucia = initializeLucia(c.env.DB);
+            const session = await lucia.createSession(existingUser.id, {});
+            const sessionCookie = lucia.createSessionCookie(session.id);
+
+            c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+
+            return c.json({ success: true, user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, role: existingUser.role } });
+        } catch (sessionError: any) {
+            console.error('Session creation failed:', sessionError);
+            return c.json({ error: `Session error: ${sessionError.message || 'Unknown session error'}` }, 500);
+        }
+    } catch (globalError: any) {
+        console.error('Global unhandled API error:', globalError);
+        return c.json({ error: `Unhandled exception: ${globalError.message || 'Unknown error'}` }, 500);
     }
 });
 
