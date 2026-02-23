@@ -429,9 +429,9 @@ export const AdminProductManage: React.FC = () => {
                                             <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{product.duration}</td>
                                             <td className="px-6 py-4">
                                                 <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white">₩{product.price.toLocaleString()}</p>
+                                                    <p className="font-bold text-slate-900 dark:text-white">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</p>
                                                     {product.originalPrice && (
-                                                        <p className="text-xs text-slate-400 line-through">₩{product.originalPrice.toLocaleString()}</p>
+                                                        <p className="text-xs text-slate-400 line-through">₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</p>
                                                     )}
                                                 </div>
                                             </td>

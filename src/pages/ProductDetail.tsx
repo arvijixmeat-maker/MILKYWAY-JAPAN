@@ -31,27 +31,31 @@ export const ProductDetail: React.FC = () => {
                         id: data.id,
                         name: data.name,
                         price: data.price,
-                        originalPrice: data.original_price,
+                        originalPrice: data.originalPrice ?? data.original_price,
                         duration: data.duration,
                         category: data.category,
-                        mainImages: data.main_images || [],
-                        isPopular: data.is_popular,
-                        tags: data.tags || [],
+                        mainImages: data.mainImages ?? data.main_images ?? [],
+                        galleryImages: data.galleryImages ?? data.gallery_images ?? [],
+                        detailImages: data.detailImages ?? data.detail_images ?? [],
+                        itineraryImages: data.itineraryImages ?? data.itinerary_images ?? [],
+                        detailSlides: data.detailSlides ?? data.detail_slides ?? [],
+                        detailBlocks: data.detailBlocks ?? data.detail_blocks ?? [],
+                        itineraryBlocks: data.itineraryBlocks ?? data.itinerary_blocks ?? [],
+                        tags: data.tags ?? [],
+                        included: data.included ?? [],
+                        excluded: data.excluded ?? [],
+                        highlights: data.highlights ?? [],
+                        pricingOptions: data.pricingOptions ?? data.pricing_options ?? [],
+                        accommodationOptions: data.accommodationOptions ?? data.accommodation_options ?? [],
+                        vehicleOptions: data.vehicleOptions ?? data.vehicle_options ?? [],
+                        isFeatured: data.isFeatured ?? data.is_featured ?? false,
+                        isPopular: data.isPopular ?? data.is_popular ?? false,
                         description: data.description,
-                        galleryImages: data.gallery_images || [],
-                        detailImages: data.detail_images || [],
-                        detailBlocks: data.detail_blocks || [],
-                        itineraryBlocks: data.itinerary_blocks || [],
-                        itineraryImages: data.itinerary_images || [],
                         status: data.status,
-                        isFeatured: data.is_featured,
-                        highlights: data.highlights || [],
-                        included: data.included || [],
-                        excluded: data.excluded || [],
-                        viewCount: data.view_count,
-                        bookingCount: data.booking_count,
-                        createdAt: data.created_at,
-                        updatedAt: data.updated_at
+                        viewCount: data.viewCount ?? data.view_count ?? 0,
+                        bookingCount: data.bookingCount ?? data.booking_count ?? 0,
+                        createdAt: data.createdAt ?? data.created_at,
+                        updatedAt: data.updatedAt ?? data.updated_at
                     };
                     setProduct(mappedProduct);
                     addToRecentlyViewed(mappedProduct);
@@ -156,11 +160,13 @@ export const ProductDetail: React.FC = () => {
         );
     }
 
+    const safeMainImages = Array.isArray(product.mainImages) ? product.mainImages : [];
+
     const structuredData = {
         "@context": "https://schema.org/",
         "@type": "Product",
         "name": product.name,
-        "image": (product.mainImages || []).filter(img => !img.startsWith('data:')),
+        "image": safeMainImages.filter(img => !img.startsWith('data:')),
         "description": product.description || product.highlights?.[0]?.description,
         "offers": {
             "@type": "Offer",
@@ -230,8 +236,8 @@ export const ProductDetail: React.FC = () => {
                         }
                     }}
                 >
-                    {product.mainImages && product.mainImages.length > 0 ? (
-                        product.mainImages.map((img, index) => (
+                    {safeMainImages.length > 0 ? (
+                        safeMainImages.map((img, index) => (
                             <div
                                 key={index}
                                 className="flex-shrink-0 w-full snap-center relative aspect-[4/3]"
@@ -253,7 +259,7 @@ export const ProductDetail: React.FC = () => {
 
                 {/* Pagination Dots */}
                 <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-2 z-10">
-                    {product.mainImages.map((_, index) => (
+                    {safeMainImages.map((_, index) => (
                         <div
                             key={index}
                             className={`size-1.5 rounded-full transition-all duration-300 ${index === activeImageIndex ? 'bg-white w-4' : 'bg-white/50'
