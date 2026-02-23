@@ -4,6 +4,7 @@ import { api } from '../lib/api'; // Changed from supabase
 import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
+import { useTranslation } from 'react-i18next';
 
 interface Magazine {
     id: string;
@@ -19,6 +20,7 @@ interface Magazine {
 export const TravelGuideDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [magazine, setMagazine] = useState<Magazine | null>(null);
     const [relatedMagazines, setRelatedMagazines] = useState<Magazine[]>([]);
     const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export const TravelGuideDetail: React.FC = () => {
 
     // Content Renderer
     const renderContent = (content: string) => {
-        if (!content) return <p>내용이 없습니다.</p>;
+        if (!content) return <p>{t('travel_guide.detail.no_content')}</p>;
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, 'text/html');
@@ -150,12 +152,12 @@ export const TravelGuideDetail: React.FC = () => {
         return (
             <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-slate-500 mb-4">매거진을 불러오는 중이거나 찾을 수 없습니다.</p>
+                    <p className="text-slate-500 mb-4">{t('travel_guide.detail.loading_or_not_found')}</p>
                     <button
                         onClick={() => navigate('/travel-guide')}
                         className="text-primary font-bold hover:underline"
                     >
-                        목록으로 돌아가기
+                        {t('travel_guide.detail.go_back_to_list')}
                     </button>
                 </div>
             </div>
@@ -235,7 +237,7 @@ export const TravelGuideDetail: React.FC = () => {
                 {relatedMagazines && relatedMagazines.length > 0 && (
                     <div className="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800">
                         <h3 className="text-xl font-bold text-text-primary dark:text-white mb-6">
-                            이 가이드는 어떠세요? 👀
+                            {t('travel_guide.detail.recommended_guides')}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {relatedMagazines.map((item) => (

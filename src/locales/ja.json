@@ -314,5 +314,22 @@
             "own_post": "自分の投稿です。",
             "closed_status": "募集完了"
         }
+    },
+    "travel_guide": {
+        "title": "モンゴル旅行ガイド",
+        "search_placeholder": "気になる旅行情報を検索してみてください",
+        "all": "全体",
+        "hot_guides": "今一番ホットなガイド 🔥",
+        "popular": "人気",
+        "search_results": "検索結果",
+        "collection": "旅行情報まとめ 📚",
+        "no_results": "検索結果がありません。",
+        "no_guides": "登録されたガイドがありません。",
+        "detail": {
+            "no_content": "内容がありません。",
+            "loading_or_not_found": "マガジンを読み込み中、または見つかりません。",
+            "go_back_to_list": "リストに戻る",
+            "recommended_guides": "このガイドはいかがですか？ 👀"
+        }
     }
 }
