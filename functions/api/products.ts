@@ -48,5 +48,86 @@ app.get('/:id', async (c) => {
     return c.json(parsed);
 });
 
+// POST /api/products
+app.post('/', async (c) => {
+    try {
+        const data = await c.req.json();
+        const db = drizzle(c.env.DB);
+        const id = data.id || `prod-${Date.now()}`;
+
+        await db.insert(products).values({
+            id,
+            name: data.name || '',
+            description: data.description || '',
+            category: data.category || '',
+            duration: data.duration || '',
+            price: data.price || 0,
+            originalPrice: data.originalPrice || data.original_price || null,
+            mainImages: JSON.stringify(data.mainImages || []),
+            galleryImages: JSON.stringify(data.galleryImages || []),
+            detailImages: JSON.stringify(data.detailImages || []),
+            itineraryImages: JSON.stringify(data.itineraryImages || []),
+            status: data.status || 'active',
+            isFeatured: data.isFeatured ?? false,
+            isPopular: data.isPopular ?? false,
+            tags: JSON.stringify(data.tags || []),
+            included: JSON.stringify(data.included || []),
+            excluded: JSON.stringify(data.excluded || []),
+            viewCount: data.viewCount || 0,
+            bookingCount: data.bookingCount || 0,
+        });
+
+        return c.json({ success: true, id });
+    } catch (e: any) {
+        console.error('Product create error:', e);
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// PUT /api/products/:id
+app.put('/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const data = await c.req.json();
+        const db = drizzle(c.env.DB);
+
+        await db.update(products).set({
+            name: data.name || '',
+            description: data.description || '',
+            category: data.category || '',
+            duration: data.duration || '',
+            price: data.price || 0,
+            originalPrice: data.originalPrice || data.original_price || null,
+            mainImages: JSON.stringify(data.mainImages || []),
+            galleryImages: JSON.stringify(data.galleryImages || []),
+            detailImages: JSON.stringify(data.detailImages || []),
+            itineraryImages: JSON.stringify(data.itineraryImages || []),
+            status: data.status || 'active',
+            isFeatured: data.isFeatured ?? false,
+            isPopular: data.isPopular ?? false,
+            tags: JSON.stringify(data.tags || []),
+            included: JSON.stringify(data.included || []),
+            excluded: JSON.stringify(data.excluded || []),
+        }).where(eq(products.id, id));
+
+        return c.json({ success: true });
+    } catch (e: any) {
+        console.error('Product update error:', e);
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// DELETE /api/products/:id
+app.delete('/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const db = drizzle(c.env.DB);
+        await db.delete(products).where(eq(products.id, id));
+        return c.json({ success: true });
+    } catch (e: any) {
+        console.error('Product delete error:', e);
+        return c.json({ error: e.message }, 500);
+    }
+});
 
 export default app;
