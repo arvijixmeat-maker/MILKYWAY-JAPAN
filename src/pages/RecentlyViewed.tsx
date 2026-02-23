@@ -104,7 +104,7 @@ export const RecentlyViewed: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         {item.price && (
                                             <p className="text-sm font-bold text-primary">
-                                                {item.price.toLocaleString()}원~
+                                                {typeof item.price === 'number' ? item.price.toLocaleString() : (item.price || 0)}원~
                                             </p>
                                         )}
                                         <p className="text-xs text-gray-400">

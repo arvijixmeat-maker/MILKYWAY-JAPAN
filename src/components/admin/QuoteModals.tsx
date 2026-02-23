@@ -149,7 +149,7 @@ export const ConvertSelectionModal: React.FC<{
                             </div>
                             {totalAmount > 0 && (
                                 <p className="text-[10px] font-bold text-primary/70 ml-1">
-                                    ≈ {(totalAmount / 10000).toLocaleString()}만원
+                                    ≈ {typeof totalAmount === 'number' && !isNaN(totalAmount) ? (totalAmount / 10000).toLocaleString() : 0}만원
                                 </p>
                             )}
                         </div>
@@ -168,7 +168,7 @@ export const ConvertSelectionModal: React.FC<{
                             </div>
                             {deposit > 0 && (
                                 <p className="text-[10px] font-bold text-primary/70 ml-1">
-                                    ≈ {(deposit / 10000).toLocaleString()}만원
+                                    ≈ {typeof deposit === 'number' && !isNaN(deposit) ? (deposit / 10000).toLocaleString() : 0}만원
                                 </p>
                             )}
                         </div>
@@ -183,7 +183,7 @@ export const ConvertSelectionModal: React.FC<{
                             )}
                         </div>
                         <span className={`text-base font-extrabold ${totalAmount - deposit < 0 ? 'text-red-600' : 'text-primary'}`}>
-                            {(totalAmount - deposit).toLocaleString()}원
+                            {typeof totalAmount === 'number' && typeof deposit === 'number' && !isNaN(totalAmount) && !isNaN(deposit) ? (totalAmount - deposit).toLocaleString() : 0}원
                         </span>
                     </div>
                 </div>
@@ -459,7 +459,7 @@ export const QuoteDetailModal: React.FC<{
                                 </div>
                                 {priceDetail.totalAmount > 0 && (
                                     <p className="mt-1 text-[9px] font-bold text-primary/60 text-right">
-                                        ≈ {(priceDetail.totalAmount / 10000).toLocaleString()}만원
+                                        ≈ {typeof priceDetail.totalAmount === 'number' && !isNaN(priceDetail.totalAmount) ? (priceDetail.totalAmount / 10000).toLocaleString() : 0}만원
                                     </p>
                                 )}
                             </div>
@@ -477,7 +477,7 @@ export const QuoteDetailModal: React.FC<{
                                 </div>
                                 {priceDetail.deposit > 0 && (
                                     <p className="mt-1 text-[9px] font-bold text-primary/60 text-right">
-                                        ≈ {(priceDetail.deposit / 10000).toLocaleString()}만원
+                                        ≈ {typeof priceDetail.deposit === 'number' && !isNaN(priceDetail.deposit) ? (priceDetail.deposit / 10000).toLocaleString() : 0}만원
                                     </p>
                                 )}
                             </div>
@@ -508,7 +508,7 @@ export const QuoteDetailModal: React.FC<{
                                 )}
                             </div>
                             <p className={`text-base font-bold ${priceDetail.totalAmount - priceDetail.deposit < 0 ? 'text-red-600' : 'text-primary dark:text-primary-dark'}`}>
-                                {(priceDetail.totalAmount - priceDetail.deposit).toLocaleString()}원
+                                {typeof priceDetail.totalAmount === 'number' && typeof priceDetail.deposit === 'number' && !isNaN(priceDetail.totalAmount) && !isNaN(priceDetail.deposit) ? (priceDetail.totalAmount - priceDetail.deposit).toLocaleString() : 0}원
                             </p>
                         </div>
                     </div>

@@ -376,7 +376,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                     className="w-32 text-right px-2 py-1 border rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                                 />
                                             ) : (
-                                                `${reservation.totalAmount.toLocaleString()}원`
+                                                typeof reservation.totalAmount === 'number' ? `${reservation.totalAmount.toLocaleString()}원` : '0원'
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -412,7 +412,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                     className="w-32 text-right px-2 py-1 border rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                                 />
                                             ) : (
-                                                `${reservation.deposit.toLocaleString()}원`
+                                                typeof reservation.deposit === 'number' ? `${reservation.deposit.toLocaleString()}원` : '0원'
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -441,8 +441,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                         </td>
                                         <td className="px-4 py-3 text-right font-bold text-blue-600">
                                             {isEditing
-                                                ? (editForm.totalAmount - editForm.deposit).toLocaleString()
-                                                : reservation.balance.toLocaleString()
+                                                ? (typeof editForm.totalAmount === 'number' && typeof editForm.deposit === 'number' ? (editForm.totalAmount - editForm.deposit).toLocaleString() : 0)
+                                                : (typeof reservation.balance === 'number' ? reservation.balance.toLocaleString() : 0)
                                             }원
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -1302,8 +1302,8 @@ export const AdminReservationManage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{res.date}</td>
                                             <td className="px-6 py-5 text-right">
-                                                <div className="text-sm font-bold text-slate-800 dark:text-white">{res.totalAmount.toLocaleString()}원</div>
-                                                <div className="text-xs text-slate-400 dark:text-slate-500">(예약금: {res.deposit.toLocaleString()}원)</div>
+                                                <div className="text-sm font-bold text-slate-800 dark:text-white">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) ? res.totalAmount.toLocaleString() : 0}원</div>
+                                                <div className="text-xs text-slate-400 dark:text-slate-500">(예약금: {typeof res.deposit === 'number' && !isNaN(res.deposit) ? res.deposit.toLocaleString() : 0}원)</div>
                                             </td>
                                             <td className="px-6 py-5 text-center">
                                                 <StatusDropdown

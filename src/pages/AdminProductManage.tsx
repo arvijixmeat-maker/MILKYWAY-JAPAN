@@ -465,8 +465,8 @@ export const AdminProductManage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 text-center text-sm text-slate-600 dark:text-slate-300">
                                                 <div className="flex flex-col gap-1">
-                                                    <span>{product.viewCount.toLocaleString()}</span>
-                                                    <span className="text-teal-600 dark:text-teal-400 font-bold">{product.bookingCount}</span>
+                                                    <span>{typeof product.viewCount === 'number' ? product.viewCount.toLocaleString() : (product.viewCount || 0)}</span>
+                                                    <span className="text-teal-600 dark:text-teal-400 font-bold">{product.bookingCount || 0}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

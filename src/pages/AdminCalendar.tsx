@@ -88,7 +88,7 @@ const ReservationDetailModal = ({ reservation, onClose }: { reservation: Reserva
                                     <tr>
                                         <td className="px-4 py-3 font-medium">총 상품 금액</td>
                                         <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-white">
-                                            {reservation.totalAmount.toLocaleString()}원
+                                            {typeof reservation.totalAmount === 'number' && !isNaN(reservation.totalAmount) ? reservation.totalAmount.toLocaleString() : 0}원
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {reservation.status === 'paid' ? (
@@ -104,7 +104,7 @@ const ReservationDetailModal = ({ reservation, onClose }: { reservation: Reserva
                                             예약금 (Deposit)
                                         </td>
                                         <td className="px-4 py-3 text-right font-bold text-teal-600">
-                                            {reservation.deposit.toLocaleString()}원
+                                            {typeof reservation.deposit === 'number' && !isNaN(reservation.deposit) ? reservation.deposit.toLocaleString() : 0}원
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {reservation.depositStatus === 'paid' ? (
@@ -120,7 +120,7 @@ const ReservationDetailModal = ({ reservation, onClose }: { reservation: Reserva
                                             잔금 (Balance)
                                         </td>
                                         <td className="px-4 py-3 text-right font-bold text-blue-600">
-                                            {reservation.balance.toLocaleString()}원
+                                            {typeof reservation.balance === 'number' && !isNaN(reservation.balance) ? reservation.balance.toLocaleString() : 0}원
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {reservation.balanceStatus === 'paid' ? (
