@@ -1,14 +1,122 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { SEO } from '../components/seo/SEO';
 
 export const TermsOfService = () => {
+    const { t, i18n } = useTranslation();
+    const isJapanese = i18n.language === 'ja' || i18n.language === 'ja-JP';
+
+    if (isJapanese) {
+        return (
+            <>
+                <SEO
+                    title="利用規約"
+                    description="モンゴリア銀河系の利用規約です。"
+                />
+                <div className="container mx-auto px-4 py-8 max-w-4xl font-display">
+                    <h1 className="text-3xl font-bold mb-6">利用規約 (Terms of Service)</h1>
+
+                    <div className="prose prose-slate max-w-none">
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第1条 (目的)</h2>
+                            <p className="mb-4">
+                                本規約は、モンゴリア銀河系（以下「会社」）が提供するサービスの利用条件および手順、会社と会員間の権利、義務および責任事項などを規定することを目的とします。
+                            </p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第2条 (規約の効力および変更)</h2>
+                            <p className="mb-4">
+                                1. 本規約は、サービスを利用しようとする全ての会員に対して効力を生じます。<br />
+                                2. 会社は必要に応じて、関連法令に違反しない範囲で本規約を変更することができ、変更時はサービス内のお知らせを通じて告知します。
+                            </p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第3条 (サービスの提供)</h2>
+                            <p className="mb-4">会社は会員に対して以下のサービスを提供します。</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>旅行情報の提供サービス</li>
+                                <li>旅行商品の予約および仲介サービス</li>
+                                <li>コミュニティサービス</li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第4条 (会員登録およびアカウント管理)</h2>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>1. 会員はGoogleアカウントを通じて簡単に登録できます。</li>
+                                <li>2. 会員は自身のアカウント情報を安全に管理する責任があり、他人に譲渡または貸与することはできません。</li>
+                                <li>3. 退会はサービス内の設定メニューから可能です。</li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第5条 (個人情報の収集および利用)</h2>
+                            <p className="mb-4">1. 会社はサービス提供のために以下の個人情報を収集します：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>- 名前、メールアドレス、プロフィール写真（Googleアカウントの基本情報）</li>
+                            </ul>
+                            <p className="mb-4">2. 収集された個人情報は以下の目的で利用されます：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>- 会員識別および本人確認</li>
+                                <li>- サービスの提供および改善</li>
+                                <li>- お問い合わせへの対応</li>
+                            </ul>
+                            <p className="mb-4">3. 詳細については、プライバシーポリシー（個人情報保護方針）をご参照ください。</p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第6条 (会員の義務)</h2>
+                            <p className="mb-4">会員は以下の行為を行ってはなりません：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>1. 他人の情報の盗用</li>
+                                <li>2. 虚偽情報の登録</li>
+                                <li>3. 違法または不適切なコンテンツの投稿</li>
+                                <li>4. サービスの運営を妨害する行為</li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第7条 (サービス利用制限)</h2>
+                            <p className="mb-4">
+                                会社は、会員が本規約に違反した場合、サービス利用を制限、または会員資格を停止・喪失させることができます。
+                            </p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第8条 (会社の義務および免責)</h2>
+                            <p className="mb-4">
+                                1. 会社は、関連法令および本規約が禁止する行為、または公序良俗に反する行為を行わず、継続的かつ安定的にサービスを提供するために最善を尽くします。<br />
+                                2. 会社は、天災地変、戦争、基幹通信事業者のサービス停止など、不可抗力的な事由によるサービスの中断については責任を負いません。
+                            </p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第9条 (紛争解決)</h2>
+                            <p className="mb-4">
+                                1. 会社と会員の間で発生した紛争については、相互に協議して解決します。<br />
+                                2. 協議がまとまらない場合は大韓民国の法律に従い、会社の本社所在地を管轄する裁判所を第一審の管轄裁判所とします。
+                            </p>
+                        </section>
+
+                        <div className="mt-8 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+                            <p className="font-bold mb-2">附則</p>
+                            <p>本規約は2026年1月23日から施行されます。</p>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
     return (
         <>
             <SEO
                 title="이용약관"
                 description="몽골리아 은하수의 이용약관입니다."
             />
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="container mx-auto px-4 py-8 max-w-4xl font-display">
                 <h1 className="text-3xl font-bold mb-6">이용약관 (Terms of Service)</h1>
 
                 <div className="prose prose-slate max-w-none">

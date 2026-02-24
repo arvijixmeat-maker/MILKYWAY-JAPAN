@@ -1,14 +1,226 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { SEO } from '../components/seo/SEO';
 
 export const PrivacyPolicy = () => {
+    const { t, i18n } = useTranslation();
+    const isJapanese = i18n.language === 'ja' || i18n.language === 'ja-JP';
+
+    if (isJapanese) {
+        return (
+            <>
+                <SEO
+                    title="プライバシーポリシー"
+                    description="モンゴリア銀河系のプライバシーポリシー（個人情報保護方針）です。"
+                />
+                <div className="container mx-auto px-4 py-8 max-w-4xl font-display">
+                    <h1 className="text-3xl font-bold mb-6">プライバシーポリシー（個人情報保護方針）</h1>
+
+                    <div className="prose prose-slate max-w-none">
+                        <p className="mb-6">
+                            モンゴリア銀河系（以下「会社」）は、個人情報保護法等の関連法令に基づき、利用者の個人情報を保護し、これに関連する苦情を迅速かつ円滑に処理するため、以下の通りプライバシーポリシーを策定・公開します。
+                        </p>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第1条 (個人情報の利用目的)</h2>
+                            <p className="mb-4">
+                                会社は以下の目的のために個人情報を取り扱います。取り扱っている個人情報は、以下の目的以外の用途には利用されず、利用目的が変更される場合には別途同意を得る等、必要な措置を講じる予定です。
+                            </p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>
+                                    <strong>1. 会員登録および管理</strong>
+                                    <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-gray-700">
+                                        <li>- 会員登録の意思確認、会員制サービス提供に伴う本人識別・認証</li>
+                                        <li>- 会員資格の維持・管理、サービスの不正利用防止</li>
+                                    </ul>
+                                </li>
+                                <li className="mt-4">
+                                    <strong>2. サービスの提供</strong>
+                                    <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-gray-700">
+                                        <li>- 旅行情報の提供、予約仲介サービスの提供</li>
+                                        <li>- カスタマイズされたサービスの提供、本人認証</li>
+                                    </ul>
+                                </li>
+                                <li className="mt-4">
+                                    <strong>3. 苦情処理</strong>
+                                    <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-gray-700">
+                                        <li>- 申立人の本人確認、苦情事項の確認、事実調査のための連絡・通知</li>
+                                        <li>- 処理結果の通知</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第2条 (取り扱う個人情報の項目)</h2>
+                            <p className="mb-4">会社は以下の個人情報項目を取り扱っています。</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>
+                                    <strong>1. 必須項目</strong><br />
+                                    - Googleアカウント情報：名前、メールアドレス、プロフィール写真
+                                </li>
+                                <li>
+                                    <strong>2. 自動収集項目</strong><br />
+                                    - サービス利用履歴、アクセスログ、クッキー、アクセスIP情報
+                                </li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第3条 (個人情報の取り扱いおよび保有期間)</h2>
+                            <p className="mb-4">
+                                1. 会社は、法令に基づく個人情報の保有・利用期間、または情報主体から個人情報を収集する際に同意を得た個人情報の保有・利用期間内で個人情報を取り扱い、保有します。
+                            </p>
+                            <p className="mb-4">
+                                2. それぞれの個人情報の取り扱いおよび保有期間は以下の通りです：
+                            </p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>会員登録および管理：会員退会時まで</li>
+                                <li>ただし、関連法令の違反に伴う捜査・調査等が進行中の場合は、当該捜査・調査の終了時まで</li>
+                            </ul>
+                            <p className="mt-4 mb-2">3. 関連法令に基づく保存：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>契約または申込撤回等に関する記録：5年（電子商取引法）</li>
+                                <li>代金決済および財貨等の供給に関する記録：5年（電子商取引法）</li>
+                                <li>消費者の不満または紛争処理に関する記録：3年（電子商取引法）</li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第4条 (個人情報の第三者への提供)</h2>
+                            <p className="mb-4">
+                                会社は原則として、利用者の個人情報を第1条（個人情報の利用目的）で明示した範囲内でのみ取り扱い、利用者の事前の同意なしに本来の範囲を超えて取り扱ったり、第三者に提供したりすることはありません。
+                            </p>
+                            <p className="mb-2">ただし、以下の場合を除きます：</p>
+                            <ol className="list-decimal pl-6 mb-4 space-y-2">
+                                <li>利用者が事前に同意した場合</li>
+                                <li>法令の規定に基づく場合、または捜査の目的で法令に定められた手続きと方法に従い捜査機関の要求がある場合</li>
+                            </ol>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第5条 (個人情報処理の委託)</h2>
+                            <p className="mb-4">会社は、円滑な個人情報業務処理のために、以下のように個人情報処理業務を委託しています：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>
+                                    <strong>1. クラウドサービスの提供</strong>
+                                    <ul className="list-none pl-4 mt-1 space-y-1 text-sm text-gray-700">
+                                        <li>- 受託業者：Supabase Inc., Vercel Inc.</li>
+                                        <li>- 委託業務の内容：サーバーホスティングおよびデータ保存</li>
+                                        <li>- 保有および利用期間：会員退会時、または委託契約の終了時まで</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第6条 (情報主体の権利・義務および行使方法)</h2>
+                            <p className="mb-4">1. 情報主体は会社に対し、いつでも以下の各号の個人情報保護に関する権利を行使することができます：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-1">
+                                <li>個人情報の閲覧要求</li>
+                                <li>誤り等がある場合の訂正要求</li>
+                                <li>削除要求</li>
+                                <li>取り扱い停止要求</li>
+                            </ul>
+                            <p className="mt-4 mb-2">2. 権利の行使は会社に対し、書面、電話、電子メール等を通じて行うことができ、会社はこれに対して遅滞なく措置を講じます。</p>
+                            <p className="mb-2">3. 情報主体が個人情報の誤り等に対する訂正または削除を要求した場合、会社は訂正または削除を完了するまで当該個人情報を利用または提供しません。</p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第7条 (個人情報の破棄)</h2>
+                            <p className="mb-4">1. 会社は、個人情報の保有期間の経過、利用目的の達成等により個人情報が不要となった場合には、遅滞なく当該個人情報を破棄します。</p>
+                            <p className="mb-2">2. 破棄の手順および方法：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>破棄の手順：不要となった個人情報は別途のDBに移され、内部方針および関連法令に従い一定期間保存された後、破棄されます。</li>
+                                <li>破棄の方法：電子ファイル形態の情報は、記録を再生できない技術的方法を使用します。</li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第8条 (個人情報の安全性確保措置)</h2>
+                            <p className="mb-4">会社は、個人情報の安全性を確保するために以下のような措置を講じています：</p>
+                            <ol className="list-decimal pl-6 mb-4 space-y-2">
+                                <li><strong>管理的措置：</strong>内部管理計画の策定・実施、定期的な従業員教育</li>
+                                <li><strong>技術的措置：</strong>個人情報処理システム等のアクセス権限の管理、アクセス制御システムの導入、固有識別情報等の暗号化、セキュリティプログラムのインストール</li>
+                                <li><strong>物理的措置：</strong>電算室、資料保管室等のアクセス制御</li>
+                            </ol>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第9条 (個人情報自動収集装置の設置・運用および拒否に関する事項)</h2>
+                            <p className="mb-4">1. 会社は、利用者に個別カスタマイズされたサービスを提供するために、利用情報を保存し、随時呼び出す「クッキー（cookie）」を使用します。</p>
+                            <p className="mb-4">2. クッキーは、ウェブサイトを運営するために利用されるサーバーが利用者のコンピュータブラウザに送信する少量の情報であり、利用者のPCのハードディスクに保存されることもあります。</p>
+                            <p className="mb-2">3. クッキーの設置・運用および拒否：</p>
+                            <ul className="list-disc pl-6 mb-4 space-y-2">
+                                <li>ウェブブラウザ上部のツール ＞ インターネットオプション ＞ プライバシーメニューのオプション設定を通じてクッキーの保存を拒否することができます。</li>
+                                <li>クッキーの保存を拒否した場合、カスタマイズされたサービスの利用に困難が生じる可能性があります。</li>
+                            </ul>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第10条 (個人情報保護責任者)</h2>
+                            <p className="mb-4">
+                                会社は、個人情報の取り扱いに関する業務を総括して責任を負い、個人情報の取り扱いに関連する情報主体の苦情処理および被害救済等のために、以下の通り個人情報保護責任者を指定しています。
+                            </p>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="font-bold mb-2">▶ 個人情報保護責任者</p>
+                                <ul className="space-y-1 text-sm">
+                                    <li>- 姓名：チュ・スジョン</li>
+                                    <li>- 役職：旅行プランナー</li>
+                                    <li>- 連絡先：<a href="mailto:bolor1@hanmail.net" className="text-blue-600 hover:underline">bolor1@hanmail.net</a></li>
+                                </ul>
+                                <p className="mt-2 text-xs text-gray-500">※ 個人情報保護担当部署につながります。</p>
+                            </div>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第11条 (プライバシーポリシーの変更)</h2>
+                            <p className="mb-4">
+                                このプライバシーポリシーは2026年1月23日から適用され、法令および方針に基づく変更内容の追加、削除、訂正がある場合には、変更事項の施行7日前からお知らせを通じて告知します。
+                            </p>
+                        </section>
+
+                        <section className="mb-8">
+                            <h2 className="text-xl font-semibold mb-4">第12条 (権利侵害の救済方法)</h2>
+                            <p className="mb-4">情報主体は、以下の機関に対して個人情報侵害に対する被害救済、相談等を問い合わせることができます。（※韓国の機関となります）</p>
+
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="font-bold mb-2">▶ 個人情報侵害申告センター（韓国インターネット振興院 運営）</p>
+                                    <ul className="space-y-1 text-sm text-gray-600">
+                                        <li>- 所管業務：個人情報侵害の事実申告、相談申請</li>
+                                        <li>- ホームページ：<a href="https://privacy.kisa.or.kr" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">privacy.kisa.or.kr</a></li>
+                                        <li>- 電話：（局番なし）118</li>
+                                    </ul>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="font-bold mb-2">▶ 個人情報紛争調整委員会</p>
+                                    <ul className="space-y-1 text-sm text-gray-600">
+                                        <li>- 所管業務：個人情報紛争調整の申請、集団紛争調整（民事的解決）</li>
+                                        <li>- ホームページ：<a href="https://www.kopico.go.kr" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">www.kopico.go.kr</a></li>
+                                        <li>- 電話：（局番なし）1833-6972</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="mt-8 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+                            <p className="font-bold mb-2">附則</p>
+                            <p>本方針は2026年1月23日から施行されます。</p>
+                        </div>
+                    </div>
+                </div>
+            </>
+        )
+    }
+
     return (
         <>
             <SEO
                 title="개인정보처리방침"
                 description="몽골리아 은하수의 개인정보처리방침입니다."
             />
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className="container mx-auto px-4 py-8 max-w-4xl font-display">
                 <h1 className="text-3xl font-bold mb-6">개인정보처리방침</h1>
 
                 <div className="prose prose-slate max-w-none">
