@@ -31,6 +31,9 @@ export const optimizeImage = (url: string, options: OptimizeOptions = {}): strin
         url.includes('localhost') ||
         url.includes('127.0.0.1') ||
         url.includes('r2.dev') ||
+        url.includes('mongolryokou.com') ||
+        url.includes('milkyway') ||
+        url.includes('arvijixmeat-maker') ||
         !url.startsWith('http')
     ) {
         return url;
