@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { sendNotificationEmail } from '../lib/email';
 
 export const Payment: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [showToast, setShowToast] = useState(false);
@@ -88,10 +90,10 @@ export const Payment: React.FC = () => {
     // Safety check for 0 won payments (especially for quotes)
     useEffect(() => {
         if (priceBreakdown && priceBreakdown.total <= 0) {
-            alert('금액 정보가 올바르지 않습니다. 관리자에게 문의해주세요.');
+            alert(t('payment.messages.invalid_price'));
             navigate(-1);
         }
-    }, [priceBreakdown, navigate]);
+    }, [priceBreakdown, navigate, t]);
 
     // Auto-fill customer info from quote if passed
     useEffect(() => {
@@ -114,6 +116,15 @@ export const Payment: React.FC = () => {
     const formatDate = (date: Date) => {
         if (!date) return '';
         const d = new Date(date);
+        const locale = t('reservation.date_selection.locale_date', { defaultValue: 'ko-KR' });
+        if (locale === 'ja-JP') {
+            return d.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short'
+            });
+        }
         return d.toLocaleDateString('ko-KR', {
             year: 'numeric',
             month: '2-digit',
@@ -136,37 +147,37 @@ export const Payment: React.FC = () => {
 
         // For regular products, dates are required; for quotes, they are optional
         if (!reservationData || !product || !priceBreakdown) {
-            alert('잘못된 접근입니다.');
+            alert(t('payment.messages.invalid_access'));
             return;
         }
 
         // For regular products, require dates
         if (!isQuote && (!selectedStartDate || !parsedDuration)) {
-            alert('날짜 정보가 없습니다.');
+            alert(t('payment.messages.missing_date'));
             return;
         }
 
         // Validate customer info
         if (!customerInfo.name.trim()) {
-            alert('이름을 입력해주세요.');
+            alert(t('payment.messages.missing_name'));
             return;
         }
         if (!customerInfo.phone.trim()) {
-            alert('휴대폰 번호를 입력해주세요.');
+            alert(t('payment.messages.missing_phone'));
             return;
         }
         if (!customerInfo.email.trim()) {
-            alert('이메일 주소를 입력해주세요.');
+            alert(t('payment.messages.missing_email'));
             return;
         }
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(customerInfo.email)) {
-            alert('올바른 이메일 주소를 입력해주세요.');
+            alert(t('payment.messages.invalid_email'));
             return;
         }
         if (!agreeToTerms) {
-            alert('주문 내용 확인 및 결제 동의가 필요합니다.');
+            alert(t('payment.messages.agree_terms_required'));
             return;
         }
 
@@ -174,7 +185,7 @@ export const Payment: React.FC = () => {
             setIsProcessing(true);
             const me = await api.auth.me();
             if (!me) {
-                alert('로그인이 필요합니다.');
+                alert(t('payment.messages.login_required'));
                 setIsProcessing(false);
                 return;
             }
@@ -250,7 +261,7 @@ export const Payment: React.FC = () => {
                 if (sbError.hint) errorDetails += `\nHint: ${sbError.hint}`;
             }
 
-            alert(`예약 저장 실패: ${errorMessage}${errorDetails}`);
+            alert(`${t('payment.messages.save_failed')}${errorMessage}${errorDetails}`);
         }
     };
 
@@ -259,12 +270,12 @@ export const Payment: React.FC = () => {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-gray-500 mb-4">예약 정보가 없습니다.</p>
+                    <p className="text-gray-500 mb-4">{t('payment.no_reservation')}</p>
                     <button
                         onClick={() => navigate('/products')}
                         className="px-4 py-2 bg-primary text-white rounded-lg"
                     >
-                        상품 목록으로 돌아가기
+                        {t('payment.return_to_products')}
                     </button>
                 </div>
             </div>
@@ -280,7 +291,7 @@ export const Payment: React.FC = () => {
                     className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-max px-5 py-3.5 bg-zinc-900/90 dark:bg-white/90 backdrop-blur-md rounded-2xl flex items-center gap-2.5 shadow-xl border border-white/10 dark:border-black/5 transition-opacity duration-300 ${showToast ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                 >
                     <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span>
-                    <p className="text-white dark:text-zinc-900 text-sm font-medium tracking-tight">계좌번호가 복사되었습니다</p>
+                    <p className="text-white dark:text-zinc-900 text-sm font-medium tracking-tight">{t('payment.account_copied')}</p>
                 </div>
 
                 {/* Header */}
@@ -291,14 +302,14 @@ export const Payment: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">예약 정보 및 계좌 확인</h2>
+                    <h2 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">{t('payment.title')}</h2>
                     <div className="size-10"></div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto pb-48">
                     <div className="px-5 pt-8 pb-6">
                         <div className="mb-4">
-                            <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-[11px] font-bold rounded-md mb-2">선택한 여행 정보</span>
+                            <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-[11px] font-bold rounded-md mb-2">{t('payment.selected_travel_info')}</span>
                             <h3 className="text-[#0e1a18] dark:text-white text-2xl font-bold leading-tight">{product.name}</h3>
                         </div>
                         <div className="space-y-4 mt-6">
@@ -307,9 +318,9 @@ export const Payment: React.FC = () => {
                                 <div className="flex items-start gap-3">
                                     <span className="material-symbols-outlined text-gray-400 mt-0.5">calendar_today</span>
                                     <div>
-                                        <p className="text-[13px] text-gray-400 font-medium">여행 기간</p>
+                                        <p className="text-[13px] text-gray-400 font-medium">{t('payment.travel_duration')}</p>
                                         <p className="text-sm text-[#0e1a18] dark:text-white font-semibold">
-                                            {formatDate(new Date(selectedStartDate))} - {formatDate(endDate)} • {parsedDuration.nights}박 {parsedDuration.days}일
+                                            {formatDate(new Date(selectedStartDate))} - {formatDate(endDate)} • {t('payment.duration_format', { nights: parsedDuration.nights, days: parsedDuration.days })}
                                         </p>
                                     </div>
                                 </div>
@@ -319,7 +330,7 @@ export const Payment: React.FC = () => {
                                 <div className="flex items-start gap-3">
                                     <span className="material-symbols-outlined text-gray-400 mt-0.5">calendar_today</span>
                                     <div>
-                                        <p className="text-[13px] text-gray-400 font-medium">여행 기간</p>
+                                        <p className="text-[13px] text-gray-400 font-medium">{t('payment.travel_duration')}</p>
                                         <p className="text-sm text-[#0e1a18] dark:text-white font-semibold">
                                             {product.duration}
                                         </p>
@@ -329,8 +340,8 @@ export const Payment: React.FC = () => {
                             <div className="flex items-start gap-3">
                                 <span className="material-symbols-outlined text-gray-400 mt-0.5">group</span>
                                 <div>
-                                    <p className="text-[13px] text-gray-400 font-medium">예약 인원</p>
-                                    <p className="text-sm text-[#0e1a18] dark:text-white font-semibold">총 {totalPeople}명</p>
+                                    <p className="text-[13px] text-gray-400 font-medium">{t('payment.reservation_guests')}</p>
+                                    <p className="text-sm text-[#0e1a18] dark:text-white font-semibold">{t('payment.total_guests', { count: totalPeople })}</p>
                                 </div>
                             </div>
                         </div>
@@ -340,25 +351,25 @@ export const Payment: React.FC = () => {
 
                     <div className="px-5 py-8">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold">예약자 정보</h3>
+                            <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold">{t('payment.customer_info_title')}</h3>
                             <label className="flex items-center gap-1.5 cursor-pointer">
                                 <input className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" type="checkbox" disabled />
-                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">회원 정보와 동일</span>
+                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('payment.same_as_member')}</span>
                             </label>
                         </div>
                         <div className="space-y-5">
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">이름</label>
+                                <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">{t('payment.customer_name')}</label>
                                 <input
                                     value={customerInfo.name}
                                     onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm text-[#0e1a18] dark:text-white placeholder:text-gray-400 transition-all focus:bg-white dark:focus:bg-zinc-800 outline-none focus:border-primary"
-                                    placeholder="성함을 입력해주세요"
+                                    placeholder={t('payment.customer_name_placeholder')}
                                     type="text"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">휴대폰 번호</label>
+                                <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">{t('payment.customer_phone')}</label>
                                 <input
                                     value={customerInfo.phone}
                                     onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
@@ -368,7 +379,7 @@ export const Payment: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">이메일 주소</label>
+                                <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">{t('payment.customer_email')}</label>
                                 <input
                                     value={customerInfo.email}
                                     onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
@@ -383,23 +394,23 @@ export const Payment: React.FC = () => {
                     <div className="h-2 bg-gray-50 dark:bg-zinc-800/30"></div>
 
                     <div className="px-5 py-8">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">결제 금액</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">{t('payment.payment_amount')}</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">총 여행 경비</span>
-                                <span className="text-[#0e1a18] dark:text-white font-bold text-lg">{formatPrice(priceBreakdown.total)}円</span>
+                                <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">{t('payment.total_travel_expense')}</span>
+                                <span className="text-[#0e1a18] dark:text-white font-bold text-lg">{formatPrice(priceBreakdown.total)}{t('reservation.price_info.currency')}</span>
                             </div>
                             <div className="flex justify-between items-center py-4 px-4 bg-primary/5 rounded-2xl border border-primary/10">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-primary font-bold">지금 결제할 예약금</span>
+                                    <span className="text-primary font-bold">{t('payment.deposit_to_pay_now')}</span>
                                     <span className="material-symbols-outlined text-primary text-sm">help_outline</span>
                                 </div>
-                                <span className="text-primary font-bold text-xl">{formatPrice(priceBreakdown.deposit)}円</span>
+                                <span className="text-primary font-bold text-xl">{formatPrice(priceBreakdown.deposit)}{t('reservation.price_info.currency')}</span>
                             </div>
                             {priceBreakdown.local > 0 && (
                                 <div className="flex justify-between items-center py-3 px-4 bg-gray-50 dark:bg-zinc-800/30 rounded-xl">
-                                    <span className="text-gray-600 dark:text-gray-300 font-medium text-sm">현지 지불 잔금</span>
-                                    <span className="text-gray-700 dark:text-gray-200 font-bold text-base">{formatPrice(priceBreakdown.local)}円</span>
+                                    <span className="text-gray-600 dark:text-gray-300 font-medium text-sm">{t('payment.local_payment_balance')}</span>
+                                    <span className="text-gray-700 dark:text-gray-200 font-bold text-base">{formatPrice(priceBreakdown.local)}{t('reservation.price_info.currency')}</span>
                                 </div>
                             )}
                         </div>
@@ -408,21 +419,21 @@ export const Payment: React.FC = () => {
                     <div className="h-2 bg-gray-50 dark:bg-zinc-800/30"></div>
 
                     <div className="px-5 py-8">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">결제 수단 및 계좌 정보</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">{t('payment.payment_method_info')}</h3>
                         <div className="border-2 border-primary rounded-2xl bg-white dark:bg-zinc-800 overflow-hidden shadow-sm">
                             <div className="flex items-center gap-4 p-4 border-b border-gray-100 dark:border-zinc-700 bg-primary/5">
                                 <div className="size-10 bg-white dark:bg-zinc-700 rounded-full flex items-center justify-center shadow-sm">
                                     <span className="material-symbols-outlined text-primary">account_balance</span>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[#0e1a18] dark:text-white font-bold">무통장 입금</p>
-                                    <p className="text-xs text-gray-500">24시간 이내 입금 시 예약 확정</p>
+                                    <p className="text-[#0e1a18] dark:text-white font-bold">{t('payment.bank_transfer')}</p>
+                                    <p className="text-xs text-gray-500">{t('payment.bank_transfer_desc')}</p>
                                 </div>
                                 <span className="material-symbols-outlined text-primary">check_circle</span>
                             </div>
                             <div className="p-5 space-y-4">
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">입금 계좌</span>
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('payment.deposit_account')}</span>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-[#0e1a18] dark:text-white">{bankAccount.bankName}</span>
@@ -433,12 +444,12 @@ export const Payment: React.FC = () => {
                                             className="px-3 py-1.5 bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 transition-colors flex items-center gap-1 active:scale-95"
                                         >
                                             <span className="material-symbols-outlined text-sm">content_copy</span>
-                                            복사
+                                            {t('payment.copy')}
                                         </button>
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">예금주</span>
+                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('payment.account_holder')}</span>
                                     <p className="text-sm font-bold text-[#0e1a18] dark:text-white">{bankAccount.accountHolder}</p>
                                 </div>
                             </div>
@@ -446,12 +457,16 @@ export const Payment: React.FC = () => {
                         <div className="mt-6 p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
                             <p className="text-[13px] font-bold text-gray-600 dark:text-gray-300 mb-2 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-sm">info</span>
-                                입금 시 주의사항
+                                {t('payment.deposit_notices.title')}
                             </p>
                             <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-2 list-disc pl-4">
-                                <li>입금자명은 반드시 <span className="text-[#0e1a18] dark:text-white font-bold">예약자 성함</span>과 동일해야 합니다.</li>
-                                <li>24시간 이내 미입금 시 예약이 자동 취소됩니다.</li>
-                                <li>현지 잔금은 여행 당일 가이드에게 직접 전달합니다.</li>
+                                <li>
+                                    {t('payment.deposit_notices.name_match').split(t('payment.deposit_notices.name_match_highlight'))[0]}
+                                    <span className="text-[#0e1a18] dark:text-white font-bold">{t('payment.deposit_notices.name_match_highlight')}</span>
+                                    {t('payment.deposit_notices.name_match').split(t('payment.deposit_notices.name_match_highlight'))[1]}
+                                </li>
+                                <li>{t('payment.deposit_notices.auto_cancel')}</li>
+                                <li>{t('payment.deposit_notices.local_payment')}</li>
                             </ul>
                         </div>
                     </div>
@@ -468,7 +483,7 @@ export const Payment: React.FC = () => {
                             }`}>
                             {agreeToTerms && <span className="material-symbols-outlined text-white text-[16px] font-bold">check</span>}
                         </div>
-                        <p className="text-sm font-semibold text-[#0e1a18] dark:text-white">주문 내용을 확인하였으며, 결제에 동의합니다.</p>
+                        <p className="text-sm font-semibold text-[#0e1a18] dark:text-white">{t('payment.agree_terms')}</p>
                     </div>
                     <button
                         onClick={handlePayment}
@@ -478,11 +493,11 @@ export const Payment: React.FC = () => {
                         {isProcessing ? (
                             <>
                                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                처리 중...
+                                {t('payment.processing')}
                             </>
                         ) : (
                             <>
-                                {formatPrice(priceBreakdown.deposit)}円 결제하기
+                                {t('payment.pay_amount', { amount: formatPrice(priceBreakdown.deposit) })}
                                 <span className="material-symbols-outlined text-lg transition-transform group-hover:translate-x-1">payments</span>
                             </>
                         )}

@@ -340,7 +340,8 @@
             "subtitle_default": "モンゴルの広大な自然に出会う日付を選択してください",
             "selected_range": "選択された旅行期間",
             "selected_range_format": "{{startDate}} ~ {{endDate}}",
-            "duration_format": "({{nights}}泊 {{days}}日)"
+            "duration_format": "({{nights}}泊 {{days}}日)",
+            "locale_date": "ja-JP"
         },
         "guest_selection": {
             "title": "人数の選択",
@@ -379,6 +380,55 @@
             "loading": "読み込み中...",
             "not_found": "商品が見つかりません。",
             "please_select_date": "旅行開始日を選択してください。"
+        }
+    },
+    "payment": {
+        "title": "予約情報および口座確認",
+        "no_reservation": "予約情報がありません。",
+        "return_to_products": "商品一覧に戻る",
+        "account_copied": "口座番号がコピーされました",
+        "selected_travel_info": "選択した旅行情報",
+        "travel_duration": "旅行期間",
+        "duration_format": "{{nights}}泊 {{days}}日",
+        "reservation_guests": "予約人数",
+        "total_guests": "計 {{count}}名",
+        "customer_info_title": "予約者情報",
+        "same_as_member": "会員情報と同じ",
+        "customer_name": "お名前",
+        "customer_name_placeholder": "お名前を入力してください",
+        "customer_phone": "携帯電話番号",
+        "customer_email": "メールアドレス",
+        "payment_amount": "決済金額",
+        "total_travel_expense": "総旅行費用",
+        "deposit_to_pay_now": "今すぐ決済する予約金",
+        "local_payment_balance": "現地支払い残金",
+        "payment_method_info": "決済手段および口座情報",
+        "bank_transfer": "銀行振込",
+        "bank_transfer_desc": "24時間以内の入金で予約確定",
+        "deposit_account": "入金口座",
+        "copy": "コピー",
+        "account_holder": "口座名義",
+        "deposit_notices": {
+            "title": "入金時の注意事項",
+            "name_match": "入金者名は必ず予約者名と同じにする必要があります。",
+            "name_match_highlight": "予約者名",
+            "auto_cancel": "24時間以内に入金がない場合、予約は自動的にキャンセルされます。",
+            "local_payment": "現地残金は旅行当日にガイドへ直接お渡しください。"
+        },
+        "agree_terms": "注文内容を確認し、決済に同意します。",
+        "processing": "処理中...",
+        "pay_amount": "{{amount}}円 決済する",
+        "messages": {
+            "invalid_price": "金額情報が正しくありません。管理者にお問い合わせください。",
+            "invalid_access": "無効なアクセスです。",
+            "missing_date": "日付情報がありません。",
+            "missing_name": "お名前を入力してください。",
+            "missing_phone": "携帯電話番号を入力してください。",
+            "missing_email": "メールアドレスを入力してください。",
+            "invalid_email": "正しいメールアドレスを入力してください。",
+            "agree_terms_required": "注文内容の確認と決済への同意が必要です。",
+            "login_required": "ログインが必要です。",
+            "save_failed": "予約保存の失敗: "
         }
     }
 }

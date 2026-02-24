@@ -323,7 +323,8 @@
             "subtitle_default": "몽골의 광활한 자연을 만날 날짜를 골라주세요",
             "selected_range": "선택된 여행 기간",
             "selected_range_format": "{{startDate}} ~ {{endDate}}",
-            "duration_format": "({{nights}}박 {{days}}일)"
+            "duration_format": "({{nights}}박 {{days}}일)",
+            "locale_date": "ko-KR"
         },
         "guest_selection": {
             "title": "인원 선택",
@@ -362,6 +363,55 @@
             "loading": "Loading...",
             "not_found": "상품을 찾을 수 없습니다.",
             "please_select_date": "여행 시작일을 선택해주세요."
+        }
+    },
+    "payment": {
+        "title": "예약 정보 및 계좌 확인",
+        "no_reservation": "예약 정보가 없습니다.",
+        "return_to_products": "상품 목록으로 돌아가기",
+        "account_copied": "계좌번호가 복사되었습니다",
+        "selected_travel_info": "선택한 여행 정보",
+        "travel_duration": "여행 기간",
+        "duration_format": "{{nights}}박 {{days}}일",
+        "reservation_guests": "예약 인원",
+        "total_guests": "총 {{count}}명",
+        "customer_info_title": "예약자 정보",
+        "same_as_member": "회원 정보와 동일",
+        "customer_name": "이름",
+        "customer_name_placeholder": "성함을 입력해주세요",
+        "customer_phone": "휴대폰 번호",
+        "customer_email": "이메일 주소",
+        "payment_amount": "결제 금액",
+        "total_travel_expense": "총 여행 경비",
+        "deposit_to_pay_now": "지금 결제할 예약금",
+        "local_payment_balance": "현지 지불 잔금",
+        "payment_method_info": "결제 수단 및 계좌 정보",
+        "bank_transfer": "무통장 입금",
+        "bank_transfer_desc": "24시간 이내 입금 시 예약 확정",
+        "deposit_account": "입금 계좌",
+        "copy": "복사",
+        "account_holder": "예금주",
+        "deposit_notices": {
+            "title": "입금 시 주의사항",
+            "name_match": "입금자명은 반드시 예약자 성함과 동일해야 합니다.",
+            "name_match_highlight": "예약자 성함",
+            "auto_cancel": "24시간 이내 미입금 시 예약이 자동 취소됩니다.",
+            "local_payment": "현지 잔금은 여행 당일 가이드에게 직접 전달합니다."
+        },
+        "agree_terms": "주문 내용을 확인하였으며, 결제에 동의합니다.",
+        "processing": "처리 중...",
+        "pay_amount": "{{amount}}원 결제하기",
+        "messages": {
+            "invalid_price": "금액 정보가 올바르지 않습니다. 관리자에게 문의해주세요.",
+            "invalid_access": "잘못된 접근입니다.",
+            "missing_date": "날짜 정보가 없습니다.",
+            "missing_name": "이름을 입력해주세요.",
+            "missing_phone": "휴대폰 번호를 입력해주세요.",
+            "missing_email": "이메일 주소를 입력해주세요.",
+            "invalid_email": "올바른 이메일 주소를 입력해주세요.",
+            "agree_terms_required": "주문 내용 확인 및 결제 동의가 필요합니다.",
+            "login_required": "로그인이 필요합니다.",
+            "save_failed": "예약 저장 실패: "
         }
     }
 }
