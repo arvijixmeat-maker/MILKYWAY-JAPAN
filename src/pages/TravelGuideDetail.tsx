@@ -43,10 +43,10 @@ export const TravelGuideDetail: React.FC = () => {
                 const currentMagazine = {
                     id: magData.id,
                     title: magData.title,
-                    description: magData.description,
+                    description: magData.subtitle || magData.description || '',
                     content: magData.content,
                     category: magData.category,
-                    image: magData.image,
+                    image: magData.thumbnail || magData.image || '',
                     tag: magData.tag,
                     createdAt: magData.created_at
                 };
@@ -68,10 +68,10 @@ export const TravelGuideDetail: React.FC = () => {
                     setRelatedMagazines(relatedData.map((m: any) => ({
                         id: m.id,
                         title: m.title,
-                        description: m.description,
+                        description: m.subtitle || m.description || '',
                         content: m.content,
                         category: m.category,
-                        image: m.image,
+                        image: m.thumbnail || m.image || '',
                         tag: m.tag,
                         createdAt: m.created_at
                     })));

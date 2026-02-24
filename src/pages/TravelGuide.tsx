@@ -49,10 +49,10 @@ export const TravelGuide: React.FC = () => {
                         .map((m: any) => ({
                             id: m.id,
                             title: m.title,
-                            description: m.description,
+                            description: m.subtitle || m.description || '',
                             content: m.content,
                             category: m.category,
-                            image: m.image,
+                            image: m.thumbnail || m.image || '',
                             tag: m.tag,
                             isFeatured: m.is_featured,
                             isActive: m.is_active,

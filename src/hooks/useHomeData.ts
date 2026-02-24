@@ -67,9 +67,9 @@ export const useHomeData = () => {
             const magazines: Magazine[] = (Array.isArray(magazinesData) ? magazinesData.filter((m: any) => m.is_active) : []).map((m: any) => ({
                 id: m.id,
                 title: m.title,
-                description: m.description,
+                description: m.subtitle || m.description || '', // mapped from subtitle
                 category: m.category,
-                image: m.image,
+                image: m.thumbnail || m.image || '', // mapped from thumbnail
                 isActive: m.is_active
             }));
 

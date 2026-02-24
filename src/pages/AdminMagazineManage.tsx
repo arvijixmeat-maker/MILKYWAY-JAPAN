@@ -272,10 +272,10 @@ export const AdminMagazineManage: React.FC = () => {
                 setMagazines(data.map((m: any) => ({
                     id: m.id,
                     title: m.title,
-                    description: m.description,
+                    description: m.subtitle || m.description || '', // Map subtitle
                     content: m.content,
                     category: m.category,
-                    image: m.image,
+                    image: m.thumbnail || m.image || '', // Map thumbnail
                     tag: m.tag,
                     isFeatured: m.is_featured,
                     isActive: m.is_active,
@@ -417,10 +417,10 @@ export const AdminMagazineManage: React.FC = () => {
 
             const magazineData = {
                 title: formData.title || '',
-                description: formData.description || '',
+                subtitle: formData.description || '', // Map description to subtitle
                 content: content,
                 category: formData.category || '여행 팁',
-                image: formData.image || '',
+                thumbnail: formData.image || '', // Map image to thumbnail
                 tag: formData.tag,
                 is_featured: formData.isFeatured || false,
                 is_active: formData.isActive ?? true,
