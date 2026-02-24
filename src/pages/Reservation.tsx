@@ -21,12 +21,13 @@ export const Reservation: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
 
-    // Parse duration to get number of nights and days
+    // Parse duration to get number of nights and days (robust to handle multiple languages)
     const parsedDuration = useMemo(() => {
         if (!product?.duration) return { nights: 0, days: 0 };
-        const match = product.duration.match(/(\d+)박\s*(\d+)일/);
-        if (match) {
-            return { nights: parseInt(match[1]), days: parseInt(match[2]) };
+        // Extract all numbers to handle formats like "3박 4일", "3泊4日", "3 nights 4 days"
+        const matches = product.duration.match(/\d+/g);
+        if (matches && matches.length >= 2) {
+            return { nights: parseInt(matches[0], 10), days: parseInt(matches[1], 10) };
         }
         return { nights: 0, days: 0 };
     }, [product?.duration]);
