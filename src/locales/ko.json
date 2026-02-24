@@ -314,5 +314,54 @@
             "own_post": "자신의 게시물입니다.",
             "closed_status": "모집완료"
         }
+    },
+    "reservation": {
+        "title": "예약 날짜 및 옵션 선택",
+        "date_selection": {
+            "title": "여행 시작일 선택",
+            "subtitle_with_duration": "{{nights}}박 {{days}}일 일정의 시작일을 선택하세요",
+            "subtitle_default": "몽골의 광활한 자연을 만날 날짜를 골라주세요",
+            "selected_range": "선택된 여행 기간",
+            "selected_range_format": "{{startDate}} ~ {{endDate}}",
+            "duration_format": "({{nights}}박 {{days}}일)"
+        },
+        "guest_selection": {
+            "title": "인원 선택",
+            "total_guests": "총 인원",
+            "select_guests": "인원을 선택하세요",
+            "unit": "명"
+        },
+        "price_info": {
+            "per_person_current": "현재 인원 기준 1인당",
+            "currency": "원",
+            "view_price_by_guests": "인원별 가격 보기",
+            "live_estimate": "실시간 예상 합계",
+            "deposit": "예약금",
+            "local_payment": "현지 지불",
+            "modal_title": "인원별 1인 단가 안내",
+            "modal_guests": "인원수",
+            "modal_price": "1인당 단가",
+            "modal_deposit_local": "(예약금: {{deposit}} / 현지: {{local}})",
+            "no_price_info": "가격 정보가 없습니다.",
+            "description": "가이드 및 차량 등 공동 이용 비용이 포함되어 인원이 많을수록 저렴해집니다."
+        },
+        "options": {
+            "accommodation_title": "숙소 옵션",
+            "no_accommodation": "선택 가능한 숙소 옵션이 없습니다. (기본 포함)",
+            "vehicle_title": "차량 옵션",
+            "no_vehicle": "선택 가능한 차량 옵션이 없습니다.",
+            "included_default": "기본 포함",
+            "free": "무료",
+            "selected": "선택됨"
+        },
+        "buttons": {
+            "next_step": "다음 단계로",
+            "confirm": "확인"
+        },
+        "messages": {
+            "loading": "Loading...",
+            "not_found": "상품을 찾을 수 없습니다.",
+            "please_select_date": "여행 시작일을 선택해주세요."
+        }
     }
 }

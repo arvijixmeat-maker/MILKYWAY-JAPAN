@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { TourProduct } from '../types/product';
 import { api } from '../lib/api';
 
 export const Reservation: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [product, setProduct] = useState<TourProduct | null>(null);
@@ -142,8 +144,8 @@ export const Reservation: React.FC = () => {
 
     const formatPrice = (price: number) => price.toLocaleString();
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    if (!product) return <div className="min-h-screen flex items-center justify-center">상품을 찾을 수 없습니다.</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center">{t('reservation.messages.loading')}</div>;
+    if (!product) return <div className="min-h-screen flex items-center justify-center">{t('reservation.messages.not_found')}</div>;
 
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
@@ -156,18 +158,18 @@ export const Reservation: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">예약 날짜 및 옵션 선택</h2>
+                    <h2 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">{t('reservation.title')}</h2>
                     <div className="size-10"></div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto pb-48">
                     {/* Date Selection */}
                     <div className="px-4 pt-6 pb-2">
-                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-tight">여행 시작일 선택</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-tight">{t('reservation.date_selection.title')}</h3>
                         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                             {parsedDuration.nights > 0
-                                ? `${parsedDuration.nights}박 ${parsedDuration.days}일 일정의 시작일을 선택하세요`
-                                : '몽골의 광활한 자연을 만날 날짜를 골라주세요'
+                                ? t('reservation.date_selection.subtitle_with_duration', { nights: parsedDuration.nights, days: parsedDuration.days })
+                                : t('reservation.date_selection.subtitle_default')
                             }
                         </p>
                     </div>
@@ -262,11 +264,13 @@ export const Reservation: React.FC = () => {
                             {/* Selected Date Range Display */}
                             {selectedStartDate && parsedDuration.nights > 0 && (
                                 <div className="mt-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">선택된 여행 기간</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('reservation.date_selection.selected_range')}</p>
                                     <p className="text-sm font-bold text-primary">
-                                        {selectedStartDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} ~ {' '}
-                                        {new Date(selectedStartDate.getTime() + parsedDuration.nights * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
-                                        <span className="ml-2 text-xs">({parsedDuration.nights}박 {parsedDuration.days}일)</span>
+                                        {t('reservation.date_selection.selected_range_format', {
+                                            startDate: selectedStartDate.toLocaleDateString(t('reservation.date_selection.locale_date', { defaultValue: 'ko-KR' }), { month: 'long', day: 'numeric' }),
+                                            endDate: new Date(selectedStartDate.getTime() + parsedDuration.nights * 24 * 60 * 60 * 1000).toLocaleDateString(t('reservation.date_selection.locale_date', { defaultValue: 'ko-KR' }), { month: 'long', day: 'numeric' })
+                                        })}
+                                        <span className="ml-2 text-xs">{t('reservation.date_selection.duration_format', { nights: parsedDuration.nights, days: parsedDuration.days })}</span>
                                     </p>
                                 </div>
                             )}
@@ -277,16 +281,16 @@ export const Reservation: React.FC = () => {
 
                     {/* Guest Selection */}
                     <div className="px-4 pt-6 pb-2">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight">인원 선택</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight">{t('reservation.guest_selection.title')}</h3>
                     </div>
                     <div className="space-y-1">
                         <div className="flex items-center gap-4 bg-white dark:bg-zinc-900 px-4 min-h-16 justify-between">
                             <div>
-                                <p className="text-[#0e1a18] dark:text-white text-base font-semibold leading-normal">총 인원</p>
+                                <p className="text-[#0e1a18] dark:text-white text-base font-semibold leading-normal">{t('reservation.guest_selection.total_guests')}</p>
                                 <p className="text-gray-400 text-xs">
                                     {product.pricingOptions && product.pricingOptions.length > 0
-                                        ? `${Math.min(...product.pricingOptions.map(p => p.people))}명 ~ ${Math.max(...product.pricingOptions.map(p => p.people))}명`
-                                        : '인원을 선택하세요'
+                                        ? `${Math.min(...product.pricingOptions.map(p => p.people))}${t('reservation.guest_selection.unit')} ~ ${Math.max(...product.pricingOptions.map(p => p.people))}${t('reservation.guest_selection.unit')}`
+                                        : t('reservation.guest_selection.select_guests')
                                     }
                                 </p>
                             </div>
@@ -303,7 +307,7 @@ export const Reservation: React.FC = () => {
                                     disabled={!product.pricingOptions || product.pricingOptions.length === 0 || totalPeople <= Math.min(...(product.pricingOptions?.map(p => p.people) || [2]))}
                                     className="text-primary text-xl font-bold flex h-8 w-8 items-center justify-center rounded-full hover:bg-white dark:hover:bg-zinc-700 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
                                 >-</button>
-                                <span className="text-[#0e1a18] dark:text-white font-bold text-base min-w-[24px] text-center">{totalPeople}명</span>
+                                <span className="text-[#0e1a18] dark:text-white font-bold text-base min-w-[24px] text-center">{totalPeople}{t('reservation.guest_selection.unit')}</span>
                                 <button
                                     onClick={() => {
                                         if (!product.pricingOptions || product.pricingOptions.length === 0) return;
@@ -324,14 +328,14 @@ export const Reservation: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-sm text-primary">info</span>
                             <p className="text-[#0e1a18] dark:text-white text-[13px] font-medium">
-                                현재 인원 기준 1인당 <span className="text-primary font-bold">{formatPrice(baseOption?.pricePerPerson || 0)}</span>원
+                                {t('reservation.price_info.per_person_current')} <span className="text-primary font-bold">{formatPrice(baseOption?.pricePerPerson || 0)}</span>{t('reservation.price_info.currency')}
                             </p>
                         </div>
                         <button
                             onClick={() => setIsPriceModalOpen(true)}
                             className="flex items-center gap-0.5 text-gray-400 dark:text-gray-500 text-[12px] font-medium border-b border-gray-300 dark:border-gray-600 pb-0.5 hover:text-primary transition-colors"
                         >
-                            인원별 가격 보기
+                            {t('reservation.price_info.view_price_by_guests')}
                             <span className="material-symbols-outlined text-[14px]">expand_more</span>
                         </button>
                     </div>
@@ -340,11 +344,11 @@ export const Reservation: React.FC = () => {
 
                     {/* Accommodation Options */}
                     <div className="px-4 pt-6 pb-2">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight">숙소 옵션</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight">{t('reservation.options.accommodation_title')}</h3>
                     </div>
                     <div className="px-4 space-y-3">
                         {(!product.accommodationOptions || product.accommodationOptions.length === 0) ? (
-                            <p className="text-gray-500 text-sm">선택 가능한 숙소 옵션이 없습니다. (기본 포함)</p>
+                            <p className="text-gray-500 text-sm">{t('reservation.options.no_accommodation')}</p>
                         ) : (
                             product.accommodationOptions.map(option => (
                                 <div
@@ -366,11 +370,11 @@ export const Reservation: React.FC = () => {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-primary font-bold text-sm">
-                                            {option.priceModifier === 0 ? '기본 포함' : `${option.priceModifier > 0 ? '+' : ''}${formatPrice(option.priceModifier)}`}
+                                            {option.priceModifier === 0 ? t('reservation.options.included_default') : `${option.priceModifier > 0 ? '+' : ''}${formatPrice(option.priceModifier)}`}
                                         </p>
                                     </div>
                                     {selectedAccomId === option.id && option.priceModifier === 0 && (
-                                        <div className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">선택됨</div>
+                                        <div className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{t('reservation.options.selected')}</div>
                                     )}
                                 </div>
                             ))
@@ -381,11 +385,11 @@ export const Reservation: React.FC = () => {
 
                     {/* Vehicle Options */}
                     <div className="px-4 pt-6 pb-2">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight">차량 옵션</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight">{t('reservation.options.vehicle_title')}</h3>
                     </div>
                     <div className="px-4 space-y-3">
                         {(!product.vehicleOptions || product.vehicleOptions.length === 0) ? (
-                            <p className="text-gray-500 text-sm">선택 가능한 차량 옵션이 없습니다.</p>
+                            <p className="text-gray-500 text-sm">{t('reservation.options.no_vehicle')}</p>
                         ) : (
                             product.vehicleOptions.map(option => (
                                 <div
@@ -403,7 +407,7 @@ export const Reservation: React.FC = () => {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[#0e1a18] dark:text-white font-bold text-sm">
-                                            {option.priceModifier === 0 ? '무료' : `${option.priceModifier > 0 ? '+' : ''}${formatPrice(option.priceModifier)}`}
+                                            {option.priceModifier === 0 ? t('reservation.options.free') : `${option.priceModifier > 0 ? '+' : ''}${formatPrice(option.priceModifier)}`}
                                         </p>
                                     </div>
                                 </div>
@@ -416,16 +420,16 @@ export const Reservation: React.FC = () => {
                 <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-gray-100 dark:border-zinc-800 p-4 pb-10 z-[60] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
                     <div className="flex items-center justify-between mb-4 px-1">
                         <div>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">실시간 예상 합계</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">{t('reservation.price_info.live_estimate')}</p>
                             <div className="flex flex-col">
                                 <div className="flex items-baseline gap-1 animate-price-change">
                                     <span className="text-[26px] font-bold text-[#0e1a18] dark:text-white tracking-tight">{formatPrice(priceBreakdown.total)}</span>
-                                    <span className="text-base font-bold text-[#0e1a18] dark:text-white">원</span>
+                                    <span className="text-base font-bold text-[#0e1a18] dark:text-white">{t('reservation.price_info.currency')}</span>
                                 </div>
                                 {(priceBreakdown.deposit > 0 || priceBreakdown.local > 0) && (
                                     <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-                                        {priceBreakdown.deposit > 0 && <p>예약금: {formatPrice(priceBreakdown.deposit)}원</p>}
-                                        {priceBreakdown.local > 0 && <p>현지 지불: {formatPrice(priceBreakdown.local)}원</p>}
+                                        {priceBreakdown.deposit > 0 && <p>{t('reservation.price_info.deposit')}: {formatPrice(priceBreakdown.deposit)}{t('reservation.price_info.currency')}</p>}
+                                        {priceBreakdown.local > 0 && <p>{t('reservation.price_info.local_payment')}: {formatPrice(priceBreakdown.local)}{t('reservation.price_info.currency')}</p>}
                                     </div>
                                 )}
                             </div>
@@ -443,7 +447,7 @@ export const Reservation: React.FC = () => {
                     <button
                         onClick={() => {
                             if (!selectedStartDate) {
-                                alert('여행 시작일을 선택해주세요.');
+                                alert(t('reservation.messages.please_select_date'));
                                 return;
                             }
                             navigate('/payment', {
@@ -460,7 +464,7 @@ export const Reservation: React.FC = () => {
                         }}
                         className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
                     >
-                        다음 단계로
+                        {t('reservation.buttons.next_step')}
                         <span className="material-symbols-outlined text-lg transition-transform group-hover:translate-x-1">arrow_forward</span>
                     </button>
                 </div>
@@ -477,7 +481,7 @@ export const Reservation: React.FC = () => {
                                 <div className="w-10 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full"></div>
                             </div>
                             <div className="flex items-center justify-between px-6 py-4">
-                                <h3 className="text-lg font-bold text-[#0e1a18] dark:text-white">인원별 1인 단가 안내</h3>
+                                <h3 className="text-lg font-bold text-[#0e1a18] dark:text-white">{t('reservation.price_info.modal_title')}</h3>
                                 <button
                                     onClick={() => setIsPriceModalOpen(false)}
                                     className="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 rounded-full cursor-pointer"
@@ -488,19 +492,22 @@ export const Reservation: React.FC = () => {
                             <div className="px-6 pb-6 overflow-y-auto">
                                 <div className="bg-gray-50 dark:bg-zinc-800/30 rounded-2xl overflow-hidden border border-gray-100 dark:border-zinc-800 mb-6">
                                     <div className="grid grid-cols-2 border-b border-gray-200 dark:border-zinc-800">
-                                        <div className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50/80 dark:bg-zinc-800/50">인원수</div>
-                                        <div className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50/80 dark:bg-zinc-800/50">1인당 단가</div>
+                                        <div className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50/80 dark:bg-zinc-800/50">{t('reservation.price_info.modal_guests')}</div>
+                                        <div className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50/80 dark:bg-zinc-800/50">{t('reservation.price_info.modal_price')}</div>
                                     </div>
 
                                     {/* Dynamic Price List */}
                                     {product.pricingOptions?.sort((a, b) => a.people - b.people).map((opt, idx) => (
                                         <div key={idx} className={`grid grid-cols-2 ${totalPeople === opt.people ? 'bg-primary text-white font-bold' : 'border-b border-gray-100 dark:border-zinc-800'}`}>
-                                            <div className={`px-4 py-4 text-[15px] ${totalPeople === opt.people ? '' : 'text-[#0e1a18] dark:text-white'}`}>{opt.people}인</div>
+                                            <div className={`px-4 py-4 text-[15px] ${totalPeople === opt.people ? '' : 'text-[#0e1a18] dark:text-white'}`}>{opt.people}{t('reservation.guest_selection.unit')}</div>
                                             <div className={`px-4 py-4 text-right ${totalPeople === opt.people ? '' : 'text-[#0e1a18] dark:text-white'}`}>
-                                                <div className="text-[15px] font-medium">{formatPrice(opt.pricePerPerson)}원</div>
+                                                <div className="text-[15px] font-medium">{formatPrice(opt.pricePerPerson)}{t('reservation.price_info.currency')}</div>
                                                 {(opt.depositPerPerson > 0 || opt.localPaymentPerPerson > 0) && (
                                                     <div className={`text-[10px] mt-0.5 ${totalPeople === opt.people ? 'text-white/80' : 'text-gray-400'}`}>
-                                                        (예약금: {formatPrice(opt.depositPerPerson || 0)} / 현지: {formatPrice(opt.localPaymentPerPerson || 0)})
+                                                        {t('reservation.price_info.modal_deposit_local', {
+                                                            deposit: formatPrice(opt.depositPerPerson || 0) + t('reservation.price_info.currency'),
+                                                            local: formatPrice(opt.localPaymentPerPerson || 0) + t('reservation.price_info.currency')
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
@@ -508,21 +515,21 @@ export const Reservation: React.FC = () => {
                                     ))}
 
                                     {(!product.pricingOptions || product.pricingOptions.length === 0) && (
-                                        <div className="p-4 text-center text-gray-500">가격 정보가 없습니다.</div>
+                                        <div className="p-4 text-center text-gray-500">{t('reservation.price_info.no_price_info')}</div>
                                     )}
                                 </div>
 
                                 <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-zinc-800/30 rounded-xl mb-8">
                                     <span className="material-symbols-outlined text-primary text-lg">lightbulb</span>
                                     <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-300">
-                                        가이드 및 차량 등 공동 이용 비용이 포함되어 인원이 많을수록 저렴해집니다.
+                                        {t('reservation.price_info.description')}
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => setIsPriceModalOpen(false)}
                                     className="w-full bg-[#1e2a27] dark:bg-primary text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98]"
                                 >
-                                    확인
+                                    {t('reservation.buttons.confirm')}
                                 </button>
                             </div>
                             <div className="h-8"></div>
