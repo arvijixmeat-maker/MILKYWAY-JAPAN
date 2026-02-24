@@ -1,6 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
+/**
+ * Safely ensures a value is always a string array.
+ * Handles: parsed arrays, JSON strings, single strings, undefined/null.
+ */
+function ensureStringArray(val: any): string[] {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter((v: any) => typeof v === 'string' && v.length > 0);
+    if (typeof val === 'string') {
+        try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed)) return parsed.filter((v: any) => typeof v === 'string' && v.length > 0);
+        } catch {
+            // Not valid JSON, treat as single URL if it looks like one
+            if (val.startsWith('/') || val.startsWith('http')) return [val];
+        }
+    }
+    return [];
+}
+
 interface CategoryTab {
     id: string;
     name: string;
@@ -50,7 +69,7 @@ export const useHomeData = () => {
                 name: p.name,
                 category: p.category,
                 price: p.price,
-                mainImages: p.main_images || [],
+                mainImages: ensureStringArray(p.mainImages || p.main_images),
                 duration: p.duration,
                 tags: p.tags || []
             }));

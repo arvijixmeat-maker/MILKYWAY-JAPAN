@@ -44,11 +44,27 @@ export const AdventureSection: React.FC<AdventureSectionProps> = ({ products }) 
                     >
                         {/* Image */}
                         <div className="aspect-square rounded-xl overflow-hidden mb-3 bg-slate-100">
-                            <img
-                                src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                            />
+                            {product.mainImages?.[0] ? (
+                                <img
+                                    src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
+                                    alt={product.name}
+                                    loading="lazy"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        const target = e.currentTarget;
+                                        target.style.display = 'none';
+                                        target.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                                        const icon = document.createElement('span');
+                                        icon.className = 'material-symbols-outlined text-3xl text-slate-300';
+                                        icon.textContent = 'landscape';
+                                        target.parentElement?.appendChild(icon);
+                                    }}
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-3xl text-slate-300">landscape</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Content */}

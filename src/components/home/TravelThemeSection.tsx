@@ -101,12 +101,27 @@ export const TravelThemeSection: React.FC<TravelThemeSectionProps> = ({ products
                                 className="flex gap-4 cursor-pointer group"
                             >
                                 <div className="w-[84px] h-[84px] rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 relative">
-                                    <img
-                                        src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
-                                        alt={product.name}
-                                        loading="lazy"
-                                        className="w-full h-full object-contain"
-                                    />
+                                    {product.mainImages?.[0] ? (
+                                        <img
+                                            src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
+                                            alt={product.name}
+                                            loading="lazy"
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                                const target = e.currentTarget;
+                                                target.style.display = 'none';
+                                                target.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                                                const icon = document.createElement('span');
+                                                icon.className = 'material-symbols-outlined text-2xl text-slate-300';
+                                                icon.textContent = 'landscape';
+                                                target.parentElement?.appendChild(icon);
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-2xl text-slate-300">landscape</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex flex-col justify-center py-0.5 flex-1">
                                     <span className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 mb-1.5 block">

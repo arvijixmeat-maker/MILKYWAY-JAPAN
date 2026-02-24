@@ -18,7 +18,7 @@ export const GobiSection: React.FC = () => {
                         name: p.name,
                         category: p.category,
                         price: p.price,
-                        mainImages: p.main_images || [],
+                        mainImages: p.mainImages || p.main_images || [],
                         isPopular: p.is_popular,
                         tags: p.tags || []
                     })));

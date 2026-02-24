@@ -18,7 +18,7 @@ export const HovsgolSection: React.FC = () => {
                         name: p.name,
                         category: p.category,
                         price: p.price,
-                        mainImages: p.main_images || [],
+                        mainImages: p.mainImages || p.main_images || [],
                         duration: p.duration,
                         highlights: p.highlights || [],
                         isPopular: p.is_popular,
