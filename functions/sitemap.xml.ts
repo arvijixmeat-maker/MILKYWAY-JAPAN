@@ -11,7 +11,7 @@ interface Env {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
     try {
         const db = drizzle(context.env.DB);
-        
+
         // Fetch all active products
         const activeProducts = await db
             .select({
@@ -47,8 +47,32 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             });
         });
 
-        // Note: We would ideally fetch active Travel Guides / Magazines here as well.
-        // For now, we seed the products as they are the primary revenue drivers.
+        // Add dynamic travel guide (magazine) URLs using raw D1 query
+        let magazinesResult;
+        try {
+            magazinesResult = await context.env.DB.prepare(
+                "SELECT id, updated_at FROM magazines WHERE is_published = 1 OR is_active = 1"
+            ).all();
+        } catch (e) {
+            // column 'is_published' or 'is_active' may differ depending on migrations, fallback to all:
+            try {
+                magazinesResult = await context.env.DB.prepare("SELECT id, updated_at FROM magazines").all();
+            } catch (err) {
+                console.error("Failed to fetch magazines for sitemap:", err);
+            }
+        }
+
+        if (magazinesResult && magazinesResult.results) {
+            magazinesResult.results.forEach((mag: any) => {
+                const lastModFormat = mag.updated_at ? mag.updated_at.split(' ')[0] : today;
+                urls.push({
+                    loc: `${baseUrl}/travel-guide/${mag.id}`,
+                    lastmod: lastModFormat,
+                    changefreq: 'monthly',
+                    priority: '0.7'
+                });
+            });
+        }
 
         const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -78,7 +102,7 @@ ${urls.map(url => `  <url>
     <priority>1.0</priority>
   </url>
 </urlset>`;
-        
+
         return new Response(fallbackXml, {
             status: 200,
             headers: {

@@ -61,8 +61,22 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         else {
             const guideMatch = path.match(/^\/travel-guide\/([^/]+)$/);
             if (guideMatch) {
-                // Feature deferred: D1 table for magazines is not yet implemented in schema.
-                // We leave the RegEx match block so fallback logic can be added later.
+                const guideId = guideMatch[1];
+                try {
+                    // Fetch magazine using raw D1 prepare as Drizzle schema limits import
+                    const guide = await context.env.DB.prepare("SELECT * FROM magazines WHERE id = ?").bind(guideId).first();
+                    if (guide) {
+                        pageTitle = `${guide.title} | Milkyway Japan Travel Guide`;
+                        pageDescription = (guide.subtitle || guide.description || SEO_CONSTANTS.DESCRIPTION) as string;
+
+                        const imageStr = (guide.thumbnail || guide.image) as string;
+                        if (imageStr) {
+                            pageImage = getAbsoluteImageUrl(imageStr);
+                        }
+                    }
+                } catch (e) {
+                    console.log("Guide meta fetch skipped/failed:", e);
+                }
             }
         }
 
