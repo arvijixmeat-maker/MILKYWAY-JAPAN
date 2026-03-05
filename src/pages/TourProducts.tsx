@@ -1,8 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-// @ts-ignore
-import { FixedSizeList as List } from 'react-window';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
@@ -121,7 +118,8 @@ export const TourProducts: React.FC = () => {
                 return [];
             }
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 30, // 30 seconds
+        refetchOnWindowFocus: true, // Refetch when admin switches back to this tab
     });
 
     // Filter and Sort products
@@ -132,7 +130,8 @@ export const TourProducts: React.FC = () => {
         if (selectedCategory !== 'all') {
             const category = categories.find(c => c.id === selectedCategory);
             if (category) {
-                result = result.filter(p => p.category === category.name);
+                // Products save category by name (e.g., '중앙몽골'), so match by category.name
+                result = result.filter(p => p.category === category.name || p.category === category.id);
             }
         }
 
@@ -319,68 +318,25 @@ export const TourProducts: React.FC = () => {
                         <span className="text-xs text-gray-400">{t('products.total_count', { count: filteredProducts.length })}</span>
                     </div>
 
-                    {/* Virtualized Grid */}
-                    <div className="h-[600px] w-full">
-                        {/* @ts-ignore */}
-                        <AutoSizer>
-                            {({ height, width }: { height: number, width: number }) => {
-                                const COLUMN_COUNT = 2; // 2 items per row
-                                const GAP = 16;
-                                const itemWidth = (width - GAP) / COLUMN_COUNT;
-                                const rowHeight = itemWidth + 110; // Image aspect-square + content height estimate
-
-                                const rowCount = Math.ceil((isProductsLoading ? 6 : filteredProducts.length) / COLUMN_COUNT);
-
-                                const Row = ({ index, style }: { index: number, style: React.CSSProperties }) => {
-                                    const startIndex = index * COLUMN_COUNT;
-
-                                    // Render Skeletons if loading
-                                    if (isProductsLoading) {
-                                        return (
-                                            <div style={style} className="flex gap-4">
-                                                <div style={{ width: itemWidth, height: '100%' }}>
-                                                    <ProductSkeleton />
-                                                </div>
-                                                <div style={{ width: itemWidth, height: '100%' }}>
-                                                    <ProductSkeleton />
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-
-                                    const product1 = filteredProducts[startIndex];
-                                    const product2 = filteredProducts[startIndex + 1];
-
-                                    return (
-                                        <div style={{ ...style, marginBottom: GAP }} className="flex gap-4">
-                                            {product1 && (
-                                                <div style={{ width: itemWidth, height: '100%' }}>
-                                                    <ProductCard product={product1} />
-                                                </div>
-                                            )}
-                                            {product2 && (
-                                                <div style={{ width: itemWidth, height: '100%' }}>
-                                                    <ProductCard product={product2} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                };
-
-                                return (
-                                    <List
-                                        height={height}
-                                        itemCount={rowCount}
-                                        itemSize={rowHeight + GAP}
-                                        width={width}
-                                        className="no-scrollbar"
-                                    >
-                                        {Row}
-                                    </List>
-                                );
-                            }}
-                        </AutoSizer>
-                    </div>
+                    {/* Product Grid */}
+                    {isProductsLoading ? (
+                        <div className="grid grid-cols-2 gap-4">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <ProductSkeleton key={i} />
+                            ))}
+                        </div>
+                    ) : filteredProducts.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-4">
+                            {filteredProducts.map((product) => (
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                            <span className="material-symbols-outlined text-4xl mb-2 block">inventory_2</span>
+                            <p className="text-sm">해당 카테고리에 상품이 없습니다</p>
+                        </div>
+                    )}
                 </section>
 
                 {/* Section: Event Banners (Horizontal Scroll) */}

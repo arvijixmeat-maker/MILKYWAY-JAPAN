@@ -94,9 +94,9 @@ export const useHomeData = () => {
 
             return { products, tabs, magazines };
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 30, // 30 seconds
         gcTime: 1000 * 60 * 30,   // 30 minutes
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,
     });
 
     // Provide default empty values to match previous interface
