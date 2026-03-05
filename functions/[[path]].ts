@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { products } from '../src/db/schema/products';
-import { magazines } from '../src/db/schema/index'; // Assuming magazines are exported from index or similar, we will verify this
+
 import { eq } from 'drizzle-orm';
 import { SEO_CONSTANTS } from '../src/constants/seo';
 
@@ -61,24 +61,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         else {
             const guideMatch = path.match(/^\/travel-guide\/([^/]+)$/);
             if (guideMatch) {
-                const guideId = guideMatch[1];
-                // Note: We need to verify the exact magazines table structure, assuming 'magazines' for now.
-                // We will gracefully degrade if the table doesn't exist or schema differs.
-                try {
-                    const guideArr = await db.select().from(magazines).where(eq(magazines.id, guideId)).limit(1);
-                    if (guideArr.length > 0) {
-                        const guide = guideArr[0];
-                        pageTitle = `${guide.title} | Milkyway Japan Travel Guide`;
-                        pageDescription = guide.subtitle || guide.description || SEO_CONSTANTS.DESCRIPTION;
-
-                        const imageStr = guide.thumbnail || guide.image;
-                        if (imageStr) {
-                            pageImage = getAbsoluteImageUrl(imageStr);
-                        }
-                    }
-                } catch (e) {
-                    console.log("Guide meta fetch skipped/failed:", e);
-                }
+                // Feature deferred: D1 table for magazines is not yet implemented in schema.
+                // We leave the RegEx match block so fallback logic can be added later.
             }
         }
 
