@@ -39,10 +39,19 @@ app.get('/', async (c) => {
         result = await db.select().from(reservations).where(eq(reservations.userId, user.id)).orderBy(desc(reservations.createdAt)).all();
     }
 
-    // Parse JSON fields
+    // Parse JSON fields and map to legacy frontend schema interface
     const parsed = result.map(r => ({
         ...r,
-        assignedGuide: r.assignedGuideId ? JSON.parse(r.assignedGuideId) : undefined,
+        email: r.customerEmail,
+        phone: r.customerPhone,
+        date: r.startDate,
+        headcount: `${r.travelers}名`,
+        totalPeople: r.travelers,
+        totalAmount: r.totalPrice,
+        deposit: r.depositAmount,
+        balance: r.balanceAmount,
+        depositStatus: r.status === 'confirmed' ? 'paid' : 'unpaid',
+        balanceStatus: r.status === 'completed' ? 'paid' : 'unpaid',
         dailyAccommodations: r.dailyAccommodations ? JSON.parse(r.dailyAccommodations) : undefined,
         history: r.history ? JSON.parse(r.history) : undefined,
     }));
@@ -77,7 +86,16 @@ app.get('/:id', async (c) => {
 
     const parsed = {
         ...result,
-        assignedGuide: result.assignedGuideId ? JSON.parse(result.assignedGuideId) : undefined,
+        email: result.customerEmail,
+        phone: result.customerPhone,
+        date: result.startDate,
+        headcount: `${result.travelers}名`,
+        totalPeople: result.travelers,
+        totalAmount: result.totalPrice,
+        deposit: result.depositAmount,
+        balance: result.balanceAmount,
+        depositStatus: result.status === 'confirmed' ? 'paid' : 'unpaid',
+        balanceStatus: result.status === 'completed' ? 'paid' : 'unpaid',
         dailyAccommodations: result.dailyAccommodations ? JSON.parse(result.dailyAccommodations) : undefined,
         history: result.history ? JSON.parse(result.history) : undefined,
     };
@@ -115,18 +133,8 @@ app.put('/:id', async (c) => {
 
     // Flatten nested objects for DB storage if needed
     const updateData: any = { ...body };
-    if (body.assignedGuide) updateData.assignedGuideId = JSON.stringify(body.assignedGuide);
     if (body.dailyAccommodations) updateData.dailyAccommodations = JSON.stringify(body.dailyAccommodations);
     if (body.history) updateData.history = JSON.stringify(body.history);
-
-    // Remove fields that are not columns if necessary (like 'assignedGuide' object itself if we store ID)
-    delete updateData.assignedGuide;
-    // dailyAccommodations and history are stored as JSON strings in Text columns likely?
-    // Need to check schema. 
-    // 'reservations' schema definition:
-    // assignedGuideId: text('assigned_guide_id'), 
-    // dailyAccommodations: text('daily_accommodations'),
-    // history: text('history')
 
     await db.update(reservations).set(updateData).where(eq(reservations.id, id)).run();
 
@@ -134,8 +142,17 @@ app.put('/:id', async (c) => {
     const updated = await db.select().from(reservations).where(eq(reservations.id, id)).get();
 
     const parsed = {
-        ...updated,
-        assignedGuide: updated?.assignedGuideId ? JSON.parse(updated.assignedGuideId) : undefined,
+        ...updated!,
+        email: updated?.customerEmail,
+        phone: updated?.customerPhone,
+        date: updated?.startDate,
+        headcount: `${updated?.travelers}名`,
+        totalPeople: updated?.travelers,
+        totalAmount: updated?.totalPrice,
+        deposit: updated?.depositAmount,
+        balance: updated?.balanceAmount,
+        depositStatus: updated?.status === 'confirmed' ? 'paid' : 'unpaid',
+        balanceStatus: updated?.status === 'completed' ? 'paid' : 'unpaid',
         dailyAccommodations: updated?.dailyAccommodations ? JSON.parse(updated.dailyAccommodations) : undefined,
         history: updated?.history ? JSON.parse(updated.history) : undefined,
     };
@@ -165,25 +182,23 @@ app.post('/', async (c) => {
     try {
         await db.insert(reservations).values({
             id,
-            type: body.type ? String(body.type) : 'product',
+            type: body.type ? String(body.type) : 'tour',
             productName: String(productName),
-            userId: body.user_id || body.userId ? String(body.user_id || body.userId) : null,
+            userId: (body.user_id || body.userId) ? String(body.user_id || body.userId) : null,
             customerName: String(customerName),
-            email: String(customerEmail),
-            phone: String(customerPhone),
-            date: body.start_date || body.date ? String(body.start_date || body.date) : '',
-            headcount: body.headcount ? String(body.headcount) : `${body.total_people || 1}名`,
-            totalPeople: Number(body.total_people || body.totalPeople || 1),
+            customerEmail: String(customerEmail),
+            customerPhone: String(customerPhone),
+            travelers: Number(body.total_people || body.totalPeople || 1),
+            startDate: (body.start_date || body.date) ? String(body.start_date || body.date) : null,
+            endDate: body.end_date ? String(body.end_date) : null,
             status: body.status ? String(body.status) : 'pending_payment',
-            totalAmount: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
-            deposit: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
-            depositStatus: body.depositStatus ? String(body.depositStatus) : 'unpaid',
-            balance: Number(body.price_breakdown?.local ?? body.balance ?? 0),
-            balanceStatus: body.balanceStatus ? String(body.balanceStatus) : 'unpaid',
-            assignedGuideId: body.assignedGuide ? JSON.stringify(body.assignedGuide) : null,
+            totalPrice: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
+            depositAmount: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
+            balanceAmount: Number(body.price_breakdown?.local ?? body.balance ?? 0),
+            paymentMethod: body.paymentMethod ? String(body.paymentMethod) : null,
+            notes: body.notes ? String(body.notes) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,
             history: body.history ? JSON.stringify(body.history) : null,
-            areAssignmentsVisibleToUser: Boolean(body.areAssignmentsVisibleToUser || false),
         }).run();
 
         return c.json({ message: 'Reservation created', id }, 201);

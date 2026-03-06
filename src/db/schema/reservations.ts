@@ -2,41 +2,24 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const reservations = sqliteTable('reservations', {
-    id: text('id').primaryKey(), // UUID
-    type: text('type').notNull(), // 'product' | 'quote'
-
-    // Product Info
-    productName: text('product_name').notNull(),
-
-    // Customer Info
-    userId: text('user_id'), // Optional link to registered user
-    customerName: text('customer_name').notNull(),
-    email: text('email').notNull(),
-    phone: text('phone').notNull(),
-
-    // Trip Details
-    date: text('date').notNull(),
-    headcount: text('headcount').notNull(), // "2명"
-    totalPeople: integer('total_people').notNull(),
-
-    // Status
-    status: text('status').notNull().default('pending_payment'),
-
-    // Payment
-    totalAmount: integer('total_amount').notNull(),
-    deposit: integer('deposit').notNull(),
-    depositStatus: text('deposit_status').notNull().default('unpaid'),
-    balance: integer('balance').notNull(),
-    balanceStatus: text('balance_status').notNull().default('unpaid'),
-
-    // Logistics
-    assignedGuideId: text('assigned_guide_id'), // JSON or ID? keeping simple for now
-    dailyAccommodations: text('daily_accommodations'), // JSON string
-
-    // Meta
-    history: text('history'), // JSON string for logs
-    areAssignmentsVisibleToUser: integer('are_assignments_visible_to_user', { mode: 'boolean' }).default(false),
-
+    id: text('id').primaryKey(),
+    type: text('type').default('tour'),
+    productName: text('product_name'),
+    customerName: text('customer_name'),
+    customerEmail: text('customer_email'),
+    customerPhone: text('customer_phone'),
+    travelers: integer('travelers').default(1),
+    startDate: text('start_date'),
+    endDate: text('end_date'),
+    status: text('status').default('pending_payment'),
+    totalPrice: real('total_price').default(0),
+    depositAmount: real('deposit_amount').default(0),
+    balanceAmount: real('balance_amount').default(0),
+    paymentMethod: text('payment_method'),
+    dailyAccommodations: text('daily_accommodations').default('[]'),
+    notes: text('notes'),
+    history: text('history').default('[]'),
+    userId: text('user_id'),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
