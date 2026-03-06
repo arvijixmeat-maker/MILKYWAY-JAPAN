@@ -37,7 +37,8 @@ export const QuickLinks: React.FC = () => {
         queryFn: async () => {
             try {
                 const data = await api.quickLinks.list();
-                if (data && data.length > 0) {
+                // DB에 충분한 데이터가 있을 때만 사용 (3개 미만이면 기본값 사용)
+                if (data && Array.isArray(data) && data.length >= 3) {
                     return data.map((l: any) => ({
                         id: l.id,
                         icon: l.icon,
