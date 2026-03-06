@@ -24,6 +24,8 @@ import guides from './guides';
 import quotes from './quotes';
 import upload from './upload';
 import images from './images/[...path]';
+import quickLinks from './quick-links';
+import eventBanners from './event-banners';
 import migrateDb from './migrate-db';
 
 // Register routes
@@ -43,6 +45,8 @@ app.route('/guides', guides);
 app.route('/quotes', quotes);
 app.route('/upload', upload);
 app.route('/images', images);
+app.route('/quick-links', quickLinks);
+app.route('/event-banners', eventBanners);
 app.route('/migrate-db', migrateDb);
 
 export const onRequest = handle(app);
