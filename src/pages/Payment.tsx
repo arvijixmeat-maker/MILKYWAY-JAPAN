@@ -419,38 +419,19 @@ export const Payment: React.FC = () => {
                     <div className="h-2 bg-gray-50 dark:bg-zinc-800/30"></div>
 
                     <div className="px-5 py-8">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">{t('payment.payment_method_info')}</h3>
-                        <div className="border-2 border-primary rounded-2xl bg-white dark:bg-zinc-800 overflow-hidden shadow-sm">
-                            <div className="flex items-center gap-4 p-4 border-b border-gray-100 dark:border-zinc-700 bg-primary/5">
-                                <div className="size-10 bg-white dark:bg-zinc-700 rounded-full flex items-center justify-center shadow-sm">
-                                    <span className="material-symbols-outlined text-primary">account_balance</span>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">{t('payment.paypal_invoice_title', { defaultValue: '予約金のお支払いについて' })}</h3>
+                        <div className="border border-blue-100 dark:border-blue-900/50 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 overflow-hidden shadow-sm">
+                            <div className="flex items-center gap-4 p-5">
+                                <div className="size-12 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center shadow-sm shrink-0">
+                                    <span className="material-symbols-outlined text-[#003087] text-2xl">mail</span>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[#0e1a18] dark:text-white font-bold">{t('payment.bank_transfer')}</p>
-                                    <p className="text-xs text-gray-500">{t('payment.bank_transfer_desc')}</p>
-                                </div>
-                                <span className="material-symbols-outlined text-primary">check_circle</span>
-                            </div>
-                            <div className="p-5 space-y-4">
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('payment.deposit_account')}</span>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-[#0e1a18] dark:text-white">{bankAccount.bankName}</span>
-                                            <span className="text-lg font-bold text-[#0e1a18] dark:text-white tracking-tight">{bankAccount.accountNumber}</span>
-                                        </div>
-                                        <button
-                                            onClick={handleCopy}
-                                            className="px-3 py-1.5 bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 transition-colors flex items-center gap-1 active:scale-95"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">content_copy</span>
-                                            {t('payment.copy')}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('payment.account_holder')}</span>
-                                    <p className="text-sm font-bold text-[#0e1a18] dark:text-white">{bankAccount.accountHolder}</p>
+                                    <p className="text-[#0e1a18] dark:text-white font-bold text-[15px] mb-1">{t('payment.paypal_invoice_method', { defaultValue: 'PayPal 請求書 (Eメール)' })}</p>
+                                    <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                                        {t('payment.paypal_invoice_desc1', { defaultValue: '予約申し込み完了後、ご入力いただいたメールアドレス宛にPayPalの請求書をお送りいたします。' })}
+                                        <br />
+                                        {t('payment.paypal_invoice_desc2', { defaultValue: 'メール内のリンクから、クレジットカード等で安全にお支払いいただけます。' })}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -460,11 +441,7 @@ export const Payment: React.FC = () => {
                                 {t('payment.deposit_notices.title')}
                             </p>
                             <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-2 list-disc pl-4">
-                                <li>
-                                    {t('payment.deposit_notices.name_match').split(t('payment.deposit_notices.name_match_highlight'))[0]}
-                                    <span className="text-[#0e1a18] dark:text-white font-bold">{t('payment.deposit_notices.name_match_highlight')}</span>
-                                    {t('payment.deposit_notices.name_match').split(t('payment.deposit_notices.name_match_highlight'))[1]}
-                                </li>
+                                <li>{t('payment.paypal_notices.check_email', { defaultValue: '請求書メールにお支払い期限が記載されています。期限内に決済をお願いします。' })}</li>
                                 <li>{t('payment.deposit_notices.auto_cancel')}</li>
                                 <li>{t('payment.deposit_notices.local_payment')}</li>
                             </ul>
