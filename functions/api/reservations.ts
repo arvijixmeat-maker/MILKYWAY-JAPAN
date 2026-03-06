@@ -149,7 +149,13 @@ app.post('/', async (c) => {
     const db = drizzle(c.env.DB);
 
     // Basic validation (can be improved with Zod)
-    if (!body.productName || !body.customerName) {
+    const productName = body.product_name || body.productName;
+    const customerInfo = body.customer_info || {};
+    const customerName = customerInfo.name || body.customerName;
+    const customerEmail = customerInfo.email || body.email;
+    const customerPhone = customerInfo.phone || body.phone;
+
+    if (!productName || !customerName) {
         return c.json({ error: 'Missing required fields' }, 400);
     }
 
@@ -160,19 +166,19 @@ app.post('/', async (c) => {
         await db.insert(reservations).values({
             id,
             type: body.type || 'product',
-            productName: body.productName,
-            userId: body.userId,
-            customerName: body.customerName,
-            email: body.email,
-            phone: body.phone,
-            date: body.date,
-            headcount: body.headcount,
-            totalPeople: body.totalPeople || 1,
+            productName: productName,
+            userId: body.user_id || body.userId,
+            customerName: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            date: body.start_date || body.date,
+            headcount: body.total_people || body.headcount,
+            totalPeople: body.total_people || body.totalPeople || 1,
             status: body.status || 'pending_payment',
-            totalAmount: body.totalAmount || 0,
-            deposit: body.deposit || 0,
+            totalAmount: body.price_breakdown?.total || body.totalAmount || 0,
+            deposit: body.price_breakdown?.deposit || body.deposit || 0,
             depositStatus: body.depositStatus || 'unpaid',
-            balance: body.balance || 0,
+            balance: body.price_breakdown?.local || body.balance || 0,
             balanceStatus: body.balanceStatus || 'unpaid',
             assignedGuideId: body.assignedGuide ? JSON.stringify(body.assignedGuide) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,

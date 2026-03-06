@@ -374,7 +374,7 @@ export const Payment: React.FC = () => {
                                     value={customerInfo.phone}
                                     onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm text-[#0e1a18] dark:text-white placeholder:text-gray-400 transition-all focus:bg-white dark:focus:bg-zinc-800 outline-none focus:border-primary"
-                                    placeholder="010-0000-0000"
+                                    placeholder="090-0000-0000"
                                     type="tel"
                                 />
                             </div>
