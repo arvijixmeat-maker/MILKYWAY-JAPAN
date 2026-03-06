@@ -1,9 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import prerender from '@prerenderer/rollup-plugin'
+import PuppeteerRenderer from '@prerenderer/renderer-puppeteer'
+import path from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    prerender({
+      routes: ['/', '/products', '/travel-guide', '/faq'],
+      renderer: new PuppeteerRenderer({
+        renderAfterTime: 2000,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      }),
+      staticDir: path.join(__dirname, 'dist'),
+      fallback: 'index.html',
+    })
+  ],
   build: {
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
