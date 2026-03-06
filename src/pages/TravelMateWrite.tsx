@@ -14,7 +14,7 @@ export const TravelMateWrite: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [count, setCount] = useState(4);
-    const [gender, setGender] = useState('무관');
+    const [gender, setGender] = useState('any');
     const [selectedAges, setSelectedAges] = useState<string[]>(['30s']);
     const [selectedRegion, setSelectedRegion] = useState('central_mongolia');
     const [styles, setStyles] = useState<string[]>(['healing']);

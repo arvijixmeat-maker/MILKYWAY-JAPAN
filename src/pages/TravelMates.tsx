@@ -72,12 +72,12 @@ export const TravelMates: React.FC = () => {
             const tabLabel = t(`travel_mates.tabs.${activeTab}`);
             regionMatch = post.region && post.region.includes(tabLabel) || post.region.includes(activeTab);
 
-            // Fallback for kr database
-            if (activeTab === 'central_mongolia' && post.region.includes('중앙몽골')) regionMatch = true;
-            if (activeTab === 'gobi_desert' && post.region.includes('고비사막')) regionMatch = true;
-            if (activeTab === 'khuvsgul' && post.region.includes('홉스골')) regionMatch = true;
-            if (activeTab === 'trekking' && post.region.includes('트레킹')) regionMatch = true;
-            if (activeTab === 'golf' && post.region.includes('골프')) regionMatch = true;
+            // Fallback for kr/ja database
+            if (activeTab === 'central_mongolia' && (post.region.includes('中央モンゴル') || post.region.includes('중앙몽골'))) regionMatch = true;
+            if (activeTab === 'gobi_desert' && (post.region.includes('ゴビ砂漠') || post.region.includes('고비사막'))) regionMatch = true;
+            if (activeTab === 'khuvsgul' && (post.region.includes('フブスグル') || post.region.includes('홉스괨'))) regionMatch = true;
+            if (activeTab === 'trekking' && (post.region.includes('トレッキング') || post.region.includes('트레킹'))) regionMatch = true;
+            if (activeTab === 'golf' && (post.region.includes('ゴルフ') || post.region.includes('골프'))) regionMatch = true;
         }
 
         const matchesTab = regionMatch;
@@ -115,14 +115,14 @@ export const TravelMates: React.FC = () => {
         // Gender Filter
         if (matchesFilters && filters.gender) {
             // gender filter logic: 
-            // DB has '남성', '여성', '무관'. 
+            // DB has '男性'/'남성', '女性'/'여성', '不問'/'무관'. 
             // We need to map filter selection to these.
             // filter.gender values: 'male', 'female', ''
 
             if (filters.gender === 'male') {
-                if (post.gender !== '남성' && post.gender !== '무관' && post.gender !== 'male' && post.gender !== 'any') matchesFilters = false;
+                if (post.gender !== '男性' && post.gender !== '不問' && post.gender !== '남성' && post.gender !== '무관' && post.gender !== 'male' && post.gender !== 'any') matchesFilters = false;
             } else if (filters.gender === 'female') {
-                if (post.gender !== '여성' && post.gender !== '무관' && post.gender !== 'female' && post.gender !== 'any') matchesFilters = false;
+                if (post.gender !== '女性' && post.gender !== '不問' && post.gender !== '여성' && post.gender !== '무관' && post.gender !== 'female' && post.gender !== 'any') matchesFilters = false;
             }
         }
 
@@ -131,26 +131,26 @@ export const TravelMates: React.FC = () => {
             // filters.age is like '20s', '30s'. 
             // DB ageGroups is likely ['20대', '30대'] or ['20s', '30s'].
             // Need mapping if DB is Korean.
-            const ageMap: Record<string, string> = { '20s': '20대', '30s': '30대', '40s': '40대', '50s_plus': '50대+' };
-            const targetAge = ageMap[filters.age] || filters.age;
+            const ageMap: Record<string, string[]> = { '20s': ['20代', '20대'], '30s': ['30代', '30대'], '40s': ['40代', '40대'], '50s_plus': ['50代+', '50대+'] };
+            const targetAges = ageMap[filters.age] || [filters.age];
 
-            if (!post.ageGroups.some((g: string) => g === targetAge || g === filters.age)) matchesFilters = false;
+            if (!post.ageGroups.some((g: string) => targetAges.includes(g) || g === filters.age)) matchesFilters = false;
         }
 
         // Style Filter
         if (matchesFilters && filters.style) {
             // filters.style is 'healing', 'photo', etc.
-            // DB styles is ['🏞️ 힐링', ...]
-            const styleMap: Record<string, string> = {
-                'healing': '🏞️ 힐링',
-                'photo': '📸 인생샷',
-                'activity': '💪 액티비티',
-                'food': '🍽️ 맛집 탐방',
-                'camping': '⛺ 캠핑/차박'
+            // DB styles is ['🏞️ ヒーリング', ...] or ['🏞️ 힐링', ...]
+            const styleMap: Record<string, string[]> = {
+                'healing': ['🏞️ ヒーリング', '🏞️ 힐링'],
+                'photo': ['📸 ベストショット', '📸 인생샷'],
+                'activity': ['💪 アクティビティ', '💪 액티비티'],
+                'food': ['🍽️ グルメ巡り', '🍽️ 맛집 탐방'],
+                'camping': ['⛺ キャンプ/車中泊', '⛺ 캠핑/차박']
             };
-            const targetStyle = styleMap[filters.style] || filters.style;
+            const targetStyles = styleMap[filters.style] || [filters.style];
 
-            if (!post.styles.some((s: string) => s === targetStyle || s === filters.style)) matchesFilters = false;
+            if (!post.styles.some((s: string) => targetStyles.includes(s) || s === filters.style)) matchesFilters = false;
         }
 
         return matchesTab && matchesSearch && matchesFilters;

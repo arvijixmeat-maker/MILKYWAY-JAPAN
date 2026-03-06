@@ -117,6 +117,7 @@ export const TravelGuideDetail: React.FC = () => {
                 if (node.nodeType === Node.ELEMENT_NODE &&
                     element.tagName === 'DIV' &&
                     element.textContent &&
+                    element.textContent.includes('イメージスライダー') ||
                     element.textContent.includes('이미지 슬라이더') &&
                     element.querySelector('img')) {
                     // This is likely a zombie thumbnail artifact. Skip it.
