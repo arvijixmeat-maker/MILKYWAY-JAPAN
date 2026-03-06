@@ -334,7 +334,7 @@ export const TourProducts: React.FC = () => {
                     ) : (
                         <div className="py-12 text-center text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
                             <span className="material-symbols-outlined text-4xl mb-2 block">inventory_2</span>
-                            <p className="text-sm">해당 카테고리에 상품이 없습니다</p>
+                            <p className="text-sm">該当カテゴリに商品がありません</p>
                         </div>
                     )}
                 </section>

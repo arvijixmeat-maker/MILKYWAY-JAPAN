@@ -40,10 +40,10 @@ export const HovsgolSection: React.FC = () => {
         <section className="py-8 px-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-background-dark">
             <div className="flex items-end justify-between mb-6">
                 <div>
-                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">푸른 진주 홉스굴</h3>
-                    <p className="text-[13px] text-slate-500 mt-1">몽골의 어머니라 불리는 거대한 호수</p>
+                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">青い真珠 フブスグル</h3>
+                    <p className="text-[13px] text-slate-500 mt-1">モンゴルの母と呼ばれる巨大な湖</p>
                 </div>
-                <button onClick={() => navigate('/products?category=khuvsgul')} className="text-primary text-sm font-bold flex items-center">전체보기 <span className="material-symbols-outlined text-sm">chevron_right</span></button>
+                <button onClick={() => navigate('/products?category=khuvsgul')} className="text-primary text-sm font-bold flex items-center">すべて見る <span className="material-symbols-outlined text-sm">chevron_right</span></button>
             </div>
             <div className="space-y-4">
                 {khuvsgulProducts.length > 0 ? (
@@ -61,7 +61,7 @@ export const HovsgolSection: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col justify-center py-1 flex-1">
                                     <span className="text-[10px] font-bold text-primary mb-1">
-                                        {product.isPopular ? '인기 급상승' : (product.tags?.[0] || '추천')}
+                                        {product.isPopular ? '人気急上昇' : (product.tags?.[0] || 'おすすめ')}
                                     </span>
                                     <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">
                                         {product.name}
@@ -86,7 +86,7 @@ export const HovsgolSection: React.FC = () => {
                     ))
                 ) : (
                     <div className="text-center py-8 text-slate-400 text-sm">
-                        등록된 홉스굴 상품이 없습니다.
+                        登録されたフブスグル商品がありません。
                     </div>
                 )}
             </div>

@@ -103,13 +103,13 @@ const ConfirmModal: React.FC<{
                         onClick={onCancel}
                         className="flex-1 py-4 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
-                        {options.cancelText || '취소'}
+                        {options.cancelText || 'キャンセル'}
                     </button>
                     <button
                         onClick={onConfirm}
                         className={`flex-1 py-4 font-bold transition-colors ${style.confirmBtn}`}
                     >
-                        {options.confirmText || '확인'}
+                        {options.confirmText || '確認'}
                     </button>
                 </div>
             </div>

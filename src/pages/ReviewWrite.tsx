@@ -64,7 +64,7 @@ export const ReviewWrite: React.FC = () => {
 
             setImages(prev => [...prev, ...uploadedUrls]);
         } catch (error) {
-            alert('이미지 업로드에 실패했습니다.');
+            alert('画像のアップロードに失敗しました。');
         }
 
         // Reset input
@@ -81,7 +81,7 @@ export const ReviewWrite: React.FC = () => {
         try {
             const me = await api.auth.me();
             if (!me) {
-                alert('로그인이 필요합니다.');
+                alert('ログインが必要です。');
                 return;
             }
 
@@ -90,11 +90,11 @@ export const ReviewWrite: React.FC = () => {
             // Let's assume me object has necessary fields or fallback.
             await api.reviews.create({
                 user_id: me.id,
-                author_name: me.user_metadata?.full_name || me.name || me.email?.split('@')[0] || '익명',
-                visit_date: selectedReservation.startDate.slice(0, 7) + ' 방문',
+                author_name: me.user_metadata?.full_name || me.name || me.email?.split('@')[0] || '匿名',
+                visit_date: selectedReservation.startDate.slice(0, 7) + ' 訪問',
                 rating: rating,
                 product_name: selectedReservation.productName,
-                title: `${selectedReservation.productName} 후기`,
+                title: `${selectedReservation.productName} レビュー`,
                 content: content,
                 images: images,
                 user_image: me.user_metadata?.avatar_url || me.avatar_url
@@ -103,7 +103,7 @@ export const ReviewWrite: React.FC = () => {
             setIsSuccessModalOpen(true);
         } catch (error: any) {
             console.error('Failed to save review:', error);
-            alert('리뷰 저장에 실패했습니다: ' + (error.message || 'Unknown error'));
+            alert('レビューの保存に失敗しました: ' + (error.message || 'Unknown error'));
         }
     };
 
@@ -118,13 +118,13 @@ export const ReviewWrite: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">후기 작성</h2>
+                    <h2 className="text-[#0e1a18] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">レビュー作成</h2>
                 </div>
 
                 <div className="flex-1 pb-32">
                     {/* Section: Tour Selection */}
                     <div className="px-4 pt-6">
-                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">최근 다녀온 투어</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">最近参加したツアー</h3>
                         <div className="flex flex-col gap-3">
                             {completedReservations && completedReservations.length > 0 ? (
                                 completedReservations.map((reservation) => (
@@ -155,8 +155,8 @@ export const ReviewWrite: React.FC = () => {
                                 ))
                             ) : (
                                 <div className="text-center py-8 text-gray-400">
-                                    <p>완료된 투어가 없습니다.</p>
-                                    <p className="text-xs pt-2">예약 확정 및 여행 완료 후 작성 가능합니다.</p>
+                                    <p>完了したツアーはありません。</p>
+                                    <p className="text-xs pt-2">予約確定・旅行完了後に作成できます。</p>
                                 </div>
                             )}
                         </div>
@@ -164,8 +164,8 @@ export const ReviewWrite: React.FC = () => {
 
                     {/* Section: Rating */}
                     <div className="px-4 pt-8">
-                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-2">이번 여행은 어떠셨나요?</h3>
-                        <p className="text-gray-500 text-sm mb-6">별점을 선택해 주세요.</p>
+                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-2">今回の旅行はいかがでしたか？</h3>
+                        <p className="text-gray-500 text-sm mb-6">星の数を選択してください。</p>
                         <div className="flex justify-center gap-2 py-4">
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <span
@@ -183,7 +183,7 @@ export const ReviewWrite: React.FC = () => {
                     {/* Section: Photo Upload */}
                     <div className="px-4 pt-8">
                         <div className="flex justify-between items-end mb-4">
-                            <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">사진 업로드</h3>
+                            <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">写真アップロード</h3>
                             <p className="text-gray-500 text-sm"><span className="text-primary font-bold">{images.length}</span>/10</p>
                         </div>
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -198,7 +198,7 @@ export const ReviewWrite: React.FC = () => {
                                     disabled={images.length >= 10}
                                 />
                                 <span className="material-symbols-outlined text-gray-400">add_a_photo</span>
-                                <span className="text-[10px] text-gray-400 mt-1 font-bold">추가</span>
+                                <span className="text-[10px] text-gray-400 mt-1 font-bold">追加</span>
                             </label>
 
                             {/* Uploaded Images */}
@@ -221,12 +221,12 @@ export const ReviewWrite: React.FC = () => {
 
                     {/* Section: Detailed Review */}
                     <div className="px-4 pt-8 pb-10">
-                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">상세 후기</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">詳細レビュー</h3>
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             className="w-full min-h-[200px] p-4 rounded-xl bg-white dark:bg-[#1a2e2a] border border-gray-100 dark:border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-base resize-none transition-all placeholder:text-gray-400 text-[#0e1a18] dark:text-white"
-                            placeholder="몽골에서의 소중한 추억을 공유해주세요 (날씨, 가이드, 숙소 등 자유로운 의견)"
+                            placeholder="モンゴルでの大切な思い出を共有してください（天気、ガイド、宿泊施設など自由なご意見）"
                         ></textarea>
                     </div>
                 </div>
@@ -239,7 +239,7 @@ export const ReviewWrite: React.FC = () => {
                             disabled={!content.trim() || !selectedReservationId}
                             className="w-full bg-primary hover:bg-[#19a186] disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-lg font-bold py-4 rounded-xl shadow-lg transition-colors active:scale-[0.98]"
                         >
-                            작성 완료
+                            作成完了
                         </button>
                     </div>
                     <div className="h-4"></div> {/* iOS Home Indicator Area */}
@@ -254,10 +254,10 @@ export const ReviewWrite: React.FC = () => {
                                     <span className="material-symbols-outlined text-primary text-4xl fill-current" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                                 </div>
                                 <h3 className="text-[#0e1a18] dark:text-white tracking-tight text-xl font-bold leading-tight text-center px-2">
-                                    후기가 소중하게<br />등록되었습니다
+                                    レビューが<br />登録されました
                                 </h3>
                                 <p className="text-zinc-500 dark:text-zinc-400 text-sm font-normal leading-relaxed pt-3 px-4 text-center">
-                                    소중한 후기는 다른 여행자들에게<br />큰 도움이 됩니다.
+                                    大切なレビューは他の旅行者にとって<br />大きな助けになります。
                                 </p>
                             </div>
                             <div className="flex pt-2">
@@ -265,7 +265,7 @@ export const ReviewWrite: React.FC = () => {
                                     onClick={() => navigate('/reviews')}
                                     className="flex h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-primary text-white text-base font-bold leading-normal tracking-wide active:scale-[0.98] transition-transform hover:bg-[#19a186]"
                                 >
-                                    <span className="truncate">확인</span>
+                                    <span className="truncate">確認</span>
                                 </button>
                             </div>
                         </div>
