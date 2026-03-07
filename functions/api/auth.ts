@@ -152,9 +152,9 @@ app.get('/login/google/callback', async (c) => {
         c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
 
         return c.redirect("/"); // Redirect to home on success
-    } catch (e) {
-        console.error(e);
-        return c.json({ error: "Authentication failed" }, 500);
+    } catch (e: any) {
+        console.error('Google OAuth callback error:', e);
+        return c.json({ error: "Authentication failed", detail: e?.message || String(e) }, 500);
     }
 });
 
