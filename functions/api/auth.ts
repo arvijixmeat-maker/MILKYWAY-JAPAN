@@ -72,7 +72,9 @@ app.post('/login', async (c) => {
 
 // GET /api/auth/login/google
 app.get('/login/google', async (c) => {
-    const google = new Google(c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173/api/auth/login/google/callback"); // TODO: Update callback URL for production
+    const origin = new URL(c.req.url).origin;
+    const callbackUrl = `${origin}/api/auth/login/google/callback`;
+    const google = new Google(c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, callbackUrl);
 
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
@@ -109,7 +111,9 @@ app.get('/login/google/callback', async (c) => {
         return c.json({ error: "Invalid state" }, 400);
     }
 
-    const google = new Google(c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173/api/auth/login/google/callback"); // TODO: Production URL
+    const origin = new URL(c.req.url).origin;
+    const callbackUrl = `${origin}/api/auth/login/google/callback`;
+    const google = new Google(c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, callbackUrl);
 
     try {
         const tokens = await google.validateAuthorizationCode(code, storedCodeVerifier);
