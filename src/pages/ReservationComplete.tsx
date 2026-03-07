@@ -112,15 +112,15 @@ export const ReservationComplete: React.FC = () => {
                         <div className="h-px bg-gray-200 dark:bg-zinc-700 w-full mb-6"></div>
                         <div className="flex flex-col gap-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
                             <div className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-green-500 text-lg">mark_email_read</span>
+                                <span className="material-symbols-outlined text-green-500 text-lg shrink-0 mt-0.5">mark_email_read</span>
                                 <p>ご登録のEメール宛に決済用のPayPalご請求メールをお送りします。</p>
                             </div>
                             <div className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-green-500 text-lg">credit_score</span>
+                                <span className="material-symbols-outlined text-green-500 text-lg shrink-0 mt-0.5">credit_score</span>
                                 <p>メール内のリンクから、クレジットカード等で安全・簡単にお支払いいただけます。</p>
                             </div>
                             <div className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-orange-500 text-lg">warning</span>
+                                <span className="material-symbols-outlined text-orange-500 text-lg shrink-0 mt-0.5">warning</span>
                                 <p>お支払いが確認できない場合、自動的にキャンセルとなることがございます。</p>
                             </div>
                         </div>

@@ -101,29 +101,28 @@ export const MyReservations: React.FC = () => {
                 const quoteData = await api.quotes.list();
 
                 // Client-side filter if API returns everything (Safety)
-                // If API is truly user-scoped, this filter is redundant but harmless.
-                const myReservations = Array.isArray(resData) ? resData.filter((r: any) => r.user_id === me.id) : [];
-                const myQuotes = Array.isArray(quoteData) ? quoteData.filter((q: any) => q.user_id === me.id && ['personal', 'custom', 'business'].includes(q.type)) : [];
-
+                // Fallback to check both user_id and userId
+                const myReservations = Array.isArray(resData) ? resData.filter((r: any) => r.user_id === me.id || r.userId === me.id) : [];
+                const myQuotes = Array.isArray(quoteData) ? quoteData.filter((q: any) => (q.user_id === me.id || q.userId === me.id) && ['personal', 'custom', 'business'].includes(q.type)) : [];
 
                 if (myReservations) {
                     const mappedRes = myReservations.map((r: any) => ({
                         id: r.id,
                         status: r.status,
-                        productName: r.product_name,
-                        startDate: r.start_date,
-                        endDate: r.end_date,
+                        productName: r.product_name || r.productName,
+                        startDate: r.start_date || r.startDate || r.date,
+                        endDate: r.end_date || r.endDate,
                         duration: r.duration,
-                        totalPeople: r.total_people,
-                        priceBreakdown: r.price_breakdown,
-                        bankAccount: r.bank_account,
-                        createdAt: r.created_at,
-                        contractUrl: r.contract_url,
-                        itineraryUrl: r.itinerary_url,
+                        totalPeople: r.total_people || r.travelers || r.totalPeople,
+                        priceBreakdown: r.price_breakdown || r.priceBreakdown,
+                        bankAccount: r.bank_account || r.bankAccount,
+                        createdAt: r.created_at || r.createdAt,
+                        contractUrl: r.contract_url || r.contractUrl,
+                        itineraryUrl: r.itinerary_url || r.itineraryUrl,
                         history: r.history || [],
-                        assignedGuide: r.assigned_guide,
-                        dailyAccommodations: r.daily_accommodations,
-                        areAssignmentsVisibleToUser: r.are_assignments_visible_to_user
+                        assignedGuide: r.assigned_guide || r.assignedGuide,
+                        dailyAccommodations: r.daily_accommodations || r.dailyAccommodations,
+                        areAssignmentsVisibleToUser: r.are_assignments_visible_to_user || r.areAssignmentsVisibleToUser
                     }));
                     // Sor by created_at desc
                     setReservations(mappedRes.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -134,12 +133,12 @@ export const MyReservations: React.FC = () => {
                         id: e.id,
                         status: e.status === 'new' ? 'waiting' : e.status,
                         title: e.title || `${t('my_reservations.labels.custom_quote')} (${e.destination || t('my_reservations.labels.mongolia')})`,
-                        date: e.travel_dates || e.period,
+                        date: e.travel_dates || e.period || e.travelDates,
                         type: t('my_reservations.labels.custom_quote'),
                         people: e.travelers || e.headcount,
-                        requestDate: new Date(e.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'ko-KR'),
+                        requestDate: new Date(e.created_at || e.createdAt).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'ko-KR'),
                         destination: e.destination,
-                        createdAt: e.created_at
+                        createdAt: e.created_at || e.createdAt
                     }));
                     setQuotes(mappedQuotes.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
                 }

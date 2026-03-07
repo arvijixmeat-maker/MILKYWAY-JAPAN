@@ -50,6 +50,11 @@ app.get('/', async (c) => {
         totalAmount: r.totalPrice,
         deposit: r.depositAmount,
         balance: r.balanceAmount,
+        price_breakdown: {
+            total: r.totalPrice,
+            deposit: r.depositAmount,
+            local: r.balanceAmount
+        },
         depositStatus: r.status === 'confirmed' ? 'paid' : 'unpaid',
         balanceStatus: r.status === 'completed' ? 'paid' : 'unpaid',
         dailyAccommodations: r.dailyAccommodations ? JSON.parse(r.dailyAccommodations) : undefined,
@@ -97,6 +102,11 @@ app.get('/:id', async (c) => {
         totalAmount: result.totalPrice,
         deposit: result.depositAmount,
         balance: result.balanceAmount,
+        price_breakdown: {
+            total: result.totalPrice,
+            deposit: result.depositAmount,
+            local: result.balanceAmount
+        },
         depositStatus: result.status === 'confirmed' ? 'paid' : 'unpaid',
         balanceStatus: result.status === 'completed' ? 'paid' : 'unpaid',
         dailyAccommodations: result.dailyAccommodations ? JSON.parse(result.dailyAccommodations) : undefined,
@@ -154,6 +164,11 @@ app.put('/:id', async (c) => {
         totalAmount: updated?.totalPrice,
         deposit: updated?.depositAmount,
         balance: updated?.balanceAmount,
+        price_breakdown: {
+            total: updated?.totalPrice,
+            deposit: updated?.depositAmount,
+            local: updated?.balanceAmount
+        },
         depositStatus: updated?.status === 'confirmed' ? 'paid' : 'unpaid',
         balanceStatus: updated?.status === 'completed' ? 'paid' : 'unpaid',
         dailyAccommodations: updated?.dailyAccommodations ? JSON.parse(updated.dailyAccommodations) : undefined,
