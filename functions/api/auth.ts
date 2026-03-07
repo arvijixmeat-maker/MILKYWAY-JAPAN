@@ -117,9 +117,10 @@ app.get('/login/google/callback', async (c) => {
 
     try {
         const tokens = await google.validateAuthorizationCode(code, storedCodeVerifier);
+        const accessToken = tokens.accessToken();
         const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
             headers: {
-                Authorization: `Bearer ${tokens.accessToken}`
+                Authorization: `Bearer ${accessToken}`
             }
         });
         const googleUser: any = await response.json();
