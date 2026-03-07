@@ -430,5 +430,22 @@
             "login_required": "ログインが必要です。",
             "save_failed": "予約保存の失敗: "
         }
+    },
+    "review_detail": {
+        "title": "レビュー詳細",
+        "not_found": "レビューが見つかりません。",
+        "loading": "ローディング中...",
+        "helpful_question": "このレビューは参考になりましたか？",
+        "helpful_button": "参考になる",
+        "comments": "コメント",
+        "reply": "返信する",
+        "cancel": "キャンセル",
+        "reply_placeholder": "返信を入力してください",
+        "submit": "登録",
+        "no_comments": "最初のコメントを残してみましょう！",
+        "comment_placeholder": "コメントを入力してください",
+        "login_required": "ログインが必要なサービスです。",
+        "add_comment_failed": "コメントの登録中にエラーが発生しました。",
+        "add_reply_failed": "返信の登録中にエラーが発生しました。"
     }
 }

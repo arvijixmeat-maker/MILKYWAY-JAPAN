@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { BottomNav } from '../components/layout/BottomNav';
@@ -7,6 +8,7 @@ import { BottomNav } from '../components/layout/BottomNav';
 export const ReviewDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const { t } = useTranslation();
 
     const [review, setReview] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export const ReviewDetail: React.FC = () => {
 
     const handleAddComment = async () => {
         if (!currentUser) {
-            alert('로그인이 필요한 서비스입니다.');
+            alert(t('review_detail.login_required'));
             // navigate('/login'); // Optional functionality
             return;
         }
@@ -99,7 +101,7 @@ export const ReviewDetail: React.FC = () => {
             setNewComment('');
         } catch (error) {
             console.error('Failed to add comment:', error);
-            alert('댓글 등록 중 오류가 발생했습니다.');
+            alert(t('review_detail.add_comment_failed'));
         } finally {
             setSubmitting(false);
         }
@@ -107,7 +109,7 @@ export const ReviewDetail: React.FC = () => {
 
     const handleAddReply = async (commentId: string) => {
         if (!currentUser) {
-            alert('로그인이 필요한 서비스입니다.');
+            alert(t('review_detail.login_required'));
             return;
         }
         if (!replyContent.trim() || !review || !id) return;
@@ -131,7 +133,7 @@ export const ReviewDetail: React.FC = () => {
             setReplyingTo(null);
         } catch (error) {
             console.error('Failed to add reply:', error);
-            alert('답글 등록 중 오류가 발생했습니다.');
+            alert(t('review_detail.add_reply_failed'));
         } finally {
             setSubmitting(false);
         }
@@ -139,7 +141,7 @@ export const ReviewDetail: React.FC = () => {
 
     const handleToggleHelpful = async () => {
         if (!currentUser) {
-            alert('로그인이 필요한 서비스입니다.');
+            alert(t('review_detail.login_required'));
             return;
         }
         if (!review || !id) return;
@@ -174,7 +176,7 @@ export const ReviewDetail: React.FC = () => {
     if (loading) {
         return (
             <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen flex items-center justify-center">
-                <p className="text-gray-400">로딩 중...</p>
+                <p className="text-gray-400">{t('review_detail.loading')}</p>
             </div>
         );
     }
@@ -182,7 +184,7 @@ export const ReviewDetail: React.FC = () => {
     if (!review) {
         return (
             <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen flex items-center justify-center">
-                <p className="text-gray-400">리뷰를 찾을 수 없습니다.</p>
+                <p className="text-gray-400">{t('review_detail.not_found')}</p>
             </div>
         );
     }
@@ -198,7 +200,7 @@ export const ReviewDetail: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-[17px] font-bold leading-tight tracking-tight flex-1 text-center pr-10 text-[#0e1a18] dark:text-white">리뷰 상세보기</h2>
+                    <h2 className="text-[17px] font-bold leading-tight tracking-tight flex-1 text-center pr-10 text-[#0e1a18] dark:text-white">{t('review_detail.title')}</h2>
                 </div>
             </nav>
 
@@ -281,7 +283,7 @@ export const ReviewDetail: React.FC = () => {
 
                     {/* Helpful Button */}
                     <div className="py-6 border-y border-gray-100 dark:border-zinc-800 flex flex-col items-center gap-4">
-                        <p className="text-[15px] font-semibold text-[#4e5968] dark:text-gray-400">이 리뷰가 도움이 되었나요?</p>
+                        <p className="text-[15px] font-semibold text-[#4e5968] dark:text-gray-400">{t('review_detail.helpful_question')}</p>
                         <button
                             onClick={handleToggleHelpful}
                             className={`flex items-center gap-2 px-8 py-3 rounded-full border font-bold text-[15px] active:scale-95 transition-transform ${review.helpfulUsers?.includes(currentUser?.id)
@@ -290,7 +292,7 @@ export const ReviewDetail: React.FC = () => {
                                 }`}
                         >
                             <span className="material-symbols-outlined text-[20px]">thumb_up</span>
-                            도움돼요 {review.helpfulCount > 0 && review.helpfulCount}
+                            {t('review_detail.helpful_button')} {review.helpfulCount > 0 && review.helpfulCount}
                         </button>
                     </div>
                 </section>
@@ -298,7 +300,7 @@ export const ReviewDetail: React.FC = () => {
                 {/* Comments Section */}
                 <section className="bg-gray-50 dark:bg-zinc-900/50 p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[16px] font-bold text-[#0e1a18] dark:text-white">댓글 {review.comments?.length || 0}</h3>
+                        <h3 className="text-[16px] font-bold text-[#0e1a18] dark:text-white">{t('review_detail.comments')} {review.comments?.length || 0}</h3>
                     </div>
                     <div className="space-y-6">
                         {review.comments?.map((comment: any) => (
@@ -320,7 +322,7 @@ export const ReviewDetail: React.FC = () => {
                                             onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                                             className="text-[11px] font-bold text-gray-500 hover:text-primary transition-colors"
                                         >
-                                            {replyingTo === comment.id ? '취소' : '답글 달기'}
+                                            {replyingTo === comment.id ? t('review_detail.cancel') : t('review_detail.reply')}
                                         </button>
                                     </div>
                                     {/* Reply Input */}
@@ -336,7 +338,7 @@ export const ReviewDetail: React.FC = () => {
                                                         }
                                                     }}
                                                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-[#0e1a18] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                                    placeholder="답글을 입력하세요"
+                                                    placeholder={t('review_detail.reply_placeholder')}
                                                     disabled={submitting}
                                                 />
                                             </div>
@@ -345,7 +347,7 @@ export const ReviewDetail: React.FC = () => {
                                                 disabled={!replyContent.trim() || submitting}
                                                 className="px-3 py-2 bg-primary text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
                                             >
-                                                등록
+                                                {t('review_detail.submit')}
                                             </button>
                                         </div>
                                     )}
@@ -353,7 +355,7 @@ export const ReviewDetail: React.FC = () => {
                             </div>
                         ))}
                         {(!review.comments || review.comments.length === 0) && (
-                            <p className="text-center text-gray-400 py-4 text-sm">첫 번째 댓글을 남겨보세요!</p>
+                            <p className="text-center text-gray-400 py-4 text-sm">{t('review_detail.no_comments')}</p>
                         )}
                     </div>
                 </section>
@@ -372,7 +374,7 @@ export const ReviewDetail: React.FC = () => {
                                 }
                             }}
                             className="w-full bg-gray-100 dark:bg-zinc-800 border-none rounded-full px-4 py-2.5 text-sm focus:ring-1 focus:ring-primary text-[#0e1a18] dark:text-white placeholder:text-gray-400"
-                            placeholder="댓글을 입력해주세요"
+                            placeholder={t('review_detail.comment_placeholder')}
                             type="text"
                             disabled={submitting}
                         />
@@ -382,7 +384,7 @@ export const ReviewDetail: React.FC = () => {
                         disabled={!newComment.trim() || submitting}
                         className="text-primary font-bold px-2 whitespace-nowrap disabled:opacity-50"
                     >
-                        등록
+                        {t('review_detail.submit')}
                     </button>
                 </div>
             </div>
