@@ -30,7 +30,13 @@ const g = (data: any, snakeKey: string, camelKey: string, defaultVal: any = '') 
 app.get('/', async (c) => {
     const db = c.env.DB;
     try {
-        const result = await db.prepare('SELECT * FROM products ORDER BY sort_order ASC, created_at DESC').all();
+        let result;
+        try {
+            result = await db.prepare('SELECT * FROM products ORDER BY sort_order ASC, created_at DESC').all();
+        } catch {
+            // Fallback if sort_order column doesn't exist
+            result = await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+        }
         const parsed = (result.results || []).map((p: any) => ({
             ...p,
             mainImages: safeParse(p.main_images),
@@ -106,50 +112,97 @@ app.post('/', async (c) => {
         const isFeatured = data.is_featured ?? data.isFeatured ?? false;
         const isPopular = data.is_popular ?? data.isPopular ?? false;
 
+        try {
             await db.prepare(`
-            INSERT INTO products (
-                id, name, description, category, duration, price, original_price,
-                main_images, gallery_images, detail_images, itinerary_images,
-                images, thumbnail, status,
-                is_featured, is_popular, featured, popular,
-                tags, included, excluded,
-                detail_slides, detail_blocks, itinerary_blocks,
-                highlights, pricing_options, accommodation_options, vehicle_options,
-                view_count, booking_count, sort_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-            id,
-            data.name || '',
-            data.description || '',
-            data.category || '',
-            data.duration || '',
-            data.price || 0,
-            g(data, 'original_price', 'originalPrice', 0),
-            toJson(mainImages),
-            toJson(g(data, 'gallery_images', 'galleryImages', [])),
-            toJson(g(data, 'detail_images', 'detailImages', [])),
-            toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
-            toJson(mainImages), // images = copy of mainImages
-            (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '', // thumbnail
-            data.status || 'active',
-            isFeatured ? 1 : 0,
-            isPopular ? 1 : 0,
-            isFeatured ? 1 : 0,
-            isPopular ? 1 : 0,
-            toJson(data.tags || []),
-            toJson(data.included || []),
-            toJson(data.excluded || []),
-            toJson(g(data, 'detail_slides', 'detailSlides', [])),
-            toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
-            toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
-            toJson(data.highlights || []),
-            toJson(g(data, 'pricing_options', 'pricingOptions', [])),
-            toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
-            toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
-            data.view_count || data.viewCount || 0,
-            data.booking_count || data.bookingCount || 0,
-            data.sortOrder || 0
-        ).run();
+                INSERT INTO products (
+                    id, name, description, category, duration, price, original_price,
+                    main_images, gallery_images, detail_images, itinerary_images,
+                    images, thumbnail, status,
+                    is_featured, is_popular, featured, popular,
+                    tags, included, excluded,
+                    detail_slides, detail_blocks, itinerary_blocks,
+                    highlights, pricing_options, accommodation_options, vehicle_options,
+                    view_count, booking_count, sort_order
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                id,
+                data.name || '',
+                data.description || '',
+                data.category || '',
+                data.duration || '',
+                data.price || 0,
+                g(data, 'original_price', 'originalPrice', 0),
+                toJson(mainImages),
+                toJson(g(data, 'gallery_images', 'galleryImages', [])),
+                toJson(g(data, 'detail_images', 'detailImages', [])),
+                toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
+                toJson(mainImages), // images = copy of mainImages
+                (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '', // thumbnail
+                data.status || 'active',
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                toJson(data.tags || []),
+                toJson(data.included || []),
+                toJson(data.excluded || []),
+                toJson(g(data, 'detail_slides', 'detailSlides', [])),
+                toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
+                toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
+                toJson(data.highlights || []),
+                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
+                toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
+                toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
+                data.view_count || data.viewCount || 0,
+                data.booking_count || data.bookingCount || 0,
+                data.sortOrder || 0
+            ).run();
+        } catch {
+            // Fallback if sort_order column doesn't exist
+            await db.prepare(`
+                INSERT INTO products (
+                    id, name, description, category, duration, price, original_price,
+                    main_images, gallery_images, detail_images, itinerary_images,
+                    images, thumbnail, status,
+                    is_featured, is_popular, featured, popular,
+                    tags, included, excluded,
+                    detail_slides, detail_blocks, itinerary_blocks,
+                    highlights, pricing_options, accommodation_options, vehicle_options,
+                    view_count, booking_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                id,
+                data.name || '',
+                data.description || '',
+                data.category || '',
+                data.duration || '',
+                data.price || 0,
+                g(data, 'original_price', 'originalPrice', 0),
+                toJson(mainImages),
+                toJson(g(data, 'gallery_images', 'galleryImages', [])),
+                toJson(g(data, 'detail_images', 'detailImages', [])),
+                toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
+                toJson(mainImages),
+                (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '',
+                data.status || 'active',
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                toJson(data.tags || []),
+                toJson(data.included || []),
+                toJson(data.excluded || []),
+                toJson(g(data, 'detail_slides', 'detailSlides', [])),
+                toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
+                toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
+                toJson(data.highlights || []),
+                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
+                toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
+                toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
+                data.view_count || data.viewCount || 0,
+                data.booking_count || data.bookingCount || 0
+            ).run();
+        }
 
         return c.json({ success: true, id });
     } catch (e: any) {
@@ -195,48 +248,93 @@ app.put('/:id', async (c) => {
         const isFeatured = data.is_featured ?? data.isFeatured ?? false;
         const isPopular = data.is_popular ?? data.isPopular ?? false;
 
-        await db.prepare(`
-            UPDATE products SET
-                name = ?, description = ?, category = ?, duration = ?, price = ?, original_price = ?,
-                main_images = ?, gallery_images = ?, detail_images = ?, itinerary_images = ?,
-                images = ?, thumbnail = ?, status = ?,
-                is_featured = ?, is_popular = ?, featured = ?, popular = ?,
-                tags = ?, included = ?, excluded = ?,
-                detail_slides = ?, detail_blocks = ?, itinerary_blocks = ?,
-                highlights = ?, pricing_options = ?, accommodation_options = ?, vehicle_options = ?,
-                sort_order = ?, updated_at = datetime('now')
-            WHERE id = ?
-        `).bind(
-            data.name || '',
-            data.description || '',
-            data.category || '',
-            data.duration || '',
-            data.price || 0,
-            g(data, 'original_price', 'originalPrice', 0),
-            toJson(mainImages),
-            toJson(g(data, 'gallery_images', 'galleryImages', [])),
-            toJson(g(data, 'detail_images', 'detailImages', [])),
-            toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
-            toJson(mainImages),
-            (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '',
-            data.status || 'active',
-            isFeatured ? 1 : 0,
-            isPopular ? 1 : 0,
-            isFeatured ? 1 : 0,
-            isPopular ? 1 : 0,
-            toJson(data.tags || []),
-            toJson(data.included || []),
-            toJson(data.excluded || []),
-            toJson(g(data, 'detail_slides', 'detailSlides', [])),
-            toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
-            toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
-            toJson(data.highlights || []),
-            toJson(g(data, 'pricing_options', 'pricingOptions', [])),
-            toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
-            toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
-            data.sortOrder || 0,
-            id
-        ).run();
+        try {
+            await db.prepare(`
+                UPDATE products SET
+                    name = ?, description = ?, category = ?, duration = ?, price = ?, original_price = ?,
+                    main_images = ?, gallery_images = ?, detail_images = ?, itinerary_images = ?,
+                    images = ?, thumbnail = ?, status = ?,
+                    is_featured = ?, is_popular = ?, featured = ?, popular = ?,
+                    tags = ?, included = ?, excluded = ?,
+                    detail_slides = ?, detail_blocks = ?, itinerary_blocks = ?,
+                    highlights = ?, pricing_options = ?, accommodation_options = ?, vehicle_options = ?,
+                    sort_order = ?, updated_at = datetime('now')
+                WHERE id = ?
+            `).bind(
+                data.name || '',
+                data.description || '',
+                data.category || '',
+                data.duration || '',
+                data.price || 0,
+                g(data, 'original_price', 'originalPrice', 0),
+                toJson(mainImages),
+                toJson(g(data, 'gallery_images', 'galleryImages', [])),
+                toJson(g(data, 'detail_images', 'detailImages', [])),
+                toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
+                toJson(mainImages),
+                (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '',
+                data.status || 'active',
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                toJson(data.tags || []),
+                toJson(data.included || []),
+                toJson(data.excluded || []),
+                toJson(g(data, 'detail_slides', 'detailSlides', [])),
+                toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
+                toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
+                toJson(data.highlights || []),
+                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
+                toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
+                toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
+                data.sortOrder || 0,
+                id
+            ).run();
+        } catch {
+            // Fallback if sort_order column doesn't exist
+            await db.prepare(`
+                UPDATE products SET
+                    name = ?, description = ?, category = ?, duration = ?, price = ?, original_price = ?,
+                    main_images = ?, gallery_images = ?, detail_images = ?, itinerary_images = ?,
+                    images = ?, thumbnail = ?, status = ?,
+                    is_featured = ?, is_popular = ?, featured = ?, popular = ?,
+                    tags = ?, included = ?, excluded = ?,
+                    detail_slides = ?, detail_blocks = ?, itinerary_blocks = ?,
+                    highlights = ?, pricing_options = ?, accommodation_options = ?, vehicle_options = ?,
+                    updated_at = datetime('now')
+                WHERE id = ?
+            `).bind(
+                data.name || '',
+                data.description || '',
+                data.category || '',
+                data.duration || '',
+                data.price || 0,
+                g(data, 'original_price', 'originalPrice', 0),
+                toJson(mainImages),
+                toJson(g(data, 'gallery_images', 'galleryImages', [])),
+                toJson(g(data, 'detail_images', 'detailImages', [])),
+                toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
+                toJson(mainImages),
+                (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '',
+                data.status || 'active',
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                isFeatured ? 1 : 0,
+                isPopular ? 1 : 0,
+                toJson(data.tags || []),
+                toJson(data.included || []),
+                toJson(data.excluded || []),
+                toJson(g(data, 'detail_slides', 'detailSlides', [])),
+                toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
+                toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
+                toJson(data.highlights || []),
+                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
+                toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
+                toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
+                id
+            ).run();
+        }
 
         return c.json({ success: true });
     } catch (e: any) {
