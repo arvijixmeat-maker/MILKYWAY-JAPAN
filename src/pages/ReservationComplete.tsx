@@ -36,7 +36,7 @@ export const ReservationComplete: React.FC = () => {
                 }
             } catch (error) {
                 console.error('Error fetching reservation:', error);
-                alert('예약 정보를 불러오는데 실패했습니다.');
+                alert('予約情報の読み込みに失敗しました。');
                 navigate('/', { replace: true });
             } finally {
                 setLoading(false);

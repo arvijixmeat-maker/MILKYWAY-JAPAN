@@ -62,27 +62,30 @@ app.get('/', async (c) => {
 // GET /api/reservations/:id
 app.get('/:id', async (c) => {
     const id = c.req.param('id');
-    const lucia = initializeLucia(c.env.DB);
-    const sessionId = getCookie(c, lucia.sessionCookieName);
-
-    if (!sessionId) {
-        return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const { session, user } = await lucia.validateSession(sessionId);
-    if (!session) {
-        return c.json({ error: "Unauthorized" }, 401);
-    }
-
     const db = drizzle(c.env.DB);
     const result = await db.select().from(reservations).where(eq(reservations.id, id)).get();
 
     if (!result) return c.json({ error: 'Reservation not found' }, 404);
 
-    // Authorization check for filtering detail view
-    if (user.role !== 'admin' && result.userId !== user.id) {
-        return c.json({ error: "Forbidden" }, 403);
+    // If the reservation belongs to a specific user, enforce auth
+    if (result.userId !== null) {
+        const lucia = initializeLucia(c.env.DB);
+        const sessionId = getCookie(c, lucia.sessionCookieName);
+        
+        if (!sessionId) {
+            return c.json({ error: "Unauthorized" }, 401);
+        }
+
+        const { session, user } = await lucia.validateSession(sessionId);
+        if (!session) {
+            return c.json({ error: "Unauthorized" }, 401);
+        }
+
+        if (user.role !== 'admin' && result.userId !== user.id) {
+            return c.json({ error: "Forbidden" }, 403);
+        }
     }
+    // If userId is null (guest reservation), allow public access since the UUID is practically unguessable.
 
     const parsed = {
         ...result,

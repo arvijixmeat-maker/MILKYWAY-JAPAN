@@ -12,8 +12,15 @@ async function request(url: string, options?: RequestInit) {
 export const api = {
     auth: {
         me: async () => {
-            const res = await fetch(`${API_BASE}/auth/me`);
-            return res.json();
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`);
+                if (!res.ok) return null;
+                const data = await res.json();
+                if (data.error) return null;
+                return data;
+            } catch (e) {
+                return null;
+            }
         },
         login: async (email: string, password: string) => {
             return request(`${API_BASE}/auth/login`, {

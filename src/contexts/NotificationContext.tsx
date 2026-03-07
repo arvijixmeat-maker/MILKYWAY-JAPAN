@@ -28,7 +28,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const fetchNotifications = async () => {
         try {
             const me = await api.auth.me();
-            if (!me) {
+            if (!me || me.error) {
                 setNotifications([]);
                 setLoading(false);
                 return;
@@ -53,7 +53,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             // const { data: { user } } = await supabase.auth.getUser();
             // if (!user) return;
             const me = await api.auth.me();
-            if (!me) return;
+            if (!me || me.error) return;
 
             // Initial fetch
             fetchNotifications();
