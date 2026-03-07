@@ -59,32 +59,31 @@ export const EstimateComplete: React.FC = () => {
                     {/* Headlines */}
                     <div className="text-center mb-10">
                         <h1 className="text-[#121716] dark:text-white tracking-tight text-[28px] font-bold leading-tight pb-3">
-                            견적 요청이<br />접수되었습니다
+                            お見積りリクエストを<br />受け付けました
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 text-[16px] font-normal leading-relaxed">
-                            담당자가 확인 후 24시간 이내에<br />맞춤 견적을 보내드릴게요.
+                            担当者が確認後、24時間以内に<br />オーダーメイドお見積りをお送りします。
                         </p>
                     </div>
 
-                    {/* Summary Card (DescriptionList Style) */}
                     <div className="bg-white dark:bg-[#1a2c28] rounded-3xl p-6 shadow-sm mb-8">
                         <div className="flex items-center gap-2 mb-4">
                             <span className="material-symbols-outlined text-primary text-[20px]">receipt_long</span>
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white">요청 내역 요약</h3>
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-white">リクエスト内容の要約</h3>
                         </div>
                         <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">여행 일정</p>
-                            <p className="text-[#121716] dark:text-gray-200 text-sm font-medium">{estimate.period || '날짜 미정'}</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">旅行日程</p>
+                            <p className="text-[#121716] dark:text-gray-200 text-sm font-medium">{estimate.period || '日付未定'}</p>
                         </div>
                         <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">여행 인원</p>
-                            <p className="text-[#121716] dark:text-gray-200 text-sm font-medium">{estimate.headcount || '인원 미정'}</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">旅行人数</p>
+                            <p className="text-[#121716] dark:text-gray-200 text-sm font-medium">{estimate.headcount || '人数未定'}</p>
                         </div>
                         <div className="flex justify-between items-center pt-3">
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">예상 답변 시간</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">予想回答時間</p>
                             <div className="flex items-center gap-1">
                                 <span className="material-symbols-outlined text-primary text-[14px]">schedule</span>
-                                <p className="text-primary text-sm font-bold">평균 3시간 이내</p>
+                                <p className="text-primary text-sm font-bold">平均3時間以内</p>
                             </div>
                         </div>
                     </div>
@@ -92,8 +91,8 @@ export const EstimateComplete: React.FC = () => {
                     {/* Engagement Section (Categories) */}
                     <div className="w-full mb-12">
                         <div className="flex justify-between items-end mb-3 px-1">
-                            <h3 className="text-lg font-bold text-[#121716] dark:text-white">기다리는 동안 구경하기</h3>
-                            <button onClick={() => navigate('/products')} className="text-xs text-gray-400 font-medium cursor-pointer">더보기</button>
+                            <h3 className="text-lg font-bold text-[#121716] dark:text-white">待っている間に見てみる</h3>
+                            <button onClick={() => navigate('/products')} className="text-xs text-gray-400 font-medium cursor-pointer">もっと見る</button>
                         </div>
 
                         <div className="flex overflow-x-auto hide-scrollbar px-1 gap-4 py-4 no-scrollbar">
@@ -125,7 +124,6 @@ export const EstimateComplete: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Bottom Actions (Fixed) */}
                 <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md z-20 border-t border-gray-100 dark:border-gray-800">
                     <button
                         onClick={() => {
@@ -134,13 +132,13 @@ export const EstimateComplete: React.FC = () => {
                         }}
                         className="w-full bg-primary hover:bg-[#189f84] text-white text-[16px] font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] mb-3"
                     >
-                        내 견적 현황 보기
+                        私のお見積り状況を見る
                     </button>
                     <button
                         onClick={() => navigate('/')}
                         className="w-full bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white text-[15px] font-medium py-3 rounded-xl transition-colors"
                     >
-                        홈으로 돌아가기
+                        ホームに戻る
                     </button>
                 </div>
             </div>

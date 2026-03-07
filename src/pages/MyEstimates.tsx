@@ -20,10 +20,10 @@ export const MyEstimates: React.FC = () => {
                     setEstimates(myQuotes.map((e: any) => ({
                         id: e.id,
                         status: e.status === 'new' ? 'waiting' : e.status,
-                        statusLabel: e.status === 'new' ? '답변 대기' : e.status === 'answered' ? '답변 완료' : e.status === 'converted' ? '예약 전환' : '상담 중',
-                        title: `맞춤 견적 요청 (${e.destination || '몽골'})`,
+                        statusLabel: e.status === 'new' ? '回答待ち' : e.status === 'answered' ? '回答完了' : e.status === 'converted' ? '予約転換' : '相談中',
+                        title: `オーダーメイド見積り依頼 (${e.destination || 'モンゴル'})`,
                         date: e.period,
-                        type: '맞춤여행',
+                        type: 'オーダーメイド',
                         people: e.headcount,
                         requestDate: new Date(e.created_at).toLocaleDateString('ko-KR')
                     })));
@@ -46,7 +46,7 @@ export const MyEstimates: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <h1 className="text-lg font-bold text-text-main dark:text-white flex-1 text-center pr-8">투어 견적 요청 내역</h1>
+                    <h1 className="text-lg font-bold text-text-main dark:text-white flex-1 text-center pr-8">ツアー見積りリクエスト履歴</h1>
                 </div>
 
                 {/* Content */}
@@ -93,22 +93,22 @@ export const MyEstimates: React.FC = () => {
                                             className="flex items-center gap-1 hover:underline"
                                         >
                                             <span className="material-symbols-outlined text-[14px]">event_available</span>
-                                            예약 확정됨 (내역 확인)
+                                            予約確定済 (履歴確認)
                                         </button>
                                     ) : estimate.status === 'answered' ? (
                                         <>
                                             <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                                            견적서 확인하기
+                                            見積書を確認する
                                         </>
                                     ) : estimate.status === 'processing' ? (
                                         <>
                                             <span className="material-symbols-outlined text-[14px]">chat_bubble</span>
-                                            상담 중
+                                            ご相談中
                                         </>
                                     ) : (
                                         <>
                                             <span className="material-symbols-outlined text-[14px]">schedule</span>
-                                            답변 대기
+                                            ご回答待ち
                                         </>
                                     )}
                                 </span>
@@ -118,7 +118,7 @@ export const MyEstimates: React.FC = () => {
                     ))}
 
                     <div className="py-6 text-center">
-                        <p className="text-xs text-gray-400">최근 1년 간 요청한 견적 내역이 표시됩니다.</p>
+                        <p className="text-xs text-gray-400">直近1年間の見積りリクエスト履歴が表示されます。</p>
                     </div>
                 </div>
 
