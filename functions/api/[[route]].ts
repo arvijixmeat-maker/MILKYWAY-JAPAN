@@ -27,6 +27,8 @@ import images from './images/[...path]';
 import quickLinks from './quick-links';
 import eventBanners from './event-banners';
 import migrateDb from './migrate-db';
+import wishlist from './wishlist';
+import recentlyViewed from './recently-viewed';
 
 // Register routes
 app.route('/products', products);
@@ -48,5 +50,7 @@ app.route('/images', images);
 app.route('/quick-links', quickLinks);
 app.route('/event-banners', eventBanners);
 app.route('/migrate-db', migrateDb);
+app.route('/wishlist', wishlist);
+app.route('/recently-viewed', recentlyViewed);
 
 export const onRequest = handle(app);
