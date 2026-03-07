@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabaseClient';
 import imageCompression from 'browser-image-compression';
 
 /**

@@ -151,28 +151,6 @@ export const MyReservations: React.FC = () => {
         };
 
         fetchData();
-
-        // Realtime Subscription (Commented out for migration)
-        /*
-        const channel = supabase
-            .channel('my-reservations-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'reservations'
-                },
-                () => {
-                    fetchData();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-        */
     }, [t, i18n.language]);
 
     const formatDate = (dateStr: string) => {

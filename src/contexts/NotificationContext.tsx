@@ -58,38 +58,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             // Initial fetch
             fetchNotifications();
 
-            // Realtime Disabled for API migration
-            /*
-            // Setup Realtime subscription
-            subscription = supabase
-                .channel('public:notifications')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*', // Listen for INSERT, UPDATE, DELETE
-                        schema: 'public',
-                        table: 'notifications',
-                        filter: `user_id=eq.${user.id}`
-                    },
-                    (payload) => {
-                        // console.log('Realtime notification:', payload);
-                        if (payload.eventType === 'INSERT') {
-                            setNotifications(prev => [payload.new as Notification, ...prev]);
-                            // Optional: Show toast or browser notification here
-                        } else if (payload.eventType === 'UPDATE') {
-                            setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new as Notification : n));
-                        }
-                    }
-                )
-                .subscribe();
-            */
         };
 
         setupRealtime();
 
-        // return () => {
-        //     if (subscription) supabase.removeChannel(subscription);
-        // };
         return () => { };
     }, []);
 

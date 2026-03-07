@@ -53,30 +53,6 @@ export const ChatRoom: React.FC = () => {
 
         fetchPartner();
         fetchMessages();
-
-        // Realtime Subscription (Disabled for API migration)
-        /*
-        const channel = supabase
-            .channel(`room:${roomId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `room_id=eq.${roomId}`
-                },
-                (payload) => {
-                    const newMsg = payload.new as Message;
-                    setMessages((prev) => [...prev, newMsg]);
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-        */
     }, [roomId, user]);
 
     // Auto Scroll

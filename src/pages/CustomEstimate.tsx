@@ -4,8 +4,12 @@ import { api } from '../lib/api';
 import { sendNotificationEmail } from '../lib/email';
 import { BottomNav } from '../components/layout/BottomNav';
 
+import { SEO } from '../components/seo/SEO';
+import { useTranslation } from 'react-i18next';
+
 export const CustomEstimate: React.FC = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [priceRange, setPriceRange] = useState(150);
     const [adultCount, setAdultCount] = useState(2);
     const [childCount, setChildCount] = useState(0);
@@ -97,6 +101,10 @@ export const CustomEstimate: React.FC = () => {
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white pb-28">
+            <SEO 
+                title={t('estimate.seo_title', '맞춤 견적 요청 | Milkyway Japan')}
+                description={t('estimate.seo_description', '몽골 여행에 대한 맞춤 견적을 요청해보세요. Milkyway Japan이 여러분의 조건에 딱 맞는 여행 일정을 제안해 드립니다.')}
+            />
             <div className="sticky top-0 z-50 flex items-center justify-between bg-white dark:bg-zinc-900 p-4 border-b border-gray-100 dark:border-zinc-800">
                 <button
                     onClick={() => navigate(-1)}

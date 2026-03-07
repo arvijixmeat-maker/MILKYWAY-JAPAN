@@ -1,0 +1,14 @@
+﻿
+> mongolia-milky-way@0.0.0 build
+> node scripts/generateSitemap.js && vite build
+
+Generating dynamic sitemap...
+Fetching products from API...
+??Loaded 2 products
+Fetching magazines from API...
+??Loaded 2 magazines/guides
+??sitemap.xml generated with 9 URLs.
+??prerender-routes.json generated with 9 paths for Prerendering.
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m??[39m 971 modules transformed.
