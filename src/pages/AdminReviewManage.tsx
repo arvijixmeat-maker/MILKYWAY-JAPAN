@@ -31,16 +31,22 @@ export const AdminReviewManage: React.FC = () => {
         try {
             const data = await api.reviews.list();
             if (Array.isArray(data)) {
-                setReviews(data.map((r: any) => ({
-                    id: r.id,
-                    author: r.author_name,
-                    date: r.created_at ? r.created_at.substring(0, 10) : '',
-                    visitDate: r.visit_date,
-                    rating: r.rating,
-                    product_name: r.product_name,
-                    content: r.content,
-                    images: typeof r.images === 'string' ? JSON.parse(r.images || '[]') : (r.images || [])
-                })));
+                setReviews(data.map((r: any) => {
+                    let parsedImages: string[] = [];
+                    try {
+                        parsedImages = typeof r.images === 'string' ? JSON.parse(r.images || '[]') : (Array.isArray(r.images) ? r.images : []);
+                    } catch { parsedImages = []; }
+                    return {
+                        id: r.id,
+                        author: r.author_name || r.user_name || '(이름 없음)',
+                        date: r.created_at ? r.created_at.substring(0, 10) : '',
+                        visitDate: r.visit_date || '',
+                        rating: r.rating || 0,
+                        product_name: r.product_name || '',
+                        content: r.content || '',
+                        images: parsedImages
+                    };
+                }));
             }
         } catch (error) {
             console.error('Error fetching reviews:', error);
@@ -129,8 +135,8 @@ export const AdminReviewManage: React.FC = () => {
     };
 
     const filteredReviews = reviews.filter(review =>
-        review.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        review.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (review.author || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (review.content || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (review.product_name && review.product_name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 

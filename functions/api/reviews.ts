@@ -33,9 +33,9 @@ app.post('/', async (c) => {
     const id = data.id || crypto.randomUUID();
     try {
         await db.prepare(
-            "INSERT INTO reviews (id, user_id, user_name, user_avatar, product_id, product_name, rating, title, content, images, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(id, data.user_id || '', data.user_name || '', data.user_avatar || '', data.product_id || '', data.product_name || '',
-            data.rating || 5, data.title || '', data.content || '', JSON.stringify(data.images || []), data.is_approved ?? 0).run();
+            "INSERT INTO reviews (id, user_id, user_name, user_avatar, product_id, product_name, rating, title, content, images, is_approved, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(id, data.user_id || '', data.user_name || data.author_name || '', data.user_avatar || '', data.product_id || '', data.product_name || '',
+            data.rating || 5, data.title || '', data.content || '', JSON.stringify(data.images || []), data.is_approved ?? 0, data.created_at || new Date().toISOString()).run();
         return c.json({ id, ...data });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
