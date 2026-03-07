@@ -222,7 +222,6 @@ export const AdminProductManage: React.FC = () => {
         } catch (e) { console.error(e); }
     };
 
-    // Delete product
     const deleteProduct = async (id: string) => {
         if (confirm('정말 이 상품을 삭제하시겠습니까?')) {
             try {
@@ -231,6 +230,62 @@ export const AdminProductManage: React.FC = () => {
             } catch (error: any) {
                 alert('삭제 실패: ' + error.message);
             }
+        }
+    };
+
+    // Drag and Drop for Products List
+    const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
+
+    const handleProductDragStart = (e: React.DragEvent, index: number) => {
+        setDraggedProductIndex(index);
+        // Required for Firefox
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', index.toString());
+    };
+
+    const handleProductDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        if (draggedProductIndex === null || draggedProductIndex === index) return;
+        
+        // When filtering or pagination is active, reordering might be tricky.
+        // For simplicity, we'll only allow reordering if we are showing all items or searching.
+        // And we'll apply it to the main `products` array.
+        const draggedProduct = paginatedProducts[draggedProductIndex];
+        const targetProduct = paginatedProducts[index];
+
+        // Find their actual indices in the main `products` array
+        const actualDragIndex = products.findIndex(p => p.id === draggedProduct.id);
+        const actualTargetIndex = products.findIndex(p => p.id === targetProduct.id);
+
+        if (actualDragIndex === -1 || actualTargetIndex === -1) return;
+
+        const newProducts = [...products];
+        // Remove from old position
+        newProducts.splice(actualDragIndex, 1);
+        // Insert at new position
+        newProducts.splice(actualTargetIndex, 0, draggedProduct);
+        
+        setProducts(newProducts);
+        setDraggedProductIndex(index);
+    };
+
+    const handleProductDragEnd = async () => {
+        setDraggedProductIndex(null);
+        
+        try {
+            // Update the sort_order in the backend based on the current products array order
+            const orderData = products.map((p, index) => ({
+                id: p.id,
+                sortOrder: index
+            }));
+            
+            await api.products.reorder(orderData);
+            // Optionally show a toast for successful save
+        } catch (error) {
+            console.error('Failed to save product order:', error);
+            alert('순서 저장에 실패했습니다.');
         }
     };
 
@@ -411,10 +466,21 @@ export const AdminProductManage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                    {paginatedProducts.map((product) => (
-                                        <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                    {paginatedProducts.map((product, index) => (
+                                        <tr 
+                                            key={product.id} 
+                                            draggable
+                                            onDragStart={(e) => handleProductDragStart(e, index)}
+                                            onDragOver={(e) => handleProductDragOver(e, index)}
+                                            onDrop={handleProductDragEnd}
+                                            onDragEnd={handleProductDragEnd}
+                                            className={`transition-colors cursor-move 
+                                                ${draggedProductIndex === index ? 'opacity-50 bg-slate-100 dark:bg-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}
+                                            `}
+                                        >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
+                                                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 hover:text-slate-500 cursor-grab active:cursor-grabbing mr-2">drag_indicator</span>
                                                     <img
                                                         src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
                                                         alt={product.name}

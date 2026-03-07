@@ -46,6 +46,11 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }),
+        reorder: async (items: { id: string, sortOrder: number }[]) => request(`${API_BASE}/products/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items })
+        }),
         delete: async (id: string) => request(`${API_BASE}/products/${id}`, { method: 'DELETE' }),
     },
     reservations: {

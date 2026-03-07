@@ -30,7 +30,7 @@ const g = (data: any, snakeKey: string, camelKey: string, defaultVal: any = '') 
 app.get('/', async (c) => {
     const db = c.env.DB;
     try {
-        const result = await db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+        const result = await db.prepare('SELECT * FROM products ORDER BY sort_order ASC, created_at DESC').all();
         const parsed = (result.results || []).map((p: any) => ({
             ...p,
             mainImages: safeParse(p.main_images),
@@ -51,6 +51,7 @@ app.get('/', async (c) => {
             originalPrice: p.original_price,
             isFeatured: p.is_featured === 1 || p.featured === 1,
             isPopular: p.is_popular === 1 || p.popular === 1,
+            sortOrder: p.sort_order || 0,
         }));
         return c.json(parsed);
     } catch (e: any) {
@@ -86,6 +87,7 @@ app.get('/:id', async (c) => {
             originalPrice: result.original_price,
             isFeatured: result.is_featured === 1 || result.featured === 1,
             isPopular: result.is_popular === 1 || result.popular === 1,
+            sortOrder: result.sort_order || 0,
         };
         return c.json(parsed);
     } catch (e: any) {
@@ -104,7 +106,7 @@ app.post('/', async (c) => {
         const isFeatured = data.is_featured ?? data.isFeatured ?? false;
         const isPopular = data.is_popular ?? data.isPopular ?? false;
 
-        await db.prepare(`
+            await db.prepare(`
             INSERT INTO products (
                 id, name, description, category, duration, price, original_price,
                 main_images, gallery_images, detail_images, itinerary_images,
@@ -113,8 +115,8 @@ app.post('/', async (c) => {
                 tags, included, excluded,
                 detail_slides, detail_blocks, itinerary_blocks,
                 highlights, pricing_options, accommodation_options, vehicle_options,
-                view_count, booking_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                view_count, booking_count, sort_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
             id,
             data.name || '',
@@ -145,12 +147,39 @@ app.post('/', async (c) => {
             toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
             toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
             data.view_count || data.viewCount || 0,
-            data.booking_count || data.bookingCount || 0
+            data.booking_count || data.bookingCount || 0,
+            data.sortOrder || 0
         ).run();
 
         return c.json({ success: true, id });
     } catch (e: any) {
         console.error('Product create error:', e);
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// POST /api/products/reorder
+app.post('/reorder', async (c) => {
+    try {
+        const { items } = await c.req.json();
+        // items should be an array of { id: string, sortOrder: number }
+        if (!Array.isArray(items)) {
+            return c.json({ error: 'Invalid data format' }, 400);
+        }
+
+        const db = c.env.DB;
+        
+        // Use a transaction or multiple updates
+        // Since sqlite in cloudflare workers via Drizzle/binding doesn't support complex bulk updates easily without a loop or transaction
+        const statements = items.map((item: any) => 
+            db.prepare('UPDATE products SET sort_order = ? WHERE id = ?').bind(item.sortOrder, item.id)
+        );
+
+        await db.batch(statements);
+
+        return c.json({ success: true });
+    } catch (e: any) {
+        console.error('Product reorder error:', e);
         return c.json({ error: e.message }, 500);
     }
 });
@@ -175,7 +204,7 @@ app.put('/:id', async (c) => {
                 tags = ?, included = ?, excluded = ?,
                 detail_slides = ?, detail_blocks = ?, itinerary_blocks = ?,
                 highlights = ?, pricing_options = ?, accommodation_options = ?, vehicle_options = ?,
-                updated_at = datetime('now')
+                sort_order = ?, updated_at = datetime('now')
             WHERE id = ?
         `).bind(
             data.name || '',
@@ -205,6 +234,7 @@ app.put('/:id', async (c) => {
             toJson(g(data, 'pricing_options', 'pricingOptions', [])),
             toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
             toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
+            data.sortOrder || 0,
             id
         ).run();
 

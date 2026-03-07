@@ -24,6 +24,8 @@ export const products = sqliteTable('products', {
     included: text('included').notNull(), // JSON.stringify(string[])
     excluded: text('excluded').notNull(), // JSON.stringify(string[])
 
+    sortOrder: integer('sort_order').default(0),
+
     viewCount: integer('view_count').default(0),
     bookingCount: integer('booking_count').default(0),
 

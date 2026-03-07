@@ -40,6 +40,15 @@ export const ReviewDetail: React.FC = () => {
                 const data = await api.reviews.get(id);
 
                 if (data) {
+                    let parsedImages = [];
+                    try { parsedImages = typeof data.images === 'string' ? JSON.parse(data.images) : (data.images || []); } catch (e) { parsedImages = []; }
+                    
+                    let parsedComments = [];
+                    try { parsedComments = typeof data.comments === 'string' ? JSON.parse(data.comments) : (data.comments || []); } catch (e) { parsedComments = []; }
+                    
+                    let parsedHelpfulUsers = [];
+                    try { parsedHelpfulUsers = typeof data.helpful_users === 'string' ? JSON.parse(data.helpful_users) : (data.helpful_users || []); } catch (e) { parsedHelpfulUsers = []; }
+
                     setReview({
                         id: data.id,
                         author: data.author_name,
@@ -49,11 +58,11 @@ export const ReviewDetail: React.FC = () => {
                         productName: data.product_name,
                         productId: data.product_id,
                         content: data.content,
-                        images: data.images || [],
+                        images: parsedImages,
                         userImage: data.user_image,
-                        comments: data.comments || [],
+                        comments: parsedComments,
                         helpfulCount: data.helpful_count || 0,
-                        helpfulUsers: data.helpful_users || []
+                        helpfulUsers: parsedHelpfulUsers
                     });
                 }
             } catch (error) {
