@@ -89,3 +89,10 @@ img {
     user-select: none;
     -webkit-user-select: none;
 }
+
+/* Move Channel Talk Widget above the Bottom Navigation Bar (applies to mobile view where bottom nav exists) */
+@media (max-width: 768px) {
+    #ch-plugin {
+        bottom: 85px !important;
+    }
+}
