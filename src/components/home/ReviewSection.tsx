@@ -14,15 +14,24 @@ export const ReviewSection: React.FC = () => {
             try {
                 const data = await api.reviews.list();
                 if (Array.isArray(data)) {
-                    return data.slice(0, 10).map((r: any) => ({
-                        id: r.id,
-                        author: r.author_name,
-                        visitDate: r.visit_date,
-                        rating: r.rating,
-                        content: r.content,
-                        images: r.images,
-                        productName: r.product_name || t('home.reviews.default_product')
-                    }));
+                    return data.slice(0, 10).map((r: any) => {
+                        let parsedImages = [];
+                        try {
+                            parsedImages = typeof r.images === 'string' ? JSON.parse(r.images) : (r.images || []);
+                        } catch (e) {
+                            parsedImages = [];
+                        }
+
+                        return {
+                            id: r.id,
+                            author: r.author_name,
+                            visitDate: r.visit_date,
+                            rating: r.rating,
+                            content: r.content,
+                            images: parsedImages,
+                            productName: r.product_name || t('home.reviews.default_product')
+                        };
+                    });
                 }
             } catch (error) {
                 console.error('Error fetching reviews:', error);

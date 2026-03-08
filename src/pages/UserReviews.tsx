@@ -31,18 +31,27 @@ export const UserReviews: React.FC = () => {
                 const data = await api.reviews.list();
 
                 if (data) {
-                    const mapped: Review[] = data.map((r: any) => ({
-                        id: r.id,
-                        author: r.author_name,
-                        date: r.created_at ? r.created_at.substring(0, 10) : '',
-                        rating: r.rating,
-                        title: r.title,
-                        productName: r.product_name,
-                        productId: r.product_id,
-                        content: r.content,
-                        images: r.images || [],
-                        userImage: r.user_image
-                    }));
+                    const mapped: Review[] = data.map((r: any) => {
+                        let parsedImages = [];
+                        try {
+                            parsedImages = typeof r.images === 'string' ? JSON.parse(r.images) : (r.images || []);
+                        } catch (e) {
+                            parsedImages = [];
+                        }
+
+                        return {
+                            id: r.id,
+                            author: r.author_name,
+                            date: r.created_at ? r.created_at.substring(0, 10) : '',
+                            rating: r.rating,
+                            title: r.title,
+                            productName: r.product_name,
+                            productId: r.product_id,
+                            content: r.content,
+                            images: parsedImages,
+                            userImage: r.user_image
+                        };
+                    });
                     setAllReviews(mapped);
                 }
             } catch (e) {

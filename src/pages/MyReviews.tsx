@@ -25,18 +25,27 @@ export const MyReviews: React.FC = () => {
                     // Sort descending
                     myReviews.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-                    const mapped = myReviews.map((r: any) => ({
-                        id: r.id,
-                        author: r.author_name,
-                        date: r.created_at,
-                        rating: r.rating,
-                        productName: r.product_name,
-                        content: r.content,
-                        images: r.images,
-                        userImage: r.user_image,
-                        helpfulCount: r.helpful_count,
-                        comments: []
-                    }));
+                    const mapped = myReviews.map((r: any) => {
+                        let parsedImages = [];
+                        try {
+                            parsedImages = typeof r.images === 'string' ? JSON.parse(r.images) : (r.images || []);
+                        } catch (e) {
+                            parsedImages = [];
+                        }
+
+                        return {
+                            id: r.id,
+                            author: r.author_name,
+                            date: r.created_at,
+                            rating: r.rating,
+                            productName: r.product_name,
+                            content: r.content,
+                            images: parsedImages,
+                            userImage: r.user_image,
+                            helpfulCount: r.helpful_count,
+                            comments: []
+                        };
+                    });
                     setMyReviews(mapped);
                 }
             } catch (e) {
