@@ -53,6 +53,15 @@ export const TravelMateDetail: React.FC = () => {
                         parsedStyles = typeof data.styles === 'string' ? JSON.parse(data.styles) : data.styles || [];
                     } catch (e) { console.error('Error parsing styles JSON:', e); }
 
+                    // Localize stored English duration like "3N 4D" → "3박 4일"
+                    let localizedDuration = data.duration || '';
+                    const durationMatch = localizedDuration.match(/^(\d+)N\s+(\d+)D$/);
+                    if (durationMatch) {
+                        localizedDuration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '박' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '일' })}`;
+                    } else if (localizedDuration === '1 Day') {
+                        localizedDuration = t('travel_mates.detail.one_day', { defaultValue: '당일치기' });
+                    }
+
                     setPost({
                         ...data,
                         startDate: data.start_date,
@@ -61,8 +70,9 @@ export const TravelMateDetail: React.FC = () => {
                         ageGroups: parsedAgeGroups,
                         styles: parsedStyles,
                         authorImage: data.author_image,
-                        authorName: data.author_name,
-                        authorInfo: data.author_info,
+                        authorName: data.author_name === 'Anonymous' ? '' : data.author_name,
+                        authorInfo: data.author_info === 'Traveler' ? '' : data.author_info,
+                        duration: localizedDuration,
                         createdAt: data.created_at,
                         updatedAt: data.updated_at,
                         views: data.view_count,
