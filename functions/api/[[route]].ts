@@ -29,6 +29,7 @@ import eventBanners from './event-banners';
 import migrateDb from './migrate-db';
 import wishlist from './wishlist';
 import recentlyViewed from './recently-viewed';
+import travelMates from './travel-mates';
 
 // Register routes
 app.route('/products', products);
@@ -52,5 +53,6 @@ app.route('/event-banners', eventBanners);
 app.route('/migrate-db', migrateDb);
 app.route('/wishlist', wishlist);
 app.route('/recently-viewed', recentlyViewed);
+app.route('/travel-mates', travelMates);
 
 export const onRequest = handle(app);
