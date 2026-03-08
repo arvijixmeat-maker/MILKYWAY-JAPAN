@@ -33,20 +33,32 @@ export const TravelMates: React.FC = () => {
 
                 if (data) {
                     // Map snake_case to camelCase
-                    const mappedPosts = data.map((post: any) => ({
-                        ...post,
-                        startDate: post.start_date,
-                        endDate: post.end_date,
-                        recruitCount: post.recruit_count,
-                        ageGroups: post.age_groups || [],
-                        styles: post.styles || [],
-                        gender: post.gender,
-                        authorImage: post.author_image,
-                        authorName: post.author_name,
-                        authorInfo: post.author_info,
-                        createdAt: post.created_at,
-                        updatedAt: post.updated_at
-                    }));
+                    const mappedPosts = data.map((post: any) => {
+                        let parsedAgeGroups = [];
+                        let parsedStyles = [];
+                        try {
+                            parsedAgeGroups = typeof post.age_groups === 'string' ? JSON.parse(post.age_groups) : post.age_groups || [];
+                        } catch (e) { console.error('Error parsing age groups JSON:', e); }
+
+                        try {
+                            parsedStyles = typeof post.styles === 'string' ? JSON.parse(post.styles) : post.styles || [];
+                        } catch (e) { console.error('Error parsing styles JSON:', e); }
+
+                        return {
+                            ...post,
+                            startDate: post.start_date,
+                            endDate: post.end_date,
+                            recruitCount: post.recruit_count,
+                            ageGroups: parsedAgeGroups,
+                            styles: parsedStyles,
+                            gender: post.gender,
+                            authorImage: post.author_image,
+                            authorName: post.author_name,
+                            authorInfo: post.author_info,
+                            createdAt: post.created_at,
+                            updatedAt: post.updated_at
+                        };
+                    });
                     setPosts(mappedPosts);
                 }
             } catch (error) {

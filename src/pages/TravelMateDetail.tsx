@@ -37,12 +37,24 @@ export const TravelMateDetail: React.FC = () => {
                 const data = await api.travelMates.get(id);
 
                 if (data) {
+                    let parsedAgeGroups = [];
+                    let parsedStyles = [];
+                    // SQLite stored JSON handling
+                    try {
+                        parsedAgeGroups = typeof data.age_groups === 'string' ? JSON.parse(data.age_groups) : data.age_groups || [];
+                    } catch (e) { console.error('Error parsing age groups JSON:', e); }
+
+                    try {
+                        parsedStyles = typeof data.styles === 'string' ? JSON.parse(data.styles) : data.styles || [];
+                    } catch (e) { console.error('Error parsing styles JSON:', e); }
+
                     setPost({
                         ...data,
                         startDate: data.start_date,
                         endDate: data.end_date,
                         recruitCount: data.recruit_count,
-                        ageGroups: data.age_groups,
+                        ageGroups: parsedAgeGroups,
+                        styles: parsedStyles,
                         authorImage: data.author_image,
                         authorName: data.author_name,
                         authorInfo: data.author_info,

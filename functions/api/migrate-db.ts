@@ -9,14 +9,45 @@ const app = new Hono<{ Bindings: Env }>();
 app.get('/', async (c) => {
     try {
         await c.env.DB.prepare("ALTER TABLE categories ADD COLUMN type TEXT DEFAULT 'product'").run();
-        return c.json({ success: true, message: "Added 'type' column to categories table successfully!" });
+        console.log("categories migration ok");
     } catch (e: any) {
-        // If it already exists, it will throw an error, which is fine at this point, but we can catch it.
-        if (e.message.includes('duplicate column name')) {
-            return c.json({ success: true, message: "Column 'type' already exists." });
-        }
-        return c.json({ success: false, error: e.message });
+        console.log("categories migration: ", e.message);
     }
+    
+    // Travel Mates Migrations
+    const travelMatesColumns = [
+        "image TEXT",
+        "start_date TEXT",
+        "end_date TEXT",
+        "duration TEXT",
+        "recruit_count INTEGER DEFAULT 1",
+        "gender TEXT DEFAULT 'any'",
+        "age_groups TEXT DEFAULT '[]'",
+        "region TEXT",
+        "styles TEXT DEFAULT '[]'",
+        "author_info TEXT",
+        "view_count INTEGER DEFAULT 0",
+        "comment_count INTEGER DEFAULT 0",
+        "author_name TEXT",
+        "author_image TEXT",
+        "description TEXT"
+    ];
+
+    let migrationResults = [];
+    for (const colDef of travelMatesColumns) {
+        try {
+            await c.env.DB.prepare(`ALTER TABLE travel_mates ADD COLUMN ${colDef}`).run();
+            migrationResults.push(`Added ${colDef}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped ${colDef}: ${e.message}`);
+        }
+    }
+
+    return c.json({ 
+        success: true, 
+        message: "Migrations executed", 
+        details: migrationResults 
+    });
 });
 
 export default app;

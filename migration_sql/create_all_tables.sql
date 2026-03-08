@@ -174,7 +174,22 @@ CREATE TABLE IF NOT EXISTS travel_mates (
     current_members INTEGER DEFAULT 1,
     status TEXT DEFAULT 'open',
     tags TEXT DEFAULT '[]',
-    created_at TEXT DEFAULT (datetime('now'))
+    created_at TEXT DEFAULT (datetime('now')),
+    image TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    duration TEXT,
+    recruit_count INTEGER DEFAULT 1,
+    gender TEXT DEFAULT 'any',
+    age_groups TEXT DEFAULT '[]',
+    region TEXT,
+    styles TEXT DEFAULT '[]',
+    author_info TEXT,
+    view_count INTEGER DEFAULT 0,
+    comment_count INTEGER DEFAULT 0,
+    author_name TEXT,
+    author_image TEXT,
+    description TEXT
 );
 
 -- Magazines
