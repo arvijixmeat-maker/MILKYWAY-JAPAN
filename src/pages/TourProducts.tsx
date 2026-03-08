@@ -222,7 +222,7 @@ export const TourProducts: React.FC = () => {
                                     ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-background-dark'
                                     : 'opacity-80 hover:opacity-100'
                                     }`}>
-                                    {category.icon.startsWith('data:') ? (
+                                    {category.icon.startsWith('data:') || category.icon.startsWith('http') || category.icon.startsWith('/') ? (
                                         <img
                                             src={category.icon}
                                             alt={category.name}

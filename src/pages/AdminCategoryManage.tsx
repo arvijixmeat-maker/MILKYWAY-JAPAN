@@ -221,7 +221,7 @@ export const AdminCategoryManage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                {category.icon.startsWith('data:') ? (
+                                                {category.icon.startsWith('data:') || category.icon.startsWith('http') || category.icon.startsWith('/') ? (
                                                     <img
                                                         src={category.icon}
                                                         alt={category.name}
@@ -381,7 +381,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                             </label>
 
                             {/* Image Preview */}
-                            {formData.icon && (
+                            {formData.icon && (formData.icon.startsWith('data:') || formData.icon.startsWith('http') || formData.icon.startsWith('/')) && (
                                 <div className="mb-3">
                                     <img
                                         src={formData.icon}
