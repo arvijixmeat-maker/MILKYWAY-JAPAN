@@ -201,21 +201,21 @@ export const TravelMateDetail: React.FC = () => {
                         <div>
                             <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1">{t('travel_mates.detail.age')}</h3>
                             <div className="flex flex-wrap gap-2">
-                                {post.ageGroups.map((age: string) => (
+                                {Array.isArray(post.ageGroups) ? post.ageGroups.map((age: string) => (
                                     <span key={age} className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium">
                                         {t(`travel_mates.filters.age_${age}`)}
                                     </span>
-                                ))}
+                                )) : null}
                             </div>
                         </div>
                         <div>
                             <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1">{t('travel_mates.detail.style')}</h3>
                             <div className="flex flex-wrap gap-2">
-                                {post.styles.map((style: string) => (
+                                {Array.isArray(post.styles) ? post.styles.map((style: string) => (
                                     <span key={style} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-bold">
                                         {style}
                                     </span>
-                                ))}
+                                )) : null}
                             </div>
                         </div>
                         <div>
