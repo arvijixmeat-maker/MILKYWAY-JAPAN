@@ -9,7 +9,7 @@ export const BottomNav: React.FC = () => {
 
     return (
         <nav
-            className="fixed bottom-0 left-0 w-full bg-white dark:bg-background-dark shadow-none drop-shadow-none pb-safe pt-2 px-6 z-50 h-[84px]"
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white dark:bg-background-dark shadow-none drop-shadow-none pb-safe pt-2 px-6 z-50 h-[84px]"
             style={{ boxShadow: 'none !important', border: 'none !important' }}
         >
             <div className="flex justify-between items-center max-w-md mx-auto h-full">

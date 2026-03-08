@@ -45,9 +45,7 @@ body {
     overflow-x: hidden;
     position: relative;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.08); /* Shadow for desktop */
-    
-    /* CRITICAL: This treats #root as the "viewport" for all `fixed` elements */
-    transform: translateZ(0); 
+    /* Removed transform: translateZ(0) because it breaks `fixed` elements in a scrolling container like #root */
 }
 
 .dark #root {
