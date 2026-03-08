@@ -134,7 +134,7 @@ app.delete('/:id', async (c) => {
 // ===== Comments =====
 
 const ensureCommentsTable = async (db: any) => {
-    await db.exec(`
+    await db.prepare(`
         CREATE TABLE IF NOT EXISTS travel_mate_comments (
             id TEXT PRIMARY KEY,
             post_id TEXT NOT NULL,
@@ -145,7 +145,7 @@ const ensureCommentsTable = async (db: any) => {
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (post_id) REFERENCES travel_mates(id) ON DELETE CASCADE
         )
-    `);
+    `).run();
 };
 
 // GET /api/travel-mates/:id/comments

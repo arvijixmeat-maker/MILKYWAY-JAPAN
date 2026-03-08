@@ -200,7 +200,7 @@ export const TravelMateDetail: React.FC = () => {
                 {/* Header Image Area */}
                 <div className="relative h-72 w-full">
                     <img
-                        src={optimizeImage(post.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4', { width: 600 })}
+                        src={post.image ? optimizeImage(post.image, { width: 600 }) : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4'}
                         alt={post.title}
                         className="w-full h-full object-cover"
                     />

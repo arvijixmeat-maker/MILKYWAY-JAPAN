@@ -325,11 +325,10 @@ export const TravelMates: React.FC = () => {
                                 {/* Right Image */}
                                 <div className="relative w-[100px] h-[100px] flex-shrink-0">
                                     <img
-                                        src={optimizeImage(post.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', { width: 200, height: 200 })}
+                                        src={post.image ? optimizeImage(post.image, { width: 200, height: 200 }) : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800'}
                                         alt={post.title}
                                         className={`w-full h-full rounded-xl object-cover border border-gray-100 dark:border-gray-700 bg-gray-100 ${post.status === 'closed' ? 'grayscale opacity-80' : ''}`}
-                                        loading={index === 0 ? "eager" : "lazy"}
-                                        {...(index === 0 ? { fetchpriority: "high" } : {})}
+                                        loading="lazy"
                                     />
                                 </div>
                             </div>
