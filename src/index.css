@@ -23,9 +23,35 @@
 
 body {
     font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif !important;
-
+    background-color: #f3f4f6 !important; /* Light gray desktop background */
     min-height: 100dvh;
     -webkit-tap-highlight-color: transparent;
+    overflow: hidden !important; /* Stop outer window scrolling */
+    display: flex;
+    justify-content: center;
+}
+
+.dark body {
+    background-color: #111827 !important; /* Dark slate desktop background */
+}
+
+/* Make #root the "mobile screen" */
+#root {
+    width: 100%;
+    max-width: 480px;
+    height: 100dvh;
+    background-color: #ffffff;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.08); /* Shadow for desktop */
+    
+    /* CRITICAL: This treats #root as the "viewport" for all `fixed` elements */
+    transform: translateZ(0); 
+}
+
+.dark #root {
+    background-color: #0f172a;
 }
 
 .magazine-card {
