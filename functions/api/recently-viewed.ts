@@ -22,10 +22,16 @@ app.get('/', async (c) => {
         await ensureTable(db);
         const userId = c.req.query('user_id');
         let result;
+        const joinQuery = `
+            SELECT rv.id, rv.user_id, rv.product_id, rv.viewed_at as created_at,
+                   p.name as title, p.thumbnail as image, p.price, p.category
+            FROM recently_viewed rv
+            LEFT JOIN products p ON rv.product_id = p.id
+        `;
         if (userId) {
-            result = await db.prepare('SELECT * FROM recently_viewed WHERE user_id = ? ORDER BY viewed_at DESC LIMIT 20').bind(userId).all();
+            result = await db.prepare(joinQuery + ' WHERE rv.user_id = ? ORDER BY rv.viewed_at DESC LIMIT 20').bind(userId).all();
         } else {
-            result = await db.prepare('SELECT * FROM recently_viewed ORDER BY viewed_at DESC LIMIT 20').all();
+            result = await db.prepare(joinQuery + ' ORDER BY rv.viewed_at DESC LIMIT 20').all();
         }
         return c.json(result.results || []);
     } catch (e: any) {

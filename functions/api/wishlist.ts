@@ -22,10 +22,16 @@ app.get('/', async (c) => {
         await ensureTable(db);
         const userId = c.req.query('user_id');
         let result;
+        const joinQuery = `
+            SELECT w.id, w.user_id, w.product_id, w.created_at,
+                   p.name as title, p.thumbnail as image, p.price, p.category
+            FROM wishlist w
+            LEFT JOIN products p ON w.product_id = p.id
+        `;
         if (userId) {
-            result = await db.prepare('SELECT * FROM wishlist WHERE user_id = ? ORDER BY created_at DESC').bind(userId).all();
+            result = await db.prepare(joinQuery + ' WHERE w.user_id = ? ORDER BY w.created_at DESC').bind(userId).all();
         } else {
-            result = await db.prepare('SELECT * FROM wishlist ORDER BY created_at DESC').all();
+            result = await db.prepare(joinQuery + ' ORDER BY w.created_at DESC').all();
         }
         return c.json(result.results || []);
     } catch (e: any) {
