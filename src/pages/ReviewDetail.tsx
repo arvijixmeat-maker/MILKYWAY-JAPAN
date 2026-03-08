@@ -206,30 +206,34 @@ export const ReviewDetail: React.FC = () => {
 
             <main className="max-w-md mx-auto pb-32">
                 <section className="p-5">
-                    {/* Header: User & Rating */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
+                    <div className="flex items-start justify-between mb-6 gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
                             <div
-                                className="w-12 h-12 rounded-full bg-gray-100 border border-gray-50 bg-cover bg-center"
+                                className="w-12 h-12 shrink-0 rounded-full bg-gray-100 border border-gray-50 bg-cover bg-center"
                                 style={{ backgroundImage: review.userImage ? `url('${optimizeImage(review.userImage, { width: 48, height: 48 })}')` : undefined }}
                             >
                                 {!review.userImage && <span className="material-symbols-outlined text-gray-400 w-full h-full flex items-center justify-center">person</span>}
                             </div>
-                            <div>
-                                <p className="text-[16px] font-bold text-[#0e1a18] dark:text-white">{review.author}</p>
-                                <p className="text-[13px] text-gray-400">{review.date}</p>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    <p className="text-[16px] font-bold text-[#0e1a18] dark:text-white truncate">{review.author}</p>
+                                    <span className="text-[14px] font-medium text-[#0e1a18] dark:text-white">様</span>
+                                </div>
+                                <div className="flex gap-0.5 mt-0.5">
+                                    {[...Array(5)].map((_, i) => (
+                                        <span
+                                            key={i}
+                                            className={`material-symbols-outlined ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`}
+                                            style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}
+                                        >
+                                            star
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                        <div className="flex gap-0.5">
-                            {[...Array(5)].map((_, i) => (
-                                <span
-                                    key={i}
-                                    className={`material-symbols-outlined ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`}
-                                    style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}
-                                >
-                                    star
-                                </span>
-                            ))}
+                        <div className="shrink-0 text-right mt-1">
+                            <p className="text-[13px] text-gray-400">{review.date}</p>
                         </div>
                     </div>
 

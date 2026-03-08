@@ -195,23 +195,28 @@ export const UserReviews: React.FC = () => {
                                 onClick={() => navigate(`/reviews/${review.id}`)}
                                 className="bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm border border-gray-50 dark:border-zinc-800 cursor-pointer hover:shadow-md transition-shadow"
                             >
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-start justify-between mb-3 gap-2">
+                                    <div className="flex items-center gap-3 min-w-0">
                                         <div
-                                            className="w-10 h-10 rounded-full bg-gray-200 bg-cover bg-center"
+                                            className="w-10 h-10 shrink-0 rounded-full bg-gray-200 bg-cover bg-center"
                                             style={{ backgroundImage: review.userImage ? `url('${review.userImage}')` : undefined }}
                                         >
                                             {!review.userImage && <span className="material-symbols-outlined text-gray-400 w-full h-full flex items-center justify-center">person</span>}
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-[#0e1a18] dark:text-white">{review.author}</p>
-                                            <p className="text-[11px] text-gray-400">{review.date}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                <p className="text-sm font-bold text-[#0e1a18] dark:text-white truncate">{review.author}</p>
+                                                <span className="text-sm font-medium text-[#0e1a18] dark:text-white">様</span>
+                                            </div>
+                                            <div className="flex gap-0.5 mt-0.5">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <span key={i} className={`material-symbols-outlined text-[16px] ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex gap-0.5">
-                                        {[...Array(5)].map((_, i) => (
-                                            <span key={i} className={`material-symbols-outlined text-[16px] ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
-                                        ))}
+                                    <div className="shrink-0 text-right">
+                                        <p className="text-[11px] text-gray-400">{review.date}</p>
                                     </div>
                                 </div>
                                 <div className="mb-3">

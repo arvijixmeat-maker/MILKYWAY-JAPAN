@@ -64,7 +64,7 @@ export const ReviewSection: React.FC = () => {
                             onClick={() => navigate(`/reviews/${review.id}`)}
                             className="min-w-[300px] w-[300px] h-[220px] snap-center bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between"
                         >
-                            <div>
+                            <div className="flex flex-col h-full">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-900/50 flex items-center justify-center text-teal-600 dark:text-teal-400 font-bold text-sm shrink-0">
                                         {review.author?.charAt(0) || t('home.reviews.anonymous')}
