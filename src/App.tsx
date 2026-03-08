@@ -72,6 +72,16 @@ const PageLoader = () => (
 function App() {
   const location = useLocation();
 
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      document.body.classList.add('admin-mode');
+      document.body.classList.remove('mobile-mode');
+    } else {
+      document.body.classList.add('mobile-mode');
+      document.body.classList.remove('admin-mode');
+    }
+  }, [location.pathname]);
+
   return (
     <>
 

@@ -23,20 +23,23 @@
 
 body {
     font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body.mobile-mode {
     background-color: #f3f4f6 !important; /* Light gray desktop background */
     min-height: 100dvh;
-    -webkit-tap-highlight-color: transparent;
     overflow: hidden !important; /* Stop outer window scrolling */
     display: flex;
     justify-content: center;
 }
 
-.dark body {
+.dark body.mobile-mode {
     background-color: #111827 !important; /* Dark slate desktop background */
 }
 
-/* Make #root the "mobile screen" */
-#root {
+/* Make #root the "mobile screen" when not in admin mode */
+body.mobile-mode #root {
     width: 100%;
     max-width: 480px;
     height: 100dvh;
@@ -45,11 +48,18 @@ body {
     overflow-x: hidden;
     position: relative;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.08); /* Shadow for desktop */
-    /* Removed transform: translateZ(0) because it breaks `fixed` elements in a scrolling container like #root */
 }
 
-.dark #root {
+.dark body.mobile-mode #root {
     background-color: #0f172a;
+}
+
+body.admin-mode {
+    background-color: #f8fafc !important;
+}
+
+.dark body.admin-mode {
+    background-color: #0f172a !important;
 }
 
 .magazine-card {
