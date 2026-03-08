@@ -24,64 +24,73 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
     if (magazines.length === 0) return null;
 
     return (
-        <section className="py-10 bg-white dark:bg-surface-dark/30">
-            <div className="px-6 mb-6 flex items-end justify-between">
+        <section className="py-12 bg-white dark:bg-background-dark">
+            <div className="px-5 mb-6 flex items-end justify-between">
                 <div>
-                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">{t('home.magazine.title')}</h3>
-                    <p className="text-[13px] text-slate-500 mt-1">{t('home.magazine.subtitle')}</p>
+                    <h3 className="text-xl font-black text-[#0e1a18] dark:text-white leading-tight">
+                        {t('home.magazine.title', { defaultValue: '今出発する良い旅行コースおすすめ！' })}
+                    </h3>
+                    <p className="text-[13px] text-gray-500 mt-2">
+                        {t('home.magazine.subtitle', { defaultValue: 'モンゴリアの天の川が厳選した最高の目的地' })}
+                    </p>
                 </div>
                 <button
                     onClick={() => navigate('/travel-guide')}
-                    className="text-sm font-bold text-primary flex items-center shrink-0 mb-1 active:scale-95 transition-transform"
+                    className="text-[15px] font-bold text-[#0D7A66] dark:text-[#18c9a6] flex items-center shrink-0 mb-1 active:scale-95 transition-transform"
                 >
-                    {t('home.magazine.view_all')} <span className="material-symbols-outlined text-sm ml-0.5">chevron_right</span>
+                    {t('home.magazine.view_all', { defaultValue: '全て見る' })} <span className="material-symbols-outlined text-lg ml-0.5">chevron_right</span>
                 </button>
             </div>
 
-            {/* Standard Horizontal Snap Scroll (Stable & High Quality) */}
-            <div className="flex overflow-x-auto gap-4 px-6 pb-8 snap-x snap-mandatory scrollbar-hide">
+            {/* Standard Horizontal Snap Scroll */}
+            <div className="flex overflow-x-auto gap-4 px-5 pb-8 snap-x snap-mandatory scrollbar-hide">
                 {magazines.map((item) => (
                     <div
                         key={item.id}
                         onClick={() => navigate(`/travel-guide/${item.id}`)}
-                        className="relative min-w-[260px] w-[260px] h-[360px] snap-center rounded-2xl overflow-hidden shadow-lg cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
+                        className="relative min-w-[280px] w-[280px] h-[400px] snap-center rounded-[20px] overflow-hidden shadow-lg cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 bg-gray-100 dark:bg-zinc-800"
                     >
                         {/* Image Layer */}
-                        <div className="absolute inset-0 bg-slate-200">
+                        <div className="absolute inset-0">
                             {item.image ? (
                                 <img
                                     src={getOptimizedImageUrl(item.image, 'productThumbnail')}
                                     alt={item.title}
-                                    width={260}
-                                    height={360}
+                                    width={280}
+                                    height={400}
                                     loading="lazy"
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-700">
-                                    <span className="material-symbols-outlined text-4xl text-slate-300">image</span>
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-zinc-700">
+                                    <span className="material-symbols-outlined text-4xl text-gray-400">image</span>
                                 </div>
                             )}
-                            {/* Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
+                            {/* Gradient Overlay for Text Readability */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
                         </div>
 
-                        {/* Top Icon */}
-                        <div className="absolute top-4 right-4 z-10">
-                            <div className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white">
-                                <span className="material-symbols-outlined text-sm">favorite</span>
+                        {/* Top Right Blue Airplane Icon */}
+                        <div className="absolute top-5 right-5 z-10">
+                            <div className="w-9 h-9 rounded-full bg-[#0ea5e9]/90 backdrop-blur-md flex items-center justify-center text-white shadow-md">
+                                <span className="material-symbols-outlined text-[18px]">flight_takeoff</span>
                             </div>
                         </div>
 
                         {/* Bottom Text Content */}
-                        <div className="absolute bottom-0 left-0 w-full p-5 text-left z-10">
-                            <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm rounded text-[10px] font-bold text-white mb-2">
-                                {item.category || t('home.magazine.default_category')}
+                        <div className="absolute bottom-0 left-0 w-full p-6 text-left z-10">
+                            {/* Category Tag */}
+                            <span className="inline-block px-2.5 py-1 bg-white/30 backdrop-blur-sm rounded-md text-[11px] font-bold text-white mb-3">
+                                {item.category || t('home.magazine.default_category', { defaultValue: '準備' })}
                             </span>
-                            <h4 className="text-lg font-bold text-white leading-snug mb-2 line-clamp-2 drop-shadow-md">
-                                {item.title}
+                            
+                            {/* Title with Flag Emoji */}
+                            <h4 className="text-[19px] font-extrabold text-white leading-snug mb-2.5 line-clamp-2 drop-shadow-md">
+                                🚩 {item.title}
                             </h4>
-                            <p className="text-white/70 text-xs line-clamp-2">
+                            
+                            {/* Description */}
+                            <p className="text-white/80 text-[13px] leading-relaxed line-clamp-2 font-medium">
                                 {item.description}
                             </p>
                         </div>
