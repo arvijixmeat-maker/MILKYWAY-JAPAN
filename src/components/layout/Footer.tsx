@@ -10,7 +10,7 @@ export const Footer: React.FC = () => {
             {/* Contact Buttons */}
             <div className="flex flex-col gap-3 mb-6 items-center">
                 <a
-                    href="https://pf.kakao.com/_BSLaxl"
+                    href="https://jzz1k.channel.io/home"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full max-w-xs flex items-center justify-center gap-2 py-3 px-6 bg-[#E8EFF5] rounded-full text-slate-700 font-bold text-sm hover:bg-[#dbe6f0] transition-colors"
@@ -37,7 +37,7 @@ export const Footer: React.FC = () => {
                     N
                 </a>
                 {/* KakaoTalk */}
-                <a href="https://pf.kakao.com/_BSLaxl" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
+                <a href="https://jzz1k.channel.io/home" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
                     <img src="/assets/icons/kakaotalk.png" alt="KakaoTalk" className="w-full h-full object-contain" />
                 </a>
                 {/* Facebook */}

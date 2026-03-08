@@ -579,7 +579,7 @@ export const ProductDetail: React.FC = () => {
             {/* Floating Bottom Bar */}
             <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 p-4 flex gap-3 z-50">
                 <a
-                    href="https://pf.kakao.com/_BSLaxl"
+                    href="https://jzz1k.channel.io/home"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 h-14 rounded-xl border border-primary text-primary font-bold flex items-center justify-center gap-2"

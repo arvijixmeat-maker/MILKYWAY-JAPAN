@@ -425,7 +425,7 @@ export const MyPage: React.FC = () => {
                             </div>
                             <span className="material-symbols-outlined text-gray-300 text-[20px]">chevron_right</span>
                         </button>
-                        <a href="https://pf.kakao.com/_BSLaxl" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                        <a href="https://jzz1k.channel.io/home" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-full bg-[#eef6ef] dark:bg-yellow-900/30 flex items-center justify-center p-2">
                                     <img src={contactIcon} alt={t('mypage.contact_us')} className="w-full h-full object-contain" />
