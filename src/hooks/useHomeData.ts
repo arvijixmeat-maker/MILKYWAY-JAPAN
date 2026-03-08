@@ -83,13 +83,13 @@ export const useHomeData = () => {
                 bannerImage: t.image_url
             }));
 
-            const magazines: Magazine[] = (Array.isArray(magazinesData) ? magazinesData.filter((m: any) => m.is_active) : []).map((m: any) => ({
+            const magazines: Magazine[] = (Array.isArray(magazinesData) ? magazinesData.filter((m: any) => m.is_active || m.is_published) : []).map((m: any) => ({
                 id: m.id,
                 title: m.title,
                 description: m.subtitle || m.description || '', // mapped from subtitle
                 category: m.category,
                 image: m.thumbnail || m.image || '', // mapped from thumbnail
-                isActive: m.is_active
+                isActive: !!(m.is_active || m.is_published)
             }));
 
             return { products, tabs, magazines };
