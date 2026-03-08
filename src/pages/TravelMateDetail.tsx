@@ -136,8 +136,8 @@ export const TravelMateDetail: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: currentUser.id,
-                    user_name: currentUser.user_metadata?.name || t('travel_mates.detail.anonymous', { defaultValue: 'Anonymous' }),
-                    user_image: currentUser.user_metadata?.avatar_url || '',
+                    user_name: currentUser.name || currentUser.email?.split('@')[0] || t('travel_mates.detail.anonymous', { defaultValue: 'Anonymous' }),
+                    user_image: currentUser.avatarUrl || '',
                     content: commentText.trim()
                 })
             });
@@ -179,7 +179,9 @@ export const TravelMateDetail: React.FC = () => {
 
     const formatTimeAgo = (dateStr: string) => {
         const now = new Date();
-        const date = new Date(dateStr);
+        // SQLite datetime('now') sets UTC without timezone offset strings. Append 'Z' manually to parse correctly.
+        const safeDateStr = !dateStr.endsWith('Z') && !dateStr.includes('+') ? `${dateStr}Z` : dateStr;
+        const date = new Date(safeDateStr);
         const diffMs = now.getTime() - date.getTime();
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
@@ -326,7 +328,7 @@ export const TravelMateDetail: React.FC = () => {
                         {currentUser ? (
                             <div className="flex gap-3 items-start">
                                 <img
-                                    src={currentUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.user_metadata?.name || 'U'}&background=159e82&color=fff`}
+                                    src={currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${currentUser.name || currentUser.email?.split('@')[0] || 'U'}&background=159e82&color=fff`}
                                     alt="me"
                                     className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5"
                                 />
