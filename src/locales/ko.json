@@ -318,7 +318,19 @@
             "traveler": "여행자",
             "one_day": "당일치기",
             "nights": "박",
-            "days": "일"
+            "days": "일",
+            "description_title": "상세 내용",
+            "comments_title": "댓글",
+            "comment_placeholder": "댓글을 작성해주세요...",
+            "submit_comment": "등록",
+            "submitting": "등록 중...",
+            "login_to_comment": "댓글을 작성하려면 로그인이 필요합니다",
+            "login_btn": "로그인",
+            "no_comments": "아직 댓글이 없습니다. 첫 번째 댓글을 남겨보세요!",
+            "just_now": "방금 전",
+            "mins_ago": "{{count}}분 전",
+            "hours_ago": "{{count}}시간 전",
+            "days_ago": "{{count}}일 전"
         }
     },
     "reservation": {

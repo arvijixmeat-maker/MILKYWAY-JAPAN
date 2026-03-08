@@ -15,6 +15,11 @@ export const TravelMateDetail: React.FC = () => {
 
     const [currentUser, setCurrentUser] = useState<any>(null);
 
+    // Comments state
+    const [comments, setComments] = useState<any[]>([]);
+    const [commentText, setCommentText] = useState('');
+    const [commentLoading, setCommentLoading] = useState(false);
+
     useEffect(() => {
         const fetchUser = async () => {
             try {
@@ -72,6 +77,23 @@ export const TravelMateDetail: React.FC = () => {
         fetchPost();
     }, [id]);
 
+    // Fetch comments
+    useEffect(() => {
+        const fetchComments = async () => {
+            if (!id) return;
+            try {
+                const res = await fetch(`/api/travel-mates/${id}/comments`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setComments(data || []);
+                }
+            } catch (e) {
+                console.error('Error fetching comments:', e);
+            }
+        };
+        fetchComments();
+    }, [id]);
+
     const isOwner = currentUser && post && currentUser.id === post.user_id;
 
     // Increment view count once
@@ -89,31 +111,48 @@ export const TravelMateDetail: React.FC = () => {
         incrementView();
     }, [post?.id, viewIncremented, id]);
 
-    const handleStartChat = async () => {
+    const handleSubmitComment = async () => {
         if (!currentUser) {
             alert(t('travel_mates.detail.login_required'));
             navigate('/login');
             return;
         }
+        if (!commentText.trim()) return;
 
-        if (currentUser.id === post.user_id) {
-            alert(t('travel_mates.detail.own_post'));
-            return;
-        }
-
+        setCommentLoading(true);
         try {
-            setLoading(true);
-            const room = await api.chats.create({ user_id: currentUser.id, partner_id: post.user_id });
-            if (room && room.id) {
-                navigate(`/chats/${room.id}`);
-            } else {
-                throw new Error("Failed to create chat room");
+            const res = await fetch(`/api/travel-mates/${id}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    user_name: currentUser.user_metadata?.name || t('travel_mates.detail.anonymous', { defaultValue: 'Anonymous' }),
+                    user_image: currentUser.user_metadata?.avatar_url || '',
+                    content: commentText.trim()
+                })
+            });
+            if (res.ok) {
+                const newComment = await res.json();
+                setComments(prev => [...prev, newComment]);
+                setCommentText('');
+                // Update comment count on post
+                setPost((prev: any) => ({ ...prev, comments: (prev.comments || 0) + 1 }));
             }
         } catch (error) {
-            console.error('Error creating chat:', error);
-            alert('Failed to start chat');
-        } finally {
-            setLoading(false);
+            console.error('Error posting comment:', error);
+        }
+        setCommentLoading(false);
+    };
+
+    const handleDeleteComment = async (commentId: string) => {
+        try {
+            const res = await fetch(`/api/travel-mates/${id}/comments/${commentId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setComments(prev => prev.filter(c => c.id !== commentId));
+                setPost((prev: any) => ({ ...prev, comments: Math.max(0, (prev.comments || 0) - 1) }));
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
         }
     };
 
@@ -126,6 +165,20 @@ export const TravelMateDetail: React.FC = () => {
             console.error('Error deleting post:', error);
             alert('Failed to delete');
         }
+    };
+
+    const formatTimeAgo = (dateStr: string) => {
+        const now = new Date();
+        const date = new Date(dateStr);
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return t('travel_mates.detail.just_now', { defaultValue: 'Just now' });
+        if (diffMins < 60) return t('travel_mates.detail.mins_ago', { defaultValue: '{{count}} min ago', count: diffMins });
+        if (diffHours < 24) return t('travel_mates.detail.hours_ago', { defaultValue: '{{count}} hours ago', count: diffHours });
+        return t('travel_mates.detail.days_ago', { defaultValue: '{{count}} days ago', count: diffDays });
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
@@ -244,29 +297,98 @@ export const TravelMateDetail: React.FC = () => {
 
                     {/* Description Text */}
                     <div className="space-y-3">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Description</h2>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('travel_mates.detail.description_title', { defaultValue: 'Description' })}</h2>
                         <p className="text-gray-600 dark:text-gray-300 text-base leading-relaxed whitespace-pre-wrap">
                             {post.description}
                         </p>
                     </div>
 
-                </div>
+                    <div className="h-px bg-gray-100 dark:bg-gray-800"></div>
 
-                {/* Footer Action */}
-                <div className="sticky bottom-0 p-5 bg-white dark:bg-[#12201d] border-t border-gray-100 dark:border-gray-800 pb-8">
-                    {post.status === 'closed' ? (
-                        <button disabled className="w-full bg-gray-300 dark:bg-gray-700 text-white font-bold text-lg py-4 rounded-2xl cursor-not-allowed">
-                            {t('travel_mates.detail.closed_status')}
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleStartChat}
-                            className="w-full bg-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                        >
-                            <span className="material-symbols-outlined">chat_bubble</span>
-                            <span>{t('travel_mates.detail.chat_btn')}</span>
-                        </button>
-                    )}
+                    {/* Comments Section */}
+                    <div className="space-y-5">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('travel_mates.detail.comments_title', { defaultValue: 'Comments' })}</h2>
+                            <span className="text-sm text-gray-400 font-medium">{comments.length}</span>
+                        </div>
+
+                        {/* Comment Input */}
+                        {currentUser ? (
+                            <div className="flex gap-3 items-start">
+                                <img
+                                    src={currentUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.user_metadata?.name || 'U'}&background=159e82&color=fff`}
+                                    alt="me"
+                                    className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5"
+                                />
+                                <div className="flex-1">
+                                    <textarea
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        placeholder={t('travel_mates.detail.comment_placeholder', { defaultValue: 'Write a comment...' })}
+                                        className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                                        rows={2}
+                                    />
+                                    <div className="flex justify-end mt-2">
+                                        <button
+                                            onClick={handleSubmitComment}
+                                            disabled={commentLoading || !commentText.trim()}
+                                            className="px-5 py-2 rounded-xl bg-primary text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 active:scale-95 transition-all"
+                                        >
+                                            {commentLoading ? t('travel_mates.detail.submitting', { defaultValue: 'Posting...' }) : t('travel_mates.detail.submit_comment', { defaultValue: 'Post' })}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('travel_mates.detail.login_to_comment', { defaultValue: 'Login to leave a comment' })}</p>
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 active:scale-95 transition-all"
+                                >
+                                    {t('travel_mates.detail.login_btn', { defaultValue: 'Login' })}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Comments List */}
+                        <div className="space-y-5">
+                            {comments.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <span className="material-symbols-outlined text-4xl text-gray-300 dark:text-gray-600">forum</span>
+                                    <p className="mt-2 text-sm text-gray-400">{t('travel_mates.detail.no_comments', { defaultValue: 'No comments yet. Be the first!' })}</p>
+                                </div>
+                            ) : (
+                                comments.map((comment: any) => (
+                                    <div key={comment.id} className="flex gap-3">
+                                        <img
+                                            src={comment.user_image || `https://ui-avatars.com/api/?name=${comment.user_name || 'U'}&background=e0e0e0&color=666`}
+                                            alt={comment.user_name}
+                                            className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-sm text-gray-900 dark:text-white">{comment.user_name}</span>
+                                                    <span className="text-xs text-gray-400">{formatTimeAgo(comment.created_at)}</span>
+                                                </div>
+                                                {currentUser && currentUser.id === comment.user_id && (
+                                                    <button
+                                                        onClick={() => handleDeleteComment(comment.id)}
+                                                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                                    >
+                                                        {t('travel_mates.detail.delete_btn')}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed whitespace-pre-wrap">{comment.content}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>

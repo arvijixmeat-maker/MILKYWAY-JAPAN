@@ -131,4 +131,81 @@ app.delete('/:id', async (c) => {
     }
 });
 
+// ===== Comments =====
+
+const ensureCommentsTable = async (db: any) => {
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS travel_mate_comments (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            user_name TEXT DEFAULT '',
+            user_image TEXT DEFAULT '',
+            content TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (post_id) REFERENCES travel_mates(id) ON DELETE CASCADE
+        )
+    `);
+};
+
+// GET /api/travel-mates/:id/comments
+app.get('/:id/comments', async (c) => {
+    const postId = c.req.param('id');
+    const db = c.env.DB;
+    try {
+        await ensureCommentsTable(db);
+        const { results } = await db.prepare(
+            'SELECT * FROM travel_mate_comments WHERE post_id = ? ORDER BY created_at ASC'
+        ).bind(postId).all();
+        return c.json(results || []);
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// POST /api/travel-mates/:id/comments
+app.post('/:id/comments', async (c) => {
+    const postId = c.req.param('id');
+    const db = c.env.DB;
+    try {
+        await ensureCommentsTable(db);
+        const data = await c.req.json();
+        const id = crypto.randomUUID();
+
+        await db.prepare(
+            `INSERT INTO travel_mate_comments (id, post_id, user_id, user_name, user_image, content) VALUES (?, ?, ?, ?, ?, ?)`
+        ).bind(id, postId, data.user_id || '', data.user_name || '', data.user_image || '', data.content || '').run();
+
+        // Increment comment_count on the post
+        await db.prepare(
+            `UPDATE travel_mates SET comment_count = COALESCE(comment_count, 0) + 1 WHERE id = ?`
+        ).bind(postId).run();
+
+        const newComment = await db.prepare('SELECT * FROM travel_mate_comments WHERE id = ?').bind(id).first();
+        return c.json(newComment);
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// DELETE /api/travel-mates/:postId/comments/:commentId
+app.delete('/:postId/comments/:commentId', async (c) => {
+    const postId = c.req.param('postId');
+    const commentId = c.req.param('commentId');
+    const db = c.env.DB;
+    try {
+        await db.prepare('DELETE FROM travel_mate_comments WHERE id = ? AND post_id = ?').bind(commentId, postId).run();
+
+        // Decrement comment_count on the post
+        await db.prepare(
+            `UPDATE travel_mates SET comment_count = MAX(0, COALESCE(comment_count, 0) - 1) WHERE id = ?`
+        ).bind(postId).run();
+
+        return c.json({ success: true });
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
 export default app;
+

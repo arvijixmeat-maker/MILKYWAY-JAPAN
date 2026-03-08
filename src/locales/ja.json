@@ -318,7 +318,19 @@
             "traveler": "旅行者",
             "one_day": "日帰り",
             "nights": "泊",
-            "days": "日"
+            "days": "日",
+            "description_title": "詳細内容",
+            "comments_title": "コメント",
+            "comment_placeholder": "コメントを入力してください...",
+            "submit_comment": "投稿",
+            "submitting": "投稿中...",
+            "login_to_comment": "コメントを書くにはログインが必要です",
+            "login_btn": "ログイン",
+            "no_comments": "まだコメントがありません。最初のコメントを残してみましょう！",
+            "just_now": "たった今",
+            "mins_ago": "{{count}}分前",
+            "hours_ago": "{{count}}時間前",
+            "days_ago": "{{count}}日前"
         }
     },
     "travel_guide": {
