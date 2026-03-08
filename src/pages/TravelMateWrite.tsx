@@ -63,7 +63,7 @@ export const TravelMateWrite: React.FC = () => {
         const endD = new Date(end);
         const diffTime = Math.abs(endD.getTime() - startD.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays === 0) return '1 Day';
+        if (diffDays === 0) return t('travel_mates.detail.one_day', { defaultValue: '1 Day' });
         return `${diffDays}${t('travel_mates.detail.nights', { defaultValue: 'N' })} ${diffDays + 1}${t('travel_mates.detail.days', { defaultValue: 'D' })}`;
     };
 
@@ -112,19 +112,11 @@ export const TravelMateWrite: React.FC = () => {
                 gender: gender,
                 age_groups: selectedAges,
                 region: t(`travel_mates.tabs.${selectedRegion}`),
-                // Saving translated string for now as discussed to maintain compatibility with existing "Korean" data patterns
-                // or ideally we start saving keys, but list view expects strings matching tabs.
-                // The list view filters by `post.region.includes(tabLabel)`.
-                // So if we save the translated label, it works for that language. 
-                // But cross-language might be tricky. For now, assuming single-language context per user or "Korean" main.
-                // Actually, `selectedRegion` state is now 'central_mongolia' key.
-                // so `t(...)` will return "중앙몽골" (if KR) or "Central Mongolia" (if JA).
-
                 styles: styles.map(s => t(`travel_mates.filters.style_${s}`)),
                 tags: generateTags(),
                 image: image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
-                author_name: me?.user_metadata?.name || 'Anonymous',
-                author_image: me?.user_metadata?.avatar_url || 'https://via.placeholder.com/100',
+                author_name: me?.user_metadata?.name || '',
+                author_image: me?.user_metadata?.avatar_url || '',
                 author_info: `Traveler`, // Simplified
                 status: 'recruiting',
                 view_count: 0,

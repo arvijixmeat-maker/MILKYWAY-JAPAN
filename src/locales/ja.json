@@ -312,7 +312,13 @@
             "delete_confirm": "本当に削除しますか？",
             "login_required": "ログインが必要なサービスです。",
             "own_post": "自分の投稿です。",
-            "closed_status": "募集完了"
+            "closed_status": "募集完了",
+            "recruiting": "募集中",
+            "anonymous": "匿名ユーザー",
+            "traveler": "旅行者",
+            "one_day": "日帰り",
+            "nights": "泊",
+            "days": "日"
         }
     },
     "travel_guide": {

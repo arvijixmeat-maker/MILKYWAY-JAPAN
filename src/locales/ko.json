@@ -312,7 +312,13 @@
             "delete_confirm": "정말 삭제하시겠습니까?",
             "login_required": "로그인이 필요한 서비스입니다.",
             "own_post": "자신의 게시물입니다.",
-            "closed_status": "모집완료"
+            "closed_status": "모집마감",
+            "recruiting": "모집중",
+            "anonymous": "익명 사용자",
+            "traveler": "여행자",
+            "one_day": "당일치기",
+            "nights": "박",
+            "days": "일"
         }
     },
     "reservation": {

@@ -103,7 +103,7 @@ export const TravelMateDetail: React.FC = () => {
 
         try {
             setLoading(true);
-            const room = await api.chats.create({ partner_id: post.user_id });
+            const room = await api.chats.create({ user_id: currentUser.id, partner_id: post.user_id });
             if (room && room.id) {
                 navigate(`/chats/${room.id}`);
             } else {
@@ -166,7 +166,7 @@ export const TravelMateDetail: React.FC = () => {
                     <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="px-2.5 py-1 rounded-lg bg-primary/90 text-white text-xs font-bold backdrop-blur-md shadow-sm">
-                                {post.status === 'closed' ? t('travel_mates.detail.closed_status') : 'Recruiting'}
+                                {post.status === 'closed' ? t('travel_mates.detail.closed_status') : t('travel_mates.detail.recruiting', { defaultValue: 'Recruiting' })}
                             </span>
                             <span className="px-2.5 py-1 rounded-lg bg-black/40 text-white/90 text-xs font-medium backdrop-blur-md">
                                 {t('travel_mates.detail.views', { count: post.views })}
@@ -174,10 +174,10 @@ export const TravelMateDetail: React.FC = () => {
                         </div>
                         <h1 className="text-2xl font-bold leading-tight mb-3 drop-shadow-sm">{post.title}</h1>
                         <div className="flex items-center gap-3">
-                            <img src={post.authorImage || 'https://via.placeholder.com/40'} alt={post.authorName} className="w-10 h-10 rounded-full border-2 border-white/20" />
+                            <img src={post.authorImage || `https://ui-avatars.com/api/?name=${post.authorName || 'Traveler'}&background=159e82&color=fff`} alt={post.authorName} className="w-10 h-10 rounded-full border-2 border-white/20" />
                             <div>
-                                <p className="font-bold text-sm">{post.authorName}</p>
-                                <p className="text-xs text-white/70">{post.authorInfo}</p>
+                                <p className="font-bold text-sm">{post.authorName || t('travel_mates.detail.anonymous', { defaultValue: 'Anonymous' })}</p>
+                                <p className="text-xs text-white/70">{post.authorInfo || t('travel_mates.detail.traveler', { defaultValue: 'Traveler' })}</p>
                             </div>
                         </div>
                     </div>

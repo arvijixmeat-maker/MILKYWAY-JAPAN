@@ -30,6 +30,8 @@ import migrateDb from './migrate-db';
 import wishlist from './wishlist';
 import recentlyViewed from './recently-viewed';
 import travelMates from './travel-mates';
+import chats from './chats';
+import messages from './messages';
 
 // Register routes
 app.route('/products', products);
@@ -54,5 +56,7 @@ app.route('/migrate-db', migrateDb);
 app.route('/wishlist', wishlist);
 app.route('/recently-viewed', recentlyViewed);
 app.route('/travel-mates', travelMates);
+app.route('/chats', chats);
+app.route('/messages', messages);
 
 export const onRequest = handle(app);
