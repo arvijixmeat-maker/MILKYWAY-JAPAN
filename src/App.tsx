@@ -71,20 +71,19 @@ const PageLoader = () => (
 
 function App() {
   const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
+  // Ensure body background matches the layout style for seamless experience
   useEffect(() => {
-    if (location.pathname.startsWith('/admin')) {
-      document.body.classList.add('admin-mode');
-      document.body.classList.remove('mobile-mode');
+    if (isAdminRoute) {
+      document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#0f172a' : '#f8fafc';
     } else {
-      document.body.classList.add('mobile-mode');
-      document.body.classList.remove('admin-mode');
+      document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#111827' : '#f3f4f6';
     }
-  }, [location.pathname]);
+  }, [isAdminRoute]);
 
   return (
-    <>
-
+    <div className={isAdminRoute ? "admin-app-wrapper" : "mobile-app-wrapper"}>
       <SEO />
       <NotificationProvider>
         <Suspense fallback={<PageLoader />}>
@@ -146,7 +145,7 @@ function App() {
           </Routes>
         </Suspense>
       </NotificationProvider>
-    </>
+    </div>
   )
 }
 
