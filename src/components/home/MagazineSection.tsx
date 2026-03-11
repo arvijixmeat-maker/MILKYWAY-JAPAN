@@ -27,7 +27,7 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
         <section className="py-12 bg-white dark:bg-background-dark">
             <div className="px-5 mb-6 flex items-end justify-between">
                 <div>
-                    <h3 className="text-xl font-black text-[#0e1a18] dark:text-white leading-tight">
+                    <h3 className="text-[19px] font-black text-[#0e1a18] dark:text-white leading-tight">
                         {t('home.magazine.title', { defaultValue: '今出発する良い旅行コースおすすめ！' })}
                     </h3>
                     <p className="text-[13px] text-gray-500 mt-2">

@@ -30,7 +30,7 @@ export const AdventureSection: React.FC<AdventureSectionProps> = ({ products }) 
         <section className="pt-4 pb-8 px-5">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('home.adventure.title')}</h3>
+                <h3 className="text-[19px] font-bold text-slate-900 dark:text-white">{t('home.adventure.title')}</h3>
 
             </div>
 

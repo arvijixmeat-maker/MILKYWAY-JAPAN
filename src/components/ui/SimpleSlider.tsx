@@ -21,7 +21,7 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
         <div className="relative w-full my-6 select-none">
             {/* Scroll Container with Peek Effect - Aligned with Text */}
             <div
-                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide pt-2 pb-4 px-2 -mx-2"
                 onScroll={handleScroll}
                 style={{ scrollBehavior: 'smooth' }}
             >

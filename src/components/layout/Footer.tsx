@@ -29,20 +29,16 @@ export const Footer: React.FC = () => {
             {/* Social Icons */}
             <div className="flex justify-center gap-4 mb-6">
                 {/* Instagram */}
-                <a href="https://www.instagram.com/mongolia_inhasu/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
+                <a href="https://www.instagram.com/milkyway_mongolia" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
                     <img src="/assets/icons/instagram.png" alt="Instagram" className="w-full h-full object-contain" />
                 </a>
-                {/* Naver Blog */}
-                <a href="https://blog.naver.com/tulgabolor2" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#2DB400] flex items-center justify-center text-white hover:opacity-90 transition-all font-bold text-lg font-serif">
-                    N
+                {/* Line */}
+                <a href="https://line.me/ti/p/2mQyucsGcT" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
+                    <img src="/assets/icons/line.png" alt="Line" className="w-full h-full object-contain" />
                 </a>
-                {/* KakaoTalk */}
+                {/* Channel Talk */}
                 <a href="https://jzz1k.channel.io/home" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
-                    <img src="/assets/icons/kakaotalk.png" alt="KakaoTalk" className="w-full h-full object-contain" />
-                </a>
-                {/* Facebook */}
-                <a href="https://www.facebook.com/mongoliasky.co.kr/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
-                    <img src="/assets/icons/facebook.png" alt="Facebook" className="w-full h-full object-contain" />
+                    <img src="/assets/icons/channel_talk.png" alt="Channel Talk" className="w-full h-full object-contain" />
                 </a>
             </div>
 

@@ -208,7 +208,7 @@ export const TravelGuideDetail: React.FC = () => {
                             </span>
                         )}
                     </div>
-                    <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-2 drop-shadow-sm">
+                    <h1 className="text-xl md:text-2xl font-bold leading-tight mb-2 drop-shadow-sm">
                         {magazine.title}
                     </h1>
                     <div className="text-white/80 text-sm font-medium flex items-center gap-2">
