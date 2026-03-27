@@ -7,7 +7,7 @@ import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/supabase
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { useTranslation } from 'react-i18next';
 
-import type { TourProduct, DetailSlide, DividerContent, TimelineContent } from '../types/product';
+import type { TourProduct, DetailSlide, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -412,20 +412,9 @@ export const ProductDetail: React.FC = () => {
                                 );
                             } else if (block.type === 'timeline') {
                                 const timeline = block.content as TimelineContent;
-                                const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
-                                const hasMeals = timeline.meals && (timeline.meals.breakfast || timeline.meals.lunch || timeline.meals.dinner);
                                 
                                 return (
                                     <div key={block.id} className="relative pb-8 px-6">
-                                        {/* Day Label Header */}
-                                        {timeline.dayLabel && (
-                                            <div className="mb-4 -mx-2 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                                                <div className="flex items-baseline gap-3">
-                                                    <span className="text-lg font-black text-primary">{timeline.dayLabel}</span>
-                                                    {timeline.dayDate && <span className="text-sm text-slate-500 font-medium">{timeline.dayDate}</span>}
-                                                </div>
-                                            </div>
-                                        )}
                                         <div className="flex gap-4 items-stretch">
                                             <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
                                                 <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
@@ -441,29 +430,6 @@ export const ProductDetail: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Meals & Accommodation Info */}
-                                        {(hasMeals || timeline.accommodation) && (
-                                            <div className="pl-10 mt-3 space-y-2">
-                                                {hasMeals && (
-                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
-                                                        <span className="material-symbols-outlined text-[16px] text-amber-600">restaurant</span>
-                                                        <span>
-                                                            {timeline.meals!.breakfast && <span>조 : {timeline.meals!.breakfast}</span>}
-                                                            {timeline.meals!.breakfast && timeline.meals!.lunch && <span> / </span>}
-                                                            {timeline.meals!.lunch && <span>중 : {timeline.meals!.lunch}</span>}
-                                                            {(timeline.meals!.breakfast || timeline.meals!.lunch) && timeline.meals!.dinner && <span> / </span>}
-                                                            {timeline.meals!.dinner && <span>석 : {timeline.meals!.dinner}</span>}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {timeline.accommodation && (
-                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
-                                                        <span className="material-symbols-outlined text-[16px] text-blue-600">hotel</span>
-                                                        <span>{timeline.accommodation}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
                                         {timeline.images && timeline.images.length > 0 && (
                                             <div className="pl-10 mt-3">
                                                 <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
@@ -479,6 +445,54 @@ export const ProductDetail: React.FC = () => {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                );
+                            } else if (block.type === 'dayInfo') {
+                                const dayInfo = block.content as DayInfoContent;
+                                const hasMeals = dayInfo.meals && (dayInfo.meals.breakfast || dayInfo.meals.lunch || dayInfo.meals.dinner);
+                                
+                                return (
+                                    <div key={block.id} className="px-4 mb-2">
+                                        <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-900/20 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+                                            <div className="flex items-baseline gap-3 mb-1">
+                                                <span className="text-lg font-black text-primary">{dayInfo.dayLabel}</span>
+                                                {dayInfo.dayDate && <span className="text-sm text-slate-500 font-medium">{dayInfo.dayDate}</span>}
+                                            </div>
+                                            {dayInfo.title && <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{dayInfo.title}</p>}
+                                            {dayInfo.description && <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{dayInfo.description}</p>}
+                                            {(hasMeals || dayInfo.accommodation) && (
+                                                <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 space-y-1">
+                                                    {dayInfo.meals!.breakfast && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">朝食（ちょうしょく）</span>
+                                                            <span>{dayInfo.meals!.breakfast}</span>
+                                                        </div>
+                                                    )}
+                                                    {dayInfo.meals!.lunch && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">昼食（ちゅうしょく）</span>
+                                                            <span>{dayInfo.meals!.lunch}</span>
+                                                        </div>
+                                                    )}
+                                                    {dayInfo.meals!.dinner && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">夕食（ゆうしょく）</span>
+                                                            <span>{dayInfo.meals!.dinner}</span>
+                                                        </div>
+                                                    )}
+                                                    {dayInfo.accommodation && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-blue-600">hotel</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">宿泊（しゅくはく）</span>
+                                                            <span>{dayInfo.accommodation}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             }
@@ -604,20 +618,9 @@ export const ProductDetail: React.FC = () => {
                                 );
                             } else if (block.type === 'timeline') {
                                 const timeline = block.content as TimelineContent;
-                                const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
-                                const hasMeals = timeline.meals && (timeline.meals.breakfast || timeline.meals.lunch || timeline.meals.dinner);
                                 
                                 return (
                                     <div key={block.id} className="relative pb-8 px-6">
-                                        {/* Day Label Header */}
-                                        {timeline.dayLabel && (
-                                            <div className="mb-4 -mx-2 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                                                <div className="flex items-baseline gap-3">
-                                                    <span className="text-lg font-black text-primary">{timeline.dayLabel}</span>
-                                                    {timeline.dayDate && <span className="text-sm text-slate-500 font-medium">{timeline.dayDate}</span>}
-                                                </div>
-                                            </div>
-                                        )}
                                         <div className="flex gap-4 items-stretch">
                                             <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
                                                 <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
@@ -633,29 +636,6 @@ export const ProductDetail: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Meals & Accommodation Info */}
-                                        {(hasMeals || timeline.accommodation) && (
-                                            <div className="pl-10 mt-3 space-y-2">
-                                                {hasMeals && (
-                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
-                                                        <span className="material-symbols-outlined text-[16px] text-amber-600">restaurant</span>
-                                                        <span>
-                                                            {timeline.meals!.breakfast && <span>조 : {timeline.meals!.breakfast}</span>}
-                                                            {timeline.meals!.breakfast && timeline.meals!.lunch && <span> / </span>}
-                                                            {timeline.meals!.lunch && <span>중 : {timeline.meals!.lunch}</span>}
-                                                            {(timeline.meals!.breakfast || timeline.meals!.lunch) && timeline.meals!.dinner && <span> / </span>}
-                                                            {timeline.meals!.dinner && <span>석 : {timeline.meals!.dinner}</span>}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {timeline.accommodation && (
-                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
-                                                        <span className="material-symbols-outlined text-[16px] text-blue-600">hotel</span>
-                                                        <span>{timeline.accommodation}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
                                         {timeline.images && timeline.images.length > 0 && (
                                             <div className="pl-10 mt-3">
                                                 <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
@@ -671,6 +651,54 @@ export const ProductDetail: React.FC = () => {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                );
+                            } else if (block.type === 'dayInfo') {
+                                const dayInfo = block.content as DayInfoContent;
+                                const hasMeals = dayInfo.meals && (dayInfo.meals.breakfast || dayInfo.meals.lunch || dayInfo.meals.dinner);
+                                
+                                return (
+                                    <div key={block.id} className="px-4 mb-2">
+                                        <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-900/20 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+                                            <div className="flex items-baseline gap-3 mb-1">
+                                                <span className="text-lg font-black text-primary">{dayInfo.dayLabel}</span>
+                                                {dayInfo.dayDate && <span className="text-sm text-slate-500 font-medium">{dayInfo.dayDate}</span>}
+                                            </div>
+                                            {dayInfo.title && <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{dayInfo.title}</p>}
+                                            {dayInfo.description && <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{dayInfo.description}</p>}
+                                            {(hasMeals || dayInfo.accommodation) && (
+                                                <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 space-y-1">
+                                                    {dayInfo.meals!.breakfast && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">朝食（ちょうしょく）</span>
+                                                            <span>{dayInfo.meals!.breakfast}</span>
+                                                        </div>
+                                                    )}
+                                                    {dayInfo.meals!.lunch && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">昼食（ちゅうしょく）</span>
+                                                            <span>{dayInfo.meals!.lunch}</span>
+                                                        </div>
+                                                    )}
+                                                    {dayInfo.meals!.dinner && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">夕食（ゆうしょく）</span>
+                                                            <span>{dayInfo.meals!.dinner}</span>
+                                                        </div>
+                                                    )}
+                                                    {dayInfo.accommodation && (
+                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                                            <span className="material-symbols-outlined text-[14px] text-blue-600">hotel</span>
+                                                            <span className="font-medium text-slate-600 dark:text-slate-300">宿泊（しゅくはく）</span>
+                                                            <span>{dayInfo.accommodation}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             }

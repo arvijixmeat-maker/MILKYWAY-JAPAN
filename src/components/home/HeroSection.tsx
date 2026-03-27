@@ -93,13 +93,16 @@ export const HeroSection: React.FC = () => {
                         className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0"
                         onLoad={(e) => e.currentTarget.classList.remove('opacity-0')}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
-
-                    <div className="absolute bottom-0 left-0 p-6 w-full pointer-events-none">
-                        <div className="inline-flex items-center px-2 py-0.5 mb-3 text-[10px] font-bold text-white bg-primary-dark rounded uppercase tracking-wider">{banner.tag}</div>
-                        <h2 className="text-2xl font-bold text-white leading-tight mb-2 whitespace-pre-line">{banner.title}</h2>
-                        <p className="text-white/80 text-sm font-medium mb-1">{banner.subtitle}</p>
-                    </div>
+                    {(banner.tag || banner.title || banner.subtitle) && (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+                            <div className="absolute bottom-0 left-0 p-6 w-full pointer-events-none">
+                                {banner.tag && <div className="inline-flex items-center px-2 py-0.5 mb-3 text-[10px] font-bold text-white bg-primary-dark rounded uppercase tracking-wider">{banner.tag}</div>}
+                                {banner.title && <h2 className="text-2xl font-bold text-white leading-tight mb-2 whitespace-pre-line">{banner.title}</h2>}
+                                {banner.subtitle && <p className="text-white/80 text-sm font-medium mb-1">{banner.subtitle}</p>}
+                            </div>
+                        </>
+                    )}
                 </div>
             ))}
         </section>
