@@ -35,13 +35,6 @@ export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    {category.icon && (
-                        category.icon.startsWith('data:') || category.icon.startsWith('http') || category.icon.startsWith('/') ? (
-                            <img src={category.icon} alt={category.name} className="w-6 h-6 object-contain inline-block" />
-                        ) : (
-                            <span className="material-symbols-outlined text-primary text-[22px] leading-none block">{category.icon}</span>
-                        )
-                    )}
                     <h3 className="text-[19px] font-bold text-slate-900 dark:text-white pt-0.5">{category.name}</h3>
                 </div>
                 <button 

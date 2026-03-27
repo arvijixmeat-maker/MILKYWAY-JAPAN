@@ -82,10 +82,10 @@ export const TravelThemeSection: React.FC<TravelThemeSectionProps> = ({ products
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-20"></div>
                     <div className="absolute bottom-0 left-0 p-6 w-full pointer-events-none z-20">
                         <div className="inline-flex items-center px-2 py-0.5 mb-3 text-[10px] font-bold text-white bg-primary rounded uppercase tracking-wider">{currentTabInfo.name}</div>
-                        <h3 className="text-2xl font-bold text-white leading-tight mb-2 whitespace-pre-line text-left">
+                        <h3 className="text-[16px] sm:text-lg md:text-2xl lg:text-3xl font-bold text-white mb-1 md:mb-2 text-left truncate w-full">
                             {currentTabInfo.title}
                         </h3>
-                        <p className="text-white/80 text-sm font-medium mb-1 text-left whitespace-pre-line">
+                        <p className="text-white/80 text-[11px] sm:text-xs md:text-sm font-medium mb-1 text-left line-clamp-2 sm:line-clamp-1 w-full">
                             {currentTabInfo.subtitle}
                         </p>
                     </div>
