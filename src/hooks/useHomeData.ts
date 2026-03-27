@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import type { Category } from '../types/category';
 
 /**
  * Safely ensures a value is always a string array.
@@ -51,6 +52,7 @@ export interface HomeData {
     products: Product[];
     tabs: CategoryTab[];
     magazines: Magazine[];
+    categories: Category[];
 }
 
 export const useHomeData = () => {
@@ -58,10 +60,11 @@ export const useHomeData = () => {
         queryKey: ['homeData'],
         queryFn: async () => {
             // Fetch all data in parallel using Promise.all
-            const [productsData, bannersData, magazinesData] = await Promise.all([
+            const [productsData, bannersData, magazinesData, categoriesData] = await Promise.all([
                 api.products.list(),
                 api.banners.get(),
-                api.magazines.list()
+                api.magazines.list(),
+                api.categories.list()
             ]);
 
             const products: Product[] = (Array.isArray(productsData) ? productsData : []).map((p: any) => ({
@@ -92,7 +95,21 @@ export const useHomeData = () => {
                 isActive: !!(m.is_active || m.is_published)
             }));
 
-            return { products, tabs, magazines };
+            // Process categories (filter out magazines or 'all')
+            const categories: Category[] = (Array.isArray(categoriesData) ? categoriesData : [])
+                .filter((c: any) => c.is_active !== false && c.id !== 'all' && (!c.type || c.type === 'product'))
+                .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+                .map((c: any) => ({
+                    id: c.id,
+                    name: c.name,
+                    icon: c.icon,
+                    description: c.description || '',
+                    order: c.order || 0,
+                    isActive: c.is_active !== false,
+                    type: c.type || 'product'
+                }));
+
+            return { products, tabs, magazines, categories };
         },
         staleTime: 1000 * 30, // 30 seconds
         gcTime: 1000 * 60 * 30,   // 30 minutes
@@ -103,7 +120,8 @@ export const useHomeData = () => {
     const data: HomeData = queryData || {
         products: [],
         tabs: [],
-        magazines: []
+        magazines: [],
+        categories: []
     };
 
     return { data, isLoading, error };

@@ -6,7 +6,7 @@ import { QuickLinks } from '../components/home/QuickLinks';
 import { TravelThemeSection } from '../components/home/TravelThemeSection';
 import { PromoBanner } from '../components/home/PromoBanner';
 import { ReviewSection } from '../components/home/ReviewSection';
-import { AdventureSection } from '../components/home/AdventureSection';
+import { CategoryRowSection } from '../components/home/CategoryRowSection';
 import { MagazineSection } from '../components/home/MagazineSection';
 import { useHomeData } from '../hooks/useHomeData';
 import { TravelThemeSkeleton } from '../components/skeletons/TravelThemeSkeleton';
@@ -54,8 +54,14 @@ export const Home: React.FC = () => {
                         <TravelThemeSection products={data.products} tabs={data.tabs} />
                     </div>
                     <PromoBanner />
-                    <div style={{ contentVisibility: 'auto', containIntrinsicSize: '800px' }}>
-                        <AdventureSection products={data.products} />
+                    <div className="flex flex-col gap-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '800px' }}>
+                        {data.categories?.map(category => (
+                            <CategoryRowSection
+                                key={category.id}
+                                category={category}
+                                products={data.products}
+                            />
+                        ))}
                     </div>
                     <div style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
                         <MagazineSection magazines={data.magazines} />
