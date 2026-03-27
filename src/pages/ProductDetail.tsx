@@ -415,12 +415,10 @@ export const ProductDetail: React.FC = () => {
                                 const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
                                 
                                 return (
-                                    <div key={block.id} className="relative flex gap-4 px-6 items-start">
-                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1 h-full min-h-[50px]">
-                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark"></div>
-                                            {hasNextTimeline && (
-                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-[-3rem] left-1/2 -translate-x-1/2 z-0"></div>
-                                            )}
+                                    <div key={block.id} className="relative flex gap-4 px-6 items-stretch">
+                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
+                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
+                                            <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
                                         </div>
                                         <div className="flex-1 pb-8">
                                             {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
@@ -572,12 +570,10 @@ export const ProductDetail: React.FC = () => {
                                 const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
                                 
                                 return (
-                                    <div key={block.id} className="relative flex gap-4 px-6 items-start">
-                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1 h-full min-h-[50px]">
-                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark"></div>
-                                            {hasNextTimeline && (
-                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-[-3rem] left-1/2 -translate-x-1/2 z-0"></div>
-                                            )}
+                                    <div key={block.id} className="relative flex gap-4 px-6 items-stretch">
+                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
+                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
+                                            <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
                                         </div>
                                         <div className="flex-1 pb-8">
                                             {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
