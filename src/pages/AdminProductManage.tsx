@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { uploadImage, uploadFile } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/supabaseImage';
-import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent } from '../types/product';
+import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent } from '../types/product';
 import type { Category } from '../types/category';
 
 
@@ -811,7 +811,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
     // Detail Block Handlers
-    const addDetailBlock = (type: 'image' | 'slide' | 'divider') => {
+    const addDetailBlock = (type: 'image' | 'slide' | 'divider' | 'timeline') => {
         let content: any = '';
 
         if (type === 'slide') {
@@ -827,6 +827,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             content = {
                 style: 'space',
                 height: 40
+            };
+        } else if (type === 'timeline') {
+            content = {
+                id: `timeline-${Date.now()}`,
+                time: '',
+                title: '',
+                description: '',
+                images: []
             };
         }
 
@@ -919,7 +927,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
 
     // Itinerary Block Handlers (same as Detail Block but for itinerary)
-    const addItineraryBlock = (type: 'image' | 'slide' | 'divider') => {
+    const addItineraryBlock = (type: 'image' | 'slide' | 'divider' | 'timeline') => {
         let content: any = '';
 
         if (type === 'slide') {
@@ -935,6 +943,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             content = {
                 style: 'space',
                 height: 40
+            };
+        } else if (type === 'timeline') {
+            content = {
+                id: `timeline-${Date.now()}`,
+                time: '',
+                title: '',
+                description: '',
+                images: []
             };
         }
 
@@ -1026,6 +1042,55 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             blocks[blockIndex] = { ...block, content: updatedSlide };
             setFormData({ ...formData, itineraryBlocks: blocks });
         }
+    };
+
+    // Generic Timeline Block Handlers
+    const updateTimelineInBlock = (blocksArray: 'detail' | 'itinerary', blockIndex: number, field: string, value: any) => {
+        const blocks = [...(blocksArray === 'detail' ? (formData.detailBlocks || []) : (formData.itineraryBlocks || []))];
+        const block = blocks[blockIndex];
+        if (block.type !== 'timeline') return;
+        const timeline = block.content as TimelineContent;
+        const updatedTimeline = { ...timeline, [field]: value };
+        blocks[blockIndex] = { ...block, content: updatedTimeline };
+        
+        if (blocksArray === 'detail') setFormData({ ...formData, detailBlocks: blocks });
+        else setFormData({ ...formData, itineraryBlocks: blocks });
+    };
+    
+    const handleTimelineBlockImages = async (blocksArray: 'detail' | 'itinerary', blockIndex: number, files: FileList | null) => {
+        if (!files) return;
+        try {
+            const uploadPromises = Array.from(files).map(file => uploadFile(file, 'images', 'product-details'));
+            const urls = await Promise.all(uploadPromises);
+            
+            const blocks = [...(blocksArray === 'detail' ? (formData.detailBlocks || []) : (formData.itineraryBlocks || []))];
+            const block = blocks[blockIndex];
+            if (block.type === 'timeline') {
+                const currentTimeline = block.content as TimelineContent;
+                const updatedTimeline = {
+                    ...currentTimeline,
+                    images: [...currentTimeline.images, ...urls]
+                };
+                blocks[blockIndex] = { ...block, content: updatedTimeline };
+                if (blocksArray === 'detail') setFormData({ ...formData, detailBlocks: blocks });
+                else setFormData({ ...formData, itineraryBlocks: blocks });
+            }
+        } catch (error) {
+            console.error('Timeline images upload failed:', error);
+            alert('이미지 업로드 실패');
+        }
+    };
+    
+    const removeTimelineBlockImage = (blocksArray: 'detail' | 'itinerary', blockIndex: number, imgIndex: number) => {
+        const blocks = [...(blocksArray === 'detail' ? (formData.detailBlocks || []) : (formData.itineraryBlocks || []))];
+        const block = blocks[blockIndex];
+        if (block.type !== 'timeline') return;
+        const timeline = block.content as TimelineContent;
+        const newTimeline = { ...timeline, images: timeline.images.filter((_, i) => i !== imgIndex) };
+        blocks[blockIndex] = { ...block, content: newTimeline };
+        
+        if (blocksArray === 'detail') setFormData({ ...formData, detailBlocks: blocks });
+        else setFormData({ ...formData, itineraryBlocks: blocks });
     };
 
     // Detail Image handlers
@@ -1514,6 +1579,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 </button>
                                                 <button
                                                     type="button"
+                                                    onClick={() => addDetailBlock('timeline')}
+                                                    className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">timeline</span>
+                                                    타임라인 추가
+                                                </button>
+                                                <button
+                                                    type="button"
                                                     onClick={() => addDetailBlock('divider')}
                                                     className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
                                                 >
@@ -1533,7 +1606,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     <div className="flex items-center justify-between mb-3">
                                                         <div className="flex items-center gap-2">
                                                             <span className="bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                                                {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : 'DIVIDER')}
+                                                                {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : 'DIVIDER'))}
                                                             </span>
                                                             <span className="text-sm font-medium text-slate-900 dark:text-white">
                                                                 {index + 1}번째 블록
@@ -1639,6 +1712,35 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                 </div>
                                                             )}
                                                         </div>
+                                                    ) : block.type === 'timeline' ? (
+                                                        // TIMELINE BLOCK
+                                                        <div>
+                                                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                                                <div>
+                                                                    <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                </div>
+                                                                <div>
+                                                                    <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="mb-3">
+                                                                <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            </div>
+                                                            <div className="mb-2">
+                                                                <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
+                                                                <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('detail', index, e.target.files)} className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700" />
+                                                            </div>
+                                                            {(block.content as TimelineContent).images?.length > 0 && (
+                                                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                                                    {(block.content as TimelineContent).images.map((img, imgIdx) => (
+                                                                        <div key={imgIdx} className="relative flex-shrink-0">
+                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                                                                            <button type="button" onClick={() => removeTimelineBlockImage('detail', index, imgIdx)} className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white"><span className="material-symbols-outlined text-xs">close</span></button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     ) : (
                                                         // DIVIDER BLOCK
                                                         <div className="flex items-center gap-4">
@@ -1719,6 +1821,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                             </button>
                                             <button
                                                 type="button"
+                                                onClick={() => addItineraryBlock('timeline')}
+                                                className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">timeline</span>
+                                                타임라인 추가
+                                            </button>
+                                            <button
+                                                type="button"
                                                 onClick={() => addItineraryBlock('divider')}
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
                                             >
@@ -1738,7 +1848,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 <div className="flex items-center justify-between mb-3">
                                                     <div className="flex items-center gap-2">
                                                         <span className="bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                                            {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : 'DIVIDER')}
+                                                            {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : 'DIVIDER'))}
                                                         </span>
                                                         <span className="text-sm font-medium text-slate-900 dark:text-white">
                                                             {index + 1}번째 블록
@@ -1839,6 +1949,35 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                         >
                                                                             <span className="material-symbols-outlined text-xs">close</span>
                                                                         </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : block.type === 'timeline' ? (
+                                                    // TIMELINE BLOCK
+                                                    <div>
+                                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                                            <div>
+                                                                <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            </div>
+                                                            <div>
+                                                                <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="mb-3">
+                                                            <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                        </div>
+                                                        <div className="mb-2">
+                                                            <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
+                                                            <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', index, e.target.files)} className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700" />
+                                                        </div>
+                                                        {(block.content as TimelineContent).images?.length > 0 && (
+                                                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                                                {(block.content as TimelineContent).images.map((img, imgIdx) => (
+                                                                    <div key={imgIdx} className="relative flex-shrink-0">
+                                                                        <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                                                                        <button type="button" onClick={() => removeTimelineBlockImage('itinerary', index, imgIdx)} className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white"><span className="material-symbols-outlined text-xs">close</span></button>
                                                                     </div>
                                                                 ))}
                                                             </div>

@@ -87,11 +87,19 @@ export interface DividerContent {
     height: number;
 }
 
-export type DetailBlockType = 'image' | 'slide' | 'divider';
+export interface TimelineContent {
+    id: string;
+    time?: string;
+    title: string;
+    description: string;
+    images: string[];
+}
+
+export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline';
 
 export interface DetailContentBlock {
     id: string;
     type: DetailBlockType;
-    content: string | DetailSlide | DividerContent;
+    content: string | DetailSlide | DividerContent | TimelineContent;
 }
 

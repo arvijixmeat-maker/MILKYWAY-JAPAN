@@ -7,7 +7,7 @@ import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/supabase
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { useTranslation } from 'react-i18next';
 
-import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
+import type { TourProduct, DetailSlide, DividerContent, TimelineContent } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -355,7 +355,7 @@ export const ProductDetail: React.FC = () => {
                 {/* Unified Detail Content (Blocks) */}
                 {product.detailBlocks && product.detailBlocks.length > 0 ? (
                     <div className="space-y-8 mb-8">
-                        {product.detailBlocks.map(block => {
+                        {product.detailBlocks.map((block, index, arr) => {
                             if (block.type === 'image') {
                                 return (
                                     <img
@@ -409,6 +409,42 @@ export const ProductDetail: React.FC = () => {
                                             : ''
                                             }`}
                                     />
+                                );
+                            } else if (block.type === 'timeline') {
+                                const timeline = block.content as TimelineContent;
+                                const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
+                                
+                                return (
+                                    <div key={block.id} className="relative flex gap-4 px-6 items-start">
+                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1 h-full min-h-[50px]">
+                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark"></div>
+                                            {hasNextTimeline && (
+                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-[-3rem] left-1/2 -translate-x-1/2 z-0"></div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 pb-8">
+                                            {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
+                                            <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
+                                            {timeline.description && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 whitespace-pre-wrap">
+                                                    {timeline.description}
+                                                </p>
+                                            )}
+                                            {timeline.images && timeline.images.length > 0 && (
+                                                <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+                                                    {timeline.images.map((img, imgIdx) => (
+                                                        <img
+                                                            key={imgIdx}
+                                                            src={getOptimizedImageUrl(img, 'productThumbnail')}
+                                                            alt={`${timeline.title} - ${imgIdx + 1}`}
+                                                            className="w-[70%] md:w-48 h-32 md:h-32 object-cover rounded-xl shrink-0 snap-center shadow-sm border border-gray-100 dark:border-gray-800"
+                                                            loading="lazy"
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 );
                             }
                             return null;
@@ -476,7 +512,7 @@ export const ProductDetail: React.FC = () => {
 
                 {product.itineraryBlocks && product.itineraryBlocks.length > 0 ? (
                     <div className="space-y-8 pb-8">
-                        {product.itineraryBlocks.map(block => {
+                        {product.itineraryBlocks.map((block, index, arr) => {
                             if (block.type === 'image') {
                                 return (
                                     <img
@@ -530,6 +566,42 @@ export const ProductDetail: React.FC = () => {
                                             : ''
                                             }`}
                                     />
+                                );
+                            } else if (block.type === 'timeline') {
+                                const timeline = block.content as TimelineContent;
+                                const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
+                                
+                                return (
+                                    <div key={block.id} className="relative flex gap-4 px-6 items-start">
+                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1 h-full min-h-[50px]">
+                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark"></div>
+                                            {hasNextTimeline && (
+                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-[-3rem] left-1/2 -translate-x-1/2 z-0"></div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 pb-8">
+                                            {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
+                                            <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
+                                            {timeline.description && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 whitespace-pre-wrap">
+                                                    {timeline.description}
+                                                </p>
+                                            )}
+                                            {timeline.images && timeline.images.length > 0 && (
+                                                <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+                                                    {timeline.images.map((img, imgIdx) => (
+                                                        <img
+                                                            key={imgIdx}
+                                                            src={getOptimizedImageUrl(img, 'productThumbnail')}
+                                                            alt={`${timeline.title} - ${imgIdx + 1}`}
+                                                            className="w-[70%] md:w-48 h-32 md:h-32 object-cover rounded-xl shrink-0 snap-center shadow-sm border border-gray-100 dark:border-gray-800"
+                                                            loading="lazy"
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 );
                             }
                             return null;
