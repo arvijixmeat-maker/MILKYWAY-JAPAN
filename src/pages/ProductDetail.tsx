@@ -415,20 +415,24 @@ export const ProductDetail: React.FC = () => {
                                 const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
                                 
                                 return (
-                                    <div key={block.id} className="relative flex gap-4 px-6 items-stretch">
-                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
-                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
-                                            <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
+                                    <div key={block.id} className="relative pb-8 px-6">
+                                        <div className="flex gap-4 items-stretch">
+                                            <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
+                                                <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
+                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
+                                            </div>
+                                            <div className="flex-1 pb-1">
+                                                {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
+                                                <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
+                                                {timeline.description && (
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                                                        {timeline.description}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex-1 pb-8">
-                                            {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
-                                            <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
-                                            {timeline.description && (
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 whitespace-pre-wrap">
-                                                    {timeline.description}
-                                                </p>
-                                            )}
-                                            {timeline.images && timeline.images.length > 0 && (
+                                        {timeline.images && timeline.images.length > 0 && (
+                                            <div className="pl-10 mt-3">
                                                 <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
                                                     {timeline.images.map((img, imgIdx) => (
                                                         <img
@@ -440,8 +444,8 @@ export const ProductDetail: React.FC = () => {
                                                         />
                                                     ))}
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             }
@@ -570,20 +574,24 @@ export const ProductDetail: React.FC = () => {
                                 const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
                                 
                                 return (
-                                    <div key={block.id} className="relative flex gap-4 px-6 items-stretch">
-                                        <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
-                                            <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
-                                            <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
+                                    <div key={block.id} className="relative pb-8 px-6">
+                                        <div className="flex gap-4 items-stretch">
+                                            <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
+                                                <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
+                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
+                                            </div>
+                                            <div className="flex-1 pb-1">
+                                                {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
+                                                <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
+                                                {timeline.description && (
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                                                        {timeline.description}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex-1 pb-8">
-                                            {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
-                                            <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
-                                            {timeline.description && (
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 whitespace-pre-wrap">
-                                                    {timeline.description}
-                                                </p>
-                                            )}
-                                            {timeline.images && timeline.images.length > 0 && (
+                                        {timeline.images && timeline.images.length > 0 && (
+                                            <div className="pl-10 mt-3">
                                                 <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
                                                     {timeline.images.map((img, imgIdx) => (
                                                         <img
@@ -595,8 +603,8 @@ export const ProductDetail: React.FC = () => {
                                                         />
                                                     ))}
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             }
