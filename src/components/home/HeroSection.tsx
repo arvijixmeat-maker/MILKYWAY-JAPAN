@@ -45,12 +45,14 @@ export const HeroSection: React.FC = () => {
                 const data = await api.banners.get();
                 // The API now returns { banners: [], quickLinks: [], eventBanners: [], categoryTabs: [] }
                 if (data && Array.isArray(data.banners) && data.banners.length > 0) {
+                    const defaultTexts = ['New Tag', 'new tag', '새로운 배너 타이틀', '배너 설명을 입력하세요', 'Premium Trip'];
+                    const clean = (v: string) => v && !defaultTexts.includes(v.trim()) ? v : '';
                     return data.banners.map((b: any) => ({
                         id: b.id,
                         image: b.image || b.image_url,
-                        tag: b.tag || 'Premium Trip',
-                        title: b.title,
-                        subtitle: b.subtitle,
+                        tag: clean(b.tag || ''),
+                        title: clean(b.title || ''),
+                        subtitle: clean(b.subtitle || ''),
                         link: b.link
                     }));
                 }
