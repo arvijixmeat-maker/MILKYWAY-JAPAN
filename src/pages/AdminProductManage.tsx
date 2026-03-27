@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { api } from '../lib/api';
-import { uploadImage, uploadFile } from '../utils/upload';
+import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/supabaseImage';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent } from '../types/product';
@@ -998,7 +998,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
     const handleItineraryBlockImageUpload = async (index: number, file: File) => {
         try {
-            const url = await uploadFile(file, 'images', 'product-details');
+            const url = await uploadImage(file, 'product-details');
             updateItineraryBlockContent(index, url);
         } catch (error) {
             console.error('Itinerary block image upload failed:', error);
@@ -1010,7 +1010,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         if (!files) return;
 
         try {
-            const uploadPromises = Array.from(files).map(file => uploadFile(file, 'images', 'product-details'));
+            const uploadPromises = Array.from(files).map(file => uploadImage(file, 'product-details'));
             const urls = await Promise.all(uploadPromises);
 
             const block = formData.itineraryBlocks?.[blockIndex];
@@ -1060,7 +1060,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     const handleTimelineBlockImages = async (blocksArray: 'detail' | 'itinerary', blockIndex: number, files: FileList | null) => {
         if (!files) return;
         try {
-            const uploadPromises = Array.from(files).map(file => uploadFile(file, 'images', 'product-details'));
+            const uploadPromises = Array.from(files).map(file => uploadImage(file, 'product-details'));
             const urls = await Promise.all(uploadPromises);
             
             const blocks = [...(blocksArray === 'detail' ? (formData.detailBlocks || []) : (formData.itineraryBlocks || []))];
