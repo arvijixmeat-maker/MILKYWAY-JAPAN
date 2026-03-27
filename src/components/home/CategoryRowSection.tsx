@@ -36,15 +36,19 @@ export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     {category.icon && (
-                        <span className="material-symbols-outlined text-primary text-[22px]">{category.icon}</span>
+                        category.icon.startsWith('data:') || category.icon.startsWith('http') || category.icon.startsWith('/') ? (
+                            <img src={category.icon} alt={category.name} className="w-6 h-6 object-contain inline-block" />
+                        ) : (
+                            <span className="material-symbols-outlined text-primary text-[22px] leading-none block">{category.icon}</span>
+                        )
                     )}
-                    <h3 className="text-[19px] font-bold text-slate-900 dark:text-white">{category.name}</h3>
+                    <h3 className="text-[19px] font-bold text-slate-900 dark:text-white pt-0.5">{category.name}</h3>
                 </div>
                 <button 
                     onClick={() => navigate(`/products?category=${category.name}`)}
                     className="text-sm text-primary font-bold flex items-center hover:opacity-80 transition-opacity"
                 >
-                    {t('home.theme.more_items_prefix', '')} {t('home.view_details', '자세히 보기')}
+                    {t('home.theme.more_items', 'もっと見る')}
                     <span className="material-symbols-outlined text-[16px] ml-0.5">chevron_right</span>
                 </button>
             </div>
