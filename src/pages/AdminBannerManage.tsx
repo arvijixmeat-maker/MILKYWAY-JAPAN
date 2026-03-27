@@ -174,8 +174,8 @@ export const AdminBannerManage: React.FC = () => {
     const addBanner = () => {
         const newId = `banner-${Date.now()}`;
         setBanners([...banners, {
-            id: newId, image: "https://via.placeholder.com/800x500?text=New+Banner",
-            tag: "New Tag", title: "새로운 배너 타이틀", subtitle: "배너 설명을 입력하세요", link: ""
+            id: newId, image: "",
+            tag: "", title: "", subtitle: "", link: ""
         }]);
         markUnsaved();
     };
