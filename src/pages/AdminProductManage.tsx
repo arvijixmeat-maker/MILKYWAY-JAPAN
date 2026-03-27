@@ -831,10 +831,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         } else if (type === 'timeline') {
             content = {
                 id: `timeline-${Date.now()}`,
+                dayLabel: '',
+                dayDate: '',
                 time: '',
                 title: '',
                 description: '',
-                images: []
+                images: [],
+                meals: { breakfast: '', lunch: '', dinner: '' },
+                accommodation: ''
             };
         }
 
@@ -947,10 +951,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         } else if (type === 'timeline') {
             content = {
                 id: `timeline-${Date.now()}`,
+                dayLabel: '',
+                dayDate: '',
                 time: '',
                 title: '',
                 description: '',
-                images: []
+                images: [],
+                meals: { breakfast: '', lunch: '', dinner: '' },
+                accommodation: ''
             };
         }
 
@@ -1715,6 +1723,18 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     ) : block.type === 'timeline' ? (
                                                         // TIMELINE BLOCK
                                                         <div>
+                                                            {/* Day Label Row */}
+                                                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                                                <div>
+                                                                    <label className="block text-xs text-slate-500 mb-1">일차 (예: 1일차)</label>
+                                                                    <input type="text" value={(block.content as TimelineContent).dayLabel || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'dayLabel', e.target.value)} placeholder="1일차" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs text-slate-500 mb-1">날짜 (예: 05/26(화))</label>
+                                                                    <input type="text" value={(block.content as TimelineContent).dayDate || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'dayDate', e.target.value)} placeholder="05/26(화)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                </div>
+                                                            </div>
+                                                            {/* Time & Title Row */}
                                                             <div className="grid grid-cols-2 gap-3 mb-3">
                                                                 <div>
                                                                     <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
@@ -1725,6 +1745,29 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             </div>
                                                             <div className="mb-3">
                                                                 <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            </div>
+                                                            {/* Meals Row */}
+                                                            <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                                <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">🍽 식사 정보</label>
+                                                                <div className="grid grid-cols-3 gap-2">
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">조식</label>
+                                                                        <input type="text" value={(block.content as TimelineContent).meals?.breakfast || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'meals', { ...(block.content as TimelineContent).meals, breakfast: e.target.value })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">중식</label>
+                                                                        <input type="text" value={(block.content as TimelineContent).meals?.lunch || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'meals', { ...(block.content as TimelineContent).meals, lunch: e.target.value })} placeholder="현지식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">석식</label>
+                                                                        <input type="text" value={(block.content as TimelineContent).meals?.dinner || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'meals', { ...(block.content as TimelineContent).meals, dinner: e.target.value })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {/* Accommodation Row */}
+                                                            <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
+                                                                <input type="text" value={(block.content as TimelineContent).accommodation || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'accommodation', e.target.value)} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                             <div className="mb-2">
                                                                 <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
@@ -1957,6 +2000,18 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 ) : block.type === 'timeline' ? (
                                                     // TIMELINE BLOCK
                                                     <div>
+                                                        {/* Day Label Row */}
+                                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                                            <div>
+                                                                <label className="block text-xs text-slate-500 mb-1">일차 (예: 1일차)</label>
+                                                                <input type="text" value={(block.content as TimelineContent).dayLabel || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'dayLabel', e.target.value)} placeholder="1일차" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs text-slate-500 mb-1">날짜 (예: 05/26(화))</label>
+                                                                <input type="text" value={(block.content as TimelineContent).dayDate || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'dayDate', e.target.value)} placeholder="05/26(화)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            </div>
+                                                        </div>
+                                                        {/* Time & Title Row */}
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
                                                                 <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
@@ -1967,6 +2022,29 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         </div>
                                                         <div className="mb-3">
                                                             <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                        </div>
+                                                        {/* Meals Row */}
+                                                        <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                            <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">🍽 식사 정보</label>
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <div>
+                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">조식</label>
+                                                                    <input type="text" value={(block.content as TimelineContent).meals?.breakfast || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'meals', { ...(block.content as TimelineContent).meals, breakfast: e.target.value })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">중식</label>
+                                                                    <input type="text" value={(block.content as TimelineContent).meals?.lunch || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'meals', { ...(block.content as TimelineContent).meals, lunch: e.target.value })} placeholder="현지식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">석식</label>
+                                                                    <input type="text" value={(block.content as TimelineContent).meals?.dinner || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'meals', { ...(block.content as TimelineContent).meals, dinner: e.target.value })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {/* Accommodation Row */}
+                                                        <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                            <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
+                                                            <input type="text" value={(block.content as TimelineContent).accommodation || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'accommodation', e.target.value)} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                         </div>
                                                         <div className="mb-2">
                                                             <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>

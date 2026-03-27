@@ -413,9 +413,19 @@ export const ProductDetail: React.FC = () => {
                             } else if (block.type === 'timeline') {
                                 const timeline = block.content as TimelineContent;
                                 const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
+                                const hasMeals = timeline.meals && (timeline.meals.breakfast || timeline.meals.lunch || timeline.meals.dinner);
                                 
                                 return (
                                     <div key={block.id} className="relative pb-8 px-6">
+                                        {/* Day Label Header */}
+                                        {timeline.dayLabel && (
+                                            <div className="mb-4 -mx-2 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+                                                <div className="flex items-baseline gap-3">
+                                                    <span className="text-lg font-black text-primary">{timeline.dayLabel}</span>
+                                                    {timeline.dayDate && <span className="text-sm text-slate-500 font-medium">{timeline.dayDate}</span>}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="flex gap-4 items-stretch">
                                             <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
                                                 <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
@@ -431,6 +441,29 @@ export const ProductDetail: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
+                                        {/* Meals & Accommodation Info */}
+                                        {(hasMeals || timeline.accommodation) && (
+                                            <div className="pl-10 mt-3 space-y-2">
+                                                {hasMeals && (
+                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
+                                                        <span className="material-symbols-outlined text-[16px] text-amber-600">restaurant</span>
+                                                        <span>
+                                                            {timeline.meals!.breakfast && <span>조 : {timeline.meals!.breakfast}</span>}
+                                                            {timeline.meals!.breakfast && timeline.meals!.lunch && <span> / </span>}
+                                                            {timeline.meals!.lunch && <span>중 : {timeline.meals!.lunch}</span>}
+                                                            {(timeline.meals!.breakfast || timeline.meals!.lunch) && timeline.meals!.dinner && <span> / </span>}
+                                                            {timeline.meals!.dinner && <span>석 : {timeline.meals!.dinner}</span>}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {timeline.accommodation && (
+                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
+                                                        <span className="material-symbols-outlined text-[16px] text-blue-600">hotel</span>
+                                                        <span>{timeline.accommodation}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                         {timeline.images && timeline.images.length > 0 && (
                                             <div className="pl-10 mt-3">
                                                 <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
@@ -572,9 +605,19 @@ export const ProductDetail: React.FC = () => {
                             } else if (block.type === 'timeline') {
                                 const timeline = block.content as TimelineContent;
                                 const hasNextTimeline = index < arr.length - 1 && arr[index + 1]?.type === 'timeline';
+                                const hasMeals = timeline.meals && (timeline.meals.breakfast || timeline.meals.lunch || timeline.meals.dinner);
                                 
                                 return (
                                     <div key={block.id} className="relative pb-8 px-6">
+                                        {/* Day Label Header */}
+                                        {timeline.dayLabel && (
+                                            <div className="mb-4 -mx-2 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+                                                <div className="flex items-baseline gap-3">
+                                                    <span className="text-lg font-black text-primary">{timeline.dayLabel}</span>
+                                                    {timeline.dayDate && <span className="text-sm text-slate-500 font-medium">{timeline.dayDate}</span>}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="flex gap-4 items-stretch">
                                             <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
                                                 <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
@@ -590,6 +633,29 @@ export const ProductDetail: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
+                                        {/* Meals & Accommodation Info */}
+                                        {(hasMeals || timeline.accommodation) && (
+                                            <div className="pl-10 mt-3 space-y-2">
+                                                {hasMeals && (
+                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
+                                                        <span className="material-symbols-outlined text-[16px] text-amber-600">restaurant</span>
+                                                        <span>
+                                                            {timeline.meals!.breakfast && <span>조 : {timeline.meals!.breakfast}</span>}
+                                                            {timeline.meals!.breakfast && timeline.meals!.lunch && <span> / </span>}
+                                                            {timeline.meals!.lunch && <span>중 : {timeline.meals!.lunch}</span>}
+                                                            {(timeline.meals!.breakfast || timeline.meals!.lunch) && timeline.meals!.dinner && <span> / </span>}
+                                                            {timeline.meals!.dinner && <span>석 : {timeline.meals!.dinner}</span>}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {timeline.accommodation && (
+                                                    <div className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-400">
+                                                        <span className="material-symbols-outlined text-[16px] text-blue-600">hotel</span>
+                                                        <span>{timeline.accommodation}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                         {timeline.images && timeline.images.length > 0 && (
                                             <div className="pl-10 mt-3">
                                                 <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">

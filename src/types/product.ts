@@ -89,10 +89,18 @@ export interface DividerContent {
 
 export interface TimelineContent {
     id: string;
+    dayLabel?: string;       // 일차 라벨 (예: "1일차", "DAY 1")
+    dayDate?: string;        // 날짜 (예: "05/26(화)")
     time?: string;
     title: string;
     description: string;
     images: string[];
+    meals?: {
+        breakfast?: string;  // 조식 (예: "캠프식", "호텔 조식")
+        lunch?: string;      // 중식 (예: "현지식")
+        dinner?: string;     // 석식 (예: "캠프식")
+    };
+    accommodation?: string;  // 숙소 (예: "개별화장실과 샤워실이 구비된 디럭스게르")
 }
 
 export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline';
