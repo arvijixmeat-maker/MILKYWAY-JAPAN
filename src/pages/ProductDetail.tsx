@@ -474,40 +474,52 @@ export const ProductDetail: React.FC = () => {
                                 return (
                                     <div key={block.id} className="px-4 mb-2">
                                         <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-900/20 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                                            <div className="flex items-baseline gap-3 mb-1">
-                                                <span className="text-lg font-black text-primary">{dayInfo.dayLabel}</span>
+                                            <div className="flex items-baseline gap-3 mb-2">
+                                                <span className="text-xl font-black text-primary tracking-tight">{dayInfo.dayLabel}</span>
                                                 {dayInfo.dayDate && <span className="text-sm text-slate-500 font-medium">{dayInfo.dayDate}</span>}
                                             </div>
-                                            {dayInfo.title && <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{dayInfo.title}</p>}
-                                            {dayInfo.description && <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{dayInfo.description}</p>}
+                                            {dayInfo.title && <p className="text-base font-bold text-slate-800 dark:text-slate-200 mb-2 leading-tight">{dayInfo.title}</p>}
+                                            {dayInfo.description && <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-400 mb-4">{dayInfo.description}</p>}
                                             {(hasMeals || dayInfo.accommodation) && (
-                                                <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 space-y-1">
+                                                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700/60 space-y-1">
                                                     {dayInfo.meals!.breakfast && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">朝食（ちょうしょく）</span>
-                                                            <span>{dayInfo.meals!.breakfast}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>朝食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちょうしょく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.breakfast}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.lunch && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">昼食（ちゅうしょく）</span>
-                                                            <span>{dayInfo.meals!.lunch}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>昼食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちゅうしょく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.lunch}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.dinner && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">夕食（ゆうしょく）</span>
-                                                            <span>{dayInfo.meals!.dinner}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>夕食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ゆうしょく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.dinner}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.accommodation && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">hotel</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">宿泊（しゅくはく）</span>
-                                                            <span>{dayInfo.accommodation}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1 mt-1 font-medium">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">hotel</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>宿泊</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(しゅくはく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.accommodation}</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -680,40 +692,52 @@ export const ProductDetail: React.FC = () => {
                                 return (
                                     <div key={block.id} className="px-4 mb-2">
                                         <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-900/20 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                                            <div className="flex items-baseline gap-3 mb-1">
-                                                <span className="text-lg font-black text-primary">{dayInfo.dayLabel}</span>
+                                            <div className="flex items-baseline gap-3 mb-2">
+                                                <span className="text-xl font-black text-primary tracking-tight">{dayInfo.dayLabel}</span>
                                                 {dayInfo.dayDate && <span className="text-sm text-slate-500 font-medium">{dayInfo.dayDate}</span>}
                                             </div>
-                                            {dayInfo.title && <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">{dayInfo.title}</p>}
-                                            {dayInfo.description && <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{dayInfo.description}</p>}
+                                            {dayInfo.title && <p className="text-base font-bold text-slate-800 dark:text-slate-200 mb-2 leading-tight">{dayInfo.title}</p>}
+                                            {dayInfo.description && <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-400 mb-4">{dayInfo.description}</p>}
                                             {(hasMeals || dayInfo.accommodation) && (
-                                                <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 space-y-1">
+                                                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700/60 space-y-1">
                                                     {dayInfo.meals!.breakfast && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">朝食（ちょうしょく）</span>
-                                                            <span>{dayInfo.meals!.breakfast}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>朝食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちょうしょく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.breakfast}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.lunch && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">昼食（ちゅうしょく）</span>
-                                                            <span>{dayInfo.meals!.lunch}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>昼食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちゅうしょく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.lunch}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.dinner && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">夕食（ゆうしょく）</span>
-                                                            <span>{dayInfo.meals!.dinner}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>夕食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ゆうしょく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.dinner}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.accommodation && (
-                                                        <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-primary">hotel</span>
-                                                            <span className="font-medium text-slate-600 dark:text-slate-300">宿泊（しゅくはく）</span>
-                                                            <span>{dayInfo.accommodation}</span>
+                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1 mt-1 font-medium">
+                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">hotel</span>
+                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
+                                                                <span>宿泊</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(しゅくはく)</span>
+                                                            </div>
+                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.accommodation}</span>
                                                         </div>
                                                     )}
                                                 </div>
