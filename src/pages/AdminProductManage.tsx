@@ -233,6 +233,23 @@ export const AdminProductManage: React.FC = () => {
         }
     };
 
+    const duplicateProduct = async (product: TourProduct) => {
+        if (confirm(`'${product.name}' 상품을 복제하시겠습니까?`)) {
+            const duplicatedProduct: TourProduct = {
+                ...product,
+                id: `prod-${Date.now()}`,
+                name: `${product.name} (복제본)`,
+                status: 'inactive',
+                isFeatured: false,
+                isPopular: false,
+                viewCount: 0,
+                bookingCount: 0
+            };
+            
+            await saveProducts([], duplicatedProduct);
+        }
+    };
+
     // Drag and Drop for Products List
     const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
 
@@ -537,6 +554,13 @@ export const AdminProductManage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => duplicateProduct(product)}
+                                                        className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                                                        title="복제"
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">content_copy</span>
+                                                    </button>
                                                     <button
                                                         onClick={() => {
                                                             setSelectedProduct(product);
