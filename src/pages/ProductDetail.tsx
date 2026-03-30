@@ -6,6 +6,7 @@ import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/supabaseImage';
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../components/ui/Toast';
 
 import type { TourProduct, DetailSlide, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 
@@ -13,6 +14,7 @@ export const ProductDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { t } = useTranslation();
+    const { showToast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -136,6 +138,24 @@ export const ProductDetail: React.FC = () => {
         }
     };
 
+    const handleShare = async () => {
+        if (!product) return;
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: product.name,
+                    text: product.description,
+                    url: window.location.href
+                });
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                showToast('success', '링크가 복사되었습니다.');
+            }
+        } catch (error) {
+            console.error('Share error:', error);
+        }
+    };
+
     const [activeTab, setActiveTab] = useState<'intro' | 'itinerary' | 'guide'>('intro');
 
     const scrollToSection = (id: 'intro' | 'itinerary' | 'guide') => {
@@ -233,7 +253,7 @@ export const ProductDetail: React.FC = () => {
                                 favorite
                             </span>
                         </button>
-                        <button className="text-[#0e1a18] dark:text-white flex items-center justify-center">
+                        <button onClick={handleShare} className="text-[#0e1a18] dark:text-white flex items-center justify-center">
                             <span className="material-symbols-outlined">share</span>
                         </button>
                     </div>
@@ -464,28 +484,28 @@ export const ProductDetail: React.FC = () => {
                                                 <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 space-y-1">
                                                     {dayInfo.meals!.breakfast && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">朝食（ちょうしょく）</span>
                                                             <span>{dayInfo.meals!.breakfast}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.lunch && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">昼食（ちゅうしょく）</span>
                                                             <span>{dayInfo.meals!.lunch}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.dinner && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">夕食（ゆうしょく）</span>
                                                             <span>{dayInfo.meals!.dinner}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.accommodation && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-blue-600">hotel</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">hotel</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">宿泊（しゅくはく）</span>
                                                             <span>{dayInfo.accommodation}</span>
                                                         </div>
@@ -670,28 +690,28 @@ export const ProductDetail: React.FC = () => {
                                                 <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 space-y-1">
                                                     {dayInfo.meals!.breakfast && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">朝食（ちょうしょく）</span>
                                                             <span>{dayInfo.meals!.breakfast}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.lunch && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">昼食（ちゅうしょく）</span>
                                                             <span>{dayInfo.meals!.lunch}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.meals!.dinner && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">restaurant</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">夕食（ゆうしょく）</span>
                                                             <span>{dayInfo.meals!.dinner}</span>
                                                         </div>
                                                     )}
                                                     {dayInfo.accommodation && (
                                                         <div className="flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-slate-400">
-                                                            <span className="material-symbols-outlined text-[14px] text-blue-600">hotel</span>
+                                                            <span className="material-symbols-outlined text-[14px] text-primary">hotel</span>
                                                             <span className="font-medium text-slate-600 dark:text-slate-300">宿泊（しゅくはく）</span>
                                                             <span>{dayInfo.accommodation}</span>
                                                         </div>
