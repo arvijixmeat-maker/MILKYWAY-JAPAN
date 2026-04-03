@@ -131,7 +131,23 @@ export const TourProducts: React.FC = () => {
             const category = categories.find(c => c.id === selectedCategory);
             if (category) {
                 // Products save category by name (e.g., '중앙몽골'), so match by category.name
-                result = result.filter(p => p.category === category.name || p.category === category.id);
+                const catName = category.name.toLowerCase();
+                const isRidingSearch = catName.includes('乗馬') || catName.includes('승마') || catName.includes('riding');
+
+                result = result.filter(p => {
+                    const matchesCategory = p.category === category.name || p.category === category.id;
+                    if (matchesCategory) return true;
+
+                    // Fallback for Horseback Riding specifically based on Name/Tags
+                    if (isRidingSearch) {
+                        return (
+                            p.name.includes('乗馬') || 
+                            p.name.includes('승마') || 
+                            p.tags?.some(t => t.includes('乗馬') || t.includes('승마'))
+                        );
+                    }
+                    return false;
+                });
             }
         }
 

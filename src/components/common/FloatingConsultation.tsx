@@ -2,7 +2,10 @@ import React from 'react';
 
 export const FloatingConsultation: React.FC = () => {
     return (
-        <div className="fixed bottom-[160px] right-5 z-[60] flex flex-col gap-3 pointer-events-none">
+        <div 
+            className="fixed z-[60] flex flex-col gap-3 pointer-events-none"
+            style={{ bottom: '220px', right: '16px' }}
+        >
             {/* LINE FAB */}
             <a 
                 href="https://line.me/ti/p/2mQyucsGcT" 
