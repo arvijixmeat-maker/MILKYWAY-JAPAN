@@ -86,6 +86,7 @@ export function getOptimizedImageUrl(
         const params = new URLSearchParams();
         params.append('width', options.width.toString());
         params.append('quality', (options.quality || 80).toString());
+        params.append('format', 'webp');
 
         // 프리셋에 fit 옵션이 있으면 사용, 없으면 배너 등은 cover가 기본
         const fit = (options as any).fit || 'cover';

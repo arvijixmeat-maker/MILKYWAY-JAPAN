@@ -92,8 +92,12 @@ export const HeroSection: React.FC = () => {
                         alt={banner.title}
                         fetchPriority={index === 0 ? "high" : "low"}
                         loading={index === 0 ? "eager" : "lazy"}
-                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0"
-                        onLoad={(e) => e.currentTarget.classList.remove('opacity-0')}
+                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 opacity-0"
+                        onLoad={(e) => {
+                            e.currentTarget.classList.remove('opacity-0');
+                            // Add a small scale effect for the "wow" factor as it appears
+                            e.currentTarget.parentElement?.classList.add('scale-100');
+                        }}
                     />
                     {(banner.tag || banner.title || banner.subtitle) && (
                         <>
