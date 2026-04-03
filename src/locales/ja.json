@@ -126,8 +126,8 @@
         "exclusions_title": "含まれないもの",
         "trust_badge": "日本語ガイド同行可能",
         "trust_message": "日本語でのコミュニケーションに不安はありません。ベテランの現地日本人スタッフがサポートします。",
-        "consult_button": "LINEで相談",
-        "book_button": "予約に進む"
+        "consult_button": "相談する",
+        "book_button": "予約する"
     },
     "auth": {
         "login_error": "ログインエラー: ",

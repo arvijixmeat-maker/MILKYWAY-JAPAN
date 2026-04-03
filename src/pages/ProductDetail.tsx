@@ -821,20 +821,12 @@ export const ProductDetail: React.FC = () => {
                 className={`fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isBottomBarVisible ? 'translate-y-0' : 'translate-y-full'}`}
             >
                 <div className="max-w-md mx-auto flex items-center gap-3">
-                    <div className="flex flex-col min-w-[80px]">
-                        <span className="text-[9px] text-gray-500 uppercase tracking-tight font-medium leading-tight">{t('product_detail.price_label')}</span>
-                        <div className="flex items-baseline gap-0.5">
-                            <span className="text-lg font-bold text-primary tracking-tighter">¥{product.price?.toLocaleString()}</span>
-                            <span className="text-[10px] text-gray-400">~</span>
-                        </div>
-                    </div>
-                    
                     <div className="flex-1 flex gap-2">
                         <a
                             href="https://jzz1k.channel.io/home"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 h-12 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                            className="flex-1 h-12 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
                         >
                             <span className="material-symbols-outlined text-xl">chat_bubble</span>
                             {t('product_detail.consult_button')}
