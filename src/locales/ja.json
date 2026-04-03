@@ -10,7 +10,7 @@
         "notification": "通知"
     },
     "footer": {
-        "kakao_inquiry": "カカオトーク 1:1 お問い合わせ",
+        "kakao_inquiry": "LINE / チャットで相談する",
         "partnership_inquiry": "提携お問い合わせ bolor1@hanmail.net",
         "terms_of_service": "利用規約",
         "privacy_policy": "個人情報処理方針",
@@ -23,7 +23,7 @@
         "korea_office_info_1": "商号 : Hello Bola | 代表者: Davaasuren Bolor",
         "korea_office_info_2": "事業者登録番号: 730-54-00614 | 通信販売業番号: 第2022-ソウル中浪-1776号",
         "korea_office_info_3": "| メール: bolor1@hanmail.net",
-        "korea_office_info_4": "お問い合わせ : カカオトークチャンネルでお問い合わせください。",
+        "korea_office_info_4": "お問い合わせ : 公式LINEまたはチャットでお問い合わせください。",
         "disclaimer_1": "本旅行商品の販売者はモンゴル現地旅行会社(モンゴル本社)である「Mongolia Milky Way」です。",
         "disclaimer_2": "「韓国代理店」である「Hello Bola」は通信販売仲介者であり、通信販売の当事者ではありません。したがって、商品/取引情報および取引について責任を負いません。",
         "disclaimer_3": "やむを得ない事情により確定した旅行日程が変更される場合、旅行者の事前同意を得ます。"
@@ -64,7 +64,18 @@
             "title": "今すぐ出発したい旅行コースのおすすめ！",
             "subtitle": "モンゴリア銀河系が厳選した最高の旅行先",
             "view_all": "すべて見る",
-            "default_category": "旅行"
+            "default_category": "旅行",
+            "trust": {
+                "title": "Milkyway Japanが選ばれる理由",
+                "item1_title": "1. 日本語完全対応",
+                "item1_desc": "日本語堪能な専門ガイドが同行し、言葉の壁なく安心して楽しめます。",
+                "item2_title": "2. 24時間サポート",
+                "item2_desc": "旅行中の緊急時も、日本語チャットで24時間迅速に対応いたします。",
+                "item3_title": "3. 日本人向けの食事対応",
+                "item3_desc": "衛生管理を徹底し、日本人の口に合う美味しいモンゴル料理をご提案します。",
+                "item4_title": "4. 安全第一の車両管理",
+                "item4_desc": "定期点検をパスした安全な車両のみを使用し、快適な移動を保証します。"
+            }
         },
         "reviews": {
             "title": "実際の旅行者のレビュー",
@@ -93,9 +104,9 @@
         "popular_badge": "人気",
         "details_button": "詳細",
         "custom_banner": {
-            "text": "自分だけの旅行を作りたいなら？",
-            "title": "見積もりを依頼する",
-            "button": "1分で申請"
+            "text": "あなただけの特別なプランをご提案します",
+            "title": "オーダーメイド見積もり",
+            "button": "1分でリクエスト"
         }
     },
     "product_detail": {
@@ -110,8 +121,10 @@
         "no_itinerary_images": "登録された日程画像がありません。",
         "inclusions_title": "含まれるもの",
         "exclusions_title": "含まれないもの",
-        "consult_button": "ご相談",
-        "book_button": "予約する"
+        "trust_badge": "日本語ガイド同行可能",
+        "trust_message": "日本語でのコミュニケーションに不安はありません。ベテランの現地日本人スタッフがサポートします。",
+        "consult_button": "LINEで相談",
+        "book_button": "予約に進む"
     },
     "auth": {
         "login_error": "ログインエラー: ",
@@ -132,7 +145,7 @@
         "logout": "ログアウト",
         "login": "ログイン",
         "my_reservations": "MY予約",
-        "preparing_trip": "D-{{days}} 旅行準備中",
+        "preparing_trip": "ご旅行まであと {{days}}日",
         "quote_requests": "💡 見積もりリクエスト {{count}}件",
         "no_reservations": "予約なし",
         "no_upcoming_trips": "予定された旅行はありません",
@@ -431,7 +444,8 @@
             "name_match": "入金者名は必ず予約者名と同じにする必要があります。",
             "name_match_highlight": "予約者名",
             "auto_cancel": "24時間以内に入金がない場合、予約は自動的にキャンセルされます。",
-            "local_payment": "現地残金は旅行当日にガイドへ直接お渡しください。"
+            "local_payment": "現地残金は旅行当日にガイドへ直接お渡しください。",
+            "japan_support": "日本国内からの送金および支払方法については、ご相談時に別途詳しくご案内いたします。"
         },
         "agree_terms": "注文内容を確認し、決済に同意します。",
         "processing": "処理中...",

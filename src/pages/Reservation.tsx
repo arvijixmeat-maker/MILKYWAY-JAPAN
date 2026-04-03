@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TourProduct } from '../types/product';
 import { api } from '../lib/api';
+import { SEO } from '../components/seo/SEO';
 
 export const Reservation: React.FC = () => {
     const { t } = useTranslation();
@@ -150,6 +151,10 @@ export const Reservation: React.FC = () => {
 
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
+            <SEO 
+                title={`${product?.name || ''} - ${t('reservation.title')}`}
+                description={`${product?.name || ''} 予約ページ。日程와 人数를 선택해주세요.`}
+            />
             <div className="max-w-[430px] mx-auto bg-white dark:bg-zinc-900 min-h-screen flex flex-col relative overflow-x-hidden shadow-2xl">
                 {/* Header */}
                 <div className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md px-4 py-4 justify-between border-b border-gray-100 dark:border-zinc-800">

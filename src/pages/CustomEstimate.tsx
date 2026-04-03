@@ -32,30 +32,26 @@ export const CustomEstimate: React.FC = () => {
         }
     };
 
-    // Auth Check & Auto-fill
+    // Load profile if logged in
     React.useEffect(() => {
-        const checkAuthAndLoadProfile = async () => {
+        const loadProfile = async () => {
             try {
                 const me = await api.auth.me();
-                if (!me) {
-                    alert('ログインが必要なサービスです。\nログインページに移動します。');
-                    navigate('/login');
-                    return;
+                if (me) {
+                    if (me.full_name || me.name) setName(me.full_name || me.name);
+                    if (me.email) setEmail(me.email);
+                    if (me.phone) setPhone(me.phone);
                 }
-                if (me.full_name || me.name) setName(me.full_name || me.name);
-                if (me.email) setEmail(me.email);
-                if (me.phone) setPhone(me.phone);
             } catch (error) {
-                alert('ログインが必要なサービスです。\nログインページに移動します。');
-                navigate('/login');
+                // Silently fail for guests
             }
         };
-        checkAuthAndLoadProfile();
-    }, [navigate]);
+        loadProfile();
+    }, []);
 
     const handleSubmit = async () => {
         if (!name || !phone || !email || !startDate || !endDate) {
-            alert('必須情報をすべて入力してください。\n(旅行日程, 名前, 携帯電話番号, メールアドレス)');
+            alert('必須情報をすべて入力してください。\n(旅行日程, お名前, 携帯電話番号, メールアドレス)');
             return;
         }
 

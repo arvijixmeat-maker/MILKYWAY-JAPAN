@@ -19,7 +19,8 @@ export const ReviewWrite: React.FC = () => {
     useEffect(() => {
         const fetchReservations = async () => {
             try {
-                const me = await api.auth.me();
+                const meResponse = await api.auth.me();
+                const me = meResponse?.user;
                 if (!me) return;
 
                 const data = await api.reservations.list();
@@ -79,25 +80,23 @@ export const ReviewWrite: React.FC = () => {
         if (!content.trim() || !selectedReservation) return;
 
         try {
-            const me = await api.auth.me();
+            const meResponse = await api.auth.me();
+            const me = meResponse?.user;
             if (!me) {
                 alert('ログインが必要です。');
                 return;
             }
 
-            // Using api.reviews.create
-            // Note: ReviewWrite assumed user.user_metadata.full_name. api.auth.me() returns { id, email, full_name (maybe?), name? }
-            // Let's assume me object has necessary fields or fallback.
             await api.reviews.create({
                 user_id: me.id,
-                author_name: me.user_metadata?.full_name || me.name || me.email?.split('@')[0] || '匿名',
+                author_name: me.name || me.email?.split('@')[0] || '匿名',
                 visit_date: selectedReservation.startDate.slice(0, 7) + ' 訪問',
                 rating: rating,
                 product_name: selectedReservation.productName,
                 title: `${selectedReservation.productName} レビュー`,
                 content: content,
                 images: images,
-                user_image: me.user_metadata?.avatar_url || me.avatar_url
+                user_image: me.avatarUrl
             });
 
             setIsSuccessModalOpen(true);

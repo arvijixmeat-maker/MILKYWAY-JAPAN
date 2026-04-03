@@ -8,6 +8,7 @@ import { PromoBanner } from '../components/home/PromoBanner';
 import { ReviewSection } from '../components/home/ReviewSection';
 import { CategoryRowSection } from '../components/home/CategoryRowSection';
 import { MagazineSection } from '../components/home/MagazineSection';
+import { TrustSection } from '../components/home/TrustSection';
 import { useHomeData } from '../hooks/useHomeData';
 import { TravelThemeSkeleton } from '../components/skeletons/TravelThemeSkeleton';
 import { AdventureSkeleton } from '../components/skeletons/AdventureSkeleton';
@@ -66,6 +67,7 @@ export const Home: React.FC = () => {
                     <div style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
                         <MagazineSection magazines={data.magazines} />
                     </div>
+                    <TrustSection />
                 </>
             )}
 

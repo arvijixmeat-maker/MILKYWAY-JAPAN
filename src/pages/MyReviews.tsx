@@ -35,7 +35,7 @@ export const MyReviews: React.FC = () => {
 
                         return {
                             id: r.id,
-                            author: r.author_name,
+                            author: r.user_name,
                             date: r.created_at,
                             rating: r.rating,
                             productName: r.product_name,

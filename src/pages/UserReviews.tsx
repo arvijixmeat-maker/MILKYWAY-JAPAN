@@ -41,7 +41,7 @@ export const UserReviews: React.FC = () => {
 
                         return {
                             id: r.id,
-                            author: r.author_name,
+                            author: r.user_name,
                             date: r.created_at ? r.created_at.substring(0, 10) : '',
                             rating: r.rating,
                             title: r.title,

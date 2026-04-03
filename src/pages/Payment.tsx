@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { sendNotificationEmail } from '../lib/email';
+import { SEO } from '../components/seo/SEO';
 
 export const Payment: React.FC = () => {
     const { t } = useTranslation();
@@ -284,6 +285,10 @@ export const Payment: React.FC = () => {
 
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
+            <SEO 
+                title={`${product?.name || ''} - ${t('payment.title')}`}
+                description="お支払いおよび予約確認ページ。詳細を確認して予約を確定させてください。"
+            />
             <div className="max-w-[430px] mx-auto bg-white dark:bg-zinc-900 min-h-screen flex flex-col relative overflow-x-hidden shadow-2xl">
 
                 {/* Toast Notification */}
@@ -443,6 +448,7 @@ export const Payment: React.FC = () => {
                             <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-2 list-disc pl-4">
                                 <li>{t('payment.paypal_notices.check_email', { defaultValue: '請求書メールにお支払い期限が記載されています。期限内に決済をお願いします。' })}</li>
                                 <li>{t('payment.deposit_notices.auto_cancel')}</li>
+                                <li>{t('payment.japan_support')}</li>
                                 <li>{t('payment.deposit_notices.local_payment')}</li>
                             </ul>
                         </div>

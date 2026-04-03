@@ -11,6 +11,7 @@ import { SEO } from './components/seo/SEO'
 
 import { NotificationProvider } from './contexts/NotificationContext'
 import { HeroSkeleton } from './components/skeletons/HeroSkeleton' // Minimal loading state
+import { FloatingConsultation } from './components/common/FloatingConsultation'
 
 // Lazy Load Pages - Handling Named Exports
 const Reservation = lazy(() => import('./pages/Reservation').then(module => ({ default: module.Reservation })))
@@ -86,6 +87,7 @@ function App() {
     <div className={isAdminRoute ? "admin-app-wrapper" : "mobile-app-wrapper"}>
       <SEO />
       <NotificationProvider>
+        {!isAdminRoute && <FloatingConsultation />}
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />

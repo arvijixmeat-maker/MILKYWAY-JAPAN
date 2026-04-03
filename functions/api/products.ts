@@ -244,96 +244,128 @@ app.put('/:id', async (c) => {
         const data = await c.req.json();
         const db = c.env.DB;
 
-        const mainImages = g(data, 'main_images', 'mainImages', []);
-        const isFeatured = data.is_featured ?? data.isFeatured ?? false;
-        const isPopular = data.is_popular ?? data.isPopular ?? false;
+        const updateFields: string[] = [];
+        const updateValues: any[] = [];
 
-        try {
-            await db.prepare(`
-                UPDATE products SET
-                    name = ?, description = ?, category = ?, duration = ?, price = ?, original_price = ?,
-                    main_images = ?, gallery_images = ?, detail_images = ?, itinerary_images = ?,
-                    images = ?, thumbnail = ?, status = ?,
-                    is_featured = ?, is_popular = ?, featured = ?, popular = ?,
-                    tags = ?, included = ?, excluded = ?,
-                    detail_slides = ?, detail_blocks = ?, itinerary_blocks = ?,
-                    highlights = ?, pricing_options = ?, accommodation_options = ?, vehicle_options = ?,
-                    sort_order = ?, updated_at = datetime('now')
-                WHERE id = ?
-            `).bind(
-                data.name || '',
-                data.description || '',
-                data.category || '',
-                data.duration || '',
-                data.price || 0,
-                g(data, 'original_price', 'originalPrice', 0),
-                toJson(mainImages),
-                toJson(g(data, 'gallery_images', 'galleryImages', [])),
-                toJson(g(data, 'detail_images', 'detailImages', [])),
-                toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
-                toJson(mainImages),
-                (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '',
-                data.status || 'active',
-                isFeatured ? 1 : 0,
-                isPopular ? 1 : 0,
-                isFeatured ? 1 : 0,
-                isPopular ? 1 : 0,
-                toJson(data.tags || []),
-                toJson(data.included || []),
-                toJson(data.excluded || []),
-                toJson(g(data, 'detail_slides', 'detailSlides', [])),
-                toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
-                toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
-                toJson(data.highlights || []),
-                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
-                toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
-                toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
-                data.sortOrder || 0,
-                id
-            ).run();
-        } catch {
-            // Fallback if sort_order column doesn't exist
-            await db.prepare(`
-                UPDATE products SET
-                    name = ?, description = ?, category = ?, duration = ?, price = ?, original_price = ?,
-                    main_images = ?, gallery_images = ?, detail_images = ?, itinerary_images = ?,
-                    images = ?, thumbnail = ?, status = ?,
-                    is_featured = ?, is_popular = ?, featured = ?, popular = ?,
-                    tags = ?, included = ?, excluded = ?,
-                    detail_slides = ?, detail_blocks = ?, itinerary_blocks = ?,
-                    highlights = ?, pricing_options = ?, accommodation_options = ?, vehicle_options = ?,
-                    updated_at = datetime('now')
-                WHERE id = ?
-            `).bind(
-                data.name || '',
-                data.description || '',
-                data.category || '',
-                data.duration || '',
-                data.price || 0,
-                g(data, 'original_price', 'originalPrice', 0),
-                toJson(mainImages),
-                toJson(g(data, 'gallery_images', 'galleryImages', [])),
-                toJson(g(data, 'detail_images', 'detailImages', [])),
-                toJson(g(data, 'itinerary_images', 'itineraryImages', [])),
-                toJson(mainImages),
-                (Array.isArray(mainImages) && mainImages.length > 0) ? mainImages[0] : '',
-                data.status || 'active',
-                isFeatured ? 1 : 0,
-                isPopular ? 1 : 0,
-                isFeatured ? 1 : 0,
-                isPopular ? 1 : 0,
-                toJson(data.tags || []),
-                toJson(data.included || []),
-                toJson(data.excluded || []),
-                toJson(g(data, 'detail_slides', 'detailSlides', [])),
-                toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
-                toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
-                toJson(data.highlights || []),
-                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
-                toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
-                toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
-                id
-            ).run();
+        // Define mapping for frontend keys to database column names, and how to format them
+        const fieldMapping: Record<string, { col: string, format?: (v: any) => any }> = {
+            name: { col: 'name' },
+            description: { col: 'description' },
+            category: { col: 'category' },
+            duration: { col: 'duration' },
+            price: { col: 'price' },
+            original_price: { col: 'original_price' },
+            originalPrice: { col: 'original_price' },
+            
+            main_images: { col: 'main_images', format: toJson },
+            mainImages: { col: 'main_images', format: toJson },
+            gallery_images: { col: 'gallery_images', format: toJson },
+            galleryImages: { col: 'gallery_images', format: toJson },
+            detail_images: { col: 'detail_images', format: toJson },
+            detailImages: { col: 'detail_images', format: toJson },
+            itinerary_images: { col: 'itinerary_images', format: toJson },
+            itineraryImages: { col: 'itinerary_images', format: toJson },
+            
+            images: { col: 'images', format: toJson },
+            thumbnail: { col: 'thumbnail' },
+            status: { col: 'status' },
+            
+            is_featured: { col: 'is_featured', format: v => v ? 1 : 0 },
+            isFeatured: { col: 'is_featured', format: v => v ? 1 : 0 },
+            is_popular: { col: 'is_popular', format: v => v ? 1 : 0 },
+            isPopular: { col: 'is_popular', format: v => v ? 1 : 0 },
+            
+            tags: { col: 'tags', format: toJson },
+            included: { col: 'included', format: toJson },
+            excluded: { col: 'excluded', format: toJson },
+            
+            detail_slides: { col: 'detail_slides', format: toJson },
+            detailSlides: { col: 'detail_slides', format: toJson },
+            detail_blocks: { col: 'detail_blocks', format: toJson },
+            detailBlocks: { col: 'detail_blocks', format: toJson },
+            itinerary_blocks: { col: 'itinerary_blocks', format: toJson },
+            itineraryBlocks: { col: 'itinerary_blocks', format: toJson },
+            
+            highlights: { col: 'highlights', format: toJson },
+            pricing_options: { col: 'pricing_options', format: toJson },
+            pricingOptions: { col: 'pricing_options', format: toJson },
+            accommodation_options: { col: 'accommodation_options', format: toJson },
+            accommodationOptions: { col: 'accommodation_options', format: toJson },
+            vehicle_options: { col: 'vehicle_options', format: toJson },
+            vehicleOptions: { col: 'vehicle_options', format: toJson },
+            
+            view_count: { col: 'view_count' },
+            viewCount: { col: 'view_count' },
+            booking_count: { col: 'booking_count' },
+            bookingCount: { col: 'booking_count' },
+            sort_order: { col: 'sort_order' },
+            sortOrder: { col: 'sort_order' }
+        };
+
+        const processedCols = new Set<string>();
+
+        // We also want to auto-sync 'featured' and 'popular' if their 'is_' counterparts are present
+        if (data.is_featured !== undefined || data.isFeatured !== undefined) {
+             const val = data.is_featured ?? data.isFeatured;
+             updateFields.push('featured = ?');
+             updateValues.push(val ? 1 : 0);
+        }
+        if (data.is_popular !== undefined || data.isPopular !== undefined) {
+             const val = data.is_popular ?? data.isPopular;
+             updateFields.push('popular = ?');
+             updateValues.push(val ? 1 : 0);
+        }
+
+        // Auto-update images, thumbnail if mainImages is updated
+        if (data.main_images !== undefined || data.mainImages !== undefined) {
+            const m = data.main_images ?? data.mainImages;
+            if (!processedCols.has('images')) {
+                updateFields.push('images = ?');
+                updateValues.push(toJson(m));
+                processedCols.add('images');
+            }
+            if (!processedCols.has('thumbnail')) {
+                updateFields.push('thumbnail = ?');
+                updateValues.push((Array.isArray(m) && m.length > 0) ? m[0] : '');
+                processedCols.add('thumbnail');
+            }
+        }
+
+        for (const [key, value] of Object.entries(data)) {
+            if (fieldMapping[key] && !processedCols.has(fieldMapping[key].col)) {
+                updateFields.push(`${fieldMapping[key].col} = ?`);
+                updateValues.push(fieldMapping[key].format ? fieldMapping[key].format!(value) : value);
+                processedCols.add(fieldMapping[key].col);
+            }
+        }
+
+        if (updateFields.length > 0) {
+            updateFields.push(`updated_at = datetime('now')`);
+            updateValues.push(id);
+            
+            try {
+                await db.prepare(
+                    `UPDATE products SET ${updateFields.join(', ')} WHERE id = ?`
+                ).bind(...updateValues).run();
+            } catch {
+                // Remove sort_order from fields if column doesn't exist
+                const filteredFields = [];
+                const filteredValues = [];
+                for (let i = 0; i < updateFields.length - 1; i++) {
+                    if (!updateFields[i].startsWith('sort_order')) {
+                        filteredFields.push(updateFields[i]);
+                        filteredValues.push(updateValues[i]);
+                    }
+                }
+                filteredFields.push(`updated_at = datetime('now')`);
+                filteredValues.push(id);
+                
+                if (filteredFields.length > 1) { // > 1 because updated_at is always there
+                    await db.prepare(
+                        `UPDATE products SET ${filteredFields.join(', ')} WHERE id = ?`
+                    ).bind(...filteredValues).run();
+                }
+            }
         }
 
         return c.json({ success: true });

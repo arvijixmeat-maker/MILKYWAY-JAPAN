@@ -37,6 +37,10 @@ export const SEO: React.FC<SEOProps> = ({
             {/* Canonical URL */}
             <link rel="canonical" href={metaUrl} />
 
+            {/* Hreflang Tags */}
+            <link rel="alternate" hreflang="ja" href={metaUrl} />
+            <link rel="alternate" hreflang="x-default" href={metaUrl} />
+
             {/* Open Graph / Facebook */}
             <meta property="og:type" content="website" />
             <meta property="og:locale" content="ja_JP" />

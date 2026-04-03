@@ -24,7 +24,7 @@ export const ReviewSection: React.FC = () => {
 
                         return {
                             id: r.id,
-                            author: r.author_name,
+                            author: r.user_name,
                             visitDate: r.visit_date,
                             rating: r.rating,
                             content: r.content,

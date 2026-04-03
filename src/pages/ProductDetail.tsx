@@ -112,7 +112,7 @@ export const ProductDetail: React.FC = () => {
         try {
             const me = await api.auth.me();
             if (!me) {
-                alert('로그인이 필요한 서비스입니다.');
+                alert(t('mypage.login_required'));
                 navigate('/login');
                 return;
             }
@@ -317,7 +317,17 @@ export const ProductDetail: React.FC = () => {
                     ))}
                 </div>
                 <h1 className="text-[28px] font-bold leading-tight pt-2">{product.name}</h1>
-                <div className="flex items-baseline gap-2 pt-2">
+                
+                {/* Japanese Trust Badge */}
+                <div className="mt-3 flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
+                    <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[20px] shrink-0 mt-0.5">verified_user</span>
+                    <div>
+                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{t('product_detail.trust_badge')}</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1 leading-relaxed">{t('product_detail.trust_message')}</p>
+                    </div>
+                </div>
+
+                <div className="flex items-baseline gap-2 pt-4">
                     <p className="text-2xl font-bold text-primary">¥{product.price.toLocaleString()}</p>
                     {product.originalPrice && (
                         <p className="text-sm text-gray-500 line-through">¥{product.originalPrice.toLocaleString()}</p>

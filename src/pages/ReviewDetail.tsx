@@ -53,7 +53,7 @@ export const ReviewDetail: React.FC = () => {
 
                     setReview({
                         id: data.id,
-                        author: data.author_name,
+                        author: data.user_name,
                         date: data.created_at ? data.created_at.substring(0, 10) : '',
                         rating: data.rating,
                         title: data.title,

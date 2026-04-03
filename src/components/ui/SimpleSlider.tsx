@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getOptimizedImageUrl } from '../../utils/supabaseImage';
 
 interface SimpleSliderProps {
     images: string[];
@@ -10,8 +11,8 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const scrollLeft = e.currentTarget.scrollLeft;
         const width = e.currentTarget.offsetWidth;
-        // Approximate index based on scroll position
-        const index = Math.round(scrollLeft / (width * 0.9)); // Adjust for smaller item width
+        // Approximate index based on scroll position - using smaller width multiplier for cards that peek
+        const index = Math.round(scrollLeft / (width * 0.9)); 
         setActiveIndex(Math.min(index, images.length - 1));
     };
 
@@ -25,21 +26,38 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                 onScroll={handleScroll}
                 style={{ scrollBehavior: 'smooth' }}
             >
-                {images.map((src, index) => (
-                    <div
-                        key={index}
-                        className={`flex-shrink-0 w-[90%] aspect-[4/3] snap-center ${index !== images.length - 1 ? 'mr-3' : 'mr-4'}`}
-                    >
-                        <div className="w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                            <img
-                                src={src}
-                                alt={`Slide ${index + 1}`}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                            />
+                {images.map((src, index) => {
+                    const optimizedUrl = getOptimizedImageUrl(src, 'contentImage');
+                    return (
+                        <div
+                            key={index}
+                            className={`flex-shrink-0 w-[90%] aspect-[3/2] snap-center ${index !== images.length - 1 ? 'mr-3' : 'mr-4'}`}
+                        >
+                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 group">
+                                {/* Blurred Background Layer (For filling empty space on inconsistent aspect ratios) */}
+                                <div className="absolute inset-0 z-0">
+                                    <img
+                                        src={optimizedUrl}
+                                        alt=""
+                                        className="w-full h-full object-cover blur-2xl opacity-40 scale-110"
+                                        aria-hidden="true"
+                                    />
+                                    <div className="absolute inset-0 bg-white/10 dark:bg-black/20" />
+                                </div>
+
+                                {/* Main Image Layer (Actual Photo - Contained to prevent cropping) */}
+                                <div className="relative w-full h-full z-10 flex items-center justify-center p-1">
+                                    <img
+                                        src={optimizedUrl}
+                                        alt={`Slide ${index + 1}`}
+                                        className="max-w-full max-h-full object-contain drop-shadow-md"
+                                        loading="lazy"
+                                    />
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Counter Badge */}

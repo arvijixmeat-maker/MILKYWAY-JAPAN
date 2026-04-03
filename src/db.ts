@@ -168,12 +168,12 @@ export interface Comment {
 const initialReviews: Review[] = [
     {
         id: '1',
-        author: '김*수 님',
-        visitDate: '2024.01 방문',
+        author: '佐藤*様',
+        visitDate: '2024.01 訪問',
         date: '2024-01-15',
         rating: 5,
-        productName: '고비 사막 별 관측 투어',
-        content: '"정말 인생 최고의 여행이었습니다. 밤하늘의 은하수는 평생 잊지 못할 것 같아요..."',
+        productName: 'ゴ비砂漠 星空観測ツアー',
+        content: '"人生最高の旅行でした。夜空の銀河は一生忘れられない思い出になりそうです..."',
         images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuB4K20GMVq8yGSfTci46S9biO_u2LDuxENlWBxUuJ0nn-vXp0HxEwZMChpGwntz2L5VISAaVTO0C3Jwe-ONgJLNcItHgdmG8Zb9pp-1uACHde5HETQBqmxnKmhs57ApVVkSCA6Kd-ta5q_h0ExQ84FYSY6vbGnDKD5yCJn-muLZnWDQCVEXnPd4YHvkNxzeRZmK1PN9XDNxQ1qdNDHGzJNqUkknzlI6FflIQG7Tnf1tHDg5TqEB8Gp1IlcZiBunTStiUDAFZDa0zQ'],
         userImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDEPhsKRODSrZPj9ZNZymOTchNvDJE8BDxJ_Au_pSe77PLomOjV7tutw5kLq2uLspxCvcBQraXW-RVoXTzh_xHoQF_NfeHE1cdtgSYjnjaKyXcGPSUgmW2HBTNE_fne1vlYB49o486w8rOvQ719eQqr4aCbmzwdqYb5OVr-0MvPwBUoZypxVGIjeSFnt7Er6lW_psrbXz4Rj135GiajkURZ3KTC8Ca0l_1qkUFxlHtoEslZ7CFR2TEr0kC4n1JmsB49LHVY9SPtDA',
         helpfulCount: 124,
@@ -181,15 +181,15 @@ const initialReviews: Review[] = [
         comments: [
             {
                 id: 'c1',
-                author: '푸른초원',
-                content: '와... 진짜 사진 예술이네요! 저도 이번 겨울에 가보려고 하는데 꿀팁 감사합니다.',
+                author: '草原の風',
+                content: 'わあ... 本当に写真が芸術的ですね！私もこの冬に行ってみようと思っているので、役立つヒントありがとうございます。',
                 date: '2024-01-15T10:30:00Z',
                 userImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBvXSDqPR_KG335tZ6xXdjJoye4q5GVOTr20Oxpslu1zyfriAne1bZWvV5FqTK1TMF8Pa1QAcQy2yaWauK2D5V1leqdjSwdnrqFosOmj-9vf7CPhM3Z9gIL-5-j2eWYXS83ed9f7Vvy3hjsIGC1Z0B5_EUcobb3GorLH7Yy9HjTt3PhIszI6Nt4c7nFrUTEEkIoTcf-TPZ3YdGamfNE7avVjkxfs8eVnht9ZetrB1Sscxz7vShzYcrg5IX3ceMT-FPkb_wWidkhrg'
             },
             {
                 id: 'c2',
-                author: '노마드라이프',
-                content: '혹시 가이드분 성함 알 수 있을까요? 너무 좋아보이네요!',
+                author: 'ノマドライフ',
+                content: 'もしよろしければ、ガイドさんのお名前を教えていただけますか？とても良さそうですね！',
                 date: '2024-01-15T11:00:00Z',
                 userImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCShn2kpwvxzyvDnD-GN7JpBO_QKvP9brwexzTHeQAi-LgGsgbHT_GYq1BVRsmIU-WEzOpQ2tWJmbLpO8pJrGbA3lg-smckmQKX_kQQicB-2J33wkLDt9Y4un0drqJv1_xI5rZDHdphMjpKxq7s-8rzZKC4ypahdGTWeuf6wASKvdI-Q8MrDAILu54YJEn_WIcvM1pT6kAKv50dT8x6UlDQtX1cKgIa6wAZ7GX7ZAvvF5gwM_E2eo6V5nclQAyDn6JvbJjWP-pXBw'
             }
@@ -197,12 +197,12 @@ const initialReviews: Review[] = [
     },
     {
         id: '2',
-        author: '이*지 님',
-        visitDate: '2023.12 방문',
+        author: '田中*様',
+        visitDate: '2023.12 訪問',
         date: '2023-12-20',
         rating: 5,
-        productName: '테를지 국립공원 승마 체험',
-        content: '"가이드님도 너무 친절하시고 숙소 퀄리티가 기대 이상이었어요. 다시 오고 싶네요."',
+        productName: 'テレルジ国立公園 乗馬体験',
+        content: '"ガイドさんもとても親切で、宿泊施設のクオリティが期待以上でした。また来たいです。"',
         images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuCa-lOI8hWg7jkEPE6aLpgULy46wN1zu_SdVj-gwNCoVza2ioMGm0cfT7njLma7CYQJ7YOCcomwafa5fKhJc9eO0hKtIafFHLoS9Vw_f3fyxGnxJkpkfUIBcpBSK8kb0onNzfKU-ImdlsG7T9ipvcqEVeiv0IkkaRjkNX43p7iWB42lYEVlHp-virwWcrmYH0R2SNXPmyNr-nNF55R-vs8rATJH09lIQgi22C3kyFBnx7gHhz_pjfvaFOI5i-SonHUBrrbuY_hnNQ'],
         userImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBvXSDqPR_KG335tZ6xXdjJoye4q5GVOTr20Oxpslu1zyfriAne1bZWvV5FqTK1TMF8Pa1QAcQy2yaWauK2D5V1leqdjSwdnrqFosOmj-9vf7CPhM3Z9gIL-5-j2eWYXS83ed9f7Vvy3hjsIGC1Z0B5_EUcobb3GorLH7Yy9HjTt3PhIszI6Nt4c7nFrUTEEkIoTcf-TPZ3YdGamfNE7avVjkxfs8eVnht9ZetrB1Sscxz7vShzYcrg5IX3ceMT-FPkb_wWidkhrg',
         helpfulCount: 5,
@@ -211,12 +211,12 @@ const initialReviews: Review[] = [
     },
     {
         id: '3',
-        author: '박*준 님',
-        visitDate: '2023.09 방문',
+        author: '鈴木*様',
+        visitDate: '2023.09 訪問',
         date: '2023-09-10',
         rating: 5,
-        productName: '고비 사막 투어',
-        content: '"고비 사막의 은하수는 말로 표현할 수 없을 정도로 아름다웠습니다. 강력 추천합니다!"',
+        productName: 'ゴビ砂漠ツアー',
+        content: '"ゴビ砂漠の銀河は言葉で表現できないほど美しかったです。強くお勧めします！"',
         images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuCViCzrsaryy2z22sZJjJC2yPok7E9fmP1eXTz5wxd0B9jW3b8ccHatM2GhE_PpfKvS4v62VtA9hKyqw0dGAuFEsBQax20AoO8MdCUXLg00zA8ODyeJZh-S9i4BUVoD3jx3bueEDMJeAJknjXRv9dg0xSf2FnfAZjPTTIHQoJm77_1r5C4ZlTxJWlzEkoI1s2BhdWPaYC11Q17j9_gAO2hS0gUFXxzfVl469Mp7kJGlkuZc39udLK16lJgqurk2l1VXHODjPbZ5gA'],
         userImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCShn2kpwvxzyvDnD-GN7JpBO_QKvP9brwexzTHeQAi-LgGsgbHT_GYq1BVRsmIU-WEzOpQ2tWJmbLpO8pJrGbA3lg-smckmQKX_kQQicB-2J33wkLDt9Y4un0drqJv1_xI5rZDHdphMjpKxq7s-8rzZKC4ypahdGTWeuf6wASKvdI-Q8MrDAILu54YJEn_WIcvM1pT6kAKv50dT8x6UlDQtX1cKgIa6wAZ7GX7ZAvvF5gwM_E2eo6V5nclQAyDn6JvbJjWP-pXBw',
         helpfulCount: 0,
@@ -225,12 +225,12 @@ const initialReviews: Review[] = [
     },
     {
         id: '4',
-        author: '최*영 님',
-        visitDate: '2023.08 방문',
+        author: '高橋*様',
+        visitDate: '2023.08 訪問',
         date: '2023-08-05',
         rating: 5,
-        productName: '승마 체험',
-        content: '"말 타는 게 처음이라 걱정했는데 너무 잘 가르쳐주셔서 즐겁게 탔어요. 잊지 못할 추억입니다."',
+        productName: '乗馬体験',
+        content: '"乗馬は初めてで不安でしたが、とても丁寧に教えてくださったので楽しく乗れました。忘れられない思い出です。"',
         images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuB4K20GMVq8yGSfTci46S9biO_u2LDuxENlWBxUuJ0nn-vXp0HxEwZMChpGwntz2LVISAaVTO0C3Jwe-ONgJLNcItHgdmG8Zb9pp-1uACHde5HETQBqmxnKmhs57ApVVkSCA6Kd-ta5q_h0ExQ84FYSY6vbGnDKD5yCJn-muLZnWDQCVEXnPd4YHvkNxzeRZmK1PN9XDNxQ1qdNDHGzJNqUkknzlI6FflIQG7Tnf1tHDg5TqEB8Gp1IlcZiBunTStiUDAFZDa0zQ'],
         userImage: '', // Placeholder or random
         helpfulCount: 0,
