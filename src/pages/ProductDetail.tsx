@@ -22,6 +22,14 @@ export const ProductDetail: React.FC = () => {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [isInWishlist, setIsInWishlist] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
+    const [isBottomBarVisible, setIsBottomBarVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsBottomBarVisible(true);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -810,7 +818,7 @@ export const ProductDetail: React.FC = () => {
 
             {/* Floating Bottom Bar */}
             <div 
-                className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
+                className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isBottomBarVisible ? 'translate-y-0' : 'translate-y-full'}`}
             >
                 <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t('product_detail.price_label') || 'Price'}</span>
