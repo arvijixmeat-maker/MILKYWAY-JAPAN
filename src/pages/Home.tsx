@@ -42,7 +42,6 @@ export const Home: React.FC = () => {
             <div style={{ contentVisibility: 'auto', containIntrinsicSize: '400px' }}>
                 <HeroSection />
             </div>
-            <QuickLinks />
 
             {isLoading ? (
                 <>

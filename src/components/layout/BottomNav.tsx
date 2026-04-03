@@ -35,11 +35,11 @@ export const BottomNav: React.FC = () => {
                     <span className="text-[10px] font-bold">{t('nav.travel_mates')}</span>
                 </button>
                 <button
-                    onClick={() => navigate('/custom-estimate')}
-                    className={`flex flex-col items-center justify-center gap-1 ${isActive('/custom-estimate') ? 'text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                    onClick={() => navigate('/reviews')}
+                    className={`flex flex-col items-center justify-center gap-1 ${isActive('/reviews') ? 'text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                 >
-                    <span className="material-symbols-outlined" style={{ fontVariationSettings: isActive('/custom-estimate') ? "'FILL' 1" : "'FILL' 0" }}>calculate</span>
-                    <span className="text-[10px] font-bold">{t('nav.custom_estimate')}</span>
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: isActive('/reviews') ? "'FILL' 1" : "'FILL' 0" }}>rate_review</span>
+                    <span className="text-[10px] font-bold">{t('nav.reviews')}</span>
                 </button>
                 <button
                     onClick={() => navigate('/mypage')}
