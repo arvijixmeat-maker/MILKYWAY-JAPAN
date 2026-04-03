@@ -818,37 +818,35 @@ export const ProductDetail: React.FC = () => {
 
             {/* Floating Bottom Bar */}
             <div 
-                className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isBottomBarVisible ? 'translate-y-0' : 'translate-y-full'}`}
+                className={`fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isBottomBarVisible ? 'translate-y-0' : 'translate-y-full'}`}
             >
-                <div className="flex flex-col">
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t('product_detail.price_label') || 'Price'}</span>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-black text-primary">
-                            ¥{(product.pricingOptions && product.pricingOptions.length > 0
-                                ? Math.min(...product.pricingOptions.map(o => o.pricePerPerson))
-                                : product.price)?.toLocaleString()}
-                        </span>
-                        <span className="text-[10px] text-gray-400">~</span>
+                <div className="max-w-md mx-auto flex items-center gap-3">
+                    <div className="flex flex-col min-w-[80px]">
+                        <span className="text-[9px] text-gray-500 uppercase tracking-tight font-medium leading-tight">{t('product_detail.price_label')}</span>
+                        <div className="flex items-baseline gap-0.5">
+                            <span className="text-lg font-bold text-primary tracking-tighter">¥{product.price?.toLocaleString()}</span>
+                            <span className="text-[10px] text-gray-400">~</span>
+                        </div>
                     </div>
-                </div>
-                
-                <div className="flex flex-1 gap-2">
-                    <a
-                        href="https://jzz1k.channel.io/home"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-none w-12 h-12 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center transition-colors active:bg-gray-50"
-                        aria-label={t('product_detail.consult_button')}
-                    >
-                        <span className="material-symbols-outlined text-2xl">chat_bubble</span>
-                    </a>
-                    <button
-                        onClick={() => navigate(`/reservation/${id}`)}
-                        className="flex-1 bg-primary text-white font-bold h-12 rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                    >
-                        {t('product_detail.book_button')}
-                        <span className="material-symbols-outlined text-xl">arrow_forward</span>
-                    </button>
+                    
+                    <div className="flex-1 flex gap-2">
+                        <a
+                            href="https://jzz1k.channel.io/home"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 h-12 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                        >
+                            <span className="material-symbols-outlined text-xl">chat_bubble</span>
+                            {t('product_detail.consult_button')}
+                        </a>
+                        <button 
+                            onClick={() => navigate(`/reservation/${id}`)}
+                            className="flex-1 h-12 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20 active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            {t('product_detail.book_button')}
+                            <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
