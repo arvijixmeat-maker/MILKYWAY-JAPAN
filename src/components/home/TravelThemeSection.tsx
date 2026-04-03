@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { getOptimizedImageUrl } from '../../utils/supabaseImage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 interface CategoryTab {
     id: string;
@@ -30,6 +31,7 @@ export const TravelThemeSection: React.FC<TravelThemeSectionProps> = ({ products
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<string>(tabs[0]?.id || '');
+    const { ref, revealClass } = useScrollReveal(0.05);
 
     const currentTabInfo = tabs.find(t => t.id === activeTab) || tabs[0];
 
@@ -44,7 +46,7 @@ export const TravelThemeSection: React.FC<TravelThemeSectionProps> = ({ products
     }
 
     return (
-        <section className="pt-2 pb-8 bg-white dark:bg-background-dark">
+        <section ref={ref as any} className={`pt-2 pb-8 bg-white dark:bg-background-dark ${revealClass}`}>
             {/* Tabs (Chips) */}
             <div className="flex overflow-x-auto px-5 mb-6 no-scrollbar gap-3">
                 {tabs.map((tab) => (

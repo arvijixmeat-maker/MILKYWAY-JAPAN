@@ -7,6 +7,7 @@ import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/supabase
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/Toast';
+import { useScrollReveal } from '../hooks/useScrollReveal';
 
 import type { TourProduct, DetailSlide, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 
@@ -15,6 +16,7 @@ export const ProductDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const { t } = useTranslation();
     const { showToast } = useToast();
+    const { ref, revealClass } = useScrollReveal(0.02);
     const [isLoading, setIsLoading] = useState(true);
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -221,7 +223,7 @@ export const ProductDetail: React.FC = () => {
     };
 
     return (
-        <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display">
+        <div ref={ref as any} className={`bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display ${revealClass}`}>
             <SEO
                 title={product.name}
                 description={product.description || product.highlights?.[0]?.description || `${product.name} - モンゴル旅行・モンゴルツアーならMilkyway Japan。特別で魅力的なモンゴル観光体験をご提案します。`}
@@ -807,7 +809,9 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Floating Bottom Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+            <div 
+                className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${revealClass.includes('opacity-100') ? 'translate-y-0' : 'translate-y-full'}`}
+            >
                 <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t('product_detail.price_label') || 'Price'}</span>
                     <div className="flex items-baseline gap-1">

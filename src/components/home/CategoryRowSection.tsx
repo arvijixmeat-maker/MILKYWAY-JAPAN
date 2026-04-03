@@ -3,6 +3,7 @@ import { getOptimizedImageUrl } from '../../utils/supabaseImage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Category } from '../../types/category';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 interface Product {
     id: string;
@@ -21,6 +22,7 @@ interface CategoryRowSectionProps {
 export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category, products }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const { ref, revealClass } = useScrollReveal(0.05);
 
     const displayProducts = useMemo(() => {
         return products.filter(p => p.category === category.name).slice(0, 5);
@@ -31,7 +33,7 @@ export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category
     }
 
     return (
-        <section className="pt-4 pb-4 px-5">
+        <section ref={ref as any} className={`pt-4 pb-4 px-5 ${revealClass}`}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
