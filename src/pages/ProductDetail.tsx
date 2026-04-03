@@ -16,7 +16,7 @@ export const ProductDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const { t } = useTranslation();
     const { showToast } = useToast();
-    const { ref, revealClass } = useScrollReveal(0.02);
+    const { ref, revealClass, isVisible } = useScrollReveal(0.01);
     const [isLoading, setIsLoading] = useState(true);
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -810,7 +810,7 @@ export const ProductDetail: React.FC = () => {
 
             {/* Floating Bottom Bar */}
             <div 
-                className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${revealClass.includes('opacity-100') ? 'translate-y-0' : 'translate-y-full'}`}
+                className={`fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom flex items-center gap-4 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
             >
                 <div className="flex flex-col">
                     <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{t('product_detail.price_label') || 'Price'}</span>

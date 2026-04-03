@@ -62,7 +62,6 @@ export const HeroSection: React.FC = () => {
             return DEFAULT_BANNERS;
         },
         staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-        placeholderData: DEFAULT_BANNERS,
     });
 
     if (isLoading) {
