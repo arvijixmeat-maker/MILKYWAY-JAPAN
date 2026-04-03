@@ -109,9 +109,17 @@ export const Payment: React.FC = () => {
     }, [reservationData?.customerInfo]);
 
     // Calculate endDate safely (for regular products)
-    const endDate = (selectedStartDate && parsedDuration)
-        ? new Date(new Date(selectedStartDate).getTime() + parsedDuration.nights * 24 * 60 * 60 * 1000)
-        : null;
+    const endDate = React.useMemo(() => {
+        if (!selectedStartDate || !parsedDuration) return null;
+        
+        const start = new Date(selectedStartDate);
+        // Use nights as primary offset, fallback to days-1 if nights is 0 but days > 0
+        const offsetDays = parsedDuration.nights > 0 
+            ? parsedDuration.nights 
+            : Math.max(0, parsedDuration.days - 1);
+            
+        return new Date(start.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+    }, [selectedStartDate, parsedDuration]);
 
     // Format date helper
     const formatDate = (date: Date) => {

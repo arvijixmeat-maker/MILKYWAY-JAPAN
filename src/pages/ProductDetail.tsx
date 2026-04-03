@@ -224,10 +224,16 @@ export const ProductDetail: React.FC = () => {
         <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display">
             <SEO
                 title={product.name}
-                description={product.description || product.highlights?.[0]?.description}
+                description={product.description || product.highlights?.[0]?.description || `${product.name} - モンゴル旅行・モンゴルツアーならMilkyway Japan。特別で魅力的なモンゴル観光体験をご提案します。`}
                 image={product.mainImages?.find(img => !img.startsWith('data:'))}
-                keywords={`${product.category}, ${product.tags.join(', ')}`}
+                keywords={`${product.category}, ${product.tags.join(', ')}, モンゴル旅行, モンゴル観光, モンゴルツアー`}
+                url={`/products/${product.id}`}
                 structuredData={structuredData}
+                breadcrumb={[
+                    { name: t('nav.home'), url: '/' },
+                    { name: t('nav.products'), url: '/products' },
+                    { name: product.name, url: `/products/${product.id}` }
+                ]}
             />
 
             {/* Sticky Top App Bar */}

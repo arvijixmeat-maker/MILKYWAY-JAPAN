@@ -25,12 +25,30 @@ export const Reservation: React.FC = () => {
     // Parse duration to get number of nights and days (robust to handle multiple languages)
     const parsedDuration = useMemo(() => {
         if (!product?.duration) return { nights: 0, days: 0 };
-        // Extract all numbers to handle formats like "3박 4일", "3泊4日", "3 nights 4 days"
+        
+        // Extract all numbers
         const matches = product.duration.match(/\d+/g);
-        if (matches && matches.length >= 2) {
-            return { nights: parseInt(matches[0], 10), days: parseInt(matches[1], 10) };
+        if (!matches || matches.length === 0) return { nights: 0, days: 0 };
+
+        const firstNum = parseInt(matches[0], 10);
+
+        // Case 1: Two numbers (e.g., "3박 4일", "4泊5日")
+        if (matches.length >= 2) {
+            const secondNum = parseInt(matches[1], 10);
+            return { nights: firstNum, days: secondNum };
         }
-        return { nights: 0, days: 0 };
+
+        // Case 2: One number (e.g., "3박", "4일")
+        const durationStr = product.duration;
+        if (durationStr.includes('박') || durationStr.includes('泊') || durationStr.toLowerCase().includes('night')) {
+            return { nights: firstNum, days: firstNum + 1 };
+        }
+        if (durationStr.includes('일') || durationStr.includes('日') || durationStr.toLowerCase().includes('day')) {
+            return { nights: Math.max(0, firstNum - 1), days: firstNum };
+        }
+
+        // Fallback for one number: assume it's days if not specified
+        return { nights: Math.max(0, firstNum - 1), days: firstNum };
     }, [product?.duration]);
 
     // Load Product

@@ -331,7 +331,10 @@ export const MyReservations: React.FC = () => {
                                                     <div className="flex-1">
                                                         <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">{t('my_reservations.labels.itinerary')}</p>
                                                         <p className="text-[15px] font-bold text-slate-800 dark:text-slate-200 leading-snug">
-                                                            {formatDate(reservation.startDate)} - {formatDate(reservation.endDate)}
+                                                            {reservation.startDate === reservation.endDate 
+                                                                ? formatDate(reservation.startDate)
+                                                                : `${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)}`
+                                                            }
                                                         </p>
                                                         {reservation.duration && <p className="text-sm font-medium text-teal-600 dark:text-teal-400 mt-1">{reservation.duration}</p>}
                                                     </div>

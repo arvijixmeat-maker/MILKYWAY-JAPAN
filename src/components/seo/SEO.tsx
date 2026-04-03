@@ -9,6 +9,7 @@ interface SEOProps {
     image?: string;
     url?: string;
     structuredData?: Record<string, any>;
+    breadcrumb?: { name: string; url: string }[];
 }
 
 export const SEO: React.FC<SEOProps> = ({
@@ -17,7 +18,8 @@ export const SEO: React.FC<SEOProps> = ({
     keywords,
     image,
     url,
-    structuredData
+    structuredData,
+    breadcrumb
 }) => {
     const metaTitle = title
         ? `${title} | Milkyway Japan`
@@ -27,6 +29,18 @@ export const SEO: React.FC<SEOProps> = ({
     const metaKeywords = keywords || SEO_CONSTANTS.KEYWORDS;
     const metaImage = image ? (image.startsWith('http') ? image : `${SEO_CONSTANTS.SITE_URL}${image}`) : `${SEO_CONSTANTS.SITE_URL}${SEO_CONSTANTS.OG_IMAGE}`;
     const metaUrl = url ? `${SEO_CONSTANTS.SITE_URL}${url}` : SEO_CONSTANTS.SITE_URL;
+
+    // Generate Breadcrumb JSON-LD if provided
+    const breadcrumbData = breadcrumb ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": breadcrumb.map((item, index) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "name": item.name,
+            "item": item.url.startsWith('http') ? item.url : `${SEO_CONSTANTS.SITE_URL}${item.url}`
+        }))
+    } : null;
 
     return (
         <Helmet htmlAttributes={{ lang: 'ja' }}>
@@ -61,6 +75,13 @@ export const SEO: React.FC<SEOProps> = ({
             {structuredData && (
                 <script type="application/ld+json">
                     {JSON.stringify(structuredData)}
+                </script>
+            )}
+            
+            {/* Breadcrumb Data */}
+            {breadcrumbData && (
+                <script type="application/ld+json">
+                    {JSON.stringify(breadcrumbData)}
                 </script>
             )}
         </Helmet>
