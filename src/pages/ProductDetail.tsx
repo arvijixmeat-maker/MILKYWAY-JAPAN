@@ -223,7 +223,7 @@ export const ProductDetail: React.FC = () => {
     };
 
     return (
-        <div ref={ref as any} className={`bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display ${revealClass}`}>
+        <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display">
             <SEO
                 title={product.name}
                 description={product.description || product.highlights?.[0]?.description || `${product.name} - モンゴル旅行・モンゴルツアーならMilkyway Japan。特別で魅力的なモンゴル観光体験をご提案します。`}
@@ -269,7 +269,7 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Hero Image Section (Horizontal Slider) */}
-            <div className="@container relative group">
+            <div ref={ref as any} className="@container relative group">
                 <div
                     id="image-slider"
                     className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar bg-gray-200"
