@@ -127,23 +127,43 @@ export const TourProducts: React.FC = () => {
         let result = products;
 
         // 1. Category Filter
+        const normalize = (text: string) => {
+            if (!text) return '';
+            return text.toLowerCase()
+                .replace(/\s+/g, '') // Remove all whitespace
+                .replace(/골/g, 'ゴル') // Treat Hangul '골' as Katakana 'ゴル' internally
+                .replace(/몽골/g, 'モンゴル') // Treat Hangul '몽골' as Katakana 'モンゴル'
+                .replace(/승마/g, '乗馬') // Treat Hangul '승마' as Katakana '乗馬'
+                .trim();
+        };
+
         if (selectedCategory !== 'all') {
             const category = categories.find(c => c.id === selectedCategory);
             if (category) {
-                // Products save category by name (e.g., '중앙몽골'), so match by category.name
-                const catName = category.name.toLowerCase();
-                const isRidingSearch = catName.includes('乗馬') || catName.includes('승마') || catName.includes('riding');
+                const normSelectedCatName = normalize(category.name);
+                const normSelectedCatId = normalize(category.id);
+                const isRidingSearch = normSelectedCatName.includes('乗馬') || normSelectedCatId.includes('riding');
 
                 result = result.filter(p => {
-                    const matchesCategory = p.category === category.name || p.category === category.id;
-                    if (matchesCategory) return true;
+                    const normProductCat = normalize(p.category || '');
+                    
+                    // 1. Exact or Normalized Category Match
+                    if (normProductCat === normSelectedCatName || normProductCat === normSelectedCatId || p.category === category.id) {
+                        return true;
+                    }
 
-                    // Fallback for Horseback Riding specifically based on Name/Tags
+                    // 2. Horse Riding Specific Fallback (Multi-language)
                     if (isRidingSearch) {
+                        const normProductName = normalize(p.name || '');
                         return (
-                            p.name.includes('乗馬') || 
-                            p.name.includes('승마') || 
-                            p.tags?.some(t => t.includes('乗馬') || t.includes('승마'))
+                            normProductCat.includes('乗馬') || 
+                            normProductCat.includes('riding') ||
+                            normProductName.includes('乗馬') || 
+                            normProductName.includes('riding') ||
+                            p.tags?.some(tag => {
+                                const nTag = normalize(tag);
+                                return nTag.includes('乗馬') || nTag.includes('riding');
+                            })
                         );
                     }
                     return false;
