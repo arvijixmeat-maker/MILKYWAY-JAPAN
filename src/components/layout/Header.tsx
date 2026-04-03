@@ -41,14 +41,9 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={toggleMenu}
-                        className={`p-2 transition-all duration-300 ${isMenuOpen ? 'text-primary rotate-90' : 'text-slate-500 dark:text-slate-400'}`}
+                        className={`p-2 transition-all duration-300 ${isMenuOpen ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}
                     >
-                        <span className="material-symbols-outlined text-[28px]">settings</span>
-                        {unreadCount > 0 && !isMenuOpen && (
-                            <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white border-2 border-white dark:border-slate-900 font-bold">
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </span>
-                        )}
+                        <span className="material-symbols-outlined text-[30px] font-light">menu</span>
                     </button>
                 </div>
             </div>
@@ -66,7 +61,7 @@ export const Header: React.FC = () => {
                                 <button
                                     key={item.path}
                                     onClick={() => handleNavigate(item.path)}
-                                    className={`w-full text-left px-5 py-3.5 text-sm font-bold flex items-center justify-between transition-colors ${
+                                    className={`w-full text-left px-5 py-4 text-[15px] font-bold flex items-center justify-between transition-colors ${
                                         location.pathname === item.path 
                                         ? 'bg-primary/5 text-primary' 
                                         : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -78,18 +73,6 @@ export const Header: React.FC = () => {
                                     )}
                                 </button>
                             ))}
-                            <div className="border-t border-slate-50 dark:border-slate-700 my-1" />
-                            <button
-                                onClick={() => handleNavigate('/mypage/notifications')}
-                                className="w-full text-left px-5 py-3.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between"
-                            >
-                                {t('common.notifications') || '알림'}
-                                {unreadCount > 0 && (
-                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                        {unreadCount}
-                                    </span>
-                                )}
-                            </button>
                         </div>
                     </div>
                 </>
