@@ -82,6 +82,25 @@ export const TourProducts: React.FC = () => {
         staleTime: 1000 * 60 * 30, // 30 minutes
     });
 
+    // 2.5 Fetch Custom Quote Banners
+    const { data: customQuoteBanners = [], isLoading: isCustomQuoteBannersLoading } = useQuery({
+        queryKey: ['customQuoteBanners'],
+        queryFn: async () => {
+            try {
+                const settingsData = await api.settings.get('customQuoteBanners');
+                if (settingsData && settingsData.customQuoteBanners) {
+                    const parsed = JSON.parse(settingsData.customQuoteBanners);
+                    return Array.isArray(parsed) ? parsed : [];
+                }
+                return [];
+            } catch (error) {
+                console.error('Error fetching custom quote banners:', error);
+                return [];
+            }
+        },
+        staleTime: 1000 * 60 * 30,
+    });
+
     // 3. Fetch Products
     const { data: products = [], isLoading: isProductsLoading } = useQuery({
         queryKey: ['products'],
@@ -410,9 +429,32 @@ export const TourProducts: React.FC = () => {
                                         <div className="absolute -right-10 -bottom-10 size-40 bg-white/10 rounded-full blur-2xl"></div>
                                     </div>
                                 ))
+                        ) : customQuoteBanners && customQuoteBanners.length > 0 ? (
+                            customQuoteBanners.map((imageUrl: string, idx: number) => (
+                                <div
+                                    key={`quote-${idx}`}
+                                    onClick={() => navigate('/custom-estimate')}
+                                    className="relative w-[85%] shrink-0 snap-center rounded-2xl overflow-hidden shadow-lg cursor-pointer active:scale-95 transition-transform aspect-[2/1] sm:aspect-[21/9]"
+                                    style={{
+                                        background: `url('${imageUrl}') center/cover`
+                                    }}
+                                >
+                                    <div className="absolute inset-0 bg-black/50"></div>
+                                    <div className="relative z-10 flex flex-col justify-center h-full text-white p-6">
+                                        <div className="relative z-10">
+                                            <p className="text-sm font-medium opacity-90 mb-1">{t('products.custom_banner.text')}</p>
+                                            <h4 className="text-xl font-bold leading-tight mb-4">{t('products.custom_banner.title')}</h4>
+                                            <button className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-white hover:text-teal-700 transition-all shadow-sm">{t('products.custom_banner.button')}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
                         ) : (
-                            // Fallback if no banners
-                            <div className="w-full p-6 rounded-2xl bg-teal-700 text-white flex items-center justify-between relative overflow-hidden">
+                            // Fallback if no event or quote banners
+                            <div 
+                                onClick={() => navigate('/custom-estimate')}
+                                className="w-full shrink-0 snap-center p-6 rounded-2xl bg-teal-700 text-white flex items-center justify-between relative overflow-hidden cursor-pointer active:scale-95 transition-transform"
+                            >
                                 <div className="relative z-10">
                                     <p className="text-sm font-medium opacity-90 mb-1">{t('products.custom_banner.text')}</p>
                                     <h4 className="text-xl font-bold leading-tight mb-4">{t('products.custom_banner.title')}</h4>

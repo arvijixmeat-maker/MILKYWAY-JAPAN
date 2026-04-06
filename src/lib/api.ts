@@ -96,7 +96,7 @@ export const api = {
         save: async (key: string, value: any) => request(`${API_BASE}/settings`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, value })
+            body: JSON.stringify({ [key]: typeof value === 'string' ? value : JSON.stringify(value) })
         }),
     },
     faqs: {

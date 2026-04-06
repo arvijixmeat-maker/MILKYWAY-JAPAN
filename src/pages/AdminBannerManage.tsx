@@ -129,7 +129,10 @@ export const AdminBannerManage: React.FC = () => {
     const iconFileInputRef = useRef<HTMLInputElement>(null);
     const eventFileInputRef = useRef<HTMLInputElement>(null);
     const categoryFileInputRef = useRef<HTMLInputElement>(null);
+    const customQuoteFileInputRef = useRef<HTMLInputElement>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedQuoteIndex, setSelectedQuoteIndex] = useState<number | null>(null);
+    const [customQuoteBanners, setCustomQuoteBanners] = useState<string[]>([]);
 
     // Initial Load from API
     useEffect(() => {
@@ -157,6 +160,17 @@ export const AdminBannerManage: React.FC = () => {
                     setCategoryTabs(data.categoryTabs.map((c: any) => ({
                         id: c.id, name: c.name, title: c.title, subtitle: c.subtitle, bannerImage: c.banner_image
                     })));
+                }
+
+                // Fetch custom quote banners from settings
+                const settingsData = await api.settings.get('customQuoteBanners');
+                if (settingsData && settingsData.customQuoteBanners) {
+                    try {
+                        const parsed = JSON.parse(settingsData.customQuoteBanners);
+                        if (Array.isArray(parsed)) setCustomQuoteBanners(parsed);
+                    } catch (e) {
+                        console.error('Error parsing customQuoteBanners:', e);
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching admin banner data:', error);
@@ -255,10 +269,36 @@ export const AdminBannerManage: React.FC = () => {
         markUnsaved();
     };
 
+    // CRUD - Custom Quote Banners
+    const addCustomQuoteBanner = () => {
+        setCustomQuoteBanners([...customQuoteBanners, '']);
+        markUnsaved();
+    };
 
+    const deleteCustomQuoteBanner = (index: number) => {
+        if (confirm('정말 삭제하시겠습니까?')) {
+            const newBanners = [...customQuoteBanners];
+            newBanners.splice(index, 1);
+            setCustomQuoteBanners(newBanners);
+            markUnsaved();
+        }
+    };
+
+    const moveCustomQuoteBanner = (index: number, direction: 'left' | 'right') => {
+        const newBanners = [...customQuoteBanners];
+        if (direction === 'left') {
+            if (index === 0) return;
+            [newBanners[index - 1], newBanners[index]] = [newBanners[index], newBanners[index - 1]];
+        } else {
+            if (index === newBanners.length - 1) return;
+            [newBanners[index], newBanners[index + 1]] = [newBanners[index + 1], newBanners[index]];
+        }
+        setCustomQuoteBanners(newBanners);
+        markUnsaved();
+    };
 
     // Images
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'banner' | 'icon' | 'event' | 'category') => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'banner' | 'icon' | 'event' | 'category' | 'quote') => {
         const file = e.target.files?.[0];
         if (file && selectedId) {
             try {
@@ -275,6 +315,11 @@ export const AdminBannerManage: React.FC = () => {
                 if (type === 'icon') setLinks(links.map(l => l.id === selectedId ? { ...l, image: publicUrl } : l));
                 if (type === 'event') setEventBanners(eventBanners.map(ev => ev.id === selectedId ? { ...ev, image: publicUrl } : ev));
                 if (type === 'category') setCategoryTabs(categoryTabs.map(c => c.id === selectedId ? { ...c, bannerImage: publicUrl } : c));
+                if (type === 'quote' && selectedQuoteIndex !== null) {
+                    const newBanners = [...customQuoteBanners];
+                    newBanners[selectedQuoteIndex] = publicUrl;
+                    setCustomQuoteBanners(newBanners);
+                }
                 markUnsaved();
             } catch (error) {
                 console.error('Image upload failed:', error);
@@ -287,6 +332,8 @@ export const AdminBannerManage: React.FC = () => {
     const saveAll = async () => {
         try {
             await api.banners.save({ banners, quickLinks: links, eventBanners, categoryTabs });
+            await api.settings.save('customQuoteBanners', customQuoteBanners.filter(b => b)); // Empty string filter
+            
             setHasUnsavedChanges(false);
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
@@ -660,6 +707,63 @@ export const AdminBannerManage: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Custom Quote Banners Section */}
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <span className="material-symbols-outlined text-teal-500">collections</span>
+                                맞춤견적 배너 관리 (여행상품 하단 슬라이드)
+                            </h2>
+                            <button onClick={addCustomQuoteBanner} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm">add</span>
+                                이미지 추가
+                            </button>
+                        </div>
+
+                        <input type="file" ref={customQuoteFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'quote')} />
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {customQuoteBanners.map((imageUrl, index) => (
+                                <div key={index} className="border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col gap-2 group relative bg-slate-50/50 hover:bg-white transition-colors hover:shadow-sm overflow-hidden p-2">
+                                    <div className="absolute top-4 left-4 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10">#{index + 1}</div>
+                                    <button
+                                        onClick={() => deleteCustomQuoteBanner(index)}
+                                        className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1 z-20 bg-white/80 rounded-full shadow-sm"
+                                        title="삭제"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">close</span>
+                                    </button>
+                                    <div className="absolute bottom-4 right-4 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => moveCustomQuoteBanner(index, 'left')} disabled={index === 0} className="p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 bg-white/90 rounded shadow text-xs"><span className="material-symbols-outlined text-sm">chevron_left</span></button>
+                                        <button onClick={() => moveCustomQuoteBanner(index, 'right')} disabled={index === customQuoteBanners.length - 1} className="p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 bg-white/90 rounded shadow text-xs"><span className="material-symbols-outlined text-sm">chevron_right</span></button>
+                                    </div>
+
+                                    <div
+                                        className="w-full aspect-[21/9] bg-slate-200 rounded-lg bg-cover bg-center shrink-0 relative group/img cursor-pointer border border-slate-200 text-slate-800"
+                                        style={{ backgroundImage: imageUrl ? `url('${imageUrl}')` : 'none' }}
+                                        onClick={() => { setSelectedQuoteIndex(index); setSelectedId(null); customQuoteFileInputRef.current?.click(); }}
+                                    >
+                                        {!imageUrl && (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                                                <span className="material-symbols-outlined text-3xl mb-1">add_photo_alternate</span>
+                                                <span className="text-[10px] font-bold">이미지 선택</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg">
+                                            <span className="material-symbols-outlined text-white">edit</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {customQuoteBanners.length === 0 && (
+                                <div className="col-span-full text-center py-8 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-sm">
+                                    등록된 맞춤견적 슬라이드 이미지가 없습니다.
+                                </div>
+                            )}
                         </div>
                     </div>
 
