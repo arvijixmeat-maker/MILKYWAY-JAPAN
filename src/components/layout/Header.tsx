@@ -14,11 +14,11 @@ export const Header: React.FC = () => {
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
     const navItems = [
-        { path: '/products', label: t('nav.products') },
-        { path: '/custom-estimate', label: t('nav.custom_estimate') },
-        { path: '/travel-mates', label: t('nav.travel_mates') },
-        { path: '/travel-guide', label: t('nav.travel_guide') },
-        { path: '/reviews', label: t('nav.reviews') },
+        { path: '/products', label: t('nav.products'), icon: 'flight' },
+        { path: '/custom-estimate', label: t('nav.custom_estimate'), icon: 'calculate' },
+        { path: '/travel-mates', label: t('nav.travel_mates'), icon: 'group' },
+        { path: '/travel-guide', label: t('nav.travel_guide'), icon: 'menu_book' },
+        { path: '/reviews', label: t('nav.reviews'), icon: 'rate_review' },
     ];
 
     const handleNavigate = (path: string) => {
@@ -55,21 +55,22 @@ export const Header: React.FC = () => {
                         className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-[2px] z-40 transition-opacity"
                         onClick={() => setIsMenuOpen(false)}
                     />
-                    <div className="absolute top-16 right-4 w-52 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in slide-in-from-top-4 duration-200">
+                    <div className="absolute top-16 right-4 w-[220px] bg-white dark:bg-slate-800 rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:shadow-black/50 border border-slate-100 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in slide-in-from-top-4 duration-200">
                         <div className="py-2">
                             {navItems.map((item) => (
                                 <button
                                     key={item.path}
                                     onClick={() => handleNavigate(item.path)}
-                                    className={`w-full text-left px-5 py-4 text-[15px] font-bold flex items-center justify-between transition-colors ${
-                                        location.pathname === item.path 
-                                        ? 'bg-primary/5 text-primary' 
-                                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                    className={`w-full text-left px-5 py-3.5 text-[15px] font-bold flex items-center gap-3 transition-colors ${
+                                        location.pathname.startsWith(item.path) 
+                                        ? 'text-[#0f766e] dark:text-[#18c9a6] bg-[#f0fdf4] dark:bg-slate-700/50' 
+                                        : 'text-slate-700 dark:text-slate-200 hover:bg-[#f0fdf4] hover:text-[#0f766e] dark:hover:bg-slate-700'
                                     }`}
                                 >
-                                    {item.label}
-                                    {location.pathname === item.path && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    <span className="material-symbols-outlined text-[20px] leading-none shrink-0">{item.icon}</span>
+                                    <span className="flex-1">{item.label}</span>
+                                    {location.pathname.startsWith(item.path) && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#0f766e] dark:bg-[#18c9a6] shrink-0" />
                                     )}
                                 </button>
                             ))}
