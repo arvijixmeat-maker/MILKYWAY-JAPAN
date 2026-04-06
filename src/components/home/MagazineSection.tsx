@@ -67,7 +67,10 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
                                 </div>
                             )}
                             {/* Gradient Overlay for Text Readability */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
+                            <div 
+                                className="absolute inset-0" 
+                                style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(15, 118, 110, 0.85) 100%)' }}
+                            />
                         </div>
 
                         {/* Top Right Blue Airplane Icon */}
