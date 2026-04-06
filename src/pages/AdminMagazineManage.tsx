@@ -659,7 +659,7 @@ export const AdminMagazineManage: React.FC = () => {
                                             ) : (
                                                 filteredMagazines?.map((magazine, index) => (
                                                     <div key={magazine.id} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-full group hover:border-teal-500 transition-colors">
-                                                        <div className="relative h-48 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 mb-4">
+                                                        <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 mb-4">
                                                             {magazine.image ? (
                                                                 <img src={magazine.image} alt={magazine.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                             ) : (

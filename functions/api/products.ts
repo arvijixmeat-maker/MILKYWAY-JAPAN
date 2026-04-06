@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 type Env = {
     DB: any;
@@ -101,8 +102,8 @@ app.get('/:id', async (c) => {
     }
 });
 
-// POST /api/products
-app.post('/', async (c) => {
+// POST /api/products (Admin only)
+app.post('/', requireAdmin, async (c) => {
     try {
         const data = await c.req.json();
         const db = c.env.DB;
@@ -211,8 +212,8 @@ app.post('/', async (c) => {
     }
 });
 
-// POST /api/products/reorder
-app.post('/reorder', async (c) => {
+// POST /api/products/reorder (Admin only)
+app.post('/reorder', requireAdmin, async (c) => {
     try {
         const { items } = await c.req.json();
         // items should be an array of { id: string, sortOrder: number }
@@ -237,8 +238,8 @@ app.post('/reorder', async (c) => {
     }
 });
 
-// PUT /api/products/:id
-app.put('/:id', async (c) => {
+// PUT /api/products/:id (Admin only)
+app.put('/:id', requireAdmin, async (c) => {
     try {
         const id = c.req.param('id');
         const data = await c.req.json();
@@ -375,8 +376,8 @@ app.put('/:id', async (c) => {
     }
 });
 
-// DELETE /api/products/:id
-app.delete('/:id', async (c) => {
+// DELETE /api/products/:id (Admin only)
+app.delete('/:id', requireAdmin, async (c) => {
     try {
         const id = c.req.param('id');
         const db = c.env.DB;

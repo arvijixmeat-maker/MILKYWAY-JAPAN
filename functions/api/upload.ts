@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 type Env = {
     BUCKET: any;
@@ -6,7 +7,7 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     try {
         const body = await c.req.parseBody();
         const file = body['file'];

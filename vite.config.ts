@@ -1,22 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
-import fs from 'fs'
-
-// Read dynamically generated routes (could be used for standard SSG later)
-let prerenderRoutes = ['/', '/products', '/travel-guide', '/faq', '/reviews', '/custom-estimate', '/travel-mates'];
-try {
-  const routesPath = path.resolve(__dirname, 'prerender-routes.json');
-  if (fs.existsSync(routesPath)) {
-    prerenderRoutes = JSON.parse(fs.readFileSync(routesPath, 'utf8'));
-  }
-} catch (e) {
-  console.warn('Failed to load prerender-routes.json, using fallback routes');
-}
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer'
 
 export default defineConfig({
   plugins: [
     react(),
+    ViteImageOptimizer({
+      png: { quality: 80 },
+      jpeg: { quality: 80 },
+      jpg: { quality: 80 },
+      webp: { quality: 80 },
+    }),
   ],
   build: {
     emptyOutDir: true,
