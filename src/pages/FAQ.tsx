@@ -58,9 +58,26 @@ export const FAQPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
             <SEO
-                title="よくある質問 | Milkyway Japan"
-                description="モンゴル旅行に関するよくある質問と回答をご確認ください。予約・決済・キャンセル・払い戻しなど、お客様の疑問を解決いたします。"
-                keywords="モンゴル旅行FAQ, モンゴルツアー質問, 旅行社よくある質問"
+                title="モンゴルツアー・モンゴル旅行のよくある質問【Milkyway Japan】"
+                description="モンゴルツアー・モンゴル旅行に関するよくある質問と回答。予約方法、モンゴル旅行費用、モンゴル乗馬旅行の準備、ゴビ砂漠ツアーの持ち物など、お客様の疑問を解決いたします。"
+                keywords="モンゴルツアーFAQ, モンゴル旅行質問, モンゴル旅行費用, モンゴル乗馬旅行準備, モンゴルツアー予約"
+                url="/faq"
+                breadcrumb={[
+                    { name: 'ホーム', url: '/' },
+                    { name: 'よくある質問', url: '/faq' }
+                ]}
+                structuredData={faqs.length > 0 ? {
+                    "@context": "https://schema.org",
+                    "@type": "FAQPage",
+                    "mainEntity": faqs.slice(0, 20).map(faq => ({
+                        "@type": "Question",
+                        "name": faq.question,
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": faq.answer
+                        }
+                    }))
+                } : undefined}
             />
             <div className="max-w-lg mx-auto bg-white dark:bg-gray-900 min-h-screen overflow-y-auto">
                 {/* Header */}

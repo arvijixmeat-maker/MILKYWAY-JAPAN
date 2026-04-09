@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /*.cm
 
 Sitemap: https://mongolryokou.com/sitemap.xml

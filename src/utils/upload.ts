@@ -42,14 +42,20 @@ export const uploadFile = async (file: File, bucket: string = 'images', folder: 
  */
 export const uploadImage = async (file: File, folder: string = 'common'): Promise<string> => {
     try {
-        // Enforce WebP conversion and apply high quality compression
-        const options = {
-            maxSizeMB: 1, // Max file size 1MB (aggressive compression)
-            maxWidthOrHeight: 1920, // Keep dimensions reasonable for web (max 1080p width/height)
+        // If it's a detail image (usually very tall), we shouldn't restrict its height to 1920.
+        // We set a much larger maxWidthOrHeight or let the maxSizeMB dictate the compression.
+        const isDetailImage = folder.includes('detail') || folder.includes('product-details') || folder.includes('magazine');
+        
+        const options: any = {
+            maxSizeMB: isDetailImage ? 5 : 1, // Detail pages can be larger
             useWebWorker: true,
             fileType: 'image/webp', // Force WebP output format
-            initialQuality: 0.85 // High quality WebP
+            initialQuality: isDetailImage ? 0.9 : 0.85 // High quality WebP
         };
+
+        if (!isDetailImage) {
+            options.maxWidthOrHeight = 1920;
+        }
 
         let processedFile = file;
 

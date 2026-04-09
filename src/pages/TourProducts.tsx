@@ -228,6 +228,36 @@ export const TourProducts: React.FC = () => {
                 title={t('products.seo_title')}
                 description={t('products.seo_description')}
                 keywords={t('products.seo_keywords')}
+                url="/products"
+                breadcrumb={[
+                    { name: t('nav.home'), url: '/' },
+                    { name: 'モンゴルツアー商品', url: '/products' }
+                ]}
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "ItemList",
+                    "name": "モンゴルツアー商品一覧",
+                    "description": "Milkyway Japanが提供するモンゴルツアー・モンゴル旅行商品の一覧です。モンゴル乗馬旅行、ゴビ砂漠ツアー、テレルジ大自然ツアーなど。",
+                    "numberOfItems": products.length,
+                    "itemListElement": products.slice(0, 10).map((product: any, index: number) => ({
+                        "@type": "ListItem",
+                        "position": index + 1,
+                        "item": {
+                            "@type": "TouristTrip",
+                            "name": product.name,
+                            "description": product.description || `${product.name} - モンゴルツアー`,
+                            "url": `https://mongolryokou.com/products/${product.id}`,
+                            "image": product.main_images?.[0] || product.mainImages?.[0],
+                            "touristType": "Adventure",
+                            "offers": {
+                                "@type": "Offer",
+                                "price": product.price,
+                                "priceCurrency": "JPY",
+                                "availability": "https://schema.org/InStock"
+                            }
+                        }
+                    }))
+                }}
             />
             {/* Top App Bar & Search */}
             <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">

@@ -84,9 +84,14 @@ export const TravelGuide: React.FC = () => {
     return (
         <div className="bg-[#f8f7f8] dark:bg-background-dark text-text-primary dark:text-white pb-24 min-h-screen font-display">
             <SEO
-                title={`${t('travel_guide.title')} | Milkyway Japan`}
-                description="モンゴル旅行の必須情報！モンゴルの基本情報、旅行のヒント、地域別ガイド、文化やグルメ情報をチェックしましょう。"
-                keywords="モンゴル旅行ガイド, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備"
+                title={`モンゴル旅行ガイド | モンゴルツアー・モンゴル観光情報【Milkyway Japan】`}
+                description="モンゴル旅行の必須情報！モンゴルツアーの準備、モンゴルの基本情報、地域別ガイド、モンゴル文化やグルメ情報をチェック。モンゴル乗馬旅行、ゴビ砂漠ツアーの基本情報も。"
+                keywords="モンゴル旅行ガイド, モンゴルツアー準備, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備, モンゴル乗馬旅行ガイド"
+                url="/travel-guide"
+                breadcrumb={[
+                    { name: 'ホーム', url: '/' },
+                    { name: 'モンゴル旅行ガイド', url: '/travel-guide' }
+                ]}
             />
             {/* Sticky Header Container */}
             <div className="sticky top-0 z-50 bg-[#f8f7f8]/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200">
