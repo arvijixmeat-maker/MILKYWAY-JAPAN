@@ -41,14 +41,14 @@ interface CategoryTab {
 
 // Predefined Links for easy selection
 const PREDEFINED_LINKS = [
-    { label: '직접 입력', value: '' },
-    { label: '홈 화면', value: '/' },
-    { label: '여행상품 목록', value: '/products' },
+    { label: '직접 ?�력', value: '' },
+    { label: '???�면', value: '/' },
+    { label: '?�행?�품 목록', value: '/products' },
     { label: '맞춤견적', value: '/custom-estimate' },
-    { label: '동행찾기', value: '/travel-mates' },
-    { label: '마이페이지', value: '/profile' },
+    { label: '?�행찾기', value: '/travel-mates' },
+    { label: '마이?�이지', value: '/profile' },
 
-    { label: '여행가이드', value: '/travel-guide' },
+    { label: '?�행가?�드', value: '/travel-guide' },
 ];
 
 const DEFAULT_BANNERS: Banner[] = [
@@ -56,26 +56,26 @@ const DEFAULT_BANNERS: Banner[] = [
         id: 'banner-1',
         image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCa-lOI8hWg7jkEPE6aLpgULy46wN1zu_SdVj-gwNCoVza2ioMGm0cfT7njLma7CYQJ7YOCcomwafa5fKhJc9eO0hKtIafFHLoS9Vw_f3fyxGnxJkpkfUIBcpBSK8kb0onNzfKU-ImdlsG7T9ipvcqEVeiv0IkkaRjkNX43p7iWB42lYEVlHp-virwWcrmYH0R2SNXPmyNr-nNF55R-vs8rATJH09lIQgi22C3kyFBnx7gHhz_pjfvaFOI5i-SonHUBrrbuY_hnNQ",
         tag: "Premium Trip",
-        title: "지평선 끝에서 만나는\n태초의 대자연, 몽골",
-        subtitle: "지금 가장 인기 있는 테렐지 힐링 코스",
+        title: "지?�선 ?�에??만나??n?�초???�?�연, 몽골",
+        subtitle: "지�?가???�기 ?�는 ?�렐지 ?�링 코스",
         link: "/products/1"
     },
     {
         id: 'banner-2',
         image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB4K20GMVq8yGSfTci46S9biO_u2LDuxENlWBxUuJ0nn-vXp0HxEwZMChpGwntz2L5VISAaVTO0C3Jwe-ONgJLNcItHgdmG8Zb9pp-1uACHde5HETQBqmxnKmhs57ApVVkSCA6Kd-ta5q_h0ExQ84FYSY6vbGnDKD5yCJn-muLZnWDQCVEXnPd4YHvkNxzeRZmK1PN9XDNxQ1qdNDHGzJNqUkknzlI6FflIQG7Tnf1tHDg5TqEB8Gp1IlcZiBunTStiUDAFZDa0zQ",
         tag: "Gobi Adventure",
-        title: "밤하늘을 수놓은\n쏟아지는 별빛 탐험",
-        subtitle: "고비 사막 은하수 투어 얼리버드",
+        title: "밤하?�을 ?�놓?�\n?�아지??별빛 ?�험",
+        subtitle: "고비 ?�막 ?�?�수 ?�어 ?�리버드",
         link: "/products/2"
     }
 ];
 
 const DEFAULT_LINKS: QuickLink[] = [
-    { id: 'link-1', icon: 'grid_view', label: '여행상품', path: '/products' },
+    { id: 'link-1', icon: 'grid_view', label: '?�행?�품', path: '/products' },
     { id: 'link-2', icon: 'receipt_long', label: '맞춤견적', path: '/custom-estimate' },
-    { id: 'link-3', icon: 'groups', label: '동행찾기', path: '/travel-mates' },
+    { id: 'link-3', icon: 'groups', label: '?�행찾기', path: '/travel-mates' },
 
-    { id: 'link-5', icon: 'auto_stories', label: '여행가이드', path: '/travel-guide' },
+    { id: 'link-5', icon: 'auto_stories', label: '?�행가?�드', path: '/travel-guide' },
 ];
 
 const DEFAULT_EVENT_BANNERS: EventBanner[] = [
@@ -83,7 +83,7 @@ const DEFAULT_EVENT_BANNERS: EventBanner[] = [
         id: 'event-1',
         backgroundColor: '#0F766E', // teal-700
         tag: 'EVENT',
-        title: '친구와 함께하면\n10만원 할인!',
+        title: '친구?� ?�께?�면\n10만원 ?�인!',
         icon: 'redeem',
         link: '#',
         location: 'all'
@@ -94,22 +94,22 @@ const DEFAULT_CATEGORY_TABS: CategoryTab[] = [
     {
         id: 'central',
         name: '중앙몽골',
-        title: '중앙몽골의 대초원',
-        subtitle: '테를지 국립공원부터 \n카라코룸 옛 수도까지',
+        title: '중앙몽골???�초원',
+        subtitle: '?��?지 �?��공원부??\n카라코룸 ???�도까�?',
         bannerImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCViCzrsaryy2z22sZJjJC2yPok7E9fmP1eXTz5wxd0B9jW3b8ccHatM2GhE_PpfKvS4v62VtA9hKyqw0dGAuFEsBQax20AoO8MdCUXLg00zA8ODyeJZh-S9i4BUVoD3jx3bueEDMJeAJknjXRv9dg0xSf2FnfAZjPTTIHQoJm77_1r5C4ZlTxJWlzEkoI1s2BhdWPaYC11Q17j9_gAO2hS0gUFXxzfVl469Mp7kJGlkuZc39udLK16lJgqurk2l1VXHODjPbZ5gA'
     },
     {
         id: 'gobi',
-        name: '고비사막',
-        title: '쏟아지는 은하수',
-        subtitle: '끝없이 펼쳐진 모래사막과 \n밤하늘의 별을 만나다',
+        name: '고비?�막',
+        title: '?�아지???�?�수',
+        subtitle: '?�없???�쳐�?모래?�막�?\n밤하?�의 별을 만나??,
         bannerImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB4K20GMVq8yGSfTci46S9biO_u2LDuxENlWBxUuJ0nn-vXp0HxEwZMChpGwntz2L5VISAaVTO0C3Jwe-ONgJLNcItHgdmG8Zb9pp-1uACHde5HETQBqmxnKmhs57ApVVkSCA6Kd-ta5q_h0ExQ84FYSY6vbGnDKD5yCJn-muLZnWDQCVEXnPd4YHvkNxzeRZmK1PN9XDNxQ1qdNDHGzJNqUkknzlI6FflIQG7Tnf1tHDg5TqEB8Gp1IlcZiBunTStiUDAFZDa0zQ'
     },
     {
         id: 'khuvsgul',
-        name: '홉스굴',
-        title: '몽골의 푸른 진주',
-        subtitle: '지상 낙원 홉스굴 호수에서 \n즐기는 진정한 힐링',
+        name: '?�스�?,
+        title: '몽골???�른 진주',
+        subtitle: '지???�원 ?�스�??�수?�서 \n즐기??진정???�링',
         bannerImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC2c-W88eNfAuepIIez8D142m0RaAu5IIVeT9H7JHKMdO_hBpKiaj9qahcrzlVZlKjJqxXoq0VzO-Aw0A7EN_sDU5pp1smnpRkWy6O3lt4E4KuNi4L3q95jN8U_VmB_8uMcgoSNcE8b0HtZVflsg_87AOF659W686DmWlQPYRdZW0HyVcje7MtAmXT-KDvgPboK9HujomSiuwF7EPAIP4cC_s0405X2ZaWONxKLKPMLHrNtX-m2362SM10q9c7aC5w_afAeRLJU2w'
     },
 ];
@@ -195,7 +195,7 @@ export const AdminBannerManage: React.FC = () => {
     };
 
     const deleteBanner = (id: string) => {
-        if (confirm('정말 삭제하시겠습니까?')) {
+        if (confirm('?�말 ??��?�시겠습?�까?')) {
             setBanners(banners.filter(b => b.id !== id));
             markUnsaved();
         }
@@ -209,12 +209,12 @@ export const AdminBannerManage: React.FC = () => {
     // CRUD - Links
     const addLink = () => {
         const newId = `link-${Date.now()}`;
-        setLinks([...links, { id: newId, icon: 'star', label: '새 메뉴', path: '#' }]);
+        setLinks([...links, { id: newId, icon: 'star', label: '??메뉴', path: '#' }]);
         markUnsaved();
     };
 
     const deleteLink = (id: string) => {
-        if (confirm('정말 삭제하시겠습니까?')) {
+        if (confirm('?�말 ??��?�시겠습?�까?')) {
             setLinks(links.filter(l => l.id !== id));
             markUnsaved();
         }
@@ -242,12 +242,12 @@ export const AdminBannerManage: React.FC = () => {
     const addEventBanner = () => {
         const newId = `event-${Date.now()}`;
         setEventBanners([...eventBanners, {
-            id: newId, backgroundColor: '#0F766E', tag: 'NEW', title: '새로운 이벤트', icon: 'campaign', link: '#', location: 'all'
+            id: newId, backgroundColor: '#0F766E', tag: 'NEW', title: '?�로???�벤??, icon: 'campaign', link: '#', location: 'all'
         }]);
         markUnsaved();
     };
     const deleteEventBanner = (id: string) => {
-        if (confirm('정말 삭제하시겠습니까?')) {
+        if (confirm('?�말 ??��?�시겠습?�까?')) {
             setEventBanners(eventBanners.filter(e => e.id !== id));
             markUnsaved();
         }
@@ -276,7 +276,7 @@ export const AdminBannerManage: React.FC = () => {
     };
 
     const deleteCustomQuoteBanner = (index: number) => {
-        if (confirm('정말 삭제하시겠습니까?')) {
+        if (confirm('?�말 ??��?�시겠습?�까?')) {
             const newBanners = [...customQuoteBanners];
             newBanners.splice(index, 1);
             setCustomQuoteBanners(newBanners);
@@ -302,7 +302,7 @@ export const AdminBannerManage: React.FC = () => {
         const file = e.target.files?.[0];
         if (file && selectedId) {
             try {
-                // Upload to Supabase Storage
+                // Upload to Cloudflare R2
                 // Use different folders for organization
                 let folder = 'banners';
                 if (type === 'icon') folder = 'icons';
@@ -323,7 +323,7 @@ export const AdminBannerManage: React.FC = () => {
                 markUnsaved();
             } catch (error) {
                 console.error('Image upload failed:', error);
-                alert('이미지 업로드 중 오류가 발생했습니다.');
+                alert('?��?지 ?�로??�??�류가 발생?�습?�다.');
             }
         }
     };
@@ -339,7 +339,7 @@ export const AdminBannerManage: React.FC = () => {
             setTimeout(() => setShowToast(false), 3000);
         } catch (error: any) {
             console.error('Save failed:', error);
-            alert('저장 중 오류가 발생했습니다:\n\n' + (error.message || '알 수 없는 오류'));
+            alert('?�??�??�류가 발생?�습?�다:\n\n' + (error.message || '?????�는 ?�류'));
         }
     };
 
@@ -361,7 +361,7 @@ export const AdminBannerManage: React.FC = () => {
             <main className="ml-64 flex-1 flex flex-col min-h-screen">
                 <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
                     <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        홈 화면 관리
+                        ???�면 관�?
                         {hasUnsavedChanges && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>}
                     </h1>
                     <button
@@ -372,7 +372,7 @@ export const AdminBannerManage: React.FC = () => {
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                     >
                         <span className="material-symbols-outlined text-lg">save</span>
-                        변경사항 저장
+                        변경사???�??
                     </button>
                 </header>
 
@@ -383,11 +383,11 @@ export const AdminBannerManage: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-teal-500">ad_units</span>
-                                메인 배너 관리 (상단 슬라이드)
+                                메인 배너 관�?(?�단 ?�라?�드)
                             </h2>
                             <button onClick={addBanner} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-sm">add</span>
-                                배너 추가
+                                배너 추�?
                             </button>
                         </div>
 
@@ -400,7 +400,7 @@ export const AdminBannerManage: React.FC = () => {
                                     <button
                                         onClick={() => deleteBanner(banner.id)}
                                         className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1"
-                                        title="삭제"
+                                        title="??��"
                                     >
                                         <span className="material-symbols-outlined">delete</span>
                                     </button>
@@ -418,7 +418,7 @@ export const AdminBannerManage: React.FC = () => {
                                     <div className="flex-1 space-y-3 pr-8">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-xs text-slate-400 block mb-1">태그 (Tag)</label>
+                                                <label className="text-xs text-slate-400 block mb-1">?�그 (Tag)</label>
                                                 <input
                                                     type="text"
                                                     value={banner.tag}
@@ -438,7 +438,7 @@ export const AdminBannerManage: React.FC = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-slate-400 block mb-1">제목 (Title)</label>
+                                            <label className="text-xs text-slate-400 block mb-1">?�목 (Title)</label>
                                             <textarea
                                                 value={banner.title}
                                                 onChange={(e) => handleBannerChange(banner.id, 'title', e.target.value)}
@@ -446,7 +446,7 @@ export const AdminBannerManage: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-slate-400 block mb-1">부제목 (Subtitle)</label>
+                                            <label className="text-xs text-slate-400 block mb-1">부?�목 (Subtitle)</label>
                                             <input
                                                 type="text"
                                                 value={banner.subtitle}
@@ -460,7 +460,7 @@ export const AdminBannerManage: React.FC = () => {
 
                             {banners.length === 0 && (
                                 <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                    등록된 배너가 없습니다.
+                                    ?�록??배너가 ?�습?�다.
                                 </div>
                             )}
                         </div>
@@ -471,11 +471,11 @@ export const AdminBannerManage: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-teal-500">grid_view</span>
-                                바로가기 아이콘 관리
+                                바로가�??�이�?관�?
                             </h2>
                             <button onClick={addLink} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-sm">add</span>
-                                아이콘 추가
+                                ?�이�?추�?
                             </button>
                         </div>
 
@@ -504,7 +504,7 @@ export const AdminBannerManage: React.FC = () => {
                                     <button
                                         onClick={() => deleteLink(link.id)}
                                         className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow border border-slate-100 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-20"
-                                        title="삭제"
+                                        title="??��"
                                     >
                                         <span className="material-symbols-outlined text-sm">close</span>
                                     </button>
@@ -527,7 +527,7 @@ export const AdminBannerManage: React.FC = () => {
                                         <input
                                             type="text"
                                             value={link.label}
-                                            placeholder="라벨"
+                                            placeholder="?�벨"
                                             onChange={(e) => handleLinkChange(link.id, 'label', e.target.value)}
                                             className="text-xs font-bold text-center w-full border-slate-200 rounded px-1 py-1 focus:ring-1 focus:ring-teal-500 outline-none bg-white"
                                         />
@@ -549,11 +549,11 @@ export const AdminBannerManage: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-teal-500">campaign</span>
-                                이벤트 배너 관리 (가로 스크롤)
+                                ?�벤??배너 관�?(가�??�크�?
                             </h2>
                             <button onClick={addEventBanner} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-sm">add</span>
-                                이벤트 추가
+                                ?�벤??추�?
                             </button>
                         </div>
 
@@ -566,7 +566,7 @@ export const AdminBannerManage: React.FC = () => {
                                         <button onClick={() => moveEventBanner(index, 'left')} disabled={index === 0} className="p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 bg-white/80 rounded-full shadow-sm"><span className="material-symbols-outlined text-base">arrow_upward</span></button>
                                         <button onClick={() => moveEventBanner(index, 'right')} disabled={index === eventBanners.length - 1} className="p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 bg-white/80 rounded-full shadow-sm"><span className="material-symbols-outlined text-base">arrow_downward</span></button>
                                     </div>
-                                    <button onClick={() => deleteEventBanner(banner.id)} className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1" title="삭제"><span className="material-symbols-outlined">delete</span></button>
+                                    <button onClick={() => deleteEventBanner(banner.id)} className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1" title="??��"><span className="material-symbols-outlined">delete</span></button>
 
                                     {/* Preview */}
                                     <div
@@ -595,28 +595,28 @@ export const AdminBannerManage: React.FC = () => {
                                     <div className="flex-1 space-y-3 pr-8">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-xs text-slate-400 block mb-1">배경색 (Image 없을 때)</label>
+                                                <label className="text-xs text-slate-400 block mb-1">배경??(Image ?�을 ??</label>
                                                 <div className="flex gap-2">
                                                     <input type="color" value={banner.backgroundColor} onChange={(e) => handleEventChange(banner.id, 'backgroundColor', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-none p-0" />
                                                     <input type="text" value={banner.backgroundColor} onChange={(e) => handleEventChange(banner.id, 'backgroundColor', e.target.value)} className="flex-1 text-xs border-slate-200 rounded px-2" />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="text-xs text-slate-400 block mb-1">표시 위치</label>
+                                                <label className="text-xs text-slate-400 block mb-1">?�시 ?�치</label>
                                                 <select
                                                     value={banner.location || 'all'}
                                                     onChange={(e) => handleEventChange(banner.id, 'location', e.target.value)}
                                                     className="w-full text-xs border-slate-200 rounded px-2 py-1.5 focus:ring-1 focus:ring-teal-500 outline-none"
                                                 >
-                                                    <option value="all">전체 (홈 + 여행상품)</option>
-                                                    <option value="home">홈 화면만</option>
-                                                    <option value="products">여행상품 페이지만</option>
+                                                    <option value="all">?�체 (??+ ?�행?�품)</option>
+                                                    <option value="home">???�면�?/option>
+                                                    <option value="products">?�행?�품 ?�이지�?/option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-xs text-slate-400 block mb-1">태그</label>
+                                                <label className="text-xs text-slate-400 block mb-1">?�그</label>
                                                 <input type="text" value={banner.tag} onChange={(e) => handleEventChange(banner.id, 'tag', e.target.value)} className="w-full text-xs font-bold border-slate-200 rounded px-2 py-1" />
                                             </div>
                                             <div>
@@ -645,7 +645,7 @@ export const AdminBannerManage: React.FC = () => {
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-slate-400 block mb-1">제목 (줄바꿈 가능)</label>
+                                            <label className="text-xs text-slate-400 block mb-1">?�목 (줄바�?가??</label>
                                             <textarea value={banner.title} onChange={(e) => handleEventChange(banner.id, 'title', e.target.value)} className="w-full text-sm border-slate-200 rounded px-2 py-1 h-12 resize-none" />
                                         </div>
                                     </div>
@@ -660,7 +660,7 @@ export const AdminBannerManage: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-teal-500">category</span>
-                                여행지 테마 배너 관리 (탭 이미지)
+                                ?�행지 ?�마 배너 관�?(???��?지)
                             </h2>
                         </div>
 
@@ -681,14 +681,14 @@ export const AdminBannerManage: React.FC = () => {
                                         </div>
                                         <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
                                             <span className="material-symbols-outlined text-white text-3xl mb-1">add_photo_alternate</span>
-                                            <span className="text-white text-xs font-medium">이미지 변경</span>
+                                            <span className="text-white text-xs font-medium">?��?지 변�?/span>
                                         </div>
                                     </div>
 
                                     {/* Edit Fields */}
                                     <div className="p-4 space-y-3 flex-1 flex flex-col">
                                         <div>
-                                            <label className="text-[11px] text-slate-400 font-bold uppercase block mb-1">제목</label>
+                                            <label className="text-[11px] text-slate-400 font-bold uppercase block mb-1">?�목</label>
                                             <input
                                                 type="text"
                                                 value={tab.title}
@@ -697,7 +697,7 @@ export const AdminBannerManage: React.FC = () => {
                                             />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="text-[11px] text-slate-400 font-bold uppercase block mb-1">부제목</label>
+                                            <label className="text-[11px] text-slate-400 font-bold uppercase block mb-1">부?�목</label>
                                             <textarea
                                                 value={tab.subtitle}
                                                 onChange={(e) => handleCategoryChange(tab.id, 'subtitle', e.target.value)}
@@ -715,11 +715,11 @@ export const AdminBannerManage: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-teal-500">collections</span>
-                                맞춤견적 배너 관리 (여행상품 하단 슬라이드)
+                                맞춤견적 배너 관�?(?�행?�품 ?�단 ?�라?�드)
                             </h2>
                             <button onClick={addCustomQuoteBanner} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-sm">add</span>
-                                이미지 추가
+                                ?��?지 추�?
                             </button>
                         </div>
 
@@ -732,7 +732,7 @@ export const AdminBannerManage: React.FC = () => {
                                     <button
                                         onClick={() => deleteCustomQuoteBanner(index)}
                                         className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1 z-20 bg-white/80 rounded-full shadow-sm"
-                                        title="삭제"
+                                        title="??��"
                                     >
                                         <span className="material-symbols-outlined text-sm">close</span>
                                     </button>
@@ -749,7 +749,7 @@ export const AdminBannerManage: React.FC = () => {
                                         {!imageUrl && (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
                                                 <span className="material-symbols-outlined text-3xl mb-1">add_photo_alternate</span>
-                                                <span className="text-[10px] font-bold">이미지 선택</span>
+                                                <span className="text-[10px] font-bold">?��?지 ?�택</span>
                                             </div>
                                         )}
                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg">
@@ -761,7 +761,7 @@ export const AdminBannerManage: React.FC = () => {
 
                             {customQuoteBanners.length === 0 && (
                                 <div className="col-span-full text-center py-8 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-sm">
-                                    등록된 맞춤견적 슬라이드 이미지가 없습니다.
+                                    ?�록??맞춤견적 ?�라?�드 ?��?지가 ?�습?�다.
                                 </div>
                             )}
                         </div>
@@ -774,7 +774,7 @@ export const AdminBannerManage: React.FC = () => {
             {showToast && (
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce-in z-[100]">
                     <span className="material-symbols-outlined text-green-400">check_circle</span>
-                    <span className="font-bold text-sm">저장되었습니다!</span>
+                    <span className="font-bold text-sm">?�?�되?�습?�다!</span>
                 </div>
             )}
         </div>

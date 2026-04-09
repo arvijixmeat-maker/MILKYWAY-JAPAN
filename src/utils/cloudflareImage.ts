@@ -5,7 +5,8 @@ import { optimizeImage } from './imageOptimizer';
 export const IMAGE_PRESETS = {
     // 상품 관련
     productThumbnail: { width: 400, quality: 80, fit: 'contain' },      // 상품 목록 썸네일 (잘림 방지)
-    productDetail: { width: 1200, quality: 90 },        // 상품 상세 이미지
+    productDetail: { width: 1200, quality: 90 },        // 일반 상품 세부 이미지
+    productDetailFull: { quality: 90 },                 // 통상적인 상세페이지용 고해상도 긴 이미지 (가로 원본 유지)
     productItinerary: { width: 1600, quality: 100 },    // 일정 이미지 (텍스트 선명도 중요)
 
     // 배너/히어로 이미지

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 import { useUser } from '../contexts/UserContext';
 
 interface Message {
@@ -80,7 +80,7 @@ export const ChatRoom: React.FC = () => {
             }
         } catch (error) {
             console.error('Send error:', error);
-            alert('메시지 전송 실패');
+            alert('메시지 ?�송 ?�패');
         }
     };
 
@@ -96,7 +96,7 @@ export const ChatRoom: React.FC = () => {
                 </button>
                 <div className="flex flex-col">
                     <h1 className="font-bold text-lg dark:text-white leading-tight">{partnerName}</h1>
-                    <span className="text-xs text-green-500 font-medium">온라인</span>
+                    <span className="text-xs text-green-500 font-medium">?�라??/span>
                 </div>
             </header>
 
@@ -135,7 +135,7 @@ export const ChatRoom: React.FC = () => {
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="메시지를 입력하세요..."
+                        placeholder="메시지�??�력?�세??.."
                         className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 dark:text-white"
                     />
                     <button

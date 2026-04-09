@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 import { optimizeImage } from '../utils/imageOptimizer';
 
 interface RecentlyViewedItem {
@@ -34,7 +34,7 @@ export const RecentlyViewed: React.FC = () => {
                     productId: item.product_id,
                     productName: item.title,
                     productImage: item.image,
-                    category: '商品', // Schema doesn't have category for recently_viewed? Check sql. 
+                    category: '?�品', // Schema doesn't have category for recently_viewed? Check sql. 
                     // SQL says: id, user_id, product_id, type, title, image, price, created_at. No category.
                     // We can default or maybe it is part of type? type default 'product'.
                     price: item.price,
@@ -68,7 +68,7 @@ export const RecentlyViewed: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">最近見た商品</h2>
+                    <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">?�近見?�商??/h2>
                 </div>
             </nav>
 
@@ -76,7 +76,7 @@ export const RecentlyViewed: React.FC = () => {
                 {recentlyViewed && recentlyViewed.length > 0 ? (
                     <div className="p-4 space-y-3">
                         <div className="mb-4">
-                            <p className="text-sm text-gray-500">全 {recentlyViewed.length}件</p>
+                            <p className="text-sm text-gray-500">??{recentlyViewed.length}�?/p>
                         </div>
                         {recentlyViewed.map((item) => (
                             <div
@@ -104,7 +104,7 @@ export const RecentlyViewed: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         {item.price && (
                                             <p className="text-sm font-bold text-primary">
-                                                {typeof item.price === 'number' ? item.price.toLocaleString() : (item.price || 0)}円~
+                                                {typeof item.price === 'number' ? item.price.toLocaleString() : (item.price || 0)}??
                                             </p>
                                         )}
                                         <p className="text-xs text-gray-400">
@@ -118,13 +118,13 @@ export const RecentlyViewed: React.FC = () => {
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 px-6">
                         <span className="material-symbols-outlined text-6xl text-gray-300 mb-4">visibility</span>
-                        <p className="text-gray-500 text-center mb-2">最近見た商品はありません</p>
-                        <p className="text-sm text-gray-400 text-center mb-6">商品を閲覧して、お気に入りの旅行を見つけてください</p>
+                        <p className="text-gray-500 text-center mb-2">?�近見?�商?�は?�り?�せ??/p>
+                        <p className="text-sm text-gray-400 text-center mb-6">?�品?�閲覧し?�、お気に?�り??��行を見つ?�て?�だ?�い</p>
                         <button
                             onClick={() => navigate('/products')}
                             className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
                         >
-                            商品を閲覧する
+                            ?�品?�閲覧す??
                         </button>
                     </div>
                 )}

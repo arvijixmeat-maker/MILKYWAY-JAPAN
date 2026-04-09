@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 
 export interface Notification {
     id: string;
@@ -50,7 +50,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // let subscription: any;
 
         const setupRealtime = async () => {
-            // const { data: { user } } = await supabase.auth.getUser();
+            // const { data: { user } } = await Cloudflare.auth.getUser();
             // if (!user) return;
             const me = await api.auth.me();
             if (!me || me.error) return;

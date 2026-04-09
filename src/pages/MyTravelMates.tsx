@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 import { BottomNav } from '../components/layout/BottomNav';
 
 export const MyTravelMates: React.FC = () => {
@@ -59,11 +59,11 @@ export const MyTravelMates: React.FC = () => {
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
 
-        if (diffMins < 1) return 'たった今';
-        if (diffMins < 60) return `${diffMins}分前`;
-        if (diffHours < 24) return `${diffHours}時間前`;
-        if (diffDays < 30) return `${diffDays}日前`;
-        return `${Math.floor(diffDays / 30)}ヶ月前`;
+        if (diffMins < 1) return '?�っ?�今';
+        if (diffMins < 60) return `${diffMins}?�前`;
+        if (diffHours < 24) return `${diffHours}?�間??;
+        if (diffDays < 30) return `${diffDays}?�前`;
+        return `${Math.floor(diffDays / 30)}?�月??;
     };
 
     const handleToggleStatus = async (id: string, currentStatus: string) => {
@@ -78,7 +78,7 @@ export const MyTravelMates: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm('この投稿を削除しますか？')) {
+        if (confirm('?�の?�稿?�削?�し?�す?�？')) {
             try {
                 await api.travelMates.delete(id);
                 setMyPosts(prev => prev.filter(p => p.id !== id));
@@ -99,7 +99,7 @@ export const MyTravelMates: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <h1 className="text-lg font-bold text-text-main dark:text-white flex-1 text-center pr-8">投稿した同行者募集</h1>
+                    <h1 className="text-lg font-bold text-text-main dark:text-white flex-1 text-center pr-8">?�稿?�た?�行?�募??/h1>
                 </div>
 
                 {/* Content */}
@@ -107,12 +107,12 @@ export const MyTravelMates: React.FC = () => {
                     {myPosts.length === 0 ? (
                         <div className="text-center py-20">
                             <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600">edit_note</span>
-                            <p className="mt-4 text-gray-500 dark:text-gray-400">作成した投稿がありません。</p>
+                            <p className="mt-4 text-gray-500 dark:text-gray-400">作成?�た?�稿?�あ?�ま?�ん??/p>
                             <button
                                 onClick={() => navigate('/travel-mates/write')}
                                 className="mt-4 bg-primary text-white px-6 py-2 rounded-full font-bold text-sm"
                             >
-                                最初の投稿を作成する
+                                ?�?�の?�稿?�作?�す??
                             </button>
                         </div>
                     ) : (
@@ -123,7 +123,7 @@ export const MyTravelMates: React.FC = () => {
                             >
                                 <div className="flex justify-between items-start mb-3">
                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold ${post.status === 'closed' ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300' : 'bg-primary/10 text-primary'}`}>
-                                        {post.status === 'closed' ? '募集 완료' : '募集 中'}
+                                        {post.status === 'closed' ? '?�集 ?�료' : '?�集 �?}
                                     </span>
                                     <div className="relative">
                                         <button
@@ -141,13 +141,13 @@ export const MyTravelMates: React.FC = () => {
                                                 onClick={() => handleToggleStatus(post.id, post.status)}
                                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg"
                                             >
-                                                {post.status === 'recruiting' ? '募集 締切' : '再募集'}
+                                                {post.status === 'recruiting' ? '?�集 締切' : '?�募??}
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(post.id)}
                                                 className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg"
                                             >
-                                                削除
+                                                ?�除
                                             </button>
                                         </div>
                                     </div>
@@ -188,7 +188,7 @@ export const MyTravelMates: React.FC = () => {
                     )}
 
                     <div className="py-6 text-center">
-                        <p className="text-xs text-gray-400">直近1年間に作成した投稿が表示されます。</p>
+                        <p className="text-xs text-gray-400">?�近1年間?�作?�し?�投稿が表示?�れ?�す??/p>
                     </div>
                 </div>
 

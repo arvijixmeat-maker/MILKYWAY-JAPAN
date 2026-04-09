@@ -46,24 +46,6 @@ export const optimizeImage = (url: string, options: OptimizeOptions = {}): strin
         fit = 'cover'
     } = options;
 
-    // Supabase Storage 이미지 - Native SIT 사용
-    if (url.includes('supabase.co/storage/v1/object/public/')) {
-        if (!width) return url;
-
-        // render 엔드포인트로 변환
-        const renderUrl = url.replace(
-            '/storage/v1/object/public/',
-            '/storage/v1/render/image/public/'
-        );
-
-        const params = new URLSearchParams();
-        params.append('width', width.toString());
-        if (height) params.append('height', height.toString());
-        params.append('quality', quality.toString());
-        params.append('resize', fit);
-
-        return `${renderUrl}?${params.toString()}`;
-    }
 
     // Strategy 1: Native Google Image Optimization (Fastest & Best)
     if (url.includes('googleusercontent.com') || url.includes('lh3.google')) {

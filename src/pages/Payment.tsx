@@ -29,7 +29,7 @@ export const Payment: React.FC = () => {
     // Processing state
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Load bank account settings from Supabase
+    // Load bank account settings from Cloudflare
     useEffect(() => {
         const fetchSettings = async () => {
             try {
@@ -139,7 +139,7 @@ export const Payment: React.FC = () => {
             month: '2-digit',
             day: '2-digit',
             weekday: 'short'
-        }).replace(/\. /g, '.').replace('.', '년 ').replace('.', '.').replace(' ', '(').replace(/\.$/, ')');
+        }).replace(/\. /g, '.').replace('.', '??').replace('.', '.').replace(' ', '(').replace(/\.$/, ')');
     };
 
     const formatPrice = (price: number) => price ? price.toLocaleString() : '0';
@@ -218,7 +218,7 @@ export const Payment: React.FC = () => {
             if (!isQuote && selectedStartDate && parsedDuration) {
                 newReservation.start_date = new Date(selectedStartDate).toISOString();
                 newReservation.end_date = endDate ? endDate.toISOString() : null;
-                newReservation.duration = `${parsedDuration.nights}박 ${parsedDuration.days}일`;
+                newReservation.duration = `${parsedDuration.nights}�?${parsedDuration.days}??;
             } else if (isQuote) {
                 // For quotes, use duration string from product if available
                 newReservation.duration = product.duration || null;
@@ -256,14 +256,14 @@ export const Payment: React.FC = () => {
             console.error('Failed to save reservation', e);
             setIsProcessing(false);
 
-            // Handle Supabase error object (which is not an Error instance)
+            // Handle API error object (which is not an Error instance)
             let errorMessage = 'Unknown error';
             let errorDetails = '';
 
             if (e instanceof Error) {
                 errorMessage = e.message;
             } else if (typeof e === 'object' && e !== null) {
-                // Supabase error format
+                // API error format
                 const sbError = e as { message?: string; details?: string; hint?: string; code?: string };
                 errorMessage = sbError.message || JSON.stringify(sbError);
                 if (sbError.details) errorDetails = `\nDetails: ${sbError.details}`;
@@ -295,7 +295,7 @@ export const Payment: React.FC = () => {
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
             <SEO 
                 title={`${product?.name || ''} - ${t('payment.title')}`}
-                description="お支払いおよび予約確認ページ。詳細を確認して予約を確定させてください。"
+                description="?�支?�い?�よ?�予約確認ペ?�ジ?�詳細を確認?�て予約?�確定さ?�て?�だ?�い??
             />
             <div className="max-w-[430px] mx-auto bg-white dark:bg-zinc-900 min-h-screen flex flex-col relative overflow-x-hidden shadow-2xl">
 
@@ -333,7 +333,7 @@ export const Payment: React.FC = () => {
                                     <div>
                                         <p className="text-[13px] text-gray-400 font-medium">{t('payment.travel_duration')}</p>
                                         <p className="text-sm text-[#0e1a18] dark:text-white font-semibold">
-                                            {formatDate(new Date(selectedStartDate))} - {formatDate(endDate)} • {t('payment.duration_format', { nights: parsedDuration.nights, days: parsedDuration.days })}
+                                            {formatDate(new Date(selectedStartDate))} - {formatDate(endDate)} ??{t('payment.duration_format', { nights: parsedDuration.nights, days: parsedDuration.days })}
                                         </p>
                                     </div>
                                 </div>
@@ -432,18 +432,18 @@ export const Payment: React.FC = () => {
                     <div className="h-2 bg-gray-50 dark:bg-zinc-800/30"></div>
 
                     <div className="px-5 py-8">
-                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">{t('payment.paypal_invoice_title', { defaultValue: '予約金のお支払いについて' })}</h3>
+                        <h3 className="text-[#0e1a18] dark:text-white text-lg font-bold mb-6">{t('payment.paypal_invoice_title', { defaultValue: '予約?�の?�支?�い?�つ?�て' })}</h3>
                         <div className="border border-blue-100 dark:border-blue-900/50 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 overflow-hidden shadow-sm">
                             <div className="flex items-center gap-4 p-5">
                                 <div className="size-12 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center shadow-sm shrink-0">
                                     <span className="material-symbols-outlined text-[#003087] text-2xl">mail</span>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[#0e1a18] dark:text-white font-bold text-[15px] mb-1">{t('payment.paypal_invoice_method', { defaultValue: 'PayPal 請求書 (Eメール)' })}</p>
+                                    <p className="text-[#0e1a18] dark:text-white font-bold text-[15px] mb-1">{t('payment.paypal_invoice_method', { defaultValue: 'PayPal 請求??(E?�ー??' })}</p>
                                     <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                        {t('payment.paypal_invoice_desc1', { defaultValue: '予約申し込み完了後、ご入力いただいたメールアドレス宛にPayPalの請求書をお送りいたします。' })}
+                                        {t('payment.paypal_invoice_desc1', { defaultValue: '予約?�し込み完了後、ご?�力?�た?�い?�メ?�ル?�ド?�ス宛にPayPal??��求書?�お?�り?�た?�ま?��? })}
                                         <br />
-                                        {t('payment.paypal_invoice_desc2', { defaultValue: 'メール内のリンクから、クレジットカード等で安全にお支払いいただけます。' })}
+                                        {t('payment.paypal_invoice_desc2', { defaultValue: '?�ー?�内??��?�ク?�ら?�ク?�ジ?�ト?�ー?�等?�安?�に?�支?�い?�た?�け?�す?? })}
                                     </p>
                                 </div>
                             </div>
@@ -454,7 +454,7 @@ export const Payment: React.FC = () => {
                                 {t('payment.deposit_notices.title')}
                             </p>
                             <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-2 list-disc pl-4">
-                                <li>{t('payment.paypal_notices.check_email', { defaultValue: '請求書メールにお支払い期限が記載されています。期限内に決済をお願いします。' })}</li>
+                                <li>{t('payment.paypal_notices.check_email', { defaultValue: '請求?�メ?�ル?�お??��?�期?�が記載?�れ?�い?�す?�期?�内?�決済を?�願?�し?�す?? })}</li>
                                 <li>{t('payment.deposit_notices.auto_cancel')}</li>
                                 <li>{t('payment.japan_support')}</li>
                                 <li>{t('payment.deposit_notices.local_payment')}</li>

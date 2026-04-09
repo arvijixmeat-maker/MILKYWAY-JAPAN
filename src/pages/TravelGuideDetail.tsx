@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
@@ -117,8 +117,8 @@ export const TravelGuideDetail: React.FC = () => {
                 if (node.nodeType === Node.ELEMENT_NODE &&
                     element.tagName === 'DIV' &&
                     element.textContent &&
-                    element.textContent.includes('イメージスライダー') ||
-                    element.textContent.includes('이미지 슬라이더') &&
+                    element.textContent.includes('?�メ?�ジ?�ラ?��???) ||
+                    element.textContent.includes('?��?지 ?�라?�더') &&
                     element.querySelector('img')) {
                     // This is likely a zombie thumbnail artifact. Skip it.
                     return;

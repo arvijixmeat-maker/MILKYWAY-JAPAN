@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { getOptimizedImageUrl } from '../../utils/supabaseImage';
+import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 

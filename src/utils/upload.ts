@@ -1,7 +1,7 @@
 import imageCompression from 'browser-image-compression';
 
 /**
- * Uploads a file to Supabase Storage.
+ * Uploads a file to Cloudflare R2.
  * @param file The file object to upload
  * @param bucket The storage bucket name (default: 'images')
  * @param folder (Optional) The folder path within the bucket

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
-import { getOptimizedImageUrl } from '../../utils/supabaseImage';
+import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 
 interface EventBanner {
     id: string;

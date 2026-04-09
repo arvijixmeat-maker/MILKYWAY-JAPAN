@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getOptimizedImageUrl } from '../../utils/supabaseImage';
+import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 
 interface SimpleSliderProps {
     images: string[];

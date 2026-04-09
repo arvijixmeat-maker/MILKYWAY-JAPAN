@@ -3,7 +3,7 @@ import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { getOptimizedImageUrl } from '../utils/supabaseImage';
+import { getOptimizedImageUrl } from '../utils/cloudflareImage';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 import type { Category } from '../types/category';
 
@@ -154,7 +154,7 @@ export const AdminProductManage: React.FC = () => {
             return true;
         } catch (error: any) {
             console.error('Failed to save product:', error);
-            alert('상품 저장 중 오류가 발생했습니다: ' + (error.message || JSON.stringify(error)));
+            alert('?�품 ?�??�??�류가 발생?�습?�다: ' + (error.message || JSON.stringify(error)));
             return false;
         }
     };
@@ -223,22 +223,22 @@ export const AdminProductManage: React.FC = () => {
     };
 
     const deleteProduct = async (id: string) => {
-        if (confirm('정말 이 상품을 삭제하시겠습니까?')) {
+        if (confirm('?�말 ???�품????��?�시겠습?�까?')) {
             try {
                 await api.products.delete(id);
                 setProducts(prev => prev.filter(p => p.id !== id));
             } catch (error: any) {
-                alert('삭제 실패: ' + error.message);
+                alert('??�� ?�패: ' + error.message);
             }
         }
     };
 
     const duplicateProduct = async (product: TourProduct) => {
-        if (confirm(`'${product.name}' 상품을 복제하시겠습니까?`)) {
+        if (confirm(`'${product.name}' ?�품??복제?�시겠습?�까?`)) {
             const duplicatedProduct: TourProduct = {
                 ...product,
                 id: `prod-${Date.now()}`,
-                name: `${product.name} (복제본)`,
+                name: `${product.name} (복제�?`,
                 status: 'inactive',
                 isFeatured: false,
                 isPopular: false,
@@ -302,7 +302,7 @@ export const AdminProductManage: React.FC = () => {
             // Optionally show a toast for successful save
         } catch (error) {
             console.error('Failed to save product order:', error);
-            alert('순서 저장에 실패했습니다.');
+            alert('?�서 ?�?�에 ?�패?�습?�다.');
         }
     };
 
@@ -313,9 +313,9 @@ export const AdminProductManage: React.FC = () => {
             soldout: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
         };
         const labels = {
-            active: '판매중',
-            inactive: '비활성',
-            soldout: '품절'
+            active: '?�매�?,
+            inactive: '비활??,
+            soldout: '?�절'
         };
         return (
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${styles[status as keyof typeof styles]}`}>
@@ -335,7 +335,7 @@ export const AdminProductManage: React.FC = () => {
             <main className="ml-64 flex-1 flex flex-col min-h-screen">
                 {/* Header */}
                 <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">상품 관리</h1>
+                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">?�품 관�?/h1>
                     <button
                         onClick={() => {
                             setSelectedProduct(null);
@@ -344,7 +344,7 @@ export const AdminProductManage: React.FC = () => {
                         className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors"
                     >
                         <span className="material-symbols-outlined">add</span>
-                        상품 추가
+                        ?�품 추�?
                     </button>
                 </header>
 
@@ -354,7 +354,7 @@ export const AdminProductManage: React.FC = () => {
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">전체 상품</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">?�체 ?�품</p>
                                     <p className="text-2xl font-bold text-slate-800 dark:text-white mt-1">{stats.total}</p>
                                 </div>
                                 <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -365,7 +365,7 @@ export const AdminProductManage: React.FC = () => {
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">판매중</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">?�매�?/p>
                                     <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.active}</p>
                                 </div>
                                 <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -376,7 +376,7 @@ export const AdminProductManage: React.FC = () => {
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">비활성</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">비활??/p>
                                     <p className="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{stats.inactive}</p>
                                 </div>
                                 <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
@@ -387,7 +387,7 @@ export const AdminProductManage: React.FC = () => {
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">품절</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">?�절</p>
                                     <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats.soldout}</p>
                                 </div>
                                 <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -398,7 +398,7 @@ export const AdminProductManage: React.FC = () => {
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">추천 상품</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">추천 ?�품</p>
                                     <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.featured}</p>
                                 </div>
                                 <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -412,12 +412,12 @@ export const AdminProductManage: React.FC = () => {
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">검색</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">검??/label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
                                     <input
                                         type="text"
-                                        placeholder="상품명 검색..."
+                                        placeholder="?�품�?검??.."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
@@ -431,35 +431,35 @@ export const AdminProductManage: React.FC = () => {
                                     onChange={(e) => setCategoryFilter(e.target.value)}
                                     className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                 >
-                                    <option value="all">전체</option>
+                                    <option value="all">?�체</option>
                                     {categories.map((cat) => (
                                         <option key={cat.id} value={cat.name}>{cat.name}</option>
                                     ))}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">상태</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">?�태</label>
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                     className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                 >
-                                    <option value="all">전체</option>
-                                    <option value="active">판매중</option>
-                                    <option value="inactive">비활성</option>
-                                    <option value="soldout">품절</option>
+                                    <option value="all">?�체</option>
+                                    <option value="active">?�매�?/option>
+                                    <option value="inactive">비활??/option>
+                                    <option value="soldout">?�절</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">추천 여부</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">추천 ?��?</label>
                                 <select
                                     value={featuredFilter}
                                     onChange={(e) => setFeaturedFilter(e.target.value)}
                                     className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                 >
-                                    <option value="all">전체</option>
-                                    <option value="featured">추천 상품</option>
-                                    <option value="normal">일반 상품</option>
+                                    <option value="all">?�체</option>
+                                    <option value="featured">추천 ?�품</option>
+                                    <option value="normal">?�반 ?�품</option>
                                 </select>
                             </div>
                         </div>
@@ -471,15 +471,15 @@ export const AdminProductManage: React.FC = () => {
                             <table className="w-full">
                                 <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                     <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">상품</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�품</th>
                                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">카테고리</th>
                                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">기간</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">가격</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">상태</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">가�?/th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�태</th>
                                         <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">추천</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">인기</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">조회/예약</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">액션</th>
+                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�기</th>
+                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">조회/?�약</th>
+                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�션</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -512,9 +512,9 @@ export const AdminProductManage: React.FC = () => {
                                             <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{product.duration}</td>
                                             <td className="px-6 py-4">
                                                 <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</p>
+                                                    <p className="font-bold text-slate-900 dark:text-white">??typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</p>
                                                     {product.originalPrice && (
-                                                        <p className="text-xs text-slate-400 line-through">₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</p>
+                                                        <p className="text-xs text-slate-400 line-through">??typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</p>
                                                     )}
                                                 </div>
                                             </td>
@@ -567,14 +567,14 @@ export const AdminProductManage: React.FC = () => {
                                                             setIsModalOpen(true);
                                                         }}
                                                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                                        title="수정"
+                                                        title="?�정"
                                                     >
                                                         <span className="material-symbols-outlined text-lg">edit</span>
                                                     </button>
                                                     <button
                                                         onClick={() => deleteProduct(product.id)}
                                                         className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                                                        title="삭제"
+                                                        title="??��"
                                                     >
                                                         <span className="material-symbols-outlined text-lg">delete</span>
                                                     </button>
@@ -590,7 +590,7 @@ export const AdminProductManage: React.FC = () => {
                         {totalPages > 1 && (
                             <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
                                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    총 {filteredProducts.length}개 상품 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredProducts.length)}개 표시
+                                    �?{filteredProducts.length}�??�품 �?{((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredProducts.length)}�??�시
                                 </p>
                                 <div className="flex gap-2">
                                     <button
@@ -598,7 +598,7 @@ export const AdminProductManage: React.FC = () => {
                                         disabled={currentPage === 1}
                                         className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                     >
-                                        이전
+                                        ?�전
                                     </button>
                                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                                         <button
@@ -617,7 +617,7 @@ export const AdminProductManage: React.FC = () => {
                                         disabled={currentPage === totalPages}
                                         className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                     >
-                                        다음
+                                        ?�음
                                     </button>
                                 </div>
                             </div>
@@ -712,15 +712,15 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
         // Validate required fields
         if (!formData.name || !formData.name.trim()) {
-            alert('상품명을 입력해주세요.');
+            alert('?�품명을 ?�력?�주?�요.');
             return;
         }
         if (!formData.duration || !formData.duration.trim()) {
-            alert('기간을 입력해주세요.');
+            alert('기간???�력?�주?�요.');
             return;
         }
         if (!formData.price || formData.price <= 0) {
-            alert('판매가를 입력해주세요.');
+            alert('?�매가�??�력?�주?�요.');
             return;
         }
 
@@ -920,7 +920,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             updateBlockContent(index, url);
         } catch (error) {
             console.error('Block image upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
 
@@ -945,7 +945,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             }
         } catch (error) {
             console.error('Slide images upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
 
@@ -1046,7 +1046,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             updateItineraryBlockContent(index, url);
         } catch (error) {
             console.error('Itinerary block image upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
 
@@ -1070,7 +1070,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             }
         } catch (error) {
             console.error('Itinerary slide images upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
 
@@ -1121,7 +1121,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             }
         } catch (error) {
             console.error('Timeline images upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
     
@@ -1151,7 +1151,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             }));
         } catch (error) {
             console.error('Detail image upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
 
@@ -1201,7 +1201,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             }));
         } catch (error) {
             console.error('Main image upload failed:', error);
-            alert('이미지 업로드 실패');
+            alert('?��?지 ?�로???�패');
         }
     };
 
@@ -1258,7 +1258,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {product ? '상품 수정' : '상품 추가'}
+                        {product ? '?�품 ?�정' : '?�품 추�?'}
                     </h2>
                     <button
                         onClick={onClose}
@@ -1271,11 +1271,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 dark:border-slate-700 px-6">
                     {[
-                        { id: 'basic', label: '기본 정보', icon: 'info' },
-                        { id: 'details', label: '상세 정보', icon: 'description' },
-                        { id: 'itinerary', label: '일정', icon: 'calendar_month' },
-                        { id: 'options', label: '가격/옵션', icon: 'attach_money' },
-                        { id: 'includes', label: '포함/불포함', icon: 'checklist' }
+                        { id: 'basic', label: '기본 ?�보', icon: 'info' },
+                        { id: 'details', label: '?�세 ?�보', icon: 'description' },
+                        { id: 'itinerary', label: '?�정', icon: 'calendar_month' },
+                        { id: 'options', label: '가�??�션', icon: 'attach_money' },
+                        { id: 'includes', label: '?�함/불포??, icon: 'checklist' }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -1298,7 +1298,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        상품명 *
+                                        ?�품�?*
                                     </label>
                                     <input
                                         type="text"
@@ -1320,7 +1320,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                             className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                             required
                                         >
-                                            <option value="" disabled>카테고리 선택</option>
+                                            <option value="" disabled>카테고리 ?�택</option>
                                             {categories.map(cat => (
                                                 <option key={cat.id} value={cat.name}>{cat.name}</option>
                                             ))}
@@ -1335,7 +1335,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                             type="text"
                                             value={formData.duration}
                                             onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                            placeholder="예: 4박 5일"
+                                            placeholder="?? 4�?5??
                                             className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                             required
                                         />
@@ -1345,7 +1345,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            판매가 *
+                                            ?�매가 *
                                         </label>
                                         <input
                                             type="number"
@@ -1358,7 +1358,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            정가 (선택)
+                                            ?��? (?�택)
                                         </label>
                                         <input
                                             type="number"
@@ -1372,7 +1372,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Main Images Upload */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        메인 이미지 업로드 *
+                                        메인 ?��?지 ?�로??*
                                     </label>
                                     <input
                                         type="file"
@@ -1381,7 +1381,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                         onChange={(e) => handleMainImageUpload(e.target.files)}
                                         className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
                                     />
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">여러 메인 이미지를 업로드하세요 (슬라이드로 표시됩니다)</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">?�러 메인 ?��?지�??�로?�하?�요 (?�라?�드�??�시?�니??</p>
 
                                     {/* Main Images Grid */}
                                     {formData.mainImages && formData.mainImages.length > 0 && (
@@ -1401,7 +1401,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                 type="button"
                                                                 onClick={() => moveMainImage(imgIndex, 'up')}
                                                                 className="p-1 bg-white/90 dark:bg-slate-900/90 rounded hover:bg-white dark:hover:bg-slate-900 transition-colors"
-                                                                title="위로 이동"
+                                                                title="?�로 ?�동"
                                                             >
                                                                 <span className="material-symbols-outlined text-sm text-slate-700 dark:text-slate-300">arrow_upward</span>
                                                             </button>
@@ -1411,7 +1411,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                 type="button"
                                                                 onClick={() => moveMainImage(imgIndex, 'down')}
                                                                 className="p-1 bg-white/90 dark:bg-slate-900/90 rounded hover:bg-white dark:hover:bg-slate-900 transition-colors"
-                                                                title="아래로 이동"
+                                                                title="?�래�??�동"
                                                             >
                                                                 <span className="material-symbols-outlined text-sm text-slate-700 dark:text-slate-300">arrow_downward</span>
                                                             </button>
@@ -1420,7 +1420,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             type="button"
                                                             onClick={() => removeMainImage(imgIndex)}
                                                             className="p-1 bg-red-500/90 rounded hover:bg-red-500 transition-colors"
-                                                            title="삭제"
+                                                            title="??��"
                                                         >
                                                             <span className="material-symbols-outlined text-sm text-white">delete</span>
                                                         </button>
@@ -1439,16 +1439,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            상태
+                                            ?�태
                                         </label>
                                         <select
                                             value={formData.status}
                                             onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                                             className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                         >
-                                            <option value="active">판매중</option>
-                                            <option value="inactive">비활성</option>
-                                            <option value="soldout">품절</option>
+                                            <option value="active">?�매�?/option>
+                                            <option value="inactive">비활??/option>
+                                            <option value="soldout">?�절</option>
                                         </select>
                                     </div>
 
@@ -1460,7 +1460,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
                                                 className="w-5 h-5 text-teal-500 rounded focus:ring-2 focus:ring-teal-500"
                                             />
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">추천 상품으로 설정</span>
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">추천 ?�품?�로 ?�정</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -1469,7 +1469,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
                                                 className="w-5 h-5 text-pink-500 rounded focus:ring-2 focus:ring-pink-500"
                                             />
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">인기 상품으로 설정</span>
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">?�기 ?�품?�로 ?�정</span>
                                         </label>
                                     </div>
                                 </div>
@@ -1482,7 +1482,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Tags */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        태그
+                                        ?�그
                                     </label>
                                     <div className="flex flex-wrap gap-2 mb-2">
                                         {formData.tags?.map(tag => (
@@ -1497,7 +1497,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
-                                            placeholder="태그 입력 후 Enter"
+                                            placeholder="?�그 ?�력 ??Enter"
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
                                                     e.preventDefault();
@@ -1514,14 +1514,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            하이라이트
+                                            ?�이?�이??
                                         </label>
                                         <button
                                             type="button"
                                             onClick={addHighlight}
                                             className="text-teal-600 dark:text-teal-400 text-sm font-medium hover:underline"
                                         >
-                                            + 추가
+                                            + 추�?
                                         </button>
                                     </div>
                                     <div className="space-y-3">
@@ -1530,7 +1530,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 <div className="flex gap-2 items-start">
                                                     {/* Icon Image Upload */}
                                                     <div className="flex-shrink-0">
-                                                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">아이콘</label>
+                                                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">?�이�?/label>
                                                         {highlight.icon ? (
                                                             <div className="relative w-16 h-16 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                                                                 <img src={getOptimizedImageUrl(highlight.icon, 'productThumbnail')} alt="Icon" className="w-full h-full object-cover" />
@@ -1571,7 +1571,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             type="text"
                                                             value={highlight.title}
                                                             onChange={(e) => updateHighlight(index, 'title', e.target.value)}
-                                                            placeholder="제목"
+                                                            placeholder="?�목"
                                                             className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                                                         />
                                                     </div>
@@ -1587,7 +1587,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 <textarea
                                                     value={highlight.description}
                                                     onChange={(e) => updateHighlight(index, 'description', e.target.value)}
-                                                    placeholder="설명"
+                                                    placeholder="?�명"
                                                     rows={2}
                                                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                                                 />
@@ -1602,7 +1602,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     <div>
                                         <div className="flex items-center justify-between mb-4">
                                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                상세 컨텐츠 (이미지 & 슬라이드 순서 편집)
+                                                ?�세 컨텐�?(?��?지 & ?�라?�드 ?�서 ?�집)
                                             </label>
                                             <div className="flex gap-2">
                                                 <button
@@ -1611,7 +1611,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">image</span>
-                                                    이미지 추가
+                                                    ?��?지 추�?
                                                 </button>
                                                 <button
                                                     type="button"
@@ -1619,7 +1619,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     className="px-3 py-1.5 bg-teal-500 text-white text-xs font-medium rounded-lg hover:bg-teal-600 transition-colors flex items-center gap-1"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">view_carousel</span>
-                                                    슬라이드 추가
+                                                    ?�라?�드 추�?
                                                 </button>
                                                 <button
                                                     type="button"
@@ -1627,7 +1627,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">timeline</span>
-                                                    타임라인 추가
+                                                    ?�?�라??추�?
                                                 </button>
                                                 <select
                                                     onChange={(e) => { if (e.target.value) { addDetailBlock('dayInfo', e.target.value); e.target.value = ''; } }}
@@ -1635,17 +1635,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 transition-colors cursor-pointer appearance-none"
                                                     style={{ backgroundImage: 'none' }}
                                                 >
-                                                    <option value="" disabled>📅 일차 추가</option>
-                                                    <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
-                                                    <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
-                                                    <option value="3日目（みっかめ）">3日目（みっかめ）</option>
-                                                    <option value="4日目（よっかめ）">4日目（よっかめ）</option>
-                                                    <option value="5日目（いつかめ）">5日目（いつかめ）</option>
-                                                    <option value="6日目（むいかめ）">6日目（むいかめ）</option>
-                                                    <option value="7日目（なのかめ）">7日目（なのかめ）</option>
-                                                    <option value="8日目（ようかめ）">8日目（ようかめ）</option>
-                                                    <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
-                                                    <option value="10日目（とおかめ）">10日目（とおかめ）</option>
+                                                    <option value="" disabled>?�� ?�차 추�?</option>
+                                                    <option value="1?�目（い?�に?�め�?>1?�目（い?�に?�め�?/option>
+                                                    <option value="2?�目（ふ?�か?�）">2?�目（ふ?�か?�）</option>
+                                                    <option value="3?�目（み?�か?�）">3?�目（み?�か?�）</option>
+                                                    <option value="4?�目（よ?�か?�）">4?�目（よ?�か?�）</option>
+                                                    <option value="5?�目（い?�か?�）">5?�目（い?�か?�）</option>
+                                                    <option value="6?�目（�??�か?�）">6?�目（�??�か?�）</option>
+                                                    <option value="7?�目（な??��?�）">7?�目（な??��?�）</option>
+                                                    <option value="8?�目（よ?�か?�）">8?�目（よ?�か?�）</option>
+                                                    <option value="9?�目（こ?�の?�め�?>9?�目（こ?�の?�め�?/option>
+                                                    <option value="10?�目（と?�か?�）">10?�目（と?�か?�）</option>
                                                 </select>
                                                 <button
                                                     type="button"
@@ -1653,12 +1653,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">remove</span>
-                                                    구분선/여백
+                                                    구분???�백
                                                 </button>
                                             </div>
                                         </div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                                            이미지와 슬라이드를 자유롭게 배치하여 상세 페이지를 구성하세요. 순서를 변경하거나 삭제할 수 있습니다.
+                                            ?��?지?� ?�라?�드�??�유�?�� 배치?�여 ?�세 ?�이지�?구성?�세?? ?�서�?변경하거나 ??��?????�습?�다.
                                         </p>
 
                                         <div className="space-y-4">
@@ -1717,13 +1717,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                         onClick={() => updateBlockContent(index, '')}
                                                                         className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded hover:bg-black/90"
                                                                     >
-                                                                        변경
+                                                                        변�?
                                                                     </button>
                                                                 </div>
                                                             ) : (
                                                                 <label className="block w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors">
                                                                     <span className="material-symbols-outlined text-slate-400 mb-1">add_photo_alternate</span>
-                                                                    <span className="text-xs text-slate-500">이미지 업로드</span>
+                                                                    <span className="text-xs text-slate-500">?��?지 ?�로??/span>
                                                                     <input
                                                                         type="file"
                                                                         accept="image/*"
@@ -1743,12 +1743,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                     type="text"
                                                                     value={(block.content as DetailSlide).title || ''}
                                                                     onChange={(e) => updateSlideInBlock(index, 'title', e.target.value)}
-                                                                    placeholder="슬라이드 제목 (예: 1일차 숙소)"
+                                                                    placeholder="?�라?�드 ?�목 (?? 1?�차 ?�소)"
                                                                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
                                                                 />
                                                             </div>
                                                             <div className="mb-2">
-                                                                <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 가능)</label>
+                                                                <label className="block text-xs text-slate-500 mb-1">?��?지 목록 (?�중 ?�로??가??</label>
                                                                 <input
                                                                     type="file"
                                                                     accept="image/*"
@@ -1779,17 +1779,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         <div>
                                                             <div className="grid grid-cols-2 gap-3 mb-3">
                                                                 <div>
-                                                                    <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'time', e.target.value)} placeholder="?�간 (?? 10:00) - ?�택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                                 <div>
-                                                                    <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
+                                                                    <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'title', e.target.value)} placeholder="?�목 (?? ?�이???�망?�)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
                                                                 </div>
                                                             </div>
                                                             <div className="mb-3">
-                                                                <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'description', e.target.value)} placeholder="?�명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                             <div className="mb-2">
-                                                                <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
+                                                                <label className="block text-xs text-slate-500 mb-1">?��?지 목록 (?�중 ?�로??기능)</label>
                                                                 <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('detail', index, e.target.files)} className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700" />
                                                             </div>
                                                             {(block.content as TimelineContent).images?.length > 0 && (
@@ -1808,51 +1808,51 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         <div>
                                                             <div className="grid grid-cols-2 gap-3 mb-3">
                                                                 <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">일차</label>
-                                                                    <div className="w-full px-3 py-2 border rounded-lg text-sm bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold">{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
+                                                                    <label className="block text-xs text-slate-500 mb-1">?�차</label>
+                                                                    <div className="w-full px-3 py-2 border rounded-lg text-sm bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold">{(block.content as DayInfoContent).dayLabel || '미�???}</div>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">날짜 (예: 05/26(화))</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <label className="block text-xs text-slate-500 mb-1">?�짜 (?? 05/26(??)</label>
+                                                                    <input type="text" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(??" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                             </div>
                                                             <div className="grid grid-cols-1 gap-3 mb-3">
                                                                 <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">일정 제목</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <label className="block text-xs text-slate-500 mb-1">?�정 ?�목</label>
+                                                                    <input type="text" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="?�천, ?��?바토�? 고르???�렐지" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">주요 일정 요약</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <label className="block text-xs text-slate-500 mb-1">주요 ?�정 ?�약</label>
+                                                                    <input type="text" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="?�?�마?? ?�렐지 �?��공원, 거북 바위..." className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                             </div>
                                                             <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                                <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">🍽 식사 정보</label>
+                                                                <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">?�� ?�사 ?�보</label>
                                                                 <div className="grid grid-cols-3 gap-2">
                                                                     <div>
                                                                         <label className="block text-[10px] text-slate-500 mb-0.5">조식</label>
-                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프?? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                     </div>
                                                                     <div>
                                                                         <label className="block text-[10px] text-slate-500 mb-0.5">중식</label>
-                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="?��??? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">석식</label>
-                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">?�식</label>
+                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프?? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">?�� ?�소 ?�보</label>
+                                                                <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별?�장?�과 ?�워?�이 구비???�럭?�게�? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         // DIVIDER BLOCK
                                                         <div className="flex items-center gap-4">
                                                             <div className="flex-1">
-                                                                <label className="block text-xs font-medium text-slate-500 mb-1">스타일</label>
+                                                                <label className="block text-xs font-medium text-slate-500 mb-1">?��???/label>
                                                                 <div className="flex gap-2">
                                                                     <button
                                                                         type="button"
@@ -1872,13 +1872,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                             : 'border-slate-200 dark:border-slate-700 text-slate-600'
                                                                             }`}
                                                                     >
-                                                                        여백
+                                                                        ?�백
                                                                     </button>
                                                                 </div>
                                                             </div>
                                                             <div className="w-32">
                                                                 <label className="block text-xs font-medium text-slate-500 mb-1">
-                                                                    높이 ({(block.content as DividerContent).height}px)
+                                                                    ?�이 ({(block.content as DividerContent).height}px)
                                                                 </label>
                                                                 <input
                                                                     type="range"
@@ -1907,7 +1907,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 <div>
                                     <div className="flex items-center justify-between mb-4">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            일정 컨텐츠 (이미지 & 슬라이드 순서 편집)
+                                            ?�정 컨텐�?(?��?지 & ?�라?�드 ?�서 ?�집)
                                         </label>
                                         <div className="flex gap-2">
                                             <button
@@ -1916,7 +1916,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
                                             >
                                                 <span className="material-symbols-outlined text-sm">image</span>
-                                                이미지 추가
+                                                ?��?지 추�?
                                             </button>
                                             <button
                                                 type="button"
@@ -1924,7 +1924,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 className="px-3 py-1.5 bg-teal-500 text-white text-xs font-medium rounded-lg hover:bg-teal-600 transition-colors flex items-center gap-1"
                                             >
                                                 <span className="material-symbols-outlined text-sm">view_carousel</span>
-                                                슬라이드 추가
+                                                ?�라?�드 추�?
                                             </button>
                                             <button
                                                 type="button"
@@ -1932,7 +1932,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
                                             >
                                                 <span className="material-symbols-outlined text-sm">timeline</span>
-                                                타임라인 추가
+                                                ?�?�라??추�?
                                             </button>
                                             <select
                                                 onChange={(e) => { if (e.target.value) { addItineraryBlock('dayInfo', e.target.value); e.target.value = ''; } }}
@@ -1940,17 +1940,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 transition-colors cursor-pointer appearance-none"
                                                 style={{ backgroundImage: 'none' }}
                                             >
-                                                <option value="" disabled>📅 일차 추가</option>
-                                                <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
-                                                <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
-                                                <option value="3日目（みっかめ）">3日目（みっかめ）</option>
-                                                <option value="4日目（よっかめ）">4日目（よっかめ）</option>
-                                                <option value="5日目（いつかめ）">5日目（いつかめ）</option>
-                                                <option value="6日目（むいかめ）">6日目（むいかめ）</option>
-                                                <option value="7日目（なのかめ）">7日目（なのかめ）</option>
-                                                <option value="8日目（ようかめ）">8日目（ようかめ）</option>
-                                                <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
-                                                <option value="10日目（とおかめ）">10日目（とおかめ）</option>
+                                                <option value="" disabled>?�� ?�차 추�?</option>
+                                                <option value="1?�目（い?�に?�め�?>1?�目（い?�に?�め�?/option>
+                                                <option value="2?�目（ふ?�か?�）">2?�目（ふ?�か?�）</option>
+                                                <option value="3?�目（み?�か?�）">3?�目（み?�か?�）</option>
+                                                <option value="4?�目（よ?�か?�）">4?�目（よ?�か?�）</option>
+                                                <option value="5?�目（い?�か?�）">5?�目（い?�か?�）</option>
+                                                <option value="6?�目（�??�か?�）">6?�目（�??�か?�）</option>
+                                                <option value="7?�目（な??��?�）">7?�目（な??��?�）</option>
+                                                <option value="8?�目（よ?�か?�）">8?�目（よ?�か?�）</option>
+                                                <option value="9?�目（こ?�の?�め�?>9?�目（こ?�の?�め�?/option>
+                                                <option value="10?�目（と?�か?�）">10?�目（と?�か?�）</option>
                                             </select>
                                             <button
                                                 type="button"
@@ -1958,12 +1958,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
                                             >
                                                 <span className="material-symbols-outlined text-sm">remove</span>
-                                                구분선/여백
+                                                구분???�백
                                             </button>
                                         </div>
                                     </div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                                        일정 이미지와 슬라이드를 자유롭게 배치하여 상세 일정을 구성하세요. 순서를 변경하거나 삭제할 수 있습니다.
+                                        ?�정 ?��?지?� ?�라?�드�??�유�?�� 배치?�여 ?�세 ?�정??구성?�세?? ?�서�?변경하거나 ??��?????�습?�다.
                                     </p>
 
                                     <div className="space-y-4">
@@ -2022,13 +2022,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                     onClick={() => updateItineraryBlockContent(index, '')}
                                                                     className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded hover:bg-black/90"
                                                                 >
-                                                                    변경
+                                                                    변�?
                                                                 </button>
                                                             </div>
                                                         ) : (
                                                             <label className="block w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors">
                                                                 <span className="material-symbols-outlined text-slate-400 mb-1">add_photo_alternate</span>
-                                                                <span className="text-xs text-slate-500">이미지 업로드</span>
+                                                                <span className="text-xs text-slate-500">?��?지 ?�로??/span>
                                                                 <input
                                                                     type="file"
                                                                     accept="image/*"
@@ -2048,12 +2048,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                 type="text"
                                                                 value={(block.content as DetailSlide).title || ''}
                                                                 onChange={(e) => updateItinerarySlideInBlock(index, 'title', e.target.value)}
-                                                                placeholder="슬라이드 제목 (예: 1일차 숙소)"
+                                                                placeholder="?�라?�드 ?�목 (?? 1?�차 ?�소)"
                                                                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
                                                             />
                                                         </div>
                                                         <div className="mb-2">
-                                                            <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 가능)</label>
+                                                            <label className="block text-xs text-slate-500 mb-1">?��?지 목록 (?�중 ?�로??가??</label>
                                                             <input
                                                                 type="file"
                                                                 accept="image/*"
@@ -2084,17 +2084,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     <div>
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
-                                                                <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="?�간 (?? 10:00) - ?�택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                             <div>
-                                                                <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
+                                                                <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'title', e.target.value)} placeholder="?�목 (?? ?�이???�망?�)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
                                                             </div>
                                                         </div>
                                                         <div className="mb-3">
-                                                            <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="?�명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                         </div>
                                                         <div className="mb-2">
-                                                            <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
+                                                            <label className="block text-xs text-slate-500 mb-1">?��?지 목록 (?�중 ?�로??기능)</label>
                                                             <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', index, e.target.files)} className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700" />
                                                         </div>
                                                         {(block.content as TimelineContent).images?.length > 0 && (
@@ -2113,51 +2113,51 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     <div>
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">일차</label>
-                                                                <div className="w-full px-3 py-2 border rounded-lg text-sm bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold">{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
+                                                                <label className="block text-xs text-slate-500 mb-1">?�차</label>
+                                                                <div className="w-full px-3 py-2 border rounded-lg text-sm bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold">{(block.content as DayInfoContent).dayLabel || '미�???}</div>
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">날짜 (예: 05/26(화))</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <label className="block text-xs text-slate-500 mb-1">?�짜 (?? 05/26(??)</label>
+                                                                <input type="text" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(??" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                         </div>
                                                         <div className="grid grid-cols-1 gap-3 mb-3">
                                                             <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">일정 제목</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <label className="block text-xs text-slate-500 mb-1">?�정 ?�목</label>
+                                                                <input type="text" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="?�천, ?��?바토�? 고르???�렐지" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">주요 일정 요약</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <label className="block text-xs text-slate-500 mb-1">주요 ?�정 ?�약</label>
+                                                                <input type="text" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="?�?�마?? ?�렐지 �?��공원, 거북 바위..." className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                             </div>
                                                         </div>
                                                         <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                            <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">🍽 식사 정보</label>
+                                                            <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">?�� ?�사 ?�보</label>
                                                             <div className="grid grid-cols-3 gap-2">
                                                                 <div>
                                                                     <label className="block text-[10px] text-slate-500 mb-0.5">조식</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프?? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                                 <div>
                                                                     <label className="block text-[10px] text-slate-500 mb-0.5">중식</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="?��??? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">석식</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">?�식</label>
+                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프?? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                            <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
-                                                            <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">?�� ?�소 ?�보</label>
+                                                            <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별?�장?�과 ?�워?�이 구비???�럭?�게�? className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     // DIVIDER BLOCK
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex-1">
-                                                            <label className="block text-xs font-medium text-slate-500 mb-1">스타일</label>
+                                                            <label className="block text-xs font-medium text-slate-500 mb-1">?��???/label>
                                                             <div className="flex gap-2">
                                                                 <button
                                                                     type="button"
@@ -2177,13 +2177,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                         : 'border-slate-200 dark:border-slate-700 text-slate-600'
                                                                         }`}
                                                                 >
-                                                                    여백
+                                                                    ?�백
                                                                 </button>
                                                             </div>
                                                         </div>
                                                         <div className="w-32">
                                                             <label className="block text-xs font-medium text-slate-500 mb-1">
-                                                                높이 ({(block.content as DividerContent).height}px)
+                                                                ?�이 ({(block.content as DividerContent).height}px)
                                                             </label>
                                                             <input
                                                                 type="range"
@@ -2210,20 +2210,20 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Pricing Options */}
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-lg dark:text-white">인원별 가격 옵션</h3>
+                                        <h3 className="font-bold text-lg dark:text-white">?�원�?가�??�션</h3>
                                         <button
                                             type="button"
                                             onClick={addPricingOption}
                                             className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
                                         >
-                                            + 가격 옵션 추가
+                                            + 가�??�션 추�?
                                         </button>
                                     </div>
                                     <div className="space-y-3">
                                         {formData.pricingOptions?.map((option, index) => (
                                             <div key={index} className="flex gap-4 items-end bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
                                                 <div className="flex-1">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">인원 수</label>
+                                                    <label className="block text-xs font-medium text-slate-500 mb-1">?�원 ??/label>
                                                     <input
                                                         type="number"
                                                         value={option.people}
@@ -2232,7 +2232,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     />
                                                 </div>
                                                 <div className="flex-[2]">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1인당 총 가격</label>
+                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1?�당 �?가�?/label>
                                                     <input
                                                         type="number"
                                                         value={option.pricePerPerson}
@@ -2241,7 +2241,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     />
                                                 </div>
                                                 <div className="flex-[2]">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1인당 예약금</label>
+                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1?�당 ?�약�?/label>
                                                     <input
                                                         type="number"
                                                         value={option.depositPerPerson || 0}
@@ -2250,7 +2250,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     />
                                                 </div>
                                                 <div className="flex-[2]">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1인당 현지 지불</label>
+                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1?�당 ?��? 지�?/label>
                                                     <input
                                                         type="number"
                                                         value={option.localPaymentPerPerson || 0}
@@ -2268,7 +2268,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                             </div>
                                         ))}
                                         {(!formData.pricingOptions || formData.pricingOptions.length === 0) && (
-                                            <p className="text-sm text-slate-500 text-center py-4">등록된 가격 옵션이 없습니다.</p>
+                                            <p className="text-sm text-slate-500 text-center py-4">?�록??가�??�션???�습?�다.</p>
                                         )}
                                     </div>
                                 </div>
@@ -2278,13 +2278,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Accommodation Options */}
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-lg dark:text-white">숙소 옵션</h3>
+                                        <h3 className="font-bold text-lg dark:text-white">?�소 ?�션</h3>
                                         <button
                                             type="button"
                                             onClick={addAccommodationOption}
                                             className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
                                         >
-                                            + 숙소 옵션 추가
+                                            + ?�소 ?�션 추�?
                                         </button>
                                     </div>
                                     <div className="space-y-3">
@@ -2298,7 +2298,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             onChange={() => updateAccommodationOption(index, 'isDefault', true)}
                                                             className="text-teal-500 focus:ring-teal-500"
                                                         />
-                                                        기본값
+                                                        기본�?
                                                     </label>
                                                     <button
                                                         type="button"
@@ -2310,17 +2310,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4 mt-4">
                                                     <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">이름</label>
+                                                        <label className="block text-xs font-medium text-slate-500 mb-1">?�름</label>
                                                         <input
                                                             type="text"
                                                             value={option.name}
                                                             onChange={(e) => updateAccommodationOption(index, 'name', e.target.value)}
                                                             className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="예: 게르"
+                                                            placeholder="?? 게르"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">가격 조정 (+/-)</label>
+                                                        <label className="block text-xs font-medium text-slate-500 mb-1">가�?조정 (+/-)</label>
                                                         <input
                                                             type="number"
                                                             value={option.priceModifier}
@@ -2330,13 +2330,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         />
                                                     </div>
                                                     <div className="col-span-2">
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">설명</label>
+                                                        <label className="block text-xs font-medium text-slate-500 mb-1">?�명</label>
                                                         <input
                                                             type="text"
                                                             value={option.description}
                                                             onChange={(e) => updateAccommodationOption(index, 'description', e.target.value)}
                                                             className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="옵션 설명"
+                                                            placeholder="?�션 ?�명"
                                                         />
                                                     </div>
                                                 </div>
@@ -2350,13 +2350,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Vehicle Options */}
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-lg dark:text-white">차량 옵션</h3>
+                                        <h3 className="font-bold text-lg dark:text-white">차량 ?�션</h3>
                                         <button
                                             type="button"
                                             onClick={addVehicleOption}
                                             className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
                                         >
-                                            + 차량 옵션 추가
+                                            + 차량 ?�션 추�?
                                         </button>
                                     </div>
                                     <div className="space-y-3">
@@ -2370,7 +2370,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             onChange={() => updateVehicleOption(index, 'isDefault', true)}
                                                             className="text-teal-500 focus:ring-teal-500"
                                                         />
-                                                        기본값
+                                                        기본�?
                                                     </label>
                                                     <button
                                                         type="button"
@@ -2382,17 +2382,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4 mt-4">
                                                     <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">이름</label>
+                                                        <label className="block text-xs font-medium text-slate-500 mb-1">?�름</label>
                                                         <input
                                                             type="text"
                                                             value={option.name}
                                                             onChange={(e) => updateVehicleOption(index, 'name', e.target.value)}
                                                             className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="예: 스타렉스"
+                                                            placeholder="?? ?��??�스"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">가격 조정 (+/-)</label>
+                                                        <label className="block text-xs font-medium text-slate-500 mb-1">가�?조정 (+/-)</label>
                                                         <input
                                                             type="number"
                                                             value={option.priceModifier}
@@ -2402,13 +2402,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         />
                                                     </div>
                                                     <div className="col-span-2">
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">설명</label>
+                                                        <label className="block text-xs font-medium text-slate-500 mb-1">?�명</label>
                                                         <input
                                                             type="text"
                                                             value={option.description}
                                                             onChange={(e) => updateVehicleOption(index, 'description', e.target.value)}
                                                             className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="옵션 설명"
+                                                            placeholder="?�션 ?�명"
                                                         />
                                                     </div>
                                                 </div>
@@ -2425,7 +2425,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Included */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        포함 사항
+                                        ?�함 ?�항
                                     </label>
                                     <div className="space-y-2 mb-3">
                                         {formData.included?.map((item, index) => (
@@ -2444,7 +2444,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     </div>
                                     <input
                                         type="text"
-                                        placeholder="포함 항목 입력 후 Enter"
+                                        placeholder="?�함 ??�� ?�력 ??Enter"
                                         onKeyPress={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
@@ -2459,7 +2459,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Excluded */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        불포함 사항
+                                        불포???�항
                                     </label>
                                     <div className="space-y-2 mb-3">
                                         {formData.excluded?.map((item, index) => (
@@ -2478,7 +2478,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     </div>
                                     <input
                                         type="text"
-                                        placeholder="불포함 항목 입력 후 Enter"
+                                        placeholder="불포????�� ?�력 ??Enter"
                                         onKeyPress={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
@@ -2506,7 +2506,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                             type="submit"
                             className="px-6 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-bold"
                         >
-                            {product ? '수정 완료' : '추가 완료'}
+                            {product ? '?�정 ?�료' : '추�? ?�료'}
                         </button>
                     </div>
                 </form>

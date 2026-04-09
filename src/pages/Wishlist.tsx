@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 import { optimizeImage } from '../utils/imageOptimizer';
 import { useTranslation } from 'react-i18next';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; // Changed from supabase
+import { api } from '../lib/api'; 
 import { useUser } from '../contexts/UserContext';
 import { BottomNav } from '../components/layout/BottomNav';
 
@@ -49,7 +49,7 @@ export const ChatList: React.FC = () => {
     // Helper to get partner info
     const getPartner = (participants: ChatRoom['chat_participants']) => {
         const partner = participants.find(p => p.user_id !== user?.id);
-        return partner ? partner.profiles : { full_name: '알 수 없음', avatar_url: null, email: '' };
+        return partner ? partner.profiles : { full_name: '?????�음', avatar_url: null, email: '' };
     };
 
     return (
@@ -66,13 +66,13 @@ export const ChatList: React.FC = () => {
                 ) : rooms.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                         <span className="material-symbols-outlined text-6xl mb-4 opacity-20">chat_bubble_outline</span>
-                        <p>대화방이 없습니다.</p>
-                        <p className="text-sm mt-1">동행 찾기에서 새로운 친구를 만들어보세요!</p>
+                        <p>?�?�방???�습?�다.</p>
+                        <p className="text-sm mt-1">?�행 찾기?�서 ?�로??친구�?만들?�보?�요!</p>
                         <button
                             onClick={() => navigate('/travel-mates')}
                             className="mt-6 px-6 py-2 bg-primary text-white rounded-full font-bold text-sm"
                         >
-                            동행 찾으러 가기
+                            ?�행 찾으??가�?
                         </button>
                     </div>
                 ) : (
@@ -104,7 +104,7 @@ export const ChatList: React.FC = () => {
                                             </span>
                                         </div>
                                         <p className="text-sm text-gray-500 truncate">
-                                            대화 내역을 확인해보세요.
+                                            ?�???�역???�인?�보?�요.
                                         </p>
                                     </div>
                                 </div>

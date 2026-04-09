@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { getOptimizedImageUrl } from '../../utils/supabaseImage';
+import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 import type { TourProduct } from '../../types/product';
 
 export const CentralMongoliaSection: React.FC = () => {
@@ -54,14 +54,14 @@ export const CentralMongoliaSection: React.FC = () => {
         <section className="py-8 px-5 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-end justify-between mb-5">
                 <div>
-                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">中央モンゴル クラシック</h3>
-                    <p className="text-[13px] text-slate-500 mt-1">青い草原と歴史が共存する場所</p>
+                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">�?��?�ン?�ル ??��?�ッ??/h3>
+                    <p className="text-[13px] text-slate-500 mt-1">?�い?�原?��??�が?�存?�る?��?</p>
                 </div>
                 <button
                     onClick={() => navigate('/products?category=central')}
                     className="text-primary text-sm font-bold flex items-center"
                 >
-                    もっと見る <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    ?�っ?�見??<span className="material-symbols-outlined text-sm">chevron_right</span>
                 </button>
             </div>
 
