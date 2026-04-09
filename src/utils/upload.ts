@@ -47,10 +47,10 @@ export const uploadImage = async (file: File, folder: string = 'common'): Promis
         const isDetailImage = folder.includes('detail') || folder.includes('product-details') || folder.includes('magazine');
         
         const options: any = {
-            maxSizeMB: isDetailImage ? 5 : 1, // Detail pages can be larger
+            maxSizeMB: 1, // Default limit
             useWebWorker: true,
             fileType: 'image/webp', // Force WebP output format
-            initialQuality: isDetailImage ? 0.9 : 0.85 // High quality WebP
+            initialQuality: 0.85 // High quality WebP
         };
 
         if (!isDetailImage) {
@@ -59,8 +59,10 @@ export const uploadImage = async (file: File, folder: string = 'common'): Promis
 
         let processedFile = file;
 
-        // Only compress if the file is an image and not already highly optimized or small
-        if (file.type.startsWith('image/')) {
+        // Only compress if the file is an image AND it's not a detail image.
+        // Detail images (very tall) are often destroyed by browser canvas limits during client-side compression.
+        // We will upload them raw and rely on Cloudflare Image Resizing to optimize delivery.
+        if (file.type.startsWith('image/') && !isDetailImage) {
             try {
                 const compressedBlob = await imageCompression(file, options);
                 // Create a new File from the compressed Blob with .webp extension

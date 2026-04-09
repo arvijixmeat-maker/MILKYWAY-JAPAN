@@ -60,14 +60,18 @@ export function getOptimizedImageUrl(
     // Cloudflare Image Resizing 사용
     // 형식: /cdn-cgi/image/width=X,quality=Y,format=webp/URL
     const options = IMAGE_PRESETS[preset];
-    if (!('width' in options)) return url;
 
-    const width = options.width;
-    const quality = options.quality || 80;
+    // 만약 original 프리셋 등 아무 옵션도 없으면 원본 반환
+    if (Object.keys(options).length === 0) return url;
+
+    const quality = (options as any).quality || 80;
     const fit = (options as any).fit || 'cover';
+    
+    // width가 있으면 포함하고, 없으면 quality와 format만 지정하여 크기는 유지하되 용량 최적화
+    const widthParam = 'width' in options ? `width=${options.width},` : '';
 
     // Cloudflare 로직 적용 (동일 도메인 내 이미지는 도메인 생략 가능하지만, 안전을 위해 전체 URL 사용)
-    return `/cdn-cgi/image/width=${width},quality=${quality},format=webp,fit=${fit}/${url}`;
+    return `/cdn-cgi/image/${widthParam}quality=${quality},format=webp,fit=${fit}/${url}`;
 }
 
 /**
