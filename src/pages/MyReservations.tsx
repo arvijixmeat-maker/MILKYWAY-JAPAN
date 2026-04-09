@@ -96,7 +96,7 @@ export const MyReservations: React.FC = () => {
                 // If not, we might get everyone's reservations which is bad.
                 // Assuming backend filters by auth user for 'list' or we need to filter client side if it returns all.
                 // But typically /api/reservations for a user should return their own.
-                // Filter by user
+                // Let's assume the API behaves like the Cloudflare query: filtering by user.
                 const resData = await api.reservations.list();
                 const quoteData = await api.quotes.list();
 
@@ -360,12 +360,12 @@ export const MyReservations: React.FC = () => {
                                                         <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">{t('my_reservations.labels.payment_info')}</p>
                                                         <div className="flex flex-col gap-1">
                                                             <p className="text-[17px] font-extrabold text-slate-900 dark:text-white">
-                                                                {reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.total) : '0'}{t('wishlist.won_suffix', { defaultValue: '?? })}
+                                                                {reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.total) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}
                                                             </p>
                                                             <div className="flex gap-3 text-xs mt-1">
-                                                                <span className="text-slate-500 dark:text-slate-400">{t('my_reservations.labels.deposit')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.deposit) : '0'}{t('wishlist.won_suffix', { defaultValue: '?? })}</span></span>
+                                                                <span className="text-slate-500 dark:text-slate-400">{t('my_reservations.labels.deposit')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.deposit) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}</span></span>
                                                                 <span className="w-px h-3 bg-gray-200 dark:bg-zinc-600 my-auto"></span>
-                                                                <span className="text-slate-500 dark:text-slate-400">{t('my_reservations.labels.local_payment')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.local) : '0'}{t('wishlist.won_suffix', { defaultValue: '?? })}</span></span>
+                                                                <span className="text-slate-500 dark:text-slate-400">{t('my_reservations.labels.local_payment')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.local) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}</span></span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -381,7 +381,7 @@ export const MyReservations: React.FC = () => {
                                                         </div>
                                                         <div className="bg-white dark:bg-zinc-800 p-3 rounded-lg border border-gray-100 dark:border-zinc-700 mb-3 text-center">
                                                             <p className="text-[10px] text-gray-500 mb-1">{t('my_reservations.labels.deposit_amount')}</p>
-                                                            <p className="text-lg font-extrabold text-teal-600">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.deposit) : '0'}{t('wishlist.won_suffix', { defaultValue: '?? })}</p>
+                                                            <p className="text-lg font-extrabold text-teal-600">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.deposit) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}</p>
                                                         </div>
                                                         <div className="space-y-1.5 text-xs">
                                                             <div className="flex justify-between"><span className="text-gray-500">{t('my_reservations.labels.bank')}</span><span className="font-bold text-gray-800 dark:text-gray-200">{displayBankAccount?.bankName || '-'}</span></div>

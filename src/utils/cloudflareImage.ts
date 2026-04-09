@@ -68,7 +68,7 @@ export function getOptimizedImageUrl(
     const fit = (options as any).fit || 'cover';
     
     // width가 있으면 포함하고, 없으면 quality와 format만 지정하여 크기는 유지하되 용량 최적화
-    const widthParam = 'width' in options ? `width=${options.width},` : '';
+    const widthParam = 'width' in options ? `width=${(options as any).width},` : '';
 
     // Cloudflare 로직 적용 (동일 도메인 내 이미지는 도메인 생략 가능하지만, 안전을 위해 전체 URL 사용)
     return `/cdn-cgi/image/${widthParam}quality=${quality},format=webp,fit=${fit}/${url}`;

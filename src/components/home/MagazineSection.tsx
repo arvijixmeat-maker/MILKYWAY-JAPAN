@@ -28,17 +28,17 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
             <div className="px-5 mb-5 flex flex-col gap-1.5">
                 <div className="flex items-start justify-between gap-4">
                     <h3 className="text-[17px] sm:text-[19px] font-black text-[#0e1a18] dark:text-white leading-snug break-keep flex-1">
-                        {t('home.magazine.title', { defaultValue: '今出?�す?�良?�旅行コ?�ス?�す?�め�? })}
+                        {t('home.magazine.title', { defaultValue: '今出発する良い旅行コースおすすめ！' })}
                     </h3>
                     <button
                         onClick={() => navigate('/travel-guide')}
                         className="text-[13px] sm:text-[15px] font-bold text-[#0D7A66] dark:text-[#18c9a6] flex items-center shrink-0 mt-0.5 active:scale-95 transition-transform"
                     >
-                        {t('home.magazine.view_all', { defaultValue: '?�て見る' })} <span className="material-symbols-outlined text-base sm:text-lg ml-0.5">chevron_right</span>
+                        {t('home.magazine.view_all', { defaultValue: '全て見る' })} <span className="material-symbols-outlined text-base sm:text-lg ml-0.5">chevron_right</span>
                     </button>
                 </div>
                 <p className="text-[12px] sm:text-[13px] text-gray-500">
-                    {t('home.magazine.subtitle', { defaultValue: '?�ン?�リ?�の天の川が?�選?�た?�高の??��?? })}
+                    {t('home.magazine.subtitle', { defaultValue: 'モンゴリアの天の川が厳選した最高の目的地' })}
                 </p>
             </div>
 
@@ -67,10 +67,7 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
                                 </div>
                             )}
                             {/* Gradient Overlay for Text Readability */}
-                            <div 
-                                className="absolute inset-0" 
-                                style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(15, 118, 110, 0.85) 100%)' }}
-                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
                         </div>
 
                         {/* Top Right Blue Airplane Icon */}
@@ -89,7 +86,7 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
                             
                             {/* Title with Flag Emoji */}
                             <h4 className="text-[19px] font-extrabold text-white leading-snug mb-2.5 line-clamp-2 drop-shadow-md">
-                                ?�� {item.title}
+                                🚩 {item.title}
                             </h4>
                             
                             {/* Description */}

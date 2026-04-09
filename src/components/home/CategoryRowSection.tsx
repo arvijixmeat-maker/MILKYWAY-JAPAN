@@ -43,7 +43,7 @@ export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category
                     onClick={() => navigate(`/products?category=${category.name}`)}
                     className="text-sm text-primary font-bold flex items-center hover:opacity-80 transition-opacity"
                 >
-                    {t('home.theme.more_items', '?�っ?�見??)}
+                    {t('home.theme.more_items', 'もっと見る')}
                     <span className="material-symbols-outlined text-[16px] ml-0.5">chevron_right</span>
                 </button>
             </div>
@@ -98,11 +98,11 @@ export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category
                             <div className="pt-1">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[15px] font-bold text-primary">
-                                        {product.price ? product.price.toLocaleString() : t('home.theme.price_inquiry', '문의')}{product.price ? t('home.theme.won', '??) : ''}
+                                        {product.price ? product.price.toLocaleString() : t('home.theme.price_inquiry', '문의')}{product.price ? t('home.theme.won', '원') : ''}
                                     </span>
                                 </div>
                                 <div className="text-[11px] text-slate-400 line-through">
-                                    {product.price ? (product.price * 1.05).toLocaleString() : ''}{product.price ? t('home.theme.won', '??) : ''}
+                                    {product.price ? (product.price * 1.05).toLocaleString() : ''}{product.price ? t('home.theme.won', '원') : ''}
                                 </div>
                             </div>
                         </div>

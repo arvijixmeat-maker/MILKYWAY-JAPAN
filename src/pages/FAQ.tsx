@@ -7,7 +7,7 @@ import { BottomNav } from '../components/layout/BottomNav';
 export const FAQPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('?�べ??);
+    const [selectedCategory, setSelectedCategory] = useState('すべて');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [categories, setCategories] = useState<any[]>([]);
     const [faqs, setFaqs] = useState<any[]>([]);
@@ -29,12 +29,12 @@ export const FAQPage: React.FC = () => {
         fetchData();
     }, []);
 
-    // All categories including "?�べ??
-    const allCategories = ['?�べ??, ...categories.map(c => c.name)];
+    // All categories including "すべて"
+    const allCategories = ['すべて', ...categories.map(c => c.name)];
 
     // Filter FAQs
     const filteredFaqs = faqs.filter(faq => {
-        const matchesCategory = selectedCategory === '?�べ?? || faq.category === selectedCategory;
+        const matchesCategory = selectedCategory === 'すべて' || faq.category === selectedCategory;
         const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
             faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;
@@ -58,26 +58,9 @@ export const FAQPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
             <SEO
-                title="?�ン?�ル?�ア?�・?�ン?�ル?�行??��?�あ?�質?�【Milkyway Japan??
-                description="?�ン?�ル?�ア?�・?�ン?�ル?�行?�関?�る?�く?�る質問?�回答。予約方法、モ?�ゴ?�旅行費?�、モ?�ゴ?�乗馬旅行の準備?�ゴ?�砂漠ツ?�ー??��?�物?�ど?�お客様??��?�を解決?�た?�ま?��?
-                keywords="?�ン?�ル?�ア?�FAQ, ?�ン?�ル?�行質問, ?�ン?�ル?�行費用, ?�ン?�ル乗馬?�行準備, ?�ン?�ル?�ア?�予�?
-                url="/faq"
-                breadcrumb={[
-                    { name: '?�ー??, url: '/' },
-                    { name: '?�く?�る質問', url: '/faq' }
-                ]}
-                structuredData={faqs.length > 0 ? {
-                    "@context": "https://schema.org",
-                    "@type": "FAQPage",
-                    "mainEntity": faqs.slice(0, 20).map(faq => ({
-                        "@type": "Question",
-                        "name": faq.question,
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": faq.answer
-                        }
-                    }))
-                } : undefined}
+                title="よくある質問 | Milkyway Japan"
+                description="モンゴル旅行に関するよくある質問と回答をご確認ください。予約・決済・キャンセル・払い戻しなど、お客様の疑問を解決いたします。"
+                keywords="モンゴル旅行FAQ, モンゴルツアー質問, 旅行社よくある質問"
             />
             <div className="max-w-lg mx-auto bg-white dark:bg-gray-900 min-h-screen overflow-y-auto">
                 {/* Header */}
@@ -86,7 +69,7 @@ export const FAQPage: React.FC = () => {
                         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
                             <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">arrow_back</span>
                         </button>
-                        <h1 className="text-lg font-bold text-gray-900 dark:text-white">?�く?�る質問</h1>
+                        <h1 className="text-lg font-bold text-gray-900 dark:text-white">よくある質問</h1>
                         <div className="w-10"></div>
                     </div>
                 </header>
@@ -97,7 +80,7 @@ export const FAQPage: React.FC = () => {
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
                         <input
                             type="text"
-                            placeholder="気に?�る?��??�検索し?�み?�く?�さ??
+                            placeholder="気になる内容を検索してみてください"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-12 pr-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-teal-500"
@@ -128,7 +111,7 @@ export const FAQPage: React.FC = () => {
                     {filteredFaqs.length === 0 ? (
                         <div className="text-center py-12">
                             <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600">help_outline</span>
-                            <p className="mt-4 text-gray-500 dark:text-gray-400">?�録?�れ?�FAQ??��?�ま?�ん??/p>
+                            <p className="mt-4 text-gray-500 dark:text-gray-400">登録されたFAQはありません。</p>
                         </div>
                     ) : (
                         <div className="space-y-2">

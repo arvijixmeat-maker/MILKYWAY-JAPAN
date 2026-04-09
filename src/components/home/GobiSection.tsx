@@ -12,7 +12,7 @@ export const GobiSection: React.FC = () => {
             try {
                 const data = await api.products.list();
                 if (Array.isArray(data)) {
-                    const gobiData = data.filter((p: any) => p.category === '고비?�막').slice(0, 4);
+                    const gobiData = data.filter((p: any) => p.category === '고비사막').slice(0, 4);
                     setProducts(gobiData.map((p: any) => ({
                         id: p.id,
                         name: p.name,
@@ -31,7 +31,7 @@ export const GobiSection: React.FC = () => {
     }, []);
 
     // Filter for Gobi Desert products
-    const gobiProducts = products.filter(p => p.category === '고비?�막').slice(0, 4);
+    const gobiProducts = products.filter(p => p.category === '고비사막').slice(0, 4);
 
     return (
         <section className="py-10 bg-slate-900 relative overflow-hidden">
@@ -50,10 +50,10 @@ export const GobiSection: React.FC = () => {
 
             <div className="relative z-10 px-5 mb-6 flex items-end justify-between">
                 <div>
-                    <h3 className="text-xl font-extrabold text-white">神秘??��?�砂�?/h3>
-                    <p className="text-[13px] text-white/60 mt-1 text-shadow-sm">?�丘?�降?�注?�星空の饗�?</p>
+                    <h3 className="text-xl font-extrabold text-white">神秘のゴビ砂漠</h3>
+                    <p className="text-[13px] text-white/60 mt-1 text-shadow-sm">砂丘と降り注ぐ星空の饗宴</p>
                 </div>
-                <button onClick={() => navigate('/products?category=gobi')} className="text-primary text-sm font-bold flex items-center">?�べ??��??<span className="material-symbols-outlined text-sm">chevron_right</span></button>
+                <button onClick={() => navigate('/products?category=gobi')} className="text-primary text-sm font-bold flex items-center">すべて見る <span className="material-symbols-outlined text-sm">chevron_right</span></button>
             </div>
 
             <div className="relative z-10 flex overflow-x-auto gap-4 px-5 pb-4 scrollbar-hide snap-x snap-mandatory">
@@ -75,7 +75,7 @@ export const GobiSection: React.FC = () => {
                                 <div className="absolute bottom-5 left-5 right-5">
                                     {/* Display 'Popular' or 'Private' tag if specific criteria met, or generic 'Gobi' tag */}
                                     <span className="inline-block px-2 py-0.5 bg-white/20 backdrop-blur-md rounded text-[10px] text-white font-bold mb-2">
-                                        {product.isPopular ? '人気?�ー?? : (product.tags?.[0] || '?�ビ?�漠')}
+                                        {product.isPopular ? '人気コース' : (product.tags?.[0] || 'ゴビ砂漠')}
                                     </span>
                                     <h4 className="text-lg font-bold text-white mb-1 leading-tight line-clamp-2">
                                         {product.name}
@@ -86,7 +86,7 @@ export const GobiSection: React.FC = () => {
                         </div>
                     ))
                 ) : (
-                    <div className="text-white/60 text-sm py-10 px-5">?�録?�れ?�商?�が?�り?�せ?��?/div>
+                    <div className="text-white/60 text-sm py-10 px-5">登録された商品がありません。</div>
                 )}
             </div>
         </section>

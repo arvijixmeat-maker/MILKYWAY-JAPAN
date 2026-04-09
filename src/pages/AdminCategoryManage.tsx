@@ -84,22 +84,22 @@ export const AdminCategoryManage: React.FC = () => {
             await api.categories.update(id, { is_active: !currentStatus });
             fetchCategories();
         } catch (error) {
-            alert('?�데?�트 ?�패: ' + error);
+            alert('업데이트 실패: ' + error);
         }
     };
 
     // Delete category
     const deleteCategory = async (id: string) => {
         if (id === 'all') {
-            alert('"?�체" 카테고리????��?????�습?�다.');
+            alert('"전체" 카테고리는 삭제할 수 없습니다.');
             return;
         }
-        if (confirm('?�말 ??카테고리�???��?�시겠습?�까?')) {
+        if (confirm('정말 이 카테고리를 삭제하시겠습니까?')) {
             try {
                 await api.categories.delete(id);
                 fetchCategories();
             } catch (error) {
-                alert('??�� ?�패: ' + error);
+                alert('삭제 실패: ' + error);
             }
         }
     };
@@ -148,7 +148,7 @@ export const AdminCategoryManage: React.FC = () => {
             fetchCategories();
         } catch (error: any) {
             console.error(error);
-            alert('?�??�??�류가 발생?�습?�다.');
+            alert('저장 중 오류가 발생했습니다.');
         }
     };
 
@@ -163,7 +163,7 @@ export const AdminCategoryManage: React.FC = () => {
             <main className="ml-64 flex-1 flex flex-col min-h-screen">
                 {/* Header */}
                 <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">카테고리 관�?/h1>
+                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">카테고리 관리</h1>
                     <button
                         onClick={() => {
                             setSelectedCategory(null);
@@ -172,7 +172,7 @@ export const AdminCategoryManage: React.FC = () => {
                         className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors"
                     >
                         <span className="material-symbols-outlined">add</span>
-                        카테고리 추�?
+                        카테고리 추가
                     </button>
                 </header>
 
@@ -183,19 +183,19 @@ export const AdminCategoryManage: React.FC = () => {
                         <table className="w-full">
                             <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�서</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�이�?/th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�름</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�명</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�태</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">?�업</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">순서</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">아이콘</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">이름</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">설명</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">상태</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">작업</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                 {sortedCategories.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                                            ?�록??카테고리가 ?�습?�다.
+                                            등록된 카테고리가 없습니다.
                                         </td>
                                     </tr>
                                 ) : (
@@ -245,7 +245,7 @@ export const AdminCategoryManage: React.FC = () => {
                                                         : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
                                                         }`}
                                                 >
-                                                    {category.isActive ? '?�성' : '비활??}
+                                                    {category.isActive ? '활성' : '비활성'}
                                                 </button>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -256,14 +256,14 @@ export const AdminCategoryManage: React.FC = () => {
                                                     }}
                                                     className="text-teal-600 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300 mr-4"
                                                 >
-                                                    ?�정
+                                                    수정
                                                 </button>
                                                 {category.id !== 'all' && (
                                                     <button
                                                         onClick={() => deleteCategory(category.id)}
                                                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                                                     >
-                                                        ??��
+                                                        삭제
                                                     </button>
                                                 )}
                                             </td>
@@ -315,7 +315,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name || !formData.icon) {
-            alert('?�수 ??��???�력?�주?�요.');
+            alert('필수 항목을 입력해주세요.');
             return;
         }
         // Ensure type matches the current tab if creating new
@@ -333,7 +333,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
                         <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                            {category ? '카테고리 ?�정' : `${type === 'product' ? '?�품' : '매거�?} 카테고리 추�?`}
+                            {category ? '카테고리 수정' : `${type === 'product' ? '상품' : '매거진'} 카테고리 추가`}
                         </h2>
                         <button
                             type="button"
@@ -349,35 +349,35 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                         {/* Name */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                카테고리 ?�름 *
+                                카테고리 이름 *
                             </label>
                             <input
                                 type="text"
                                 value={formData.name || ''}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                placeholder={type === 'product' ? "?? ?��?몽골" : "?? 몽골 기본 ?�보"}
+                                placeholder={type === 'product' ? "예: 서부몽골" : "예: 몽골 기본 정보"}
                             />
                         </div>
 
                         {/* Description */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                ?�명
+                                설명
                             </label>
                             <input
                                 type="text"
                                 value={formData.description || ''}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                placeholder={type === 'product' ? "?? ?��????�맥 ?�레?? : "?? ?�전, ?�심, ?�씨 ??}
+                                placeholder={type === 'product' ? "예: 알타이 산맥 트레킹" : "예: 환전, 유심, 날씨 등"}
                             />
                         </div>
 
                         {/* Icon */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                ?�이�??��?지 *
+                                아이콘 이미지 *
                             </label>
 
                             {/* Image Preview */}
@@ -403,14 +403,14 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                                             setFormData({ ...formData, icon: url });
                                         } catch (error) {
                                             console.error('Category image upload failed:', error);
-                                            alert('?��?지 ?�로???�패');
+                                            alert('이미지 업로드 실패');
                                         }
                                     }
                                 }}
                                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
                             />
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                                권장: 1:1 비율???��?지 (?�용???�면?�서 ?�형?�로 ?�시?�니??
+                                권장: 1:1 비율의 이미지 (사용자 화면에서 원형으로 표시됩니다)
                             </p>
                         </div>
 
@@ -424,7 +424,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                                 className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
                             />
                             <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                ?�성??
+                                활성화
                             </label>
                         </div>
                     </div>
@@ -442,7 +442,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                             type="submit"
                             className="px-6 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-bold"
                         >
-                            {category ? '?�정 ?�료' : '추�? ?�료'}
+                            {category ? '수정 완료' : '추가 완료'}
                         </button>
                     </div>
                 </form>

@@ -114,7 +114,7 @@ export const UserReviews: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">?�ー?�ー?�ビ?�ー</h2>
+                    <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">ユーザーレビュー</h2>
                 </div>
             </nav>
 
@@ -129,7 +129,7 @@ export const UserReviews: React.FC = () => {
                                     <span key={i} className={`material-symbols-outlined text-primary text-xl ${i < Math.round(Number(averageRating)) ? 'fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < Math.round(Number(averageRating)) ? "'FILL' 1" : "'FILL' 0" }}>star</span>
                                 ))}
                             </div>
-                            <p className="text-gray-500 text-sm font-medium">{totalReviews.toLocaleString()}件の?�ア?�な?�ビ?�ー</p>
+                            <p className="text-gray-500 text-sm font-medium">{totalReviews.toLocaleString()}件のリアルなレビュー</p>
                         </div>
                         <div className="flex-1 space-y-2 mt-2">
                             {[5, 4, 3, 2, 1].map((score) => (
@@ -155,7 +155,7 @@ export const UserReviews: React.FC = () => {
                                 : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <span className="text-sm font-bold">?��???/span>
+                            <span className="text-sm font-bold">新着順</span>
                         </button>
                         <button
                             onClick={() => setFilter('rating')}
@@ -164,7 +164,7 @@ export const UserReviews: React.FC = () => {
                                 : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <span className="text-sm font-bold">評価??/span>
+                            <span className="text-sm font-bold">評価順</span>
                         </button>
                         <button
                             onClick={() => setFilter('photo')}
@@ -173,20 +173,20 @@ export const UserReviews: React.FC = () => {
                                 : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <span className="text-sm font-bold">?�真?�ビ?�ー??��</span>
+                            <span className="text-sm font-bold">写真レビューのみ</span>
                         </button>
                     </div>
                 </section>
 
                 <div className="px-4 py-4 flex items-center justify-between">
-                    <h3 className="text-lg font-bold tracking-tight text-[#0e1a18] dark:text-white">?�て??��?�ュ??/h3>
-                    <span className="text-xs text-gray-400 font-medium">??{reviews?.length.toLocaleString() || 0}�?/span>
+                    <h3 className="text-lg font-bold tracking-tight text-[#0e1a18] dark:text-white">全てのレビュー</h3>
+                    <span className="text-xs text-gray-400 font-medium">全 {reviews?.length.toLocaleString() || 0}件</span>
                 </div>
 
                 <div className="space-y-4 px-4">
                     {reviews.length === 0 && !isLoading ? (
                         <div className="text-center py-20 text-gray-400">
-                            ?�ビ?�ー??��?�あ?�ま?�ん?��??�の?�ビ?�ー?�書?�て?�ま?�ょ?�！
+                            レビューはまだありません。最初のレビューを書いてみましょう！
                         </div>
                     ) : (
                         reviews.map((review) => (
@@ -206,7 +206,7 @@ export const UserReviews: React.FC = () => {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                                 <p className="text-sm font-bold text-[#0e1a18] dark:text-white truncate">{review.author}</p>
-                                                <span className="text-sm font-medium text-[#0e1a18] dark:text-white">�?/span>
+                                                <span className="text-sm font-medium text-[#0e1a18] dark:text-white">様</span>
                                             </div>
                                             <div className="flex gap-0.5 mt-0.5">
                                                 {[...Array(5)].map((_, i) => (
@@ -264,7 +264,7 @@ export const UserReviews: React.FC = () => {
                             className="pointer-events-auto flex items-center gap-2 bg-primary text-white px-5 py-3.5 rounded-full shadow-[0_4px_12px_rgba(30,180,150,0.3)] active:scale-95 transition-transform duration-100"
                         >
                             <span className="material-symbols-outlined text-[20px]">edit</span>
-                            <span className="text-sm font-bold">?�ビ?�ー?�書??/span>
+                            <span className="text-sm font-bold">レビューを書く</span>
                         </button>
                     </div>
                 </div>

@@ -5,7 +5,6 @@ import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 const TourProducts = lazy(() => import('./pages/TourProducts').then(module => ({ default: module.TourProducts })))
 const ProductDetail = lazy(() => import('./pages/ProductDetail').then(module => ({ default: module.ProductDetail })))
-const NotFound = lazy(() => import('./pages/NotFound').then(module => ({ default: module.NotFound })))
 import { AdminGuard } from './components/auth/AdminGuard'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { SEO } from './components/seo/SEO'
@@ -145,13 +144,6 @@ function App() {
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            
-            {/* Catch-all 404 Route */}
-            <Route path="*" element={
-              <Layout>
-                <NotFound />
-              </Layout>
-            } />
           </Routes>
         </Suspense>
       </NotificationProvider>

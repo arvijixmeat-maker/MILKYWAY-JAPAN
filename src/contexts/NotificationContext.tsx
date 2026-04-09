@@ -50,7 +50,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // let subscription: any;
 
         const setupRealtime = async () => {
-            // const { data: { user } } = await Cloudflare.auth.getUser();
+            // const { data: { user } } = await cloudflare.auth.getUser();
             // if (!user) return;
             const me = await api.auth.me();
             if (!me || me.error) return;

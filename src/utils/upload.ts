@@ -42,12 +42,11 @@ export const uploadFile = async (file: File, bucket: string = 'images', folder: 
  */
 export const uploadImage = async (file: File, folder: string = 'common'): Promise<string> => {
     try {
-        // If it's a detail image (usually very tall), we shouldn't restrict its height to 1920.
-        // We set a much larger maxWidthOrHeight or let the maxSizeMB dictate the compression.
         const isDetailImage = folder.includes('detail') || folder.includes('product-details') || folder.includes('magazine');
         
+        // Enforce WebP conversion and apply high quality compression
         const options: any = {
-            maxSizeMB: 1, // Default limit
+            maxSizeMB: 1, // Max file size 1MB (aggressive compression)
             useWebWorker: true,
             fileType: 'image/webp', // Force WebP output format
             initialQuality: 0.85 // High quality WebP
@@ -59,9 +58,7 @@ export const uploadImage = async (file: File, folder: string = 'common'): Promis
 
         let processedFile = file;
 
-        // Only compress if the file is an image AND it's not a detail image.
-        // Detail images (very tall) are often destroyed by browser canvas limits during client-side compression.
-        // We will upload them raw and rely on Cloudflare Image Resizing to optimize delivery.
+        // Only compress if the file is an image and not already highly optimized or small
         if (file.type.startsWith('image/') && !isDetailImage) {
             try {
                 const compressedBlob = await imageCompression(file, options);

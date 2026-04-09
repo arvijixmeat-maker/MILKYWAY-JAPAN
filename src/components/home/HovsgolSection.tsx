@@ -12,7 +12,7 @@ export const HovsgolSection: React.FC = () => {
             try {
                 const data = await api.products.list();
                 if (Array.isArray(data)) {
-                    const khuvsgulData = data.filter((p: any) => p.category === '?�스�?).slice(0, 3);
+                    const khuvsgulData = data.filter((p: any) => p.category === '홉스굴').slice(0, 3);
                     setProducts(khuvsgulData.map((p: any) => ({
                         id: p.id,
                         name: p.name,
@@ -34,16 +34,16 @@ export const HovsgolSection: React.FC = () => {
     }, []);
 
     // Filter for Khuvsgul products
-    const khuvsgulProducts = products.filter(p => p.category === '?�스�?).slice(0, 3);
+    const khuvsgulProducts = products.filter(p => p.category === '홉스굴').slice(0, 3);
 
     return (
         <section className="py-8 px-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-background-dark">
             <div className="flex items-end justify-between mb-6">
                 <div>
-                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">?�い?�珠 ?�ブ?�グ??/h3>
-                    <p className="text-[13px] text-slate-500 mt-1">?�ン?�ル??��?�呼?�れ?�巨大な�?/p>
+                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">青い真珠 フブスグル</h3>
+                    <p className="text-[13px] text-slate-500 mt-1">モンゴルの母と呼ばれる巨大な湖</p>
                 </div>
-                <button onClick={() => navigate('/products?category=khuvsgul')} className="text-primary text-sm font-bold flex items-center">?�べ??��??<span className="material-symbols-outlined text-sm">chevron_right</span></button>
+                <button onClick={() => navigate('/products?category=khuvsgul')} className="text-primary text-sm font-bold flex items-center">すべて見る <span className="material-symbols-outlined text-sm">chevron_right</span></button>
             </div>
             <div className="space-y-4">
                 {khuvsgulProducts.length > 0 ? (
@@ -61,13 +61,13 @@ export const HovsgolSection: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col justify-center py-1 flex-1">
                                     <span className="text-[10px] font-bold text-primary mb-1">
-                                        {product.isPopular ? '人気?�上?? : (product.tags?.[0] || '?�す?�め')}
+                                        {product.isPopular ? '人気急上昇' : (product.tags?.[0] || 'おすすめ')}
                                     </span>
                                     <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">
                                         {product.name}
                                     </h4>
                                     <p className="text-[12px] text-slate-500 mb-2 line-clamp-1">
-                                        {product.duration} · {product.highlights?.[0]?.title || '?�링 ?�행'}
+                                        {product.duration} · {product.highlights?.[0]?.title || '힐링 여행'}
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[14px] font-bold text-slate-900 dark:text-white">
@@ -86,7 +86,7 @@ export const HovsgolSection: React.FC = () => {
                     ))
                 ) : (
                     <div className="text-center py-8 text-slate-400 text-sm">
-                        ?�録?�れ?�フ?�ス?�ル?�品?�あ?�ま?�ん??
+                        登録されたフブスグル商品がありません。
                     </div>
                 )}
             </div>

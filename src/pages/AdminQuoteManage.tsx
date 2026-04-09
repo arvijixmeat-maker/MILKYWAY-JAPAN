@@ -17,7 +17,7 @@ export const AdminQuoteManage: React.FC = () => {
     const [isDarkMode, setIsDarkMode] = useState(false);
     // Filter States
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('?�체 ?�태');
+    const [filterStatus, setFilterStatus] = useState('전체 상태');
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
@@ -74,7 +74,7 @@ export const AdminQuoteManage: React.FC = () => {
 
         } catch (error) {
             console.error("Failed to update status:", error);
-            alert("?�태 변�?�??�류가 발생?�습?�다.");
+            alert("상태 변경 중 오류가 발생했습니다.");
         }
     };
 
@@ -82,12 +82,12 @@ export const AdminQuoteManage: React.FC = () => {
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
             const matchesSearch = req.name.includes(searchTerm) || req.destination.includes(searchTerm);
-            const matchesStatus = filterStatus === '?�체 ?�태' ||
-                (filterStatus === '?��? ?��? && req.status === 'new') ||
-                (filterStatus === '?�담 �? && req.status === 'processing') ||
-                (filterStatus === '?��? ?�료' && req.status === 'answered') ||
-                (filterStatus === '?�약 ?�환' && req.status === 'converted') ||
-                (filterStatus === '?�약 ?�청' && req.status === 'reservation_requested');
+            const matchesStatus = filterStatus === '전체 상태' ||
+                (filterStatus === '답변 대기' && req.status === 'new') ||
+                (filterStatus === '상담 중' && req.status === 'processing') ||
+                (filterStatus === '답변 완료' && req.status === 'answered') ||
+                (filterStatus === '예약 전환' && req.status === 'converted') ||
+                (filterStatus === '예약 요청' && req.status === 'reservation_requested');
 
             return matchesSearch && matchesStatus;
         });
@@ -111,9 +111,9 @@ export const AdminQuoteManage: React.FC = () => {
 
     // Get bank account settings (Hardcoded for now or fetch from Cloudflare later)
     const bankAccount = {
-        bankName: '�???�??,
+        bankName: '국민은행',
         accountNumber: '1234-56-7890',
-        accountHolder: '몽골리아 ?�?�수'
+        accountHolder: '몽골리아 은하수'
     };
 
     const handleConvertToReservation = async (data: { startDate: string; endDate: string; totalAmount: number; deposit: number }) => {
@@ -125,7 +125,7 @@ export const AdminQuoteManage: React.FC = () => {
             const end = new Date(data.endDate);
             const diffTime = Math.abs(end.getTime() - start.getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            const durationText = `${diffDays}�?${diffDays + 1}??;
+            const durationText = `${diffDays}박 ${diffDays + 1}일`;
 
             // 1. Create New Reservation via API
             const newReservation = await api.reservations.create({
@@ -145,9 +145,9 @@ export const AdminQuoteManage: React.FC = () => {
                     local: data.totalAmount - data.deposit
                 },
                 bank_account: {
-                    bankName: '�???�??,
+                    bankName: '국민은행',
                     accountNumber: '123-456-789012',
-                    accountHolder: '밀?�웨?�투??
+                    accountHolder: '밀키웨이투어'
                 }
             });
 
@@ -172,13 +172,13 @@ export const AdminQuoteManage: React.FC = () => {
             setIsConvertModalOpen(false);
             setSelectedRequest(null);
 
-            if (confirm('?�약???�공?�으�??�성?�었?�니??\n[?�약 관�? ?�이지�??�동?�여 ?�인?�시겠습?�까?')) {
+            if (confirm('예약이 성공적으로 생성되었습니다!\n[예약 관리] 페이지로 이동하여 확인하시겠습니까?')) {
                 navigate('/admin/reservations');
             }
 
         } catch (error: any) {
             console.error("Failed to convert reservation:", error);
-            alert(`?�약 변??�??�류가 발생?�습?�다: ${error.message || error}`);
+            alert(`예약 변환 중 오류가 발생했습니다: ${error.message || error}`);
         }
     };
 
@@ -216,7 +216,7 @@ export const AdminQuoteManage: React.FC = () => {
                 console.error('Failed to send notification email:', emailError);
             }
 
-            alert(`견적??발송 ?�료!\nURL: ${url}\n?�정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '?? : '미입??}\n(고객?�게 Gmail ?�림??발송?�었?�니??`);
+            alert(`견적서 발송 완료!\nURL: ${url}\n확정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '원' : '미입력'}\n(고객에게 Gmail 알림이 발송되었습니다)`);
 
             // Reflect in local state
             setRequests(prev => prev.map(req =>
@@ -235,7 +235,7 @@ export const AdminQuoteManage: React.FC = () => {
             setSelectedRequest(null);
         } catch (error) {
             console.error("Failed to send estimate:", error);
-            alert("견적??발송 처리 �??�류가 발생?�습?�다.");
+            alert("견적서 발송 처리 중 오류가 발생했습니다.");
         }
     };
 
@@ -271,7 +271,7 @@ export const AdminQuoteManage: React.FC = () => {
 
         } catch (error) {
             console.error("Failed to update quote:", error);
-            alert("?�보 ?�정 �??�류가 발생?�습?�다.");
+            alert("정보 수정 중 오류가 발생했습니다.");
         }
     };
 
@@ -300,12 +300,12 @@ export const AdminQuoteManage: React.FC = () => {
         };
 
         const labels: Record<string, string> = {
-            pending_payment: '?�금 ?��?,
-            paid: '결제 ?�료',
-            confirmed: '?�약 ?�정',
-            cancelled: '취소??,
-            converted: '?�약 ?�환',
-            reservation_requested: '?�약 ?�청'
+            pending_payment: '입금 대기',
+            paid: '결제 완료',
+            confirmed: '예약 확정',
+            cancelled: '취소됨',
+            converted: '예약 전환',
+            reservation_requested: '예약 요청'
         };
 
         const statusKey = status as keyof typeof styles;
@@ -358,7 +358,7 @@ export const AdminQuoteManage: React.FC = () => {
                     onClick={() => setSelectedRequest(request)}
                     className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold rounded-lg transition-colors"
                 >
-                    ?�약?�인
+                    예약확인
                 </button>
             );
         } else if (status === 'completed') {
@@ -367,7 +367,7 @@ export const AdminQuoteManage: React.FC = () => {
                     onClick={() => setSelectedRequest(request)}
                     className="px-4 py-2 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors"
                 >
-                    ?��??�료
+                    답변완료
                 </button>
             );
         }
@@ -376,7 +376,7 @@ export const AdminQuoteManage: React.FC = () => {
                 onClick={() => setSelectedRequest(request)}
                 className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg transition-colors"
             >
-                ?��??�기
+                답변하기
             </button>
         );
     };
@@ -416,7 +416,7 @@ export const AdminQuoteManage: React.FC = () => {
             <main className="ml-64 flex-1 flex flex-col min-h-screen">
                 {/* Header */}
                 <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">견적 관�?리스??/h1>
+                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">견적 관리 리스트</h1>
                     <div className="flex items-center gap-4">
                         <div className="relative">
                             <button className="p-2 text-slate-400 hover:text-teal-500 transition-colors">
@@ -425,7 +425,7 @@ export const AdminQuoteManage: React.FC = () => {
                             </button>
                         </div>
                         <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">관리자?? ?�영?�니??/span>
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">관리자님, 환영합니다</span>
                             <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-500">
                                 <span className="material-symbols-outlined">person</span>
                             </div>
@@ -438,8 +438,8 @@ export const AdminQuoteManage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">?�체 ?�청</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.total}�?/h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">전체 요청</p>
+                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.total}건</h3>
                             </div>
                             <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center">
                                 <span className="material-symbols-outlined">list_alt</span>
@@ -447,8 +447,8 @@ export const AdminQuoteManage: React.FC = () => {
                         </div>
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">?��? ?��?/p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.new}�?/h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">답변 대기</p>
+                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.new}건</h3>
                             </div>
                             <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center">
                                 <span className="material-symbols-outlined">pending_actions</span>
@@ -456,8 +456,8 @@ export const AdminQuoteManage: React.FC = () => {
                         </div>
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">?�료??견적</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.completed}�?/h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">완료된 견적</p>
+                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.completed}건</h3>
                             </div>
                             <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center">
                                 <span className="material-symbols-outlined">check_circle</span>
@@ -469,7 +469,7 @@ export const AdminQuoteManage: React.FC = () => {
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                             <div className="md:col-span-4">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">?�짜 범위</label>
+                                <label className="block text-xs font-bold text-slate-400 mb-2">날짜 범위</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">calendar_today</span>
                                     <input
@@ -481,12 +481,12 @@ export const AdminQuoteManage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="md:col-span-4">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">고객�?검??/label>
+                                <label className="block text-xs font-bold text-slate-400 mb-2">고객명 검색</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
                                     <input
                                         type="text"
-                                        placeholder="고객 ?�름 ?�는 ?�행지 검??
+                                        placeholder="고객 이름 또는 여행지 검색"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -494,24 +494,24 @@ export const AdminQuoteManage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">?�태</label>
+                                <label className="block text-xs font-bold text-slate-400 mb-2">상태</label>
                                 <select
                                     value={filterStatus}
                                     onChange={(e) => setFilterStatus(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
                                 >
-                                    <option>?�체 ?�태</option>
-                                    <option>?��? ?��?/option>
-                                    <option>?�담 �?/option>
-                                    <option>?��? ?�료</option>
-                                    <option>?�약 ?�청</option>
-                                    <option>?�약 ?�환</option>
+                                    <option>전체 상태</option>
+                                    <option>답변 대기</option>
+                                    <option>상담 중</option>
+                                    <option>답변 완료</option>
+                                    <option>예약 요청</option>
+                                    <option>예약 전환</option>
                                 </select>
                             </div>
                             <div className="md:col-span-2">
-                                <button onClick={() => { setSearchTerm(''); setFilterStatus('?�체 ?�태'); }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <button onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
                                     <span className="material-symbols-outlined text-lg">refresh</span>
-                                    초기??
+                                    초기화
                                 </button>
                             </div>
                         </div>
@@ -523,13 +523,13 @@ export const AdminQuoteManage: React.FC = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-slate-50 dark:bg-slate-700/50">
                                     <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">?�청??/th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">고객�?/th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">?�망 ?�행지</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">?�원</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">?�망 ?�정</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">?�태</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">관�?/th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">요청일</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">고객명</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">희망 여행지</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">인원</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">희망 일정</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">상태</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">관리</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -553,7 +553,7 @@ export const AdminQuoteManage: React.FC = () => {
                                                         onClick={() => setSelectedRequest(request)}
                                                         className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-lg transition-colors"
                                                     >
-                                                        ?�세 보기
+                                                        상세 보기
                                                     </button>
                                                 </div>
                                             </td>
@@ -561,7 +561,7 @@ export const AdminQuoteManage: React.FC = () => {
                                     )) : (
                                         <tr>
                                             <td colSpan={7} className="px-6 py-10 text-center text-slate-400">
-                                                검??결과가 ?�습?�다.
+                                                검색 결과가 없습니다.
                                             </td>
                                         </tr>
                                     )}

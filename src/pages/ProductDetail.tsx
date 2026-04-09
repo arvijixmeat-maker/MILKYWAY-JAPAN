@@ -159,7 +159,7 @@ export const ProductDetail: React.FC = () => {
                 });
             } else {
                 await navigator.clipboard.writeText(window.location.href);
-                showToast('success', '링크가 복사?�었?�니??');
+                showToast('success', '링크가 복사되었습니다.');
             }
         } catch (error) {
             console.error('Share error:', error);
@@ -234,9 +234,9 @@ export const ProductDetail: React.FC = () => {
         <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display">
             <SEO
                 title={product.name}
-                description={product.description || product.highlights?.[0]?.description || `${product.name} - ?�ン?�ル?�行?�モ?�ゴ?�ツ?�ー?�らMilkyway Japan?�特?�で魅力?�な?�ン?�ル観光体験?�ご?�案?�ま?��?}
+                description={product.description || product.highlights?.[0]?.description || `${product.name} - モンゴル旅行・モンゴルツアーならMilkyway Japan。特別で魅力的なモンゴル観光体験をご提案します。`}
                 image={product.mainImages?.find(img => !img.startsWith('data:'))}
-                keywords={`${product.category}, ${product.tags.join(', ')}, ?�ン?�ル?�行, ?�ン?�ル観光, ?�ン?�ル?�ア??}
+                keywords={`${product.category}, ${product.tags.join(', ')}, モンゴル旅行, モンゴル観光, モンゴルツアー`}
                 url={`/products/${product.id}`}
                 structuredData={structuredData}
                 breadcrumb={[
@@ -406,7 +406,7 @@ export const ProductDetail: React.FC = () => {
                                 return (
                                     <img
                                         key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'productDetailFull')}
+                                        src={getOptimizedImageUrl(block.content as string, 'productDetail')}
                                         alt="Detailed info"
                                         className="w-full h-auto"
                                         loading="lazy"
@@ -512,8 +512,8 @@ export const ProductDetail: React.FC = () => {
                                                         <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>?�食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�ょ?�し?�く)</span>
+                                                                <span>朝食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちょうしょく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.breakfast}</span>
                                                         </div>
@@ -522,8 +522,8 @@ export const ProductDetail: React.FC = () => {
                                                         <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>?�食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�ゅ?�し?�く)</span>
+                                                                <span>昼食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちゅうしょく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.lunch}</span>
                                                         </div>
@@ -533,7 +533,7 @@ export const ProductDetail: React.FC = () => {
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
                                                                 <span>夕食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�う?�ょ??</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ゆうしょく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.dinner}</span>
                                                         </div>
@@ -543,7 +543,7 @@ export const ProductDetail: React.FC = () => {
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">hotel</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
                                                                 <span>宿泊</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�ゅ?�は??</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(しゅくはく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.accommodation}</span>
                                                         </div>
@@ -565,7 +565,7 @@ export const ProductDetail: React.FC = () => {
                                 {product.detailImages.map((img, index) => (
                                     <img
                                         key={index}
-                                        src={getOptimizedImageUrl(img, 'productDetailFull')}
+                                        src={getOptimizedImageUrl(img, 'productItinerary')}
                                         alt={`Detail ${index + 1}`}
                                         className="w-full h-auto"
                                         loading="lazy"
@@ -730,8 +730,8 @@ export const ProductDetail: React.FC = () => {
                                                         <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>?�食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�ょ?�し?�く)</span>
+                                                                <span>朝食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちょうしょく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.breakfast}</span>
                                                         </div>
@@ -740,8 +740,8 @@ export const ProductDetail: React.FC = () => {
                                                         <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>?�食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�ゅ?�し?�く)</span>
+                                                                <span>昼食</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちゅうしょく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.lunch}</span>
                                                         </div>
@@ -751,7 +751,7 @@ export const ProductDetail: React.FC = () => {
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
                                                                 <span>夕食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�う?�ょ??</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ゆうしょく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.dinner}</span>
                                                         </div>
@@ -761,7 +761,7 @@ export const ProductDetail: React.FC = () => {
                                                             <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">hotel</span>
                                                             <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
                                                                 <span>宿泊</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(?�ゅ?�は??</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(しゅくはく)</span>
                                                             </div>
                                                             <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.accommodation}</span>
                                                         </div>
