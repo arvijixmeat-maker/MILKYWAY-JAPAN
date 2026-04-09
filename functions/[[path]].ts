@@ -32,6 +32,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     let pageDescription = SEO_CONSTANTS.DESCRIPTION;
     let pageImage = getAbsoluteImageUrl(SEO_CONSTANTS.OG_IMAGE);
     const pageUrl = url.href;
+    
+    let jsonLdString = '';
 
     try {
         const db = drizzle(context.env.DB);
@@ -55,6 +57,23 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 if (images && images.length > 0) {
                     pageImage = getAbsoluteImageUrl(images[0]);
                 }
+
+                // Construct Safe JSON-LD (No fake reviews)
+                const productJsonLd = {
+                    "@context": "https://schema.org",
+                    "@type": "Product",
+                    "name": product.name,
+                    "image": pageImage,
+                    "description": pageDescription,
+                    "offers": {
+                        "@type": "Offer",
+                        "priceCurrency": "JPY",
+                        "price": product.price,
+                        "availability": "https://schema.org/InStock",
+                        "url": pageUrl
+                    }
+                };
+                jsonLdString = JSON.stringify(productJsonLd);
             }
         }
         // --- Logic for Travel Guides (Magazines) ---
@@ -73,6 +92,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                         if (imageStr) {
                             pageImage = getAbsoluteImageUrl(imageStr);
                         }
+
+                        // Construct Safe JSON-LD for Articles
+                        const articleJsonLd = {
+                            "@context": "https://schema.org",
+                            "@type": "Article",
+                            "headline": guide.title,
+                            "image": [pageImage],
+                            "description": pageDescription,
+                            "url": pageUrl
+                        };
+                        jsonLdString = JSON.stringify(articleJsonLd);
                     }
                 } catch (e) {
                     console.log("Guide meta fetch skipped/failed:", e);
@@ -87,17 +117,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     // 2. Use HTMLRewriter to inject the dynamically fetched tags into the <head>
     return new HTMLRewriter()
+        .on('title', {
+            element(element) {
+                element.setInnerContent(pageTitle);
+            }
+        })
+        .on('meta', {
+            element(element) {
+                const name = element.getAttribute('name');
+                const property = element.getAttribute('property');
+                const targetTags = [
+                    'description', 'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image',
+                    'og:title', 'og:description', 'og:image', 'og:url', 'og:type', 'og:site_name'
+                ];
+                if ((name && targetTags.includes(name)) || (property && targetTags.includes(property))) {
+                    element.remove();
+                }
+            }
+        })
         .on('head', {
             element(element) {
-                // Ensure we inject meta tags with proper escaping (Cloudflare HTMLRewriter handles text escaping usually, 
-                // but for raw HTML we must be careful. We construct exact strings).
-
-                // Remove existing generic tags if needed (optional, typically late-appended tags take precedence in crawlers)
-                // For safety we just append ours.
-
                 element.append(`\n<!-- Injected by Cloudflare Edge SSR -->`, { html: true });
-                element.append(`\n<title>${pageTitle}</title>`, { html: true });
-
+                
                 // Standard meta
                 element.append(`\n<meta name="description" content="${pageDescription}">`, { html: true });
 
@@ -113,6 +154,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 element.append(`\n<meta name="twitter:title" content="${pageTitle}">`, { html: true });
                 element.append(`\n<meta name="twitter:description" content="${pageDescription}">`, { html: true });
                 element.append(`\n<meta name="twitter:image" content="${pageImage}">`, { html: true });
+
+                // Dynamic JSON-LD structured data (Safe schema)
+                if (jsonLdString) {
+                    element.append(`\n<script type="application/ld+json">\n${jsonLdString}\n</script>`, { html: true });
+                }
             }
         })
         .transform(response);

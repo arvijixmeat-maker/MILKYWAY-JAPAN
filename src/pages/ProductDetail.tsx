@@ -298,7 +298,7 @@ export const ProductDetail: React.FC = () => {
                             >
                                 <img
                                     {...getResponsiveImageProps(img, 'banner')}
-                                    alt={`${product.name} - ${index + 1}`}
+                                    alt={`${product.name} - ${product.tags?.[0] || 'モンゴル旅行'} の風景 ${index + 1}`}
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent pointer-events-none" />
@@ -406,8 +406,8 @@ export const ProductDetail: React.FC = () => {
                                 return (
                                     <img
                                         key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'productDetail')}
-                                        alt="Detailed info"
+                                        src={getOptimizedImageUrl(block.content as string, 'original')}
+                                        alt={`${product.name} の魅力と体験 - その${index + 1}`}
                                         className="w-full h-auto"
                                         loading="lazy"
                                     />
@@ -427,7 +427,7 @@ export const ProductDetail: React.FC = () => {
                                                 >
                                                     <img
                                                         src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                        alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
+                                                        alt={`${product.name} ${slide.title || ''} - 写真${imgIdx + 1}`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
                                                     />
@@ -565,8 +565,8 @@ export const ProductDetail: React.FC = () => {
                                 {product.detailImages.map((img, index) => (
                                     <img
                                         key={index}
-                                        src={getOptimizedImageUrl(img, 'productItinerary')}
-                                        alt={`Detail ${index + 1}`}
+                                        src={getOptimizedImageUrl(img, 'original')}
+                                        alt={`${product.name} のハイライト - その${index + 1}`}
                                         className="w-full h-auto"
                                         loading="lazy"
                                     />
@@ -624,8 +624,8 @@ export const ProductDetail: React.FC = () => {
                                 return (
                                     <img
                                         key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'productItinerary')}
-                                        alt="Itinerary info"
+                                        src={getOptimizedImageUrl(block.content as string, 'original')}
+                                        alt={`${product.name} - 旅の様子 ${index + 1}`}
                                         className="w-full h-auto"
                                         loading="lazy"
                                     />
@@ -701,7 +701,7 @@ export const ProductDetail: React.FC = () => {
                                                         <img
                                                             key={imgIdx}
                                                             src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                            alt={`${timeline.title} - ${imgIdx + 1}`}
+                                                            alt={`${product.name} ${timeline.title} - 旅の風景 ${imgIdx + 1}`}
                                                             className="w-[70%] md:w-48 h-32 md:h-32 object-cover rounded-xl shrink-0 snap-center shadow-sm border border-gray-100 dark:border-gray-800"
                                                             loading="lazy"
                                                         />
@@ -780,8 +780,8 @@ export const ProductDetail: React.FC = () => {
                         {product.itineraryImages.map((img, index) => (
                             <img
                                 key={index}
-                                src={getOptimizedImageUrl(img, 'productItinerary')}
-                                alt={`Itinerary ${index + 1}`}
+                                src={getOptimizedImageUrl(img, 'original')}
+                                alt={`${product.name} - 旅の様子 ${index + 1}`}
                                 className="w-full h-auto"
                                 loading="lazy"
                             />
