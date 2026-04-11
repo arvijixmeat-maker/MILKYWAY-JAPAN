@@ -77,8 +77,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         return response;
     }
 
-    const url = new URL(context.request.url);
-    const path = url.pathname;
 
     let pageTitle = SEO_CONSTANTS.TITLE;
     let pageDescription = SEO_CONSTANTS.DESCRIPTION;
