@@ -43,12 +43,10 @@ export const Home: React.FC = () => {
                 <HeroSection />
             </div>
 
-            {/* SEO: Visible H1 + Intro — crawlable and user-visible */}
-            <section className="px-5 pt-4 pb-2">
-                <h1 className="text-xl font-bold text-[#0e1a18] dark:text-white leading-tight mb-2">
-                    モンゴルツアー・モンゴル旅行専門の現地旅行社
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
+            {/* SEO: H1 + Intro (Visually hidden but available for crawlers and screen readers) */}
+            <section className="sr-only">
+                <h1>モンゴルツアー・モンゴル旅行専門の現地旅行社</h1>
+                <p>
                     Milkyway Japanは日本語ガイド同行で安心のモンゴルツアーをご案内。乗馬旅行、ゴビ砂漠、テレルジ国立公園など多彩なプランをご用意しています。
                 </p>
             </section>
