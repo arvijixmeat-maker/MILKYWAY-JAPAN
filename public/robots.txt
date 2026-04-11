@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /*.cm
+Disallow: /admin/
+Disallow: /shop_view
+Disallow: /*?idx=
 
 Sitemap: https://mongolryokou.com/sitemap.xml

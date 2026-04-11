@@ -40,10 +40,34 @@ const STATIC_PAGE_META: Record<string, { title: string; description: string }> =
     '/travel-mates': {
         title: '同行者募集 | Milkyway Japan',
         description: 'モンゴル旅行の同行者を募集・検索。一人旅が不安な方も、旅仲間を見つけてモンゴルツアーを一緒に楽しみましょう。'
+    },
+    '/mongol-travel': {
+        title: 'モンゴル旅行ガイド2026 – 費用・ベストシーズン・おすすめツアー | Milkyway Japan',
+        description: '大自然が広がるモンゴル旅行。おすすめの時期、費用相場、治安、人気のモンゴルツアー情報まで、モンゴル旅行前に知っておきたい完全ガイドです。'
+    },
+    '/mongol-tour': {
+        title: 'モンゴルツアー比較 – 乗馬・ゴビ砂漠・テレルジ 現地ツアー一覧 | Milkyway Japan',
+        description: 'モンゴル乗馬旅行、ゴビ砂漠星空ツアー、テレルジ国立公園の大自然体験など、様々なモンゴルツアーの特徴を比較。Milkyway Japanなら日本語ガイド付きで安心です。'
+    },
+    '/horse-riding-tour': {
+        title: 'モンゴル乗馬旅行 – 初心者OK！大草原で楽しむ乗馬ツアー | Milkyway Japan',
+        description: 'モンゴルの大草原を馬で駆ける乗馬旅行。経験豊富な現地ガイドがサポートするため、初心者から上級者まで安心。おすすめのモンゴル乗馬ツアーをご案内します。'
+    },
+    '/gobi-desert': {
+        title: 'ゴビ砂漠ツアー – 満天の星空と壮大な砂丘を体験 | Milkyway Japan',
+        description: 'モンゴル南部に広がるゴビ砂漠。ホンゴル砂丘で夕陽を眺め、夜は満天の星空（天の川）に包まれる感動のツアー。恐竜の化石発掘スポットなど、ゴビ砂漠の見どころを日本語ガイド付きでご案内します。'
     }
 };
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
+    const url = new URL(context.request.url);
+    const path = url.pathname;
+
+    // Legacy Redirects
+    if (path.startsWith('/shop_view') || url.searchParams.has('idx')) {
+        return Response.redirect(`${SEO_CONSTANTS.SITE_URL}/products`, 301);
+    }
+
     // 1. Get the original response from the asset (usually index.html for unknown routes in an SPA)
     const response = await context.next();
 
