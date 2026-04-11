@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/supabaseImage';
+import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/cloudflareImage';
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { useTranslation } from 'react-i18next';
 
