@@ -55,12 +55,28 @@ export const FAQPage: React.FC = () => {
         }
     };
 
+    // Build FAQPage structured data from loaded FAQs (only when data exists)
+    const faqStructuredData = faqs.length > 0 ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": faqs.slice(0, 20).map(faq => ({
+            "@type": "Question",
+            "name": faq.question,
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": faq.answer
+            }
+        }))
+    } : undefined;
+
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
             <SEO
-                title="よくある質問 | Milkyway Japan"
-                description="モンゴル旅行に関するよくある質問と回答をご確認ください。予約・決済・キャンセル・払い戻しなど、お客様の疑問を解決いたします。"
-                keywords="モンゴル旅行FAQ, モンゴルツアー質問, 旅行社よくある質問"
+                title="よくある質問（FAQ）"
+                description="モンゴル旅行に関するよくある質問と回答。予約方法、ツアー内容、持ち物、ビザ、決済・キャンセルなど、モンゴルツアーの疑問を解決します。"
+                keywords="モンゴル旅行FAQ, モンゴルツアー質問, モンゴル旅行準備, モンゴルビザ, 旅行社よくある質問"
+                canonical="/faq"
+                structuredData={faqStructuredData}
             />
             <div className="max-w-lg mx-auto bg-white dark:bg-gray-900 min-h-screen overflow-y-auto">
                 {/* Header */}
@@ -69,10 +85,18 @@ export const FAQPage: React.FC = () => {
                         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
                             <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">arrow_back</span>
                         </button>
-                        <h1 className="text-lg font-bold text-gray-900 dark:text-white">よくある質問</h1>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">よくある質問</span>
                         <div className="w-10"></div>
                     </div>
                 </header>
+
+                {/* SEO: H1 + Intro */}
+                <section className="px-4 pt-4 pb-1">
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">モンゴル旅行のよくある質問</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                        モンゴルツアーの予約・決済・キャンセル・持ち物・ビザなど、お客様からよくいただくご質問と回答をまとめました。
+                    </p>
+                </section>
 
                 {/* Search */}
                 <div className="p-4">

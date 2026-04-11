@@ -3,33 +3,21 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/cloudflareImage';
+import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/supabaseImage';
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '../components/ui/Toast';
-import { useScrollReveal } from '../hooks/useScrollReveal';
 
-import type { TourProduct, DetailSlide, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
+import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { t } = useTranslation();
-    const { showToast } = useToast();
-    const { ref, revealClass, isVisible } = useScrollReveal(0.01);
     const [isLoading, setIsLoading] = useState(true);
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [isInWishlist, setIsInWishlist] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
-    const [isBottomBarVisible, setIsBottomBarVisible] = useState(false);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsBottomBarVisible(true);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, []);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -122,7 +110,7 @@ export const ProductDetail: React.FC = () => {
         try {
             const me = await api.auth.me();
             if (!me) {
-                alert(t('mypage.login_required'));
+                alert('로그인이 필요한 서비스입니다.');
                 navigate('/login');
                 return;
             }
@@ -145,24 +133,6 @@ export const ProductDetail: React.FC = () => {
             console.error('Wishlist toggle error:', error);
         } finally {
             setWishlistLoading(false);
-        }
-    };
-
-    const handleShare = async () => {
-        if (!product) return;
-        try {
-            if (navigator.share) {
-                await navigator.share({
-                    title: product.name,
-                    text: product.description,
-                    url: window.location.href
-                });
-            } else {
-                await navigator.clipboard.writeText(window.location.href);
-                showToast('success', '링크가 복사되었습니다.');
-            }
-        } catch (error) {
-            console.error('Share error:', error);
         }
     };
 
@@ -197,8 +167,17 @@ export const ProductDetail: React.FC = () => {
         .filter(img => !img.startsWith('data:'))
         .map(img => img.startsWith('http') ? img : `${window.location.origin}${img}`);
 
-    // Create JSON-LD Product Schema
-    const structuredData = {
+    // Enhanced Product description for meta
+    const productMetaDescription = [
+        product.name,
+        product.duration ? `（${product.duration}）` : '',
+        product.category ? `【${product.category}】` : '',
+        product.description || product.highlights?.[0]?.description || '',
+        product.price ? `¥${product.price.toLocaleString()}〜` : ''
+    ].filter(Boolean).join(' ').substring(0, 160);
+
+    // Create JSON-LD Product Schema (enhanced)
+    const productStructuredData = {
         "@context": "https://schema.org/",
         "@type": "Product",
         "name": product.name,
@@ -208,6 +187,10 @@ export const ProductDetail: React.FC = () => {
             "@type": "Brand",
             "name": "Milkyway Japan"
         },
+        "category": product.category || "モンゴルツアー",
+        ...(product.duration ? { "additionalProperty": [
+            { "@type": "PropertyValue", "name": "所要時間", "value": product.duration }
+        ]} : {}),
         "offers": {
             "@type": "Offer",
             "url": window.location.href,
@@ -221,29 +204,37 @@ export const ProductDetail: React.FC = () => {
                 "name": "Milkyway Japan"
             }
         },
-        // We inject an aggregateRating slightly higher organically based on view/booking count
-        // In a real production app, this should be driven by actual user reviews.
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "5.0",
-            "reviewCount": Math.max((product.bookingCount || 0) + (product.viewCount || 0) % 50 + 15, 1)
-        }
+        // Include highlights as product features
+        ...(product.highlights && product.highlights.length > 0 ? {
+            "additionalType": "https://schema.org/TouristTrip",
+            "touristType": product.category || "モンゴルツアー"
+        } : {}),
+        // Include items as part of the description
+        ...(product.included && product.included.length > 0 ? {
+            "description": `${product.description || ''}。ツアーに含まれるもの: ${product.included.join('、')}`
+        } : {})
+    };
+
+    // BreadcrumbList for navigation context
+    const breadcrumbData = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "ホーム", "item": "https://mongolryokou.com/" },
+            { "@type": "ListItem", "position": 2, "name": "モンゴルツアー商品", "item": "https://mongolryokou.com/products" },
+            { "@type": "ListItem", "position": 3, "name": product.name, "item": `https://mongolryokou.com/products/${id}` }
+        ]
     };
 
     return (
         <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display">
             <SEO
                 title={product.name}
-                description={product.description || product.highlights?.[0]?.description || `${product.name} - モンゴル旅行・モンゴルツアーならMilkyway Japan。特別で魅力的なモンゴル観光体験をご提案します。`}
+                description={productMetaDescription}
                 image={product.mainImages?.find(img => !img.startsWith('data:'))}
-                keywords={`${product.category}, ${product.tags.join(', ')}, モンゴル旅行, モンゴル観光, モンゴルツアー`}
-                url={`/products/${product.id}`}
-                structuredData={structuredData}
-                breadcrumb={[
-                    { name: t('nav.home'), url: '/' },
-                    { name: t('nav.products'), url: '/products' },
-                    { name: product.name, url: `/products/${product.id}` }
-                ]}
+                keywords={`${product.category}, ${product.tags.join(', ')}, モンゴルツアー, モンゴル旅行`}
+                canonical={`/products/${id}`}
+                structuredData={[productStructuredData, breadcrumbData]}
             />
 
             {/* Sticky Top App Bar */}
@@ -269,7 +260,7 @@ export const ProductDetail: React.FC = () => {
                                 favorite
                             </span>
                         </button>
-                        <button onClick={handleShare} className="text-[#0e1a18] dark:text-white flex items-center justify-center">
+                        <button className="text-[#0e1a18] dark:text-white flex items-center justify-center">
                             <span className="material-symbols-outlined">share</span>
                         </button>
                     </div>
@@ -277,7 +268,7 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Hero Image Section (Horizontal Slider) */}
-            <div ref={ref as any} className="@container relative group">
+            <div className="@container relative group">
                 <div
                     id="image-slider"
                     className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar bg-gray-200"
@@ -298,7 +289,7 @@ export const ProductDetail: React.FC = () => {
                             >
                                 <img
                                     {...getResponsiveImageProps(img, 'banner')}
-                                    alt={`${product.name} - ${product.tags?.[0] || 'モンゴル旅行'} の風景 ${index + 1}`}
+                                    alt={`${product.name} - ${index + 1}`}
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent pointer-events-none" />
@@ -333,17 +324,7 @@ export const ProductDetail: React.FC = () => {
                     ))}
                 </div>
                 <h1 className="text-[28px] font-bold leading-tight pt-2">{product.name}</h1>
-                
-                {/* Japanese Trust Badge */}
-                <div className="mt-3 flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
-                    <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[20px] shrink-0 mt-0.5">verified_user</span>
-                    <div>
-                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{t('product_detail.trust_badge')}</p>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1 leading-relaxed">{t('product_detail.trust_message')}</p>
-                    </div>
-                </div>
-
-                <div className="flex items-baseline gap-2 pt-4">
+                <div className="flex items-baseline gap-2 pt-2">
                     <p className="text-2xl font-bold text-primary">¥{product.price.toLocaleString()}</p>
                     {product.originalPrice && (
                         <p className="text-sm text-gray-500 line-through">¥{product.originalPrice.toLocaleString()}</p>
@@ -401,13 +382,13 @@ export const ProductDetail: React.FC = () => {
                 {/* Unified Detail Content (Blocks) */}
                 {product.detailBlocks && product.detailBlocks.length > 0 ? (
                     <div className="space-y-8 mb-8">
-                        {product.detailBlocks.map((block, index, arr) => {
+                        {product.detailBlocks.map(block => {
                             if (block.type === 'image') {
                                 return (
                                     <img
                                         key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'original')}
-                                        alt={`${product.name} の魅力と体験 - その${index + 1}`}
+                                        src={getOptimizedImageUrl(block.content as string, 'productDetail')}
+                                        alt="Detailed info"
                                         className="w-full h-auto"
                                         loading="lazy"
                                     />
@@ -427,7 +408,7 @@ export const ProductDetail: React.FC = () => {
                                                 >
                                                     <img
                                                         src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                        alt={`${product.name} ${slide.title || ''} - 写真${imgIdx + 1}`}
+                                                        alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
                                                     />
@@ -456,103 +437,6 @@ export const ProductDetail: React.FC = () => {
                                             }`}
                                     />
                                 );
-                            } else if (block.type === 'timeline') {
-                                const timeline = block.content as TimelineContent;
-                                
-                                return (
-                                    <div key={block.id} className="relative pb-8 px-6">
-                                        <div className="flex gap-4 items-stretch">
-                                            <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
-                                                <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
-                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
-                                            </div>
-                                            <div className="flex-1 pb-1">
-                                                {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
-                                                <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
-                                                {timeline.description && (
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                                                        {timeline.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {timeline.images && timeline.images.length > 0 && (
-                                            <div className="pl-10 mt-3">
-                                                <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
-                                                    {timeline.images.map((img, imgIdx) => (
-                                                        <img
-                                                            key={imgIdx}
-                                                            src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                            alt={`${timeline.title} - ${imgIdx + 1}`}
-                                                            className="w-[70%] md:w-48 h-32 md:h-32 object-cover rounded-xl shrink-0 snap-center shadow-sm border border-gray-100 dark:border-gray-800"
-                                                            loading="lazy"
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            } else if (block.type === 'dayInfo') {
-                                const dayInfo = block.content as DayInfoContent;
-                                const hasMeals = dayInfo.meals && (dayInfo.meals.breakfast || dayInfo.meals.lunch || dayInfo.meals.dinner);
-                                
-                                return (
-                                    <div key={block.id} className="px-4 mb-2">
-                                        <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-900/20 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                                            <div className="flex items-baseline gap-3 mb-2">
-                                                <span className="text-xl font-black text-primary tracking-tight">{dayInfo.dayLabel}</span>
-                                                {dayInfo.dayDate && <span className="text-sm text-slate-500 font-medium">{dayInfo.dayDate}</span>}
-                                            </div>
-                                            {dayInfo.title && <p className="text-base font-bold text-slate-800 dark:text-slate-200 mb-2 leading-tight">{dayInfo.title}</p>}
-                                            {dayInfo.description && <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-400 mb-4">{dayInfo.description}</p>}
-                                            {(hasMeals || dayInfo.accommodation) && (
-                                                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700/60 space-y-1">
-                                                    {dayInfo.meals!.breakfast && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>朝食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちょうしょく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.breakfast}</span>
-                                                        </div>
-                                                    )}
-                                                    {dayInfo.meals!.lunch && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>昼食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちゅうしょく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.lunch}</span>
-                                                        </div>
-                                                    )}
-                                                    {dayInfo.meals!.dinner && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>夕食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ゆうしょく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.dinner}</span>
-                                                        </div>
-                                                    )}
-                                                    {dayInfo.accommodation && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1 mt-1 font-medium">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">hotel</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>宿泊</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(しゅくはく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.accommodation}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
                             }
                             return null;
                         })}
@@ -565,8 +449,8 @@ export const ProductDetail: React.FC = () => {
                                 {product.detailImages.map((img, index) => (
                                     <img
                                         key={index}
-                                        src={getOptimizedImageUrl(img, 'original')}
-                                        alt={`${product.name} のハイライト - その${index + 1}`}
+                                        src={getOptimizedImageUrl(img, 'productItinerary')}
+                                        alt={`Detail ${index + 1}`}
                                         className="w-full h-auto"
                                         loading="lazy"
                                     />
@@ -619,13 +503,13 @@ export const ProductDetail: React.FC = () => {
 
                 {product.itineraryBlocks && product.itineraryBlocks.length > 0 ? (
                     <div className="space-y-8 pb-8">
-                        {product.itineraryBlocks.map((block, index, arr) => {
+                        {product.itineraryBlocks.map(block => {
                             if (block.type === 'image') {
                                 return (
                                     <img
                                         key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'original')}
-                                        alt={`${product.name} - 旅の様子 ${index + 1}`}
+                                        src={getOptimizedImageUrl(block.content as string, 'productItinerary')}
+                                        alt="Itinerary info"
                                         className="w-full h-auto"
                                         loading="lazy"
                                     />
@@ -674,103 +558,6 @@ export const ProductDetail: React.FC = () => {
                                             }`}
                                     />
                                 );
-                            } else if (block.type === 'timeline') {
-                                const timeline = block.content as TimelineContent;
-                                
-                                return (
-                                    <div key={block.id} className="relative pb-8 px-6">
-                                        <div className="flex gap-4 items-stretch">
-                                            <div className="flex flex-col items-center shrink-0 w-6 relative mt-1">
-                                                <div className="w-3 h-3 rounded-full bg-primary relative z-10 ring-4 ring-white dark:ring-background-dark shrink-0"></div>
-                                                <div className="w-[2px] bg-primary/20 absolute top-3 bottom-0 left-1/2 -translate-x-1/2 z-0"></div>
-                                            </div>
-                                            <div className="flex-1 pb-1">
-                                                {timeline.time && <div className="text-sm text-primary font-bold mb-1">{timeline.time}</div>}
-                                                <h4 className="font-bold text-base mb-2">{timeline.title}</h4>
-                                                {timeline.description && (
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                                                        {timeline.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {timeline.images && timeline.images.length > 0 && (
-                                            <div className="pl-10 mt-3">
-                                                <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
-                                                    {timeline.images.map((img, imgIdx) => (
-                                                        <img
-                                                            key={imgIdx}
-                                                            src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                            alt={`${product.name} ${timeline.title} - 旅の風景 ${imgIdx + 1}`}
-                                                            className="w-[70%] md:w-48 h-32 md:h-32 object-cover rounded-xl shrink-0 snap-center shadow-sm border border-gray-100 dark:border-gray-800"
-                                                            loading="lazy"
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            } else if (block.type === 'dayInfo') {
-                                const dayInfo = block.content as DayInfoContent;
-                                const hasMeals = dayInfo.meals && (dayInfo.meals.breakfast || dayInfo.meals.lunch || dayInfo.meals.dinner);
-                                
-                                return (
-                                    <div key={block.id} className="px-4 mb-2">
-                                        <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-900/20 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                                            <div className="flex items-baseline gap-3 mb-2">
-                                                <span className="text-xl font-black text-primary tracking-tight">{dayInfo.dayLabel}</span>
-                                                {dayInfo.dayDate && <span className="text-sm text-slate-500 font-medium">{dayInfo.dayDate}</span>}
-                                            </div>
-                                            {dayInfo.title && <p className="text-base font-bold text-slate-800 dark:text-slate-200 mb-2 leading-tight">{dayInfo.title}</p>}
-                                            {dayInfo.description && <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-400 mb-4">{dayInfo.description}</p>}
-                                            {(hasMeals || dayInfo.accommodation) && (
-                                                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-700/60 space-y-1">
-                                                    {dayInfo.meals!.breakfast && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>朝食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちょうしょく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.breakfast}</span>
-                                                        </div>
-                                                    )}
-                                                    {dayInfo.meals!.lunch && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>昼食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ちゅうしょく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.lunch}</span>
-                                                        </div>
-                                                    )}
-                                                    {dayInfo.meals!.dinner && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">restaurant</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>夕食</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(ゆうしょく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.meals!.dinner}</span>
-                                                        </div>
-                                                    )}
-                                                    {dayInfo.accommodation && (
-                                                        <div className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 py-1 mt-1 font-medium">
-                                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-[2px]">hotel</span>
-                                                            <div className="font-bold text-slate-700 dark:text-slate-200 shrink-0 whitespace-nowrap w-28 flex items-baseline">
-                                                                <span>宿泊</span>
-                                                                <span className="text-[10px] text-slate-400 font-normal ml-1.5">(しゅくはく)</span>
-                                                            </div>
-                                                            <span className="flex-1 leading-relaxed break-keep mt-[1px]">{dayInfo.accommodation}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
                             }
                             return null;
                         })}
@@ -780,8 +567,8 @@ export const ProductDetail: React.FC = () => {
                         {product.itineraryImages.map((img, index) => (
                             <img
                                 key={index}
-                                src={getOptimizedImageUrl(img, 'original')}
-                                alt={`${product.name} - 旅の様子 ${index + 1}`}
+                                src={getOptimizedImageUrl(img, 'productItinerary')}
+                                alt={`Itinerary ${index + 1}`}
                                 className="w-full h-auto"
                                 loading="lazy"
                             />
@@ -817,29 +604,22 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Floating Bottom Bar */}
-            <div 
-                className={`fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 pb-safe-area-inset-bottom z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] transition-transform duration-700 ${isBottomBarVisible ? 'translate-y-0' : 'translate-y-full'}`}
-            >
-                <div className="max-w-md mx-auto flex items-center gap-3">
-                    <div className="flex-1 flex gap-2">
-                        <a
-                            href="https://jzz1k.channel.io/home"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 h-12 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-                        >
-                            <span className="material-symbols-outlined text-xl">chat_bubble</span>
-                            {t('product_detail.consult_button')}
-                        </a>
-                        <button 
-                            onClick={() => navigate(`/reservation/${id}`)}
-                            className="flex-1 h-12 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20 active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            {t('product_detail.book_button')}
-                            <span className="material-symbols-outlined text-lg">arrow_forward</span>
-                        </button>
-                    </div>
-                </div>
+            <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 p-4 flex gap-3 z-50">
+                <a
+                    href="https://jzz1k.channel.io/home"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 h-14 rounded-xl border border-primary text-primary font-bold flex items-center justify-center gap-2"
+                >
+                    <span className="material-symbols-outlined">chat_bubble</span>
+                    {t('product_detail.consult_button')}
+                </a>
+                <button
+                    onClick={() => navigate(`/reservation/${id}`)}
+                    className="flex-1 bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30"
+                >
+                    {t('product_detail.book_button')}
+                </button>
             </div>
         </div>
     );

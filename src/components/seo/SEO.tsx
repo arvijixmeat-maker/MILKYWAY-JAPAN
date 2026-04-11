@@ -8,8 +8,8 @@ interface SEOProps {
     keywords?: string;
     image?: string;
     url?: string;
-    structuredData?: Record<string, any>;
-    breadcrumb?: { name: string; url: string }[];
+    canonical?: string;
+    structuredData?: Record<string, any> | Record<string, any>[];
 }
 
 export const SEO: React.FC<SEOProps> = ({
@@ -18,8 +18,8 @@ export const SEO: React.FC<SEOProps> = ({
     keywords,
     image,
     url,
-    structuredData,
-    breadcrumb
+    canonical,
+    structuredData
 }) => {
     const metaTitle = title
         ? `${title} | Milkyway Japan`
@@ -29,18 +29,12 @@ export const SEO: React.FC<SEOProps> = ({
     const metaKeywords = keywords || SEO_CONSTANTS.KEYWORDS;
     const metaImage = image ? (image.startsWith('http') ? image : `${SEO_CONSTANTS.SITE_URL}${image}`) : `${SEO_CONSTANTS.SITE_URL}${SEO_CONSTANTS.OG_IMAGE}`;
     const metaUrl = url ? `${SEO_CONSTANTS.SITE_URL}${url}` : SEO_CONSTANTS.SITE_URL;
+    const canonicalUrl = canonical ? `${SEO_CONSTANTS.SITE_URL}${canonical}` : metaUrl;
 
-    // Generate Breadcrumb JSON-LD if provided
-    const breadcrumbData = breadcrumb ? {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": breadcrumb.map((item, index) => ({
-            "@type": "ListItem",
-            "position": index + 1,
-            "name": item.name,
-            "item": item.url.startsWith('http') ? item.url : `${SEO_CONSTANTS.SITE_URL}${item.url}`
-        }))
-    } : null;
+    // Normalize structuredData to always be an array
+    const structuredDataArray = structuredData
+        ? (Array.isArray(structuredData) ? structuredData : [structuredData])
+        : [];
 
     return (
         <Helmet htmlAttributes={{ lang: 'ja' }}>
@@ -49,11 +43,7 @@ export const SEO: React.FC<SEOProps> = ({
             <meta name="keywords" content={metaKeywords} />
 
             {/* Canonical URL */}
-            <link rel="canonical" href={metaUrl} />
-
-            {/* Hreflang Tags */}
-            <link rel="alternate" hreflang="ja" href={metaUrl} />
-            <link rel="alternate" hreflang="x-default" href={metaUrl} />
+            <link rel="canonical" href={canonicalUrl} />
 
             {/* Open Graph / Facebook */}
             <meta property="og:type" content="website" />
@@ -71,19 +61,13 @@ export const SEO: React.FC<SEOProps> = ({
             <meta property="twitter:description" content={metaDescription} />
             <meta property="twitter:image" content={metaImage} />
 
-            {/* Structured Data (JSON-LD) */}
-            {structuredData && (
-                <script type="application/ld+json">
-                    {JSON.stringify(structuredData)}
+            {/* Structured Data (JSON-LD) — supports single or multiple schemas */}
+            {structuredDataArray.map((data, index) => (
+                <script key={`jsonld-${index}`} type="application/ld+json">
+                    {JSON.stringify(data)}
                 </script>
-            )}
-            
-            {/* Breadcrumb Data */}
-            {breadcrumbData && (
-                <script type="application/ld+json">
-                    {JSON.stringify(breadcrumbData)}
-                </script>
-            )}
+            ))}
         </Helmet>
     );
 };
+

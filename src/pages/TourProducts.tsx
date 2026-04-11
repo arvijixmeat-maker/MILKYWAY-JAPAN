@@ -209,6 +209,7 @@ export const TourProducts: React.FC = () => {
                 title={t('products.seo_title')}
                 description={t('products.seo_description')}
                 keywords={t('products.seo_keywords')}
+                canonical="/products"
             />
             {/* Top App Bar & Search */}
             <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
@@ -219,7 +220,7 @@ export const TourProducts: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">{t('products.header_title')}</h2>
+                    <span className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">{t('products.header_title')}</span>
                     <div className="flex w-12 items-center justify-end absolute right-4">
                     </div>
                 </div>
@@ -285,6 +286,16 @@ export const TourProducts: React.FC = () => {
                     </div>
                 </div>
             </header>
+
+            {/* SEO: Page H1 + Intro */}
+            <section className="px-4 pt-4 pb-2">
+                <h1 className="text-xl font-bold text-[#0e1a18] dark:text-white leading-tight mb-1">
+                    モンゴルツアー商品一覧
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    モンゴル乗馬旅行、ゴビ砂漠ツアー、テレルジ国立公園、フブスグル湖など、地域・テーマ別にモンゴルツアーをお探しいただけます。
+                </p>
+            </section>
 
             <main>
                 {/* Section: Popular Products Horizontal Scroll */}

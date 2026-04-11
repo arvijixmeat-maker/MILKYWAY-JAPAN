@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api'; 
 import { BottomNav } from '../components/layout/BottomNav';
+import { SEO } from '../components/seo/SEO';
 
 // Define Review type locally or import if available, matching Cloudflare + Frontend needs
 interface Review {
@@ -103,8 +104,30 @@ export const UserReviews: React.FC = () => {
         return totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
     };
 
+    // Build AggregateRating structured data only when we have actual reviews
+    const reviewStructuredData = totalReviews > 0 ? {
+        "@context": "https://schema.org",
+        "@type": "TravelAgency",
+        "name": "Milkyway Japan",
+        "url": "https://mongolryokou.com",
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": averageRating,
+            "reviewCount": totalReviews.toString(),
+            "bestRating": "5",
+            "worstRating": "1"
+        }
+    } : undefined;
+
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen pb-20">
+            <SEO
+                title="お客様のモンゴル旅行レビュー"
+                description={`モンゴルツアーに参加されたお客様のリアルな旅行レビュー${totalReviews > 0 ? `（${totalReviews}件・平均${averageRating}点）` : ''}。実際の体験談でツアー選びの参考にしてください。`}
+                keywords="モンゴル旅行レビュー, モンゴルツアー口コミ, モンゴル旅行体験談, Milkyway Japan レビュー"
+                canonical="/reviews"
+                structuredData={reviewStructuredData}
+            />
             {/* Nav */}
             <nav className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center p-4 justify-between max-w-md mx-auto">
@@ -114,11 +137,19 @@ export const UserReviews: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">ユーザーレビュー</h2>
+                    <span className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">ユーザーレビュー</span>
                 </div>
             </nav>
 
             <main className="max-w-md mx-auto pb-24 relative">
+                {/* SEO: H1 + Intro */}
+                <section className="px-4 pt-4 pb-2">
+                    <h1 className="text-xl font-bold text-[#0e1a18] dark:text-white mb-1">モンゴル旅行のお客様レビュー</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                        実際にモンゴルツアーに参加されたお客様の体験談をご紹介。ツアー選びの参考にしてください。
+                    </p>
+                </section>
+
                 {/* Score Section */}
                 <section className="bg-white dark:bg-zinc-900 p-6 mb-2 border-b border-gray-100 dark:border-zinc-800">
                     <div className="flex flex-col md:flex-row gap-8">

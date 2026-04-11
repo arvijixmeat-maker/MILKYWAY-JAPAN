@@ -87,6 +87,7 @@ export const TravelGuide: React.FC = () => {
                 title={`${t('travel_guide.title')} | Milkyway Japan`}
                 description="モンゴル旅行の必須情報！モンゴルの基本情報、旅行のヒント、地域別ガイド、文化やグルメ情報をチェックしましょう。"
                 keywords="モンゴル旅行ガイド, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備"
+                canonical="/travel-guide"
             />
             {/* Sticky Header Container */}
             <div className="sticky top-0 z-50 bg-[#f8f7f8]/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200">
@@ -104,9 +105,12 @@ export const TravelGuide: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-text-primary dark:text-white tracking-tight mb-6">
+                    <h1 className="text-3xl font-bold text-text-primary dark:text-white tracking-tight mb-2">
                         {t('travel_guide.title')}
                     </h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
+                        モンゴルの大自然、遊牧文化、おすすめスポットなど、旅行前に知っておきたい情報をまとめてご紹介します。
+                    </p>
                     {/* Search Bar */}
                     <div className="relative w-full">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

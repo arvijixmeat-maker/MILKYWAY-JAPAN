@@ -15,6 +15,34 @@ const getAbsoluteImageUrl = (url: string) => {
     return `${SEO_CONSTANTS.SITE_URL}${url.startsWith('/') ? url : `/${url}`}`;
 };
 
+// Per-page SEO configurations for static routes
+const STATIC_PAGE_META: Record<string, { title: string; description: string }> = {
+    '/products': {
+        title: 'モンゴルツアー商品一覧 | Milkyway Japan',
+        description: 'モンゴル乗馬旅行、ゴビ砂漠ツアー、テレルジ国立公園、フブスグル湖など、地域・テーマ別にモンゴルツアーをお探しいただけます。日本語ガイド同行で安心。'
+    },
+    '/travel-guide': {
+        title: 'モンゴル旅行ガイド | Milkyway Japan',
+        description: 'モンゴルの大自然、遊牧文化、おすすめスポット、持ち物リストなど、モンゴル旅行前に知っておきたい情報をまとめてご紹介。'
+    },
+    '/faq': {
+        title: 'よくある質問（FAQ） | Milkyway Japan',
+        description: 'モンゴル旅行に関するよくある質問と回答。予約方法、ツアー内容、持ち物、ビザ、決済・キャンセルなど、モンゴルツアーの疑問を解決します。'
+    },
+    '/reviews': {
+        title: 'お客様のモンゴル旅行レビュー | Milkyway Japan',
+        description: 'モンゴルツアーに参加されたお客様のリアルな旅行レビュー。実際の体験談でツアー選びの参考にしてください。'
+    },
+    '/custom-estimate': {
+        title: 'オーダーメイド見積もり | Milkyway Japan',
+        description: 'お客様のご要望に合わせたモンゴルツアーのオーダーメイドプランをご提案。日程・予算・目的地を自由にカスタマイズ。'
+    },
+    '/travel-mates': {
+        title: '同行者募集 | Milkyway Japan',
+        description: 'モンゴル旅行の同行者を募集・検索。一人旅が不安な方も、旅仲間を見つけてモンゴルツアーを一緒に楽しみましょう。'
+    }
+};
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 1. Get the original response from the asset (usually index.html for unknown routes in an SPA)
     const response = await context.next();
@@ -32,8 +60,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     let pageDescription = SEO_CONSTANTS.DESCRIPTION;
     let pageImage = getAbsoluteImageUrl(SEO_CONSTANTS.OG_IMAGE);
     const pageUrl = url.href;
-    
-    let jsonLdString = '';
+    const canonicalUrl = `${SEO_CONSTANTS.SITE_URL}${path === '/' ? '/' : path.replace(/\/$/, '')}`;
+
+    // Check static routes first
+    const normalizedPath = path.replace(/\/$/, '') || '/';
+    if (STATIC_PAGE_META[normalizedPath]) {
+        pageTitle = STATIC_PAGE_META[normalizedPath].title;
+        pageDescription = STATIC_PAGE_META[normalizedPath].description;
+    }
 
     try {
         const db = drizzle(context.env.DB);
@@ -57,23 +91,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 if (images && images.length > 0) {
                     pageImage = getAbsoluteImageUrl(images[0]);
                 }
-
-                // Construct Safe JSON-LD (No fake reviews)
-                const productJsonLd = {
-                    "@context": "https://schema.org",
-                    "@type": "Product",
-                    "name": product.name,
-                    "image": pageImage,
-                    "description": pageDescription,
-                    "offers": {
-                        "@type": "Offer",
-                        "priceCurrency": "JPY",
-                        "price": product.price,
-                        "availability": "https://schema.org/InStock",
-                        "url": pageUrl
-                    }
-                };
-                jsonLdString = JSON.stringify(productJsonLd);
             }
         }
         // --- Logic for Travel Guides (Magazines) ---
@@ -92,17 +109,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                         if (imageStr) {
                             pageImage = getAbsoluteImageUrl(imageStr);
                         }
-
-                        // Construct Safe JSON-LD for Articles
-                        const articleJsonLd = {
-                            "@context": "https://schema.org",
-                            "@type": "Article",
-                            "headline": guide.title,
-                            "image": [pageImage],
-                            "description": pageDescription,
-                            "url": pageUrl
-                        };
-                        jsonLdString = JSON.stringify(articleJsonLd);
                     }
                 } catch (e) {
                     console.log("Guide meta fetch skipped/failed:", e);
@@ -119,47 +125,38 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new HTMLRewriter()
         .on('title', {
             element(element) {
+                // Remove existing title content — we'll inject our own
                 element.setInnerContent(pageTitle);
             }
         })
-        .on('meta', {
+        .on('meta[name="description"]', {
             element(element) {
-                const name = element.getAttribute('name');
-                const property = element.getAttribute('property');
-                const targetTags = [
-                    'description', 'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image',
-                    'og:title', 'og:description', 'og:image', 'og:url', 'og:type', 'og:site_name'
-                ];
-                if ((name && targetTags.includes(name)) || (property && targetTags.includes(property))) {
-                    element.remove();
-                }
+                // Update existing description meta
+                element.setAttribute('content', pageDescription);
+            }
+        })
+        .on('link[rel="canonical"]', {
+            element(element) {
+                // Update canonical URL
+                element.setAttribute('href', canonicalUrl);
             }
         })
         .on('head', {
             element(element) {
                 element.append(`\n<!-- Injected by Cloudflare Edge SSR -->`, { html: true });
-                
-                // Standard meta
-                element.append(`\n<meta name="description" content="${pageDescription}">`, { html: true });
 
-                // Open Graph
+                // Open Graph (appended — browsers/crawlers use last occurrence)
                 element.append(`\n<meta property="og:title" content="${pageTitle}">`, { html: true });
                 element.append(`\n<meta property="og:description" content="${pageDescription}">`, { html: true });
                 element.append(`\n<meta property="og:image" content="${pageImage}">`, { html: true });
                 element.append(`\n<meta property="og:url" content="${pageUrl}">`, { html: true });
-                element.append(`\n<meta property="og:type" content="website">`, { html: true });
 
                 // Twitter Card
-                element.append(`\n<meta name="twitter:card" content="summary_large_image">`, { html: true });
                 element.append(`\n<meta name="twitter:title" content="${pageTitle}">`, { html: true });
                 element.append(`\n<meta name="twitter:description" content="${pageDescription}">`, { html: true });
                 element.append(`\n<meta name="twitter:image" content="${pageImage}">`, { html: true });
-
-                // Dynamic JSON-LD structured data (Safe schema)
-                if (jsonLdString) {
-                    element.append(`\n<script type="application/ld+json">\n${jsonLdString}\n</script>`, { html: true });
-                }
             }
         })
         .transform(response);
 };
+
