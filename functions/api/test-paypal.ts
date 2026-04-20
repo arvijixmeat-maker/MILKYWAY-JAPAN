@@ -32,7 +32,7 @@ app.get('/', async (c) => {
             businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
             customerEmail,
             customerName: 'テスト 顧客',
-            reservationNumber: 'MN-TEST',
+            reservationNumber: `MN-TEST-${Date.now()}`,
             productName: 'テストツアー',
             depositAmount: 1000,
         });
