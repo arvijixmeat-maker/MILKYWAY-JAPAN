@@ -173,6 +173,31 @@ function tplGuideAssigned(data: any) {
 </div>`);
 }
 
+function tplEstimateCompleted(data: any) {
+    return baseLayout(`
+<div class="header">
+  <h1>🐴 Milkyway Japan</h1>
+  <p>オーダーメイド見積もり完了</p>
+</div>
+<div class="body">
+  <p class="greeting">${data.customerName} 様</p>
+  <p>お待たせいたしました。<br>モンゴル旅行のお見積もりが完成いたしました。</p>
+  <div class="card">
+    <div class="card-row"><span class="label">目的地</span><span class="value">${data.destination || '-'}</span></div>
+  </div>
+  ${data.adminNote ? `<div class="highlight"><strong>📝 担当者からのメッセージ</strong><br><br>${data.adminNote}</div>` : ''}
+  ${data.estimateUrl ? `<div style="text-align:center;margin:24px 0;">
+    <a class="btn" href="${data.estimateUrl}" style="font-size:16px;">📄 見積もりを確認する</a>
+    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">リンクが開かない場合: ${data.estimateUrl}</p>
+  </div>` : ''}
+  <p style="font-size:14px;color:#4a6b64;">ご不明な点はいつでもご連絡ください。</p>
+</div>
+<div class="footer">
+  <a href="https://mongolryokou.com">mongolryokou.com</a> |
+  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
+</div>`);
+}
+
 // ─── Route Handler ───────────────────────────────────────────────────
 
 app.post('/', async (c) => {
@@ -209,6 +234,11 @@ app.post('/', async (c) => {
             case 'GUIDE_ASSIGNED':
                 subject = `【ガイド決定】${data.productName || 'ツアー'} 担当ガイドのご案内 | Milkyway Japan`;
                 html = tplGuideAssigned(data);
+                break;
+
+            case 'ESTIMATE_COMPLETED':
+                subject = '【見積もり完了】モンゴル旅行のお見積もりをお送りします | Milkyway Japan';
+                html = tplEstimateCompleted(data);
                 break;
 
             default:

@@ -100,51 +100,48 @@ export const AdminQuoteManage: React.FC = () => {
         };
     }, [requests]);
 
-    // Get bank account settings (Hardcoded for now or fetch from Cloudflare later)
-    const bankAccount = {
-        bankName: '국민은행',
-        accountNumber: '1234-56-7890',
-        accountHolder: '몽골리아 은하수'
-    };
-
     const handleConvertToReservation = async (data: { startDate: string; endDate: string; totalAmount: number; deposit: number }) => {
         if (!selectedRequest) return;
 
         try {
-            // Calculate Duration (Nights & Days)
+            // 박수 계산
             const start = new Date(data.startDate);
             const end = new Date(data.endDate);
-            const diffTime = Math.abs(end.getTime() - start.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
             const durationText = `${diffDays}박 ${diffDays + 1}일`;
 
-            // 1. Create New Reservation via API
+            // 1. 실제 계좌 정보 가져오기
+            let bankAccount = { bankName: '', accountNumber: '', accountHolder: '' };
+            try {
+                const settings = await api.settings.get('bank_account');
+                if (settings?.value) bankAccount = settings.value;
+            } catch { /* 설정 없으면 빈 값 */ }
+
+            // 2. 예약 생성
             const newReservation = await api.reservations.create({
                 user_id: selectedRequest.userId || null,
                 type: 'quote',
-                product_name: `${selectedRequest.destination} 맞춤 견적`,
+                product_name: `${selectedRequest.destination} 맞춤견적`,
                 customer_name: selectedRequest.name,
                 customer_phone: selectedRequest.phone,
                 customer_email: selectedRequest.email,
                 total_people: selectedRequest.headcount,
                 start_date: data.startDate,
                 end_date: data.endDate,
-                status: 'pending',
+                duration: durationText,
+                status: 'pending_payment',
                 price_breakdown: {
                     total: data.totalAmount,
                     deposit: data.deposit,
                     local: data.totalAmount - data.deposit
                 },
-                bank_account: {
-                    bankName: '국민은행',
-                    accountNumber: '123-456-789012',
-                    accountHolder: '밀키웨이투어'
-                }
+                bank_account: bankAccount,
             });
 
-            // 2. Update Quote Status to 'converted' AND sync final prices
-            const requestId = selectedRequest.id;
+            const reservationNumber = newReservation.reservationNumber || newReservation.id?.slice(0, 8);
 
+            // 3. 견적 상태 → converted
+            const requestId = selectedRequest.id;
             await api.quotes.update(requestId, {
                 status: 'converted',
                 confirmed_price: data.totalAmount,
@@ -154,21 +151,36 @@ export const AdminQuoteManage: React.FC = () => {
                 updated_at: new Date().toISOString()
             });
 
-            // Reflect in local state
+            // 4. 고객에게 예약 확인 이메일 자동 발송
+            try {
+                await sendNotificationEmail(
+                    selectedRequest.email,
+                    'RESERVATION_REQUESTED',
+                    {
+                        customerName: selectedRequest.name,
+                        productName: `${selectedRequest.destination} 맞춤견적 (${durationText})`,
+                        reservationId: reservationNumber,
+                        depositAmount: `¥${data.deposit.toLocaleString()}`,
+                        customerPhone: selectedRequest.phone,
+                        customerEmail: selectedRequest.email,
+                    }
+                );
+            } catch (emailErr) {
+                console.error('이메일 발송 실패:', emailErr);
+            }
+
             setRequests(prev => prev.map(req =>
                 req.id === requestId ? { ...req, status: 'converted' } : req
             ));
-
-            // 4. Close Modals & Notify
             setIsConvertModalOpen(false);
             setSelectedRequest(null);
 
-            if (confirm('예약이 성공적으로 생성되었습니다!\n[예약 관리] 페이지로 이동하여 확인하시겠습니까?')) {
+            if (confirm(`예약 ${reservationNumber} 생성 완료!\n고객에게 확인 이메일을 발송했습니다.\n[예약 관리] 페이지로 이동하시겠습니까?`)) {
                 navigate('/admin/reservations');
             }
 
         } catch (error: any) {
-            console.error("Failed to convert reservation:", error);
+            console.error('예약 변환 오류:', error);
             alert(`예약 변환 중 오류가 발생했습니다: ${error.message || error}`);
         }
     };

@@ -55,35 +55,41 @@ export const ConvertSelectionModal: React.FC<{
     const [deposit, setDeposit] = useState(0);
 
     useEffect(() => {
-        if (request) {
-            // Parse dates from period string (format: "2026-01-19 ~ 2026-01-23" or "07.15 ~ 07.22")
-            if (request.period && request.period.includes('~')) {
-                const parts = request.period.split('~').map(p => p.trim());
-                if (parts.length === 2) {
-                    // Check if it's already in YYYY-MM-DD format
-                    if (parts[0].includes('-') && parts[0].length >= 10) {
-                        setStartDate(parts[0].substring(0, 10));
-                        setEndDate(parts[1].substring(0, 10));
-                    } else if (parts[0].includes('.')) {
-                        // Format like "01.19" - assume current year
-                        const year = new Date().getFullYear();
-                        const [startMonth, startDay] = parts[0].split('.').map(n => n.padStart(2, '0'));
-                        const [endMonth, endDay] = parts[1].split('.').map(n => n.padStart(2, '0'));
-                        // Handle year boundary roughly or assume current/next year
-                        setStartDate(`${year}-${startMonth}-${startDay}`);
-                        setEndDate(`${year}-${endMonth}-${endDay}`);
-                    }
+        if (!request) return;
+
+        // 1순위: 이미 견적서에서 확정된 금액/날짜가 있으면 우선 사용
+        if (request.confirmed_start_date) setStartDate(request.confirmed_start_date.substring(0, 10));
+        if (request.confirmed_end_date) setEndDate(request.confirmed_end_date.substring(0, 10));
+        if (request.confirmed_price) {
+            setTotalAmount(request.confirmed_price);
+            setDeposit(request.deposit || Math.floor(request.confirmed_price * 0.1));
+            return;
+        }
+
+        // 2순위: 확정 데이터 없으면 period 문자열 파싱
+        if (!request.confirmed_start_date && request.period && request.period.includes('~')) {
+            const parts = request.period.split('~').map(p => p.trim());
+            if (parts.length === 2) {
+                if (parts[0].includes('-') && parts[0].length >= 10) {
+                    setStartDate(parts[0].substring(0, 10));
+                    setEndDate(parts[1].substring(0, 10));
+                } else if (parts[0].includes('.')) {
+                    const year = new Date().getFullYear();
+                    const [startMonth, startDay] = parts[0].split('.').map(n => n.padStart(2, '0'));
+                    const [endMonth, endDay] = parts[1].split('.').map(n => n.padStart(2, '0'));
+                    setStartDate(`${year}-${startMonth}-${startDay}`);
+                    setEndDate(`${year}-${endMonth}-${endDay}`);
                 }
             }
+        }
 
-            // Parse budget (format: "150만원" or "150만원 ~" or "232만원")
-            if (request.budget) {
-                const budgetMatch = request.budget.match(/(\d+)/);
-                if (budgetMatch) {
-                    const budgetNum = parseInt(budgetMatch[1]) * 10000; // 만원 to 원
-                    setTotalAmount(budgetNum);
-                    setDeposit(Math.floor(budgetNum * 0.1)); // 10% as deposit
-                }
+        // 3순위: 금액은 예산 문자열에서 파싱
+        if (!request.confirmed_price && request.budget) {
+            const budgetMatch = request.budget.match(/(\d+)/);
+            if (budgetMatch) {
+                const budgetNum = parseInt(budgetMatch[1]) * 10000;
+                setTotalAmount(budgetNum);
+                setDeposit(Math.floor(budgetNum * 0.1));
             }
         }
     }, [request]);
