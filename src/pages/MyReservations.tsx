@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Reservation {
     id: string;
+    reservationNumber?: string;
     status: string;
     productName: string;
     startDate: string;
@@ -16,7 +17,6 @@ interface Reservation {
     duration?: string;
     totalPeople: number;
     priceBreakdown: any;
-    bankAccount: any;
     createdAt: string;
     contractUrl?: string;
     itineraryUrl?: string;
@@ -46,33 +46,9 @@ export const MyReservations: React.FC = () => {
     // Tabs: 'reservations' | 'quotes'
     const [activeTab, setActiveTab] = useState<'reservations' | 'quotes'>('reservations');
 
-    // Global bank settings fallback
-    const [globalBankSettings, setGlobalBankSettings] = useState<any>(null);
     const [reservations, setReservations] = useState<Reservation[]>([]);
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const data = await api.settings.get('bank_account');
-                if (data?.value) {
-                    setGlobalBankSettings(data.value);
-                }
-            } catch (e) {
-                console.error('Failed to fetch bank settings', e);
-            }
-        };
-        fetchSettings();
-    }, []);
-
-    const getDisplayBankAccount = (reservation: Reservation) => {
-        // Priority: 1. Reservation-specific (if valid) 2. Global settings
-        if (reservation.bankAccount?.bankName) return reservation.bankAccount;
-        if (globalBankSettings) return globalBankSettings;
-        return null; // Both missing
-    };
-
 
     useEffect(() => {
         const tabParam = searchParams.get('tab');
@@ -108,14 +84,14 @@ export const MyReservations: React.FC = () => {
                 if (myReservations) {
                     const mappedRes = myReservations.map((r: any) => ({
                         id: r.id,
+                        reservationNumber: r.reservationNumber || r.reservation_number,
                         status: r.status,
                         productName: r.product_name || r.productName,
                         startDate: r.start_date || r.startDate || r.date,
                         endDate: r.end_date || r.endDate,
                         duration: r.duration,
                         totalPeople: r.total_people || r.travelers || r.totalPeople,
-                        priceBreakdown: r.price_breakdown || r.priceBreakdown,
-                        bankAccount: r.bank_account || r.bankAccount,
+                        priceBreakdown: r.price_breakdown || { total: r.totalPrice || r.total_price, deposit: r.depositAmount || r.deposit_amount, local: r.balanceAmount || r.balance_amount },
                         createdAt: r.created_at || r.createdAt,
                         contractUrl: r.contract_url || r.contractUrl,
                         itineraryUrl: r.itinerary_url || r.itineraryUrl,
@@ -302,18 +278,17 @@ export const MyReservations: React.FC = () => {
                                 </div>
                             ) : (
                                 reservations.map((reservation) => {
-                                    const displayBankAccount = getDisplayBankAccount(reservation);
-
                                     return (
                                         <div
                                             key={reservation.id}
                                             className="bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all"
                                         >
                                             {/* Header */}
+
                                             <div className="p-5 border-b border-gray-50 dark:border-zinc-700/50">
                                                 <div className="flex items-center justify-between mb-3">
                                                     <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold bg-gray-50 dark:bg-zinc-700/50 px-2 py-1 rounded-lg">
-                                                        No. {reservation.id.slice(0, 8).toUpperCase()}
+                                                        {reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase()}
                                                     </span>
                                                     {getStatusBadge(reservation.status)}
                                                 </div>
@@ -372,22 +347,23 @@ export const MyReservations: React.FC = () => {
                                                 </div>
 
 
-                                                {/* Bank Account */}
-                                                {(reservation.status === 'pending_payment' || reservation.status === 'waiting_deposit') && (
-                                                    <div className="mt-4 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-700 rounded-xl p-4">
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <span className="material-symbols-outlined text-teal-600 text-lg">account_balance_wallet</span>
-                                                            <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('my_reservations.labels.bank_info')}</p>
-                                                        </div>
-                                                        <div className="bg-white dark:bg-zinc-800 p-3 rounded-lg border border-gray-100 dark:border-zinc-700 mb-3 text-center">
-                                                            <p className="text-[10px] text-gray-500 mb-1">{t('my_reservations.labels.deposit_amount')}</p>
-                                                            <p className="text-lg font-extrabold text-teal-600">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.deposit) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}</p>
-                                                        </div>
-                                                        <div className="space-y-1.5 text-xs">
-                                                            <div className="flex justify-between"><span className="text-gray-500">{t('my_reservations.labels.bank')}</span><span className="font-bold text-gray-800 dark:text-gray-200">{displayBankAccount?.bankName || '-'}</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">{t('my_reservations.labels.account_number')}</span><span className="font-bold text-gray-800 dark:text-gray-200 font-mono tracking-wide">{displayBankAccount?.accountNumber || '-'}</span></div>
-                                                            <div className="flex justify-between"><span className="text-gray-500">{t('my_reservations.labels.account_holder')}</span><span className="font-bold text-gray-800 dark:text-gray-200">{displayBankAccount?.accountHolder || '-'}</span></div>
-                                                        </div>
+                                                {/* PayPal Payment Button */}
+                                                {(reservation.status === 'pending_payment' || reservation.status === 'waiting_deposit') && reservation.priceBreakdown?.deposit > 0 && (
+                                                    <div className="mt-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-center">
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('my_reservations.labels.deposit_amount')}</p>
+                                                        <p className="text-xl font-extrabold text-[#003087] dark:text-blue-300 mb-3">
+                                                            {formatPrice(reservation.priceBreakdown.deposit)}円
+                                                        </p>
+                                                        <a
+                                                            href={`https://paypal.me/MilkywayMongolia/${reservation.priceBreakdown.deposit}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-2 bg-[#003087] text-white font-bold px-6 py-3 rounded-xl text-sm active:scale-95 transition-transform"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">payments</span>
+                                                            PayPalで予約金を支払う
+                                                        </a>
+                                                        <p className="text-[10px] text-gray-400 mt-2">クレジットカード・PayPalで安全にお支払いいただけます</p>
                                                     </div>
                                                 )}
 
