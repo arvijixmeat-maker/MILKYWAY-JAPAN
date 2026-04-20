@@ -39,6 +39,7 @@ export async function sendPayPalInvoice(opts: {
             detail: {
                 invoice_number: opts.reservationNumber,
                 currency_code: 'JPY',
+                locale: 'ja_JP',
                 note: `予約番号: ${opts.reservationNumber}\n残金は現地にて円現金でお支払いください。`,
                 payment_term: { term_type: 'NET_10' },
                 memo: opts.productName,
