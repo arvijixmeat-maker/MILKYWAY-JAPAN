@@ -80,9 +80,23 @@ app.get('/', async (c) => {
         }
     }
 
-    // Add missing columns to quotes table (safe to run multiple times)
+    // Add ALL potentially missing columns to quotes table (safe to run multiple times)
     const quotesColumns = [
+        "user_id TEXT",
+        "type TEXT",
+        "name TEXT",
+        "phone TEXT",
+        "email TEXT",
+        "destination TEXT",
+        "headcount TEXT",
+        "period TEXT",
+        "budget TEXT",
+        "travel_types TEXT",
+        "accommodations TEXT",
+        "vehicle TEXT",
+        "additional_request TEXT",
         "attachment_url TEXT",
+        "status TEXT DEFAULT 'pending'",
         "admin_note TEXT",
         "estimate_url TEXT",
         "confirmed_start_date TEXT",
@@ -91,6 +105,7 @@ app.get('/', async (c) => {
         "deposit INTEGER",
         "deposit_status TEXT DEFAULT 'unpaid'",
         "balance_status TEXT DEFAULT 'unpaid'",
+        "created_at TEXT DEFAULT CURRENT_TIMESTAMP",
         "updated_at TEXT DEFAULT CURRENT_TIMESTAMP",
     ];
     for (const colDef of quotesColumns) {
