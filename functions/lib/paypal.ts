@@ -67,9 +67,14 @@ export async function sendPayPalInvoice(opts: {
         }),
     });
 
-    if (!createRes.ok) throw new Error(`PayPal invoice create failed: ${await createRes.text()}`);
+    const createStatus = createRes.status;
+    const createBody = await createRes.text();
+    console.log('[PayPal] Create status:', createStatus);
+    console.log('[PayPal] Create body:', createBody.slice(0, 500));
+    console.log('[PayPal] Location header:', createRes.headers.get('Location'));
 
-    // PayPal v2 인보이스 생성은 응답 본문이 비어있고 Location 헤더에 ID가 있음
+    if (!createRes.ok) throw new Error(`PayPal invoice create failed: ${createBody}`);
+
     const locationHeader = createRes.headers.get('Location') || createRes.headers.get('location');
     let invoiceId: string | undefined;
 
@@ -77,15 +82,14 @@ export async function sendPayPalInvoice(opts: {
         invoiceId = locationHeader.split('/').pop();
     }
 
-    // 혹시 본문에 있을 경우 대비
-    if (!invoiceId) {
+    if (!invoiceId && createBody) {
         try {
-            const invoice: any = await createRes.json();
+            const invoice: any = JSON.parse(createBody);
             invoiceId = invoice.id || invoice.links?.find((l: any) => l.rel === 'self')?.href?.split('/').pop();
-        } catch { /* empty body */ }
+        } catch { /* not json */ }
     }
 
-    if (!invoiceId) throw new Error('PayPal invoice create: no invoice ID in response');
+    if (!invoiceId) throw new Error(`PayPal invoice create: no invoice ID. status=${createStatus} body=${createBody.slice(0, 200)}`);
     console.log('[PayPal] Invoice ID:', invoiceId);
 
     // 2. インボイス送信
