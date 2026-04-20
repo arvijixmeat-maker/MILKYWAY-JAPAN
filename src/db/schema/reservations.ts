@@ -20,6 +20,7 @@ export const reservations = sqliteTable('reservations', {
     notes: text('notes'),
     history: text('history').default('[]'),
     userId: text('user_id'),
+    reservationNumber: text('reservation_number'),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });

@@ -194,8 +194,17 @@ app.post('/', async (c) => {
         return c.json({ error: 'Missing required fields' }, 400);
     }
 
-    // Generate ID if not provided (UUID)
     const id = body.id || crypto.randomUUID();
+
+    // Generate sequential reservation number MN001, MN002...
+    let reservationNumber = '';
+    try {
+        const row = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM reservations').first();
+        const next = ((row?.cnt as number) || 0) + 1;
+        reservationNumber = `MN${String(next).padStart(3, '0')}`;
+    } catch {
+        reservationNumber = `MN${Date.now().toString().slice(-4)}`;
+    }
 
     try {
         await db.insert(reservations).values({
@@ -217,9 +226,10 @@ app.post('/', async (c) => {
             notes: body.notes ? String(body.notes) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,
             history: body.history ? JSON.stringify(body.history) : null,
+            reservationNumber,
         }).run();
 
-        return c.json({ message: 'Reservation created', id }, 201);
+        return c.json({ message: 'Reservation created', id, reservationNumber }, 201);
     } catch (error: any) {
         return c.json({ error: error.message }, 500);
     }

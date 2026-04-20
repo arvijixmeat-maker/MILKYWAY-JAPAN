@@ -226,6 +226,7 @@ export const Payment: React.FC = () => {
 
             const data = await api.reservations.create(newReservation);
             const reservationId = data.id;
+            const reservationNumber = data.reservationNumber || data.id.slice(0, 8).toUpperCase();
 
             // Update quote status if this is a quote reservation
             if (isQuote && quoteId) {
@@ -244,9 +245,10 @@ export const Payment: React.FC = () => {
                 {
                     customerName: newReservation.customer_info.name,
                     productName: newReservation.product_name,
-                    reservationId: reservationId,
+                    reservationId: reservationNumber,
                     depositAmount: formatPrice(newReservation.price_breakdown.deposit),
-                    bankAccount: newReservation.bank_account
+                    customerPhone: newReservation.customer_info.phone,
+                    customerEmail: newReservation.customer_info.email,
                 }
             );
 

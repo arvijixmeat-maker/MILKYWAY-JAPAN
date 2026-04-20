@@ -7,6 +7,16 @@ type Env = {
 const app = new Hono<{ Bindings: Env }>();
 
 app.get('/', async (c) => {
+    let migrationResults: string[] = [];
+
+    // Add reservation_number column to reservations table
+    try {
+        await c.env.DB.prepare('ALTER TABLE reservations ADD COLUMN reservation_number TEXT').run();
+        migrationResults.push('Added reservations.reservation_number');
+    } catch (e: any) {
+        migrationResults.push(`Skipped reservations.reservation_number: ${e.message}`);
+    }
+
     // Create quotes table if it doesn't exist
     try {
         await c.env.DB.prepare(`
@@ -70,7 +80,6 @@ app.get('/', async (c) => {
         "description TEXT"
     ];
 
-    let migrationResults = [];
     for (const colDef of travelMatesColumns) {
         try {
             await c.env.DB.prepare(`ALTER TABLE travel_mates ADD COLUMN ${colDef}`).run();

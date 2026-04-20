@@ -60,7 +60,6 @@ function baseLayout(content: string) {
 }
 
 function tplReservationRequested(data: any) {
-    const bank = data.bankAccount || {};
     return baseLayout(`
 <div class="header">
   <h1>🐴 Milkyway Japan</h1>
@@ -70,17 +69,16 @@ function tplReservationRequested(data: any) {
   <p class="greeting">${data.customerName} 様</p>
   <p>この度はご予約いただきありがとうございます。<br>以下の内容でご予約を承りました。</p>
   <div class="card">
-    <div class="card-row"><span class="label">予約番号</span><span class="value">${data.reservationId || '-'}</span></div>
+    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;">${data.reservationId || '-'}</span></div>
     <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
     <div class="card-row"><span class="label">予約金額</span><span class="value">${data.depositAmount || '-'}</span></div>
   </div>
   <div class="highlight">
-    <strong>📌 予約金お振込み先</strong><br><br>
-    銀行名：${bank.bankName || '-'}<br>
-    口座番号：${bank.accountNumber || '-'}<br>
-    口座名義：${bank.accountHolder || '-'}<br><br>
-    ※ お振込み確認後、担当者よりご連絡いたします。<br>
-    ※ お振込みの際は予約番号をメモ欄にご記入ください。
+    <strong>💳 予約金のお支払い方法</strong><br><br>
+    担当者より <strong>PayPalインボイス</strong> をメールにてお送りいたします。<br>
+    インボイスのリンクからクレジットカードまたはPayPalにてお支払いください。<br><br>
+    ※ お支払い確認後、ご予約が確定となります。<br>
+    ※ インボイスが届かない場合はお手数ですがご連絡ください。
   </div>
   <p style="font-size:14px;color:#4a6b64;">ご不明な点がございましたら、お気軽にお問い合わせください。</p>
   <a class="btn" href="https://mongolryokou.com/my-reservations">予約確認はこちら</a>
@@ -98,13 +96,13 @@ function tplAdminNewReservation(data: any) {
   <p>Milkyway Japan 管理通知</p>
 </div>
 <div class="body">
-  <p class="greeting">新しい予約が届きました。</p>
+  <p class="greeting">新しい予約が届きました。<br>PayPalインボイスを送付してください。</p>
   <div class="card">
-    <div class="card-row"><span class="label">予約番号</span><span class="value">${data.reservationId || '-'}</span></div>
+    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;">${data.reservationId || '-'}</span></div>
     <div class="card-row"><span class="label">お客様名</span><span class="value">${data.customerName || '-'}</span></div>
     <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
     <div class="card-row"><span class="label">予約金</span><span class="value">${data.depositAmount || '-'}</span></div>
-    <div class="card-row"><span class="label">メール</span><span class="value">${data.customerEmail || '-'}</span></div>
+    <div class="card-row"><span class="label">送付先メール</span><span class="value">${data.customerEmail || '-'}</span></div>
     <div class="card-row"><span class="label">電話</span><span class="value">${data.customerPhone || '-'}</span></div>
   </div>
   <a class="btn" href="https://mongolryokou.com/admin/reservations">管理画面で確認する</a>
