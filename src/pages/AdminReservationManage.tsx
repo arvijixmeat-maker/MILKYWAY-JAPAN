@@ -330,7 +330,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                         <div className={`w-2 h-8 rounded-full ${reservation.type === 'product' ? 'bg-indigo-500' : 'bg-purple-500'}`}></div>
                         <div>
                             <h2 className="text-xl font-bold">예약 상세 정보</h2>
-                            <p className="text-sm text-slate-500 font-medium">No. {reservation.id.slice(0, 8).toUpperCase()}</p>
+                            <p className="text-sm text-slate-500 font-medium">No. {(reservation as any).reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</p>
                         </div>
                     </div>
                     <button
@@ -833,33 +833,42 @@ export const AdminReservationManage: React.FC = () => {
 
             // Map Reservations
             if (resData) {
-                const mappedReservations: Reservation[] = resData.map((r: any) => ({
+                const mappedReservations: Reservation[] = resData.map((r: any) => {
+                    const startDate = r.startDate || r.start_date;
+                    const endDate = r.endDate || r.end_date;
+                    const createdAt = r.createdAt || r.created_at;
+                    const travelers = r.travelers || r.totalPeople || r.total_people || 0;
+                    const totalAmount = r.totalPrice || r.total_amount || r.price_breakdown?.total || r.totalAmount || 0;
+                    const depositAmt = r.depositAmount || r.deposit_amount || r.price_breakdown?.deposit || r.deposit || 0;
+                    return {
                     id: r.id,
+                    reservationNumber: r.reservationNumber || r.reservation_number || null,
                     type: r.type || 'product',
-                    productName: r.product_name || r.productName,
-                    customerName: r.customer_info?.name || r.customer_name || r.customerName || 'Unknown',
-                    date: r.start_date
-                        ? `${new Date(r.start_date).toLocaleDateString('ko-KR')} ~ ${new Date(r.end_date).toLocaleDateString('ko-KR')}`
+                    productName: r.productName || r.product_name,
+                    customerName: r.customerName || r.customer_name || r.customer_info?.name || 'Unknown',
+                    date: startDate
+                        ? `${new Date(startDate).toLocaleDateString('ko-KR')} ~ ${endDate ? new Date(endDate).toLocaleDateString('ko-KR') : ''}`
                         : r.duration || '날짜 미정',
-                    bookedAt: r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
+                    bookedAt: createdAt ? new Date(createdAt).toLocaleDateString('ko-KR') : '',
                     status: r.status,
-                    totalAmount: r.total_amount || r.price_breakdown?.total || r.totalAmount || 0,
-                    deposit: r.deposit_amount || r.price_breakdown?.deposit || r.deposit || 0,
-                    depositStatus: r.deposit_status || r.depositStatus || (r.status === 'pending_payment' ? 'unpaid' : 'paid'),
-                    balance: (r.total_amount || r.price_breakdown?.total || r.totalAmount || 0) - (r.deposit_amount || r.price_breakdown?.deposit || r.deposit || 0),
-                    balanceStatus: r.balance_status || r.balanceStatus || 'unpaid',
-                    contractUrl: r.contract_url || r.contractUrl,
-                    itineraryUrl: r.itinerary_url || r.itineraryUrl,
-                    assignedGuide: r.assigned_guide || r.assignedGuide,
-                    dailyAccommodations: r.daily_accommodations || r.dailyAccommodations,
+                    totalAmount,
+                    deposit: depositAmt,
+                    depositStatus: r.depositStatus || r.deposit_status || (r.status === 'pending_payment' ? 'unpaid' : 'paid'),
+                    balance: totalAmount - depositAmt,
+                    balanceStatus: r.balanceStatus || r.balance_status || 'unpaid',
+                    contractUrl: r.contractUrl || r.contract_url,
+                    itineraryUrl: r.itineraryUrl || r.itinerary_url,
+                    assignedGuide: r.assignedGuide || r.assigned_guide,
+                    dailyAccommodations: r.dailyAccommodations || r.daily_accommodations,
                     history: r.history || [],
-                    areAssignmentsVisibleToUser: r.are_assignments_visible_to_user || r.areAssignmentsVisibleToUser || false,
-                    headcount: r.total_people ? `${r.total_people}명` : '미정',
-                    totalPeople: r.total_people || r.totalPeople || 0,
-                    phone: r.customer_info?.phone || r.customer_phone || r.phone || '',
-                    email: r.customer_info?.email || r.customer_email || r.email || '',
-                    userId: r.user_id || r.userId // Map user_id
-                }));
+                    areAssignmentsVisibleToUser: r.areAssignmentsVisibleToUser || r.are_assignments_visible_to_user || false,
+                    headcount: travelers ? `${travelers}名` : '미정',
+                    totalPeople: travelers,
+                    phone: r.phone || r.customerPhone || r.customer_phone || r.customer_info?.phone || '',
+                    email: r.email || r.customerEmail || r.customer_email || r.customer_info?.email || '',
+                    userId: r.userId || r.user_id,
+                    };
+                });
                 allItems.push(...mappedReservations);
             }
 
