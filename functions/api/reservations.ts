@@ -233,14 +233,12 @@ app.post('/', async (c) => {
             reservationNumber,
         }).run();
 
-        // Auto-send PayPal invoice (blocking for debug — revert to waitUntil after confirmed)
-        let paypalDebug: any = null;
+        // Auto-send PayPal invoice — waitUntil so Worker doesn't kill the promise after response
         if (c.env.PAYPAL_CLIENT_ID && c.env.PAYPAL_SECRET_KEY && c.env.PAYPAL_BUSINESS_EMAIL) {
             const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
-            paypalDebug = { depositAmt, hasEnvVars: true };
             if (depositAmt > 0) {
-                try {
-                    const result = await sendPayPalInvoice({
+                c.executionCtx.waitUntil(
+                    sendPayPalInvoice({
                         clientId: c.env.PAYPAL_CLIENT_ID,
                         secret: c.env.PAYPAL_SECRET_KEY,
                         businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
@@ -249,18 +247,14 @@ app.post('/', async (c) => {
                         reservationNumber,
                         productName: String(productName),
                         depositAmount: depositAmt,
-                    });
-                    paypalDebug.invoiceId = result.invoiceId;
-                } catch (paypalErr: any) {
-                    console.error('[PayPal Invoice Error]', paypalErr);
-                    paypalDebug.error = paypalErr.message;
-                }
+                    }).catch((paypalErr: any) => {
+                        console.error('[PayPal Invoice Error]', paypalErr);
+                    })
+                );
             }
-        } else {
-            paypalDebug = { hasEnvVars: false };
         }
 
-        return c.json({ message: 'Reservation created', id, reservationNumber, paypalDebug }, 201);
+        return c.json({ message: 'Reservation created', id, reservationNumber }, 201);
     } catch (error: any) {
         return c.json({ error: error.message }, 500);
     }
