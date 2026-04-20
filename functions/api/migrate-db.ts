@@ -126,6 +126,66 @@ app.get('/', async (c) => {
         }
     }
 
+    // Create accommodations table
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS accommodations (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                location TEXT DEFAULT '',
+                type TEXT DEFAULT '',
+                price_per_night INTEGER DEFAULT 0,
+                images TEXT DEFAULT '[]',
+                thumbnail TEXT DEFAULT '',
+                amenities TEXT DEFAULT '[]',
+                facilities TEXT DEFAULT '[]',
+                rating REAL DEFAULT 0,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created accommodations table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped accommodations table: ${e.message}`);
+    }
+
+    // Add missing columns to accommodations table
+    const accommodationsColumns = [
+        "type TEXT DEFAULT ''",
+        "facilities TEXT DEFAULT '[]'",
+        "price_per_night INTEGER DEFAULT 0",
+        "rating REAL DEFAULT 0",
+    ];
+    for (const colDef of accommodationsColumns) {
+        try {
+            await c.env.DB.prepare(`ALTER TABLE accommodations ADD COLUMN ${colDef}`).run();
+            migrationResults.push(`Added accommodations.${colDef}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped accommodations.${colDef}: ${e.message}`);
+        }
+    }
+
+    // Create guides table
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS guides (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                bio TEXT DEFAULT '',
+                phone TEXT DEFAULT '',
+                languages TEXT DEFAULT '[]',
+                specialties TEXT DEFAULT '[]',
+                image TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created guides table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped guides table: ${e.message}`);
+    }
+
     return c.json({
         success: true,
         message: "Migrations executed",

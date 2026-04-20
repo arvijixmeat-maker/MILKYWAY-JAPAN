@@ -26,6 +26,53 @@ app.get('/:id', async (c) => {
     }
 });
 
+// POST /api/accommodations/bulk
+app.post('/bulk', async (c) => {
+    const body = await c.req.json();
+    const db = c.env.DB;
+    const items: any[] = body.accommodations || [];
+    try {
+        for (const a of items) {
+            const id = a.id || crypto.randomUUID();
+            const existing = await db.prepare('SELECT id FROM accommodations WHERE id=?').bind(id).first();
+            if (existing) {
+                await db.prepare(
+                    "UPDATE accommodations SET name=?, description=?, location=?, type=?, images=?, thumbnail=?, amenities=?, facilities=?, is_active=? WHERE id=?"
+                ).bind(
+                    a.name || '',
+                    a.description || '',
+                    a.location || '',
+                    a.type || '',
+                    JSON.stringify(Array.isArray(a.images) ? a.images : []),
+                    a.thumbnail || (Array.isArray(a.images) && a.images[0]) || '',
+                    JSON.stringify(a.amenities || []),
+                    JSON.stringify(a.facilities || []),
+                    a.is_active ?? 1,
+                    id
+                ).run();
+            } else {
+                await db.prepare(
+                    "INSERT INTO accommodations (id, name, description, location, type, images, thumbnail, amenities, facilities, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                ).bind(
+                    id,
+                    a.name || '',
+                    a.description || '',
+                    a.location || '',
+                    a.type || '',
+                    JSON.stringify(Array.isArray(a.images) ? a.images : []),
+                    a.thumbnail || (Array.isArray(a.images) && a.images[0]) || '',
+                    JSON.stringify(a.amenities || []),
+                    JSON.stringify(a.facilities || []),
+                    a.is_active ?? 1
+                ).run();
+            }
+        }
+        return c.json({ success: true });
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
 // POST /api/accommodations
 app.post('/', async (c) => {
     const data = await c.req.json();
