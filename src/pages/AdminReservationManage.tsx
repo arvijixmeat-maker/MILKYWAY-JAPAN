@@ -159,6 +159,24 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [showAccommodationModal, setShowAccommodationModal] = useState(false);
     const [selectedDay, setSelectedDay] = useState(1);
     const [extraDays, setExtraDays] = useState(0);
+    const [guideList, setGuideList] = useState<any[]>([]);
+    const [accommodationList, setAccommodationList] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (showGuideModal && guideList.length === 0) {
+            api.tourGuides.list().then((data: any) => {
+                if (Array.isArray(data)) setGuideList(data.filter((g: any) => g.status !== 'pending'));
+            }).catch(() => {});
+        }
+    }, [showGuideModal]);
+
+    useEffect(() => {
+        if (showAccommodationModal && accommodationList.length === 0) {
+            api.accommodations.list().then((data: any) => {
+                if (Array.isArray(data)) setAccommodationList(data);
+            }).catch(() => {});
+        }
+    }, [showAccommodationModal]);
 
     const getTripDays = (): number => {
         if (!reservation) return 1;
@@ -317,7 +335,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     };
 
 
-    return (
+    return (<>
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 text-slate-900 dark:text-gray-100 font-sans">
             <div
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
@@ -799,7 +817,91 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 </div>
             </div>
         </div>
-    );
+
+        {/* Guide Selection Modal */}
+        {showGuideModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/50" onClick={() => setShowGuideModal(false)} />
+                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+                    <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-800 dark:text-white">가이드 선택</h3>
+                        <button onClick={() => setShowGuideModal(false)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <span className="material-symbols-outlined text-slate-400 text-sm">close</span>
+                        </button>
+                    </div>
+                    <div className="overflow-y-auto p-4 space-y-2">
+                        {guideList.length === 0 ? (
+                            <p className="text-center text-slate-400 py-8 text-sm">등록된 가이드가 없습니다</p>
+                        ) : guideList.map((guide: any) => (
+                            <button
+                                key={guide.id}
+                                onClick={() => { handleGuideAssign(guide); setShowGuideModal(false); }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-transparent hover:border-purple-200 transition-all text-left"
+                            >
+                                {guide.image ? (
+                                    <img src={guide.image} alt={guide.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center flex-shrink-0">
+                                        <span className="material-symbols-outlined text-slate-400">person</span>
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-slate-800 dark:text-white text-sm">{guide.name}</p>
+                                    <p className="text-xs text-slate-500 truncate">{guide.phone}</p>
+                                    {guide.languages && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {(typeof guide.languages === 'string' ? JSON.parse(guide.languages) : guide.languages).slice(0, 3).map((l: string) => (
+                                                <span key={l} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[10px] rounded">{l}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Accommodation Selection Modal */}
+        {showAccommodationModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/50" onClick={() => setShowAccommodationModal(false)} />
+                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+                    <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-800 dark:text-white">{selectedDay}일차 숙소 선택</h3>
+                        <button onClick={() => setShowAccommodationModal(false)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <span className="material-symbols-outlined text-slate-400 text-sm">close</span>
+                        </button>
+                    </div>
+                    <div className="overflow-y-auto p-4 space-y-2">
+                        {accommodationList.length === 0 ? (
+                            <p className="text-center text-slate-400 py-8 text-sm">등록된 숙소가 없습니다</p>
+                        ) : accommodationList.map((acc: any) => (
+                            <button
+                                key={acc.id}
+                                onClick={() => { handleAccommodationAssign(acc); setShowAccommodationModal(false); }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-transparent hover:border-indigo-200 transition-all text-left"
+                            >
+                                {acc.thumbnail || (acc.images && JSON.parse(acc.images || '[]')[0]) ? (
+                                    <img src={acc.thumbnail || JSON.parse(acc.images || '[]')[0]} alt={acc.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+                                ) : (
+                                    <div className="w-14 h-14 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center flex-shrink-0">
+                                        <span className="material-symbols-outlined text-slate-400">hotel</span>
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-slate-800 dark:text-white text-sm">{acc.name}</p>
+                                    {acc.type && <p className="text-xs text-slate-500">{acc.type}</p>}
+                                    {acc.location && <p className="text-xs text-slate-400 truncate">{acc.location}</p>}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
+    </>);
 };
 
 export const AdminReservationManage: React.FC = () => {
