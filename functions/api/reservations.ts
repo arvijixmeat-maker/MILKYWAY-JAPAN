@@ -233,22 +233,24 @@ app.post('/', async (c) => {
             reservationNumber,
         }).run();
 
-        // Auto-send PayPal invoice (fire-and-forget, don't block reservation)
+        // Auto-send PayPal invoice — use waitUntil so the Worker doesn't kill the promise after response
         if (c.env.PAYPAL_CLIENT_ID && c.env.PAYPAL_SECRET_KEY && c.env.PAYPAL_BUSINESS_EMAIL) {
             const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
             if (depositAmt > 0) {
-                sendPayPalInvoice({
-                    clientId: c.env.PAYPAL_CLIENT_ID,
-                    secret: c.env.PAYPAL_SECRET_KEY,
-                    businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
-                    customerEmail: String(customerEmail),
-                    customerName: String(customerName),
-                    reservationNumber,
-                    productName: String(productName),
-                    depositAmount: depositAmt,
-                }).catch((paypalErr: any) => {
-                    console.error('[PayPal Invoice Error]', paypalErr);
-                });
+                c.executionCtx.waitUntil(
+                    sendPayPalInvoice({
+                        clientId: c.env.PAYPAL_CLIENT_ID,
+                        secret: c.env.PAYPAL_SECRET_KEY,
+                        businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
+                        customerEmail: String(customerEmail),
+                        customerName: String(customerName),
+                        reservationNumber,
+                        productName: String(productName),
+                        depositAmount: depositAmt,
+                    }).catch((paypalErr: any) => {
+                        console.error('[PayPal Invoice Error]', paypalErr);
+                    })
+                );
             }
         }
 
