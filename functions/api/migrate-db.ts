@@ -177,6 +177,7 @@ app.get('/', async (c) => {
                 languages TEXT DEFAULT '[]',
                 specialties TEXT DEFAULT '[]',
                 image TEXT DEFAULT '',
+                status TEXT DEFAULT 'active',
                 is_active INTEGER DEFAULT 1,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
@@ -184,6 +185,14 @@ app.get('/', async (c) => {
         migrationResults.push('Created guides table');
     } catch (e: any) {
         migrationResults.push(`Skipped guides table: ${e.message}`);
+    }
+
+    // Add status column to guides if missing
+    try {
+        await c.env.DB.prepare("ALTER TABLE guides ADD COLUMN status TEXT DEFAULT 'active'").run();
+        migrationResults.push('Added guides.status');
+    } catch (e: any) {
+        migrationResults.push(`Skipped guides.status: ${e.message}`);
     }
 
     return c.json({

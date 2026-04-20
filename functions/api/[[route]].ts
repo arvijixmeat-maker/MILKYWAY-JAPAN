@@ -36,6 +36,7 @@ import paymentReminder from './cron/payment-reminder';
 import dailyDigest from './cron/daily-digest';
 import paypalWebhook from './webhooks/paypal';
 import testPaypal from './test-paypal';
+import tourGuides from './tour-guides';
 
 // Register routes
 app.route('/products', products);
@@ -66,5 +67,6 @@ app.route('/cron/payment-reminder', paymentReminder);
 app.route('/cron/daily-digest', dailyDigest);
 app.route('/webhooks/paypal', paypalWebhook);
 app.route('/test-paypal', testPaypal);
+app.route('/tour-guides', tourGuides);
 
 export const onRequest = handle(app);

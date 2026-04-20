@@ -39,6 +39,7 @@ const TravelGuideDetail = lazy(() => import('./pages/TravelGuideDetail').then(mo
 const FAQPage = lazy(() => import('./pages/FAQ').then(module => ({ default: module.FAQPage })))
 const TermsOfService = lazy(() => import('./pages/TermsOfService').then(module => ({ default: module.TermsOfService })))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
+const GuideApply = lazy(() => import('./pages/GuideApply').then(module => ({ default: module.GuideApply })))
 
 // MyPage components
 const MyPage = lazy(() => import('./pages/MyPage').then(module => ({ default: module.MyPage })))
@@ -152,6 +153,7 @@ function App() {
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/guide-apply" element={<GuideApply />} />
           </Routes>
         </Suspense>
       </NotificationProvider>
