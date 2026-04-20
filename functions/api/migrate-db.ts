@@ -203,6 +203,22 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped guides.experience_years: ${e.message}`);
     }
 
+    // Create itinerary_templates table
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS itinerary_templates (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                days TEXT DEFAULT '[]',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created itinerary_templates table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped itinerary_templates table: ${e.message}`);
+    }
+
     return c.json({
         success: true,
         message: "Migrations executed",

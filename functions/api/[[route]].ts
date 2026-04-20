@@ -37,6 +37,7 @@ import dailyDigest from './cron/daily-digest';
 import paypalWebhook from './webhooks/paypal';
 import testPaypal from './test-paypal';
 import tourGuides from './tour-guides';
+import itineraryTemplates from './itinerary-templates';
 
 // Register routes
 app.route('/products', products);
@@ -68,5 +69,6 @@ app.route('/cron/daily-digest', dailyDigest);
 app.route('/webhooks/paypal', paypalWebhook);
 app.route('/test-paypal', testPaypal);
 app.route('/tour-guides', tourGuides);
+app.route('/itinerary-templates', itineraryTemplates);
 
 export const onRequest = handle(app);

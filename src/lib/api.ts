@@ -147,6 +147,20 @@ export const api = {
         }),
         delete: async (id: string) => request(`${API_BASE}/reviews/${id}`, { method: 'DELETE' }),
     },
+    itineraryTemplates: {
+        list: async () => request(`${API_BASE}/itinerary-templates`),
+        create: async (data: any) => request(`${API_BASE}/itinerary-templates`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        update: async (id: string, data: any) => request(`${API_BASE}/itinerary-templates/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        delete: async (id: string) => request(`${API_BASE}/itinerary-templates/${id}`, { method: 'DELETE' }),
+    },
     tourGuides: {
         list: async () => request(`${API_BASE}/tour-guides`),
         create: async (data: any) => request(`${API_BASE}/tour-guides`, {

@@ -1,0 +1,439 @@
+import React, { useState, useEffect } from 'react';
+import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { api } from '../lib/api';
+import { uploadImage } from '../utils/upload';
+
+// ─── Types ───────────────────────────────────────────────
+interface Activity { title: string; description: string; }
+interface TemplateDay { day: number; title: string; activities: Activity[]; }
+interface ItineraryTemplate { id: string; name: string; description: string; days: TemplateDay[]; createdAt: string; }
+
+interface Guide {
+    id: string; name: string; image: string; introduction: string;
+    phone: string; languages: string[]; specialties: string[]; status: string; experienceYears: number;
+}
+
+interface Accommodation {
+    id: string; name: string; images: string[]; description: string;
+    type: string; location: string;
+}
+
+const LANGUAGES = ['한국어', '영어', '몽골어', '중국어', '일본어'];
+const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
+const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
+
+// ─── Tab: Itinerary Templates ────────────────────────────
+const TemplatesTab: React.FC = () => {
+    const [templates, setTemplates] = useState<ItineraryTemplate[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editing, setEditing] = useState<ItineraryTemplate | null>(null);
+    const [form, setForm] = useState<{ name: string; description: string; days: TemplateDay[] }>({ name: '', description: '', days: [] });
+
+    const load = async () => {
+        try {
+            const data = await api.itineraryTemplates.list();
+            if (Array.isArray(data)) {
+                setTemplates(data.map((t: any) => ({
+                    id: t.id, name: t.name, description: t.description || '',
+                    days: typeof t.days === 'string' ? JSON.parse(t.days || '[]') : (t.days || []),
+                    createdAt: t.created_at || t.createdAt
+                })));
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const resetForm = () => { setForm({ name: '', description: '', days: [] }); setEditing(null); };
+
+    const addDay = () => setForm(f => ({ ...f, days: [...f.days, { day: f.days.length + 1, title: `${f.days.length + 1}일차`, activities: [] }] }));
+    const removeDay = (idx: number) => setForm(f => ({ ...f, days: f.days.filter((_, i) => i !== idx).map((d, i) => ({ ...d, day: i + 1 })) }));
+    const updateDay = (idx: number, field: keyof TemplateDay, value: any) => setForm(f => { const d = [...f.days]; d[idx] = { ...d[idx], [field]: value }; return { ...f, days: d }; });
+    const addActivity = (dayIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = [...d[dayIdx].activities, { title: '', description: '' }]; return { ...f, days: d }; });
+    const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
+    const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: string) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
+
+    const handleSubmit = async () => {
+        if (!form.name.trim()) { alert('템플릿 이름을 입력하세요.'); return; }
+        try {
+            if (editing) { await api.itineraryTemplates.update(editing.id, form); }
+            else { await api.itineraryTemplates.create(form); }
+            await load(); setIsModalOpen(false); resetForm();
+        } catch (e: any) { alert('저장 실패: ' + e.message); }
+    };
+
+    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days }); setIsModalOpen(true); };
+    const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.itineraryTemplates.delete(id); await load(); } catch (e: any) { alert('삭제 실패'); } };
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400">예약에 적용할 일정 템플릿을 미리 작성합니다.</p>
+                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
+                    <span className="material-symbols-outlined text-sm">add</span> 템플릿 추가
+                </button>
+            </div>
+
+            {templates.length === 0 ? (
+                <div className="text-center py-20 text-slate-400">
+                    <span className="material-symbols-outlined text-5xl mb-2">event_note</span>
+                    <p>등록된 템플릿이 없습니다</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {templates.map(t => (
+                        <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+                            <div className="flex items-start justify-between mb-2">
+                                <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-white">{t.name}</h3>
+                                    {t.description && <p className="text-sm text-slate-500 mt-0.5">{t.description}</p>}
+                                </div>
+                                <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-xs font-bold rounded-lg">{t.days.length}일</span>
+                            </div>
+                            <div className="space-y-1 mb-4">
+                                {t.days.slice(0, 3).map(d => (
+                                    <div key={d.day} className="flex items-center gap-2 text-xs text-slate-500">
+                                        <span className="w-10 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded font-bold text-center">{d.day}일차</span>
+                                        <span className="truncate">{d.title}</span>
+                                        <span className="text-slate-300">({d.activities.length}개 활동)</span>
+                                    </div>
+                                ))}
+                                {t.days.length > 3 && <p className="text-xs text-slate-400 pl-12">+ {t.days.length - 3}일 더...</p>}
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleEdit(t)} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium">수정</button>
+                                <button onClick={() => handleDelete(t.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-sm font-medium">삭제</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+                            <h2 className="font-bold text-slate-800 dark:text-white">{editing ? '템플릿 수정' : '템플릿 추가'}</h2>
+                            <button onClick={() => { setIsModalOpen(false); resetForm(); }}><span className="material-symbols-outlined text-slate-400">close</span></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">템플릿 이름 *</label>
+                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="예: 고비사막 4박5일 기본형" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">설명</label>
+                                <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="간단한 설명" />
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">일정</label>
+                                    <button onClick={addDay} className="text-xs px-3 py-1.5 bg-teal-500 text-white rounded-lg font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">add</span> 일차 추가</button>
+                                </div>
+                                <div className="space-y-4">
+                                    {form.days.map((day, dayIdx) => (
+                                        <div key={dayIdx} className="border border-slate-200 dark:border-slate-600 rounded-xl p-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <span className="px-2 py-1 bg-indigo-500 text-white text-xs font-bold rounded">{day.day}일차</span>
+                                                <input value={day.title} onChange={e => updateDay(dayIdx, 'title', e.target.value)} className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500" placeholder="일차 제목 (예: 울란바토르 도착)" />
+                                                <button onClick={() => removeDay(dayIdx)} className="text-red-400 hover:text-red-600"><span className="material-symbols-outlined text-sm">delete</span></button>
+                                            </div>
+                                            <div className="space-y-2 pl-2">
+                                                {day.activities.map((act, actIdx) => (
+                                                    <div key={actIdx} className="flex gap-2">
+                                                        <div className="flex-1 space-y-1">
+                                                            <input value={act.title} onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-none" placeholder="활동명 (예: 공항 픽업)" />
+                                                            <input value={act.description} onChange={e => updateActivity(dayIdx, actIdx, 'description', e.target.value)} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs focus:outline-none text-slate-500" placeholder="세부 내용" />
+                                                        </div>
+                                                        <button onClick={() => removeActivity(dayIdx, actIdx)} className="text-slate-300 hover:text-red-400 mt-1"><span className="material-symbols-outlined text-sm">close</span></button>
+                                                    </div>
+                                                ))}
+                                                <button onClick={() => addActivity(dayIdx)} className="text-xs text-teal-500 hover:text-teal-600 flex items-center gap-1 mt-1"><span className="material-symbols-outlined text-sm">add</span> 활동 추가</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {form.days.length === 0 && <p className="text-center text-sm text-slate-400 py-4 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl">위 "일차 추가" 버튼을 눌러 일정을 작성하세요</p>}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium">취소</button>
+                                <button onClick={handleSubmit} className="flex-1 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold">{editing ? '수정' : '저장'}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── Tab: Guides ─────────────────────────────────────────
+const GuidesTab: React.FC = () => {
+    const [guides, setGuides] = useState<Guide[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editing, setEditing] = useState<Guide | null>(null);
+    const [form, setForm] = useState({ name: '', image: '', introduction: '', phone: '', experienceYears: 0, languages: [] as string[], specialties: [] as string[] });
+
+    const load = async () => {
+        try {
+            const data = await api.tourGuides.list();
+            if (Array.isArray(data)) setGuides(data.map((g: any) => ({
+                id: g.id, name: g.name, image: g.image || '', introduction: g.bio || g.introduction || '',
+                phone: g.phone || '', languages: typeof g.languages === 'string' ? JSON.parse(g.languages || '[]') : (g.languages || []),
+                specialties: typeof g.specialties === 'string' ? JSON.parse(g.specialties || '[]') : (g.specialties || []),
+                status: g.status || 'active', experienceYears: g.experience_years || 0,
+            })));
+        } catch (e) { console.error(e); }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const resetForm = () => { setForm({ name: '', image: '', introduction: '', phone: '', experienceYears: 0, languages: [], specialties: [] }); setEditing(null); };
+    const toggle = (field: 'languages' | 'specialties', val: string) => setForm(f => ({ ...f, [field]: f[field].includes(val) ? f[field].filter(v => v !== val) : [...f[field], val] }));
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        try { const url = await uploadImage(file, 'guides'); setForm(f => ({ ...f, image: url })); } catch { alert('이미지 업로드 실패'); }
+    };
+
+    const handleSubmit = async () => {
+        if (!form.name || !form.phone) { alert('이름과 연락처는 필수입니다.'); return; }
+        try {
+            const payload = { name: form.name, bio: form.introduction, phone: form.phone, image: form.image, experience_years: form.experienceYears, languages: form.languages, specialties: form.specialties };
+            if (editing) { await api.tourGuides.update(editing.id, { ...payload, status: editing.status }); }
+            else { await api.tourGuides.create({ ...payload, status: 'active' }); }
+            await load(); setIsModalOpen(false); resetForm();
+        } catch (e: any) { alert('저장 실패: ' + e.message); }
+    };
+
+    const handleApprove = async (g: Guide) => {
+        try { await api.tourGuides.update(g.id, { name: g.name, bio: g.introduction, phone: g.phone, image: g.image, experience_years: g.experienceYears, languages: g.languages, specialties: g.specialties, status: 'active' }); await load(); }
+        catch (e: any) { alert('승인 실패'); }
+    };
+
+    const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.tourGuides.delete(id); await load(); } catch { alert('삭제 실패'); } };
+
+    const pendingCount = guides.filter(g => g.status === 'pending').length;
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">가이드를 등록하고 관리합니다.</p>
+                    {pendingCount > 0 && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">승인대기 {pendingCount}</span>}
+                </div>
+                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
+                    <span className="material-symbols-outlined text-sm">add</span> 가이드 등록
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {guides.map(g => (
+                    <div key={g.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="aspect-square bg-slate-100 dark:bg-slate-700 relative">
+                            {g.image ? <img src={g.image} alt={g.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-5xl text-slate-300">person</span></div>}
+                            {g.status === 'pending' && <span className="absolute top-2 left-2 px-2 py-1 bg-amber-500 text-white text-xs font-bold rounded-md">승인대기</span>}
+                        </div>
+                        <div className="p-4">
+                            <h3 className="font-bold text-slate-800 dark:text-white mb-1">{g.name}</h3>
+                            <p className="text-xs text-slate-500 mb-2 line-clamp-2">{g.introduction || '소개글 없음'}</p>
+                            <div className="flex items-center gap-1 text-xs text-slate-500 mb-1"><span className="material-symbols-outlined text-sm">phone</span>{g.phone}</div>
+                            {g.experienceYears > 0 && <div className="flex items-center gap-1 text-xs text-slate-500 mb-2"><span className="material-symbols-outlined text-sm">workspace_premium</span>경력 {g.experienceYears}년</div>}
+                            {g.languages.length > 0 && <div className="flex flex-wrap gap-1 mb-3">{g.languages.map(l => <span key={l} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-xs rounded">{l}</span>)}</div>}
+                            {g.status === 'pending' && <button onClick={() => handleApprove(g)} className="w-full mb-2 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold">승인하기</button>}
+                            <div className="flex gap-2">
+                                <button onClick={() => { setEditing(g); setForm({ name: g.name, image: g.image, introduction: g.introduction, phone: g.phone, experienceYears: g.experienceYears, languages: g.languages, specialties: g.specialties }); setIsModalOpen(true); }} className="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium">수정</button>
+                                <button onClick={() => handleDelete(g.id)} className="flex-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-xs font-medium">삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {guides.length === 0 && <div className="col-span-3 text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">person_off</span><p>등록된 가이드가 없습니다</p></div>}
+            </div>
+
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+                            <h2 className="font-bold text-slate-800 dark:text-white">{editing ? '가이드 수정' : '가이드 등록'}</h2>
+                            <button onClick={() => { setIsModalOpen(false); resetForm(); }}><span className="material-symbols-outlined text-slate-400">close</span></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                    {form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-slate-300">person</span>}
+                                </div>
+                                <label className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+                                    사진 선택 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                                </label>
+                            </div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">이름 *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">연락처 *</label><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">경력 연수</label><div className="flex items-center gap-2"><input type="number" min={0} value={form.experienceYears} onChange={e => setForm(f => ({ ...f, experienceYears: Number(e.target.value) }))} className="w-24 px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-center" /><span className="text-sm text-slate-500">년</span></div></div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">소개글</label><textarea value={form.introduction} onChange={e => setForm(f => ({ ...f, introduction: e.target.value }))} rows={3} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">언어</label><div className="flex flex-wrap gap-2">{LANGUAGES.map(l => <button key={l} type="button" onClick={() => toggle('languages', l)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${form.languages.includes(l) ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{l}</button>)}</div></div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">전문 분야</label><div className="flex flex-wrap gap-2">{SPECIALTIES.map(s => <button key={s} type="button" onClick={() => toggle('specialties', s)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${form.specialties.includes(s) ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{s}</button>)}</div></div>
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium">취소</button>
+                                <button onClick={handleSubmit} className="flex-1 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold">{editing ? '수정' : '등록'}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── Tab: Accommodations ─────────────────────────────────
+const AccommodationsTab: React.FC = () => {
+    const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editing, setEditing] = useState<Accommodation | null>(null);
+    const [form, setForm] = useState({ name: '', images: [] as string[], description: '', type: '3성급 호텔', location: '' });
+
+    const load = async () => {
+        try {
+            const data = await api.accommodations.list();
+            if (Array.isArray(data)) setAccommodations(data.map((a: any) => ({
+                id: a.id, name: a.name, images: typeof a.images === 'string' ? JSON.parse(a.images || '[]') : (a.images || []),
+                description: a.description || '', type: a.type || '', location: a.location || '',
+            })));
+        } catch (e) { console.error(e); }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const resetForm = () => { setForm({ name: '', images: [], description: '', type: '3성급 호텔', location: '' }); setEditing(null); };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files; if (!files) return;
+        try { const urls = await Promise.all(Array.from(files).map(f => uploadImage(f, 'accommodations'))); setForm(f => ({ ...f, images: [...f.images, ...urls] })); }
+        catch { alert('이미지 업로드 실패'); }
+    };
+
+    const handleSubmit = async () => {
+        if (!form.name || !form.location) { alert('숙소명과 위치는 필수입니다.'); return; }
+        try {
+            const payload = { name: form.name, images: form.images, description: form.description, type: form.type, location: form.location };
+            if (editing) { await api.accommodations.update(editing.id, payload); }
+            else { await api.accommodations.create({ ...payload, id: `ACCOM-${Date.now()}` }); }
+            await load(); setIsModalOpen(false); resetForm();
+        } catch (e: any) { alert('저장 실패: ' + e.message); }
+    };
+
+    const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.accommodations.delete(id); await load(); } catch { alert('삭제 실패'); } };
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400">숙소를 등록하고 예약에 배정합니다.</p>
+                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
+                    <span className="material-symbols-outlined text-sm">add</span> 숙소 등록
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {accommodations.map(a => (
+                    <div key={a.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="aspect-video bg-slate-100 dark:bg-slate-700">
+                            {a.images.length > 0 ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-5xl text-slate-300">hotel</span></div>}
+                        </div>
+                        <div className="p-4">
+                            <div className="flex items-start justify-between mb-1">
+                                <h3 className="font-bold text-slate-800 dark:text-white">{a.name}</h3>
+                                <span className="px-2 py-0.5 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-xs rounded">{a.type}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-slate-500 mb-2"><span className="material-symbols-outlined text-sm">location_on</span>{a.location}</div>
+                            <p className="text-xs text-slate-500 mb-3 line-clamp-2">{a.description || '설명 없음'}</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => { setEditing(a); setForm({ name: a.name, images: a.images, description: a.description, type: a.type, location: a.location }); setIsModalOpen(true); }} className="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium">수정</button>
+                                <button onClick={() => handleDelete(a.id)} className="flex-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-xs font-medium">삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {accommodations.length === 0 && <div className="col-span-3 text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">hotel</span><p>등록된 숙소가 없습니다</p></div>}
+            </div>
+
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+                            <h2 className="font-bold text-slate-800 dark:text-white">{editing ? '숙소 수정' : '숙소 등록'}</h2>
+                            <button onClick={() => { setIsModalOpen(false); resetForm(); }}><span className="material-symbols-outlined text-slate-400">close</span></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">이미지</label>
+                                {form.images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-2">{form.images.map((img, i) => <div key={i} className="relative aspect-video"><img src={img} className="w-full h-full object-cover rounded-lg" /><button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"><span className="material-symbols-outlined text-xs">close</span></button></div>)}</div>}
+                                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="text-sm" />
+                            </div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">숙소명 *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">위치 *</label><input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="예: 울란바토르 시내, 테를지 국립공원" /></div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">숙소 타입</label>
+                                {Object.entries(ACCOM_TYPES).map(([cat, subs]) => (
+                                    <div key={cat} className="mb-3">
+                                        <p className="text-xs font-semibold text-slate-500 mb-1.5">{cat}</p>
+                                        <div className="grid grid-cols-2 gap-2">{subs.map(s => <button key={s} type="button" onClick={() => setForm(f => ({ ...f, type: s }))} className={`py-2 rounded-lg text-sm font-medium transition-all ${form.type === s ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{s}</button>)}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">설명</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium">취소</button>
+                                <button onClick={handleSubmit} className="flex-1 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold">{editing ? '수정' : '등록'}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── Main Page ───────────────────────────────────────────
+const TABS = [
+    { id: 'templates', label: '일정 템플릿', icon: 'event_note' },
+    { id: 'guides', label: '가이드 관리', icon: 'badge' },
+    { id: 'accommodations', label: '숙소 관리', icon: 'hotel' },
+];
+
+export const AdminTemplateManage: React.FC = () => {
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [activeTab, setActiveTab] = useState('templates');
+
+    const toggleTheme = () => { setIsDarkMode(!isDarkMode); document.documentElement.classList.toggle('dark'); };
+
+    return (
+        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
+            <AdminSidebar activePage="templates" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+            <main className="ml-64 flex-1 flex flex-col min-h-screen">
+                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center">
+                    <h1 className="text-xl font-bold">템플릿 관리</h1>
+                </header>
+
+                <div className="px-8 pt-6">
+                    <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit mb-6">
+                        {TABS.map(tab => (
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab.id ? 'bg-white dark:bg-slate-700 text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                                <span className="material-symbols-outlined text-base">{tab.icon}</span>
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="pb-8">
+                        {activeTab === 'templates' && <TemplatesTab />}
+                        {activeTab === 'guides' && <GuidesTab />}
+                        {activeTab === 'accommodations' && <AccommodationsTab />}
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+};
