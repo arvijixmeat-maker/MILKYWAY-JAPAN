@@ -4,19 +4,19 @@ type NotificationType = 'ESTIMATE_COMPLETED' | 'GUIDE_ASSIGNED' | 'RESERVATION_R
 
 interface EmailData {
     customerName: string;
-    destination?: string;     // For Estimate
-    productName?: string;     // For Guide/Reservation/Quote
-    estimateUrl?: string;     // For Estimate
-    adminNote?: string;       // For Estimate
-    guideName?: string;       // For Guide
-    guidePhone?: string;      // For Guide
+    destination?: string;
+    productName?: string;
+    estimateUrl?: string;
+    adminNote?: string;
+    guideName?: string;
+    guidePhone?: string;
     reservationId?: string;
-    depositAmount?: string;   // For Reservation Payment
-    bankAccount?: {           // For Reservation Payment
-        bankName: string;
-        accountNumber: string;
-        accountHolder: string;
-    };
+    depositAmount?: string;
+    totalAmount?: string;
+    localAmount?: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    [key: string]: any;
 }
 
 export const sendNotificationEmail = async (

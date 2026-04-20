@@ -122,12 +122,6 @@ export const Payment: React.FC = () => {
 
     const formatPrice = (price: number) => price ? price.toLocaleString() : '0';
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(bankAccount.accountNumber);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 2500);
-    };
-
     const handlePayment = async () => {
         // Prevent double click
         if (isProcessing) return;
@@ -188,7 +182,6 @@ export const Payment: React.FC = () => {
                 total_people: totalPeople,
                 customer_info: customerInfo,
                 price_breakdown: priceBreakdown,
-                bank_account: bankAccount,
                 created_at: now
             };
 
@@ -204,7 +197,9 @@ export const Payment: React.FC = () => {
 
             const data = await api.reservations.create(newReservation);
             const reservationId = data.id;
-            const reservationNumber = data.reservationNumber || data.id.slice(0, 8).toUpperCase();
+            const reservationNumber = data.reservationNumber
+                ? String(data.reservationNumber)
+                : `MN-${data.id.slice(0, 8).toUpperCase()}`;
 
             // Update quote status if this is a quote reservation
             if (isQuote && quoteId) {

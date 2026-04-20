@@ -23,21 +23,45 @@ export const Home: React.FC = () => {
                 description={t('home.seo_description')}
                 keywords={t('home.seo_keywords')}
                 canonical="/"
-                structuredData={{
-                    "@context": "https://schema.org",
-                    "@type": "TravelAgency",
-                    "name": "Milkyway Japan",
-                    "image": "https://mongolryokou.com/og-image.jpg",
-                    "@id": "https://mongolryokou.com",
-                    "url": "https://mongolryokou.com",
-                    "address": {
-                        "@type": "PostalAddress",
-                        "addressCountry": "MN",
-                        "addressLocality": "Ulaanbaatar"
+                structuredData={[
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "TravelAgency",
+                        "@id": "https://mongolryokou.com/#organization",
+                        "name": "Milkyway Japan",
+                        "alternateName": "ミルキーウェイジャパン",
+                        "image": "https://mongolryokou.com/og-image.jpg",
+                        "url": "https://mongolryokou.com",
+                        "email": "info@mongolryokou.com",
+                        "address": {
+                            "@type": "PostalAddress",
+                            "addressCountry": "MN",
+                            "addressLocality": "Ulaanbaatar"
+                        },
+                        "description": t('home.seo_description'),
+                        "priceRange": "$$",
+                        "areaServed": "JP",
+                        "knowsLanguage": ["ja", "mn"],
+                        "sameAs": []
                     },
-                    "description": t('home.seo_description'),
-                    "priceRange": "$$"
-                }}
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "WebSite",
+                        "@id": "https://mongolryokou.com/#website",
+                        "url": "https://mongolryokou.com",
+                        "name": "Milkyway Japan | モンゴル旅行専門",
+                        "publisher": { "@id": "https://mongolryokou.com/#organization" },
+                        "inLanguage": "ja",
+                        "potentialAction": {
+                            "@type": "SearchAction",
+                            "target": {
+                                "@type": "EntryPoint",
+                                "urlTemplate": "https://mongolryokou.com/products?q={search_term_string}"
+                            },
+                            "query-input": "required name=search_term_string"
+                        }
+                    }
+                ]}
             />
             <div style={{ contentVisibility: 'auto', containIntrinsicSize: '400px' }}>
                 <HeroSection />

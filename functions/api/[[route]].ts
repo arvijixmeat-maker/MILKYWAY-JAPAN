@@ -32,6 +32,9 @@ import recentlyViewed from './recently-viewed';
 import travelMates from './travel-mates';
 import chats from './chats';
 import messages from './messages';
+import paymentReminder from './cron/payment-reminder';
+import dailyDigest from './cron/daily-digest';
+import paypalWebhook from './webhooks/paypal';
 
 // Register routes
 app.route('/products', products);
@@ -58,5 +61,8 @@ app.route('/recently-viewed', recentlyViewed);
 app.route('/travel-mates', travelMates);
 app.route('/chats', chats);
 app.route('/messages', messages);
+app.route('/cron/payment-reminder', paymentReminder);
+app.route('/cron/daily-digest', dailyDigest);
+app.route('/webhooks/paypal', paypalWebhook);
 
 export const onRequest = handle(app);

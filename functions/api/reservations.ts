@@ -4,6 +4,7 @@ import { reservations } from '../../src/db/schema/reservations';
 import { eq, desc } from 'drizzle-orm';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
+import { sendPayPalInvoice } from '../lib/paypal';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -12,6 +13,9 @@ interface Env {
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
     ENVIRONMENT: string;
+    PAYPAL_CLIENT_ID: string;
+    PAYPAL_SECRET_KEY: string;
+    PAYPAL_BUSINESS_EMAIL: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -228,6 +232,25 @@ app.post('/', async (c) => {
             history: body.history ? JSON.stringify(body.history) : null,
             reservationNumber,
         }).run();
+
+        // Auto-send PayPal invoice (fire-and-forget, don't block reservation)
+        if (c.env.PAYPAL_CLIENT_ID && c.env.PAYPAL_SECRET_KEY && c.env.PAYPAL_BUSINESS_EMAIL) {
+            const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
+            if (depositAmt > 0) {
+                sendPayPalInvoice({
+                    clientId: c.env.PAYPAL_CLIENT_ID,
+                    secret: c.env.PAYPAL_SECRET_KEY,
+                    businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
+                    customerEmail: String(customerEmail),
+                    customerName: String(customerName),
+                    reservationNumber,
+                    productName: String(productName),
+                    depositAmount: depositAmt,
+                }).catch((paypalErr: any) => {
+                    console.error('[PayPal Invoice Error]', paypalErr);
+                });
+            }
+        }
 
         return c.json({ message: 'Reservation created', id, reservationNumber }, 201);
     } catch (error: any) {
