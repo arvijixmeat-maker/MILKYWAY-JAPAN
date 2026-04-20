@@ -2,6 +2,9 @@
     "nav": {
         "home": "ホーム",
         "products": "ツアー商品",
+        "all_tours": "全ツアー一覧",
+        "horse_riding": "モンゴル乗馬旅行",
+        "gobi_desert": "ゴビ砂漠ツアー",
         "travel_mates": "同行者募集",
         "custom_estimate": "見積もり",
         "reviews": "旅行レビュー",

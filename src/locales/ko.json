@@ -2,6 +2,9 @@
     "nav": {
         "home": "홈",
         "products": "여행상품",
+        "all_tours": "전체 상품",
+        "horse_riding": "승마여행",
+        "gobi_desert": "고비사막 투어",
         "travel_mates": "동행찾기",
         "custom_estimate": "맞춤견적",
         "my_page": "마이페이지"
