@@ -327,7 +327,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800 sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        <div className={`w-2 h-8 rounded-full ${reservation.type === 'product' ? 'bg-indigo-500' : 'bg-purple-500'}`}></div>
+                        <div className={`w-2 h-8 rounded-full ${reservation.type !== 'quote' ? 'bg-indigo-500' : 'bg-purple-500'}`}></div>
                         <div>
                             <h2 className="text-xl font-bold">예약 상세 정보</h2>
                             <p className="text-sm text-slate-500 font-medium">No. {(reservation as any).reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</p>
@@ -571,8 +571,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                         <div className="p-5 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-100 dark:border-slate-700">
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-2 ${reservation.type === 'product' ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'}`}>
-                                        {reservation.type === 'product' ? '일반상품' : '맞춤견적'}
+                                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-2 ${reservation.type !== 'quote' ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'}`}>
+                                        {reservation.type !== 'quote' ? '일반상품' : '맞춤견적'}
                                     </span>
                                     <h4 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">{reservation.productName}</h4>
                                 </div>
@@ -1134,7 +1134,7 @@ export const AdminReservationManage: React.FC = () => {
                 (filterStatus === '예약 확정' && res.status === 'confirmed') ||
                 (filterStatus === '취소됨' && res.status === 'cancelled');
             const matchesType = filterType === '전체 유형' ||
-                (filterType === '일반 상품' && res.type === 'product');
+                (filterType === '일반 상품' && res.type !== 'quote');
 
             return matchesSearch && matchesStatus && matchesType;
         });
@@ -1294,8 +1294,8 @@ export const AdminReservationManage: React.FC = () => {
                                     {displayedReservations.length > 0 ? displayedReservations.map((res) => (
                                         <tr key={res.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                                             <td className="px-6 py-5">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${res.type === 'product' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
-                                                    {res.type === 'product' ? '일반상품' : (res.type === 'quote' ? '맞춤견적' : '맞춤견적')}
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${res.type !== 'quote' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                                                    {res.type !== 'quote' ? '일반상품' : (res.type === 'quote' ? '맞춤견적' : '맞춤견적')}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5 text-sm text-slate-500 dark:text-slate-400">{res.bookedAt}</td>
