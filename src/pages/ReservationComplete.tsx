@@ -5,10 +5,8 @@ import { api } from '../lib/api';
 export const ReservationComplete: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [showToast, setShowToast] = useState(false);
     const [reservation, setReservation] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [bankAccount, setBankAccount] = useState<any>(null);
 
     const reservationId = location.state?.reservationId;
 
@@ -22,18 +20,6 @@ export const ReservationComplete: React.FC = () => {
             try {
                 const data = await api.reservations.get(reservationId);
                 setReservation(data);
-
-                // Handle Bank Account Logic here immediately
-                if (data.bank_account?.bankName) {
-                    setBankAccount(data.bank_account);
-                } else {
-                    // Fallback
-                    const settingData = await api.settings.get('bank_account');
-
-                    if (settingData?.value) {
-                        setBankAccount(settingData.value);
-                    }
-                }
             } catch (error) {
                 console.error('Error fetching reservation:', error);
                 alert('予約情報の読み込みに失敗しました。');
@@ -45,14 +31,6 @@ export const ReservationComplete: React.FC = () => {
 
         fetchReservation();
     }, [reservationId, navigate]);
-
-    const handleCopy = () => {
-        if (bankAccount?.accountNumber) {
-            navigator.clipboard.writeText(bankAccount.accountNumber);
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 2500);
-        }
-    };
 
     const formatPrice = (price: number) => price ? price.toLocaleString() : '0';
 
@@ -71,14 +49,6 @@ export const ReservationComplete: React.FC = () => {
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
             <div className="max-w-[430px] mx-auto bg-white dark:bg-zinc-900 min-h-screen flex flex-col relative overflow-x-hidden shadow-2xl">
-
-                {/* Toast Notification */}
-                <div
-                    className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-max px-5 py-3.5 bg-zinc-900/90 dark:bg-white/90 backdrop-blur-md rounded-2xl flex items-center gap-2.5 shadow-xl border border-white/10 dark:border-black/5 transition-opacity duration-300 ${showToast ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
-                >
-                    <span className="material-symbols-outlined text-primary text-[18px]">check_circle</span>
-                    <p className="text-white dark:text-zinc-900 text-sm font-medium tracking-tight">계좌번호가 복사되었습니다</p>
-                </div>
 
                 {/* Header */}
                 <div className="sticky top-0 z-50 flex items-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md px-4 py-4 justify-between border-b border-gray-100 dark:border-zinc-800">

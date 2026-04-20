@@ -19,30 +19,8 @@ export const Payment: React.FC = () => {
     });
     const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-    // Bank account settings
-    const [bankAccount, setBankAccount] = useState({
-        bankName: '',
-        accountNumber: '',
-        accountHolder: ''
-    });
-
     // Processing state
     const [isProcessing, setIsProcessing] = useState(false);
-
-    // Load bank account settings from Cloudflare
-    useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const data = await api.settings.get('bank_account');
-                if (data?.value) {
-                    setBankAccount(data.value);
-                }
-            } catch (error) {
-                console.error('Failed to fetch bank account settings:', error);
-            }
-        };
-        fetchSettings();
-    }, []);
 
     // Auto-fill user info
     useEffect(() => {
@@ -249,6 +227,8 @@ export const Payment: React.FC = () => {
                     depositAmount: formatPrice(newReservation.price_breakdown.deposit),
                     customerPhone: newReservation.customer_info.phone,
                     customerEmail: newReservation.customer_info.email,
+                    totalAmount: formatPrice(newReservation.price_breakdown.total),
+                    localAmount: formatPrice(newReservation.price_breakdown.local),
                 }
             );
 

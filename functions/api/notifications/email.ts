@@ -69,18 +69,20 @@ function tplReservationRequested(data: any) {
   <p class="greeting">${data.customerName} 様</p>
   <p>この度はご予約いただきありがとうございます。<br>以下の内容でご予約を承りました。</p>
   <div class="card">
-    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;">${data.reservationId || '-'}</span></div>
+    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;font-weight:800;">${data.reservationId || '-'}</span></div>
     <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    <div class="card-row"><span class="label">予約金額</span><span class="value">${data.depositAmount || '-'}</span></div>
+    <div class="card-row"><span class="label">① 予約金（PayPal）</span><span class="value" style="color:#1eb496;">${data.depositAmount || '-'}</span></div>
+    <div class="card-row"><span class="label">② 残金（現地・円現金）</span><span class="value">${data.localAmount || '-'}</span></div>
   </div>
   <div class="highlight">
-    <strong>💳 予約金のお支払い方法</strong><br><br>
-    担当者より <strong>PayPalインボイス</strong> をメールにてお送りいたします。<br>
-    インボイスのリンクからクレジットカードまたはPayPalにてお支払いください。<br><br>
-    ※ お支払い確認後、ご予約が確定となります。<br>
+    <strong>💳 ① 予約金のお支払い</strong><br><br>
+    担当者より <strong>PayPalインボイス</strong> をこのメールアドレス宛にお送りします。<br>
+    リンクからクレジットカードまたはPayPalでお支払いください。<br><br>
+    <strong>💴 ② 残金のお支払い</strong><br><br>
+    残金は <strong>現地にて日本円（現金）</strong> でお支払いいただきます。<br><br>
+    ※ 予約金のお支払い確認後、ご予約が確定となります。<br>
     ※ インボイスが届かない場合はお手数ですがご連絡ください。
   </div>
-  <p style="font-size:14px;color:#4a6b64;">ご不明な点がございましたら、お気軽にお問い合わせください。</p>
   <a class="btn" href="https://mongolryokou.com/my-reservations">予約確認はこちら</a>
 </div>
 <div class="footer">
@@ -96,13 +98,13 @@ function tplAdminNewReservation(data: any) {
   <p>Milkyway Japan 管理通知</p>
 </div>
 <div class="body">
-  <p class="greeting">新しい予約が届きました。<br>PayPalインボイスを送付してください。</p>
+  <p class="greeting">新しい予約が届きました。<br>下記メールアドレスへ <strong style="color:#1eb496;">PayPalインボイス</strong> を送付してください。</p>
   <div class="card">
-    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;">${data.reservationId || '-'}</span></div>
+    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;font-weight:800;">${data.reservationId || '-'}</span></div>
     <div class="card-row"><span class="label">お客様名</span><span class="value">${data.customerName || '-'}</span></div>
     <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    <div class="card-row"><span class="label">予約金</span><span class="value">${data.depositAmount || '-'}</span></div>
-    <div class="card-row"><span class="label">送付先メール</span><span class="value">${data.customerEmail || '-'}</span></div>
+    <div class="card-row"><span class="label">📧 PayPal送付先</span><span class="value" style="color:#1eb496;font-weight:800;">${data.customerEmail || '-'}</span></div>
+    <div class="card-row"><span class="label">💴 予約金（PayPal）</span><span class="value">${data.depositAmount || '-'}</span></div>
     <div class="card-row"><span class="label">電話</span><span class="value">${data.customerPhone || '-'}</span></div>
   </div>
   <a class="btn" href="https://mongolryokou.com/admin/reservations">管理画面で確認する</a>
