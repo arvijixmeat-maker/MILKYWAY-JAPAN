@@ -74,14 +74,17 @@ function tplReservationRequested(data: any) {
     <div class="card-row"><span class="label">① 予約金（PayPal）</span><span class="value" style="color:#1eb496;">${data.depositAmount || '-'}</span></div>
     <div class="card-row"><span class="label">② 残金（現地・円現金）</span><span class="value">${data.localAmount || '-'}</span></div>
   </div>
+  <div style="text-align:center;margin:24px 0;">
+    <a href="https://paypal.me/MilkywayMongolia/${(data.depositAmount || '0').replace(/,/g, '')}" style="display:inline-block;background:#003087;color:#fff;padding:16px 40px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;">
+      💳 PayPalで予約金を支払う<br><span style="font-size:13px;font-weight:400;opacity:.85;">${data.depositAmount || '0'}円</span>
+    </a>
+    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">クレジットカード・PayPalで安全にお支払いいただけます</p>
+  </div>
   <div class="highlight">
-    <strong>💳 ① 予約金のお支払い</strong><br><br>
-    担当者より <strong>PayPalインボイス</strong> をこのメールアドレス宛にお送りします。<br>
-    リンクからクレジットカードまたはPayPalでお支払いください。<br><br>
     <strong>💴 ② 残金のお支払い</strong><br><br>
     残金は <strong>現地にて日本円（現金）</strong> でお支払いいただきます。<br><br>
     ※ 予約金のお支払い確認後、ご予約が確定となります。<br>
-    ※ インボイスが届かない場合はお手数ですがご連絡ください。
+    ※ ボタンが開かない場合: <a href="https://paypal.me/MilkywayMongolia/${(data.depositAmount || '0').replace(/,/g, '')}" style="color:#1eb496;">paypal.me/MilkywayMongolia</a>
   </div>
   <a class="btn" href="https://mongolryokou.com/mypage/reservations">予約確認はこちら</a>
 </div>
