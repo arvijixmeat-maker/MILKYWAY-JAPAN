@@ -16,17 +16,23 @@ export const MyEstimates: React.FC = () => {
 
                 const data = await api.quotes.list();
                 if (Array.isArray(data)) {
-                    const myQuotes = data.filter((e: any) => e.user_id === me.id && (e.type === 'personal' || e.type === 'custom'));
-                    setEstimates(myQuotes.map((e: any) => ({
-                        id: e.id,
-                        status: e.status === 'new' ? 'waiting' : e.status,
-                        statusLabel: e.status === 'new' ? '回答待ち' : e.status === 'answered' ? '回答完了' : e.status === 'converted' ? '予約転換' : '相談中',
-                        title: `オーダーメイド見積り依頼 (${e.destination || 'モンゴル'})`,
-                        date: e.period,
-                        type: 'オーダーメイド',
-                        people: e.headcount,
-                        requestDate: new Date(e.created_at).toLocaleDateString('ko-KR')
-                    })));
+                    const myQuotes = data.filter((e: any) => {
+                        const userId = e.userId || e.user_id;
+                        return userId === me.id && (e.type === 'personal' || e.type === 'custom');
+                    });
+                    setEstimates(myQuotes.map((e: any) => {
+                        const createdAt = e.createdAt || e.created_at;
+                        return {
+                            id: e.id,
+                            status: e.status === 'new' ? 'waiting' : e.status,
+                            statusLabel: e.status === 'new' ? '回答待ち' : e.status === 'answered' ? '回答完了' : e.status === 'converted' ? '予約転換' : '相談中',
+                            title: `オーダーメイド見積り依頼 (${e.destination || 'モンゴル'})`,
+                            date: e.period,
+                            type: 'オーダーメイド',
+                            people: e.headcount,
+                            requestDate: createdAt ? new Date(createdAt).toLocaleDateString('ko-KR') : ''
+                        };
+                    }));
                 }
             } catch (error) {
                 console.error('Error fetching estimates:', error);

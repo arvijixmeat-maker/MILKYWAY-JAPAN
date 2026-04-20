@@ -15,17 +15,21 @@ export const EstimateComplete: React.FC = () => {
             try {
                 const data = await api.categories.list('product');
                 if (Array.isArray(data) && data.length > 0) {
-                    setCategories(data.filter((c: any) => c.type === 'product' || !c.type).map((c: any) => ({
+                    const mapped = data.filter((c: any) => c.type === 'product' || !c.type).map((c: any) => ({
                         id: c.id,
-                        icon: c.icon,
+                        icon: c.icon || 'category',
                         name: c.name,
-                        description: c.description,
-                        isActive: c.is_active,
-                        order: c.order
-                    })));
+                        description: c.description || '',
+                        isActive: c.is_active ?? c.isActive ?? true,
+                        order: c.sort_order ?? c.order ?? 0
+                    }));
+                    setCategories(mapped.length ? mapped : DEFAULT_CATEGORIES);
+                } else {
+                    setCategories(DEFAULT_CATEGORIES);
                 }
             } catch (error) {
                 console.error('Error fetching categories:', error);
+                setCategories(DEFAULT_CATEGORIES);
             } finally {
                 setIsLoading(false);
             }
@@ -102,16 +106,16 @@ export const EstimateComplete: React.FC = () => {
                                     onClick={() => navigate(`/products?category=${category.id}`)}
                                     className="flex flex-col items-center gap-2 shrink-0"
                                 >
-                                    <div className="relative w-16 h-16 rounded-full overflow-hidden flex items-center justify-center transition-all opacity-90 hover:opacity-100 bg-gray-100 dark:bg-zinc-800">
-                                        {category.icon.startsWith('data:') ? (
+                                    <div className="relative w-16 h-16 rounded-full overflow-hidden flex items-center justify-center transition-all opacity-90 hover:opacity-100 bg-primary/5 dark:bg-primary/10">
+                                        {category.icon && typeof category.icon === 'string' && (category.icon.startsWith('data:') || category.icon.startsWith('http')) ? (
                                             <img
                                                 src={category.icon}
                                                 alt={category.name}
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <span className="material-symbols-outlined text-2xl text-gray-500 dark:text-gray-400">
-                                                {category.icon}
+                                            <span className="material-symbols-outlined text-2xl text-primary">
+                                                {category.icon || 'category'}
                                             </span>
                                         )}
                                     </div>

@@ -49,6 +49,19 @@ app.get('/', async (c) => {
     return c.json(parsed);
 });
 
+// GET /api/quotes/:id (public — no auth required so users can view own quotes from email link)
+app.get('/:id', async (c) => {
+    const id = c.req.param('id');
+    const db = drizzle(c.env.DB);
+
+    const result = await db.select().from(quotes).where(eq(quotes.id, id)).get();
+    if (!result) {
+        return c.json({ error: 'Not found' }, 404);
+    }
+
+    return c.json(result);
+});
+
 // POST /api/quotes (Create new quote — no auth required, guests can submit)
 app.post('/', async (c) => {
     try {
