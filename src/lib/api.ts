@@ -197,7 +197,7 @@ export const api = {
         }),
         delete: async (id: string) => request(`${API_BASE}/accommodations/${id}`, { method: 'DELETE' }),
         save: async (data: any[]) => request(`${API_BASE}/accommodations/bulk`, {
-            method: 'PUT',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accommodations: data })
         }),
