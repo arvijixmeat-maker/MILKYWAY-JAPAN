@@ -87,7 +87,7 @@ app.post('/', async (c) => {
         return c.json({ id, success: true });
     } catch (e: any) {
         console.error('[Quotes POST Error]', e);
-        return c.json({ error: 'Internal server error' }, 500);
+        return c.json({ error: e?.message || 'Internal server error' }, 500);
     }
 });
 
