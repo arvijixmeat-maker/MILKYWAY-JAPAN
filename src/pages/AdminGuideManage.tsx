@@ -236,12 +236,6 @@ export const AdminGuideManage: React.FC = () => {
                                             <span className="material-symbols-outlined text-slate-400 text-lg">phone</span>
                                             <span className="text-slate-700 dark:text-slate-300">{guide.phone}</span>
                                         </div>
-                                        {guide.kakaoId && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <span className="material-symbols-outlined text-slate-400 text-lg">chat</span>
-                                                <span className="text-slate-700 dark:text-slate-300">{guide.kakaoId}</span>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {guide.languages.length > 0 && (
@@ -355,18 +349,6 @@ export const AdminGuideManage: React.FC = () => {
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     placeholder="010-0000-0000"
-                                />
-                            </div>
-
-                            {/* Kakao ID */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">카카오톡 ID</label>
-                                <input
-                                    type="text"
-                                    value={formData.kakaoId}
-                                    onChange={(e) => setFormData({ ...formData, kakaoId: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    placeholder="카카오톡 ID"
                                 />
                             </div>
 
