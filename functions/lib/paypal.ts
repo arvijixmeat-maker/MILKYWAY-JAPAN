@@ -40,7 +40,7 @@ export async function sendPayPalInvoice(opts: {
                 invoice_number: opts.reservationNumber,
                 currency_code: 'JPY',
                 note: `予約番号: ${opts.reservationNumber}\n残金は現地にて円現金でお支払いください。`,
-                payment_term: { term_type: 'DUE_ON_DATE', due_date: getDueDate(3) },
+                payment_term: { term_type: 'NET_10' },
                 memo: opts.productName,
             },
             invoicer: {
@@ -81,10 +81,4 @@ export async function sendPayPalInvoice(opts: {
     if (!sendRes.ok) throw new Error(`PayPal invoice send failed: ${await sendRes.text()}`);
 
     return { invoiceId };
-}
-
-function getDueDate(daysFromNow: number): string {
-    const d = new Date();
-    d.setDate(d.getDate() + daysFromNow);
-    return d.toISOString().split('T')[0];
 }
