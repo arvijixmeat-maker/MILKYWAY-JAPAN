@@ -74,16 +74,38 @@ app.get('/', async (c) => {
     for (const colDef of travelMatesColumns) {
         try {
             await c.env.DB.prepare(`ALTER TABLE travel_mates ADD COLUMN ${colDef}`).run();
-            migrationResults.push(`Added ${colDef}`);
+            migrationResults.push(`Added travel_mates.${colDef}`);
         } catch (e: any) {
-            migrationResults.push(`Skipped ${colDef}: ${e.message}`);
+            migrationResults.push(`Skipped travel_mates.${colDef}: ${e.message}`);
         }
     }
 
-    return c.json({ 
-        success: true, 
-        message: "Migrations executed", 
-        details: migrationResults 
+    // Add missing columns to quotes table (safe to run multiple times)
+    const quotesColumns = [
+        "attachment_url TEXT",
+        "admin_note TEXT",
+        "estimate_url TEXT",
+        "confirmed_start_date TEXT",
+        "confirmed_end_date TEXT",
+        "confirmed_price INTEGER",
+        "deposit INTEGER",
+        "deposit_status TEXT DEFAULT 'unpaid'",
+        "balance_status TEXT DEFAULT 'unpaid'",
+        "updated_at TEXT DEFAULT CURRENT_TIMESTAMP",
+    ];
+    for (const colDef of quotesColumns) {
+        try {
+            await c.env.DB.prepare(`ALTER TABLE quotes ADD COLUMN ${colDef}`).run();
+            migrationResults.push(`Added quotes.${colDef}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped quotes.${colDef}: ${e.message}`);
+        }
+    }
+
+    return c.json({
+        success: true,
+        message: "Migrations executed",
+        details: migrationResults
     });
 });
 
