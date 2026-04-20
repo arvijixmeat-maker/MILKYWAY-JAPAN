@@ -17,5 +17,4 @@ bucket_name = "milkyway-assets"
 # Vars
 [vars]
 ENVIRONMENT = "production"
-RESEND_API_KEY = "re_3xUqzi1c_JVJExinYVzV58ixAQAVZvsuh"
 ADMIN_EMAIL = "agape_ibeel@hanpass.com"
