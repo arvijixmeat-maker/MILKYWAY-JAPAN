@@ -83,7 +83,7 @@ function tplReservationRequested(data: any) {
     ※ 予約金のお支払い確認後、ご予約が確定となります。<br>
     ※ インボイスが届かない場合はお手数ですがご連絡ください。
   </div>
-  <a class="btn" href="https://mongolryokou.com/my-reservations">予約確認はこちら</a>
+  <a class="btn" href="https://mongolryokou.com/mypage/reservations">予約確認はこちら</a>
 </div>
 <div class="footer">
   <a href="https://mongolryokou.com">mongolryokou.com</a> |
@@ -168,7 +168,7 @@ function tplGuideAssigned(data: any) {
     <div class="card-row"><span class="label">ガイド連絡先</span><span class="value">${data.guidePhone || '-'}</span></div>
   </div>
   <p style="font-size:14px;color:#4a6b64;">ご不明な点はいつでもご連絡ください。素敵な旅をお楽しみください！</p>
-  <a class="btn" href="https://mongolryokou.com/my-reservations">予約詳細を確認</a>
+  <a class="btn" href="https://mongolryokou.com/mypage/reservations">予約詳細を確認</a>
 </div>
 <div class="footer">
   <a href="https://mongolryokou.com">mongolryokou.com</a>
