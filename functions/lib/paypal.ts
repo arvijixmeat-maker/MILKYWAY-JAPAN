@@ -69,7 +69,16 @@ export async function sendPayPalInvoice(opts: {
 
     if (!createRes.ok) throw new Error(`PayPal invoice create failed: ${await createRes.text()}`);
     const invoice: any = await createRes.json();
-    const invoiceId = invoice.id;
+    console.log('[PayPal] Create response:', JSON.stringify(invoice).slice(0, 300));
+
+    // ID가 직접 없으면 links[rel=self] href에서 추출
+    let invoiceId = invoice.id;
+    if (!invoiceId && invoice.links) {
+        const self = invoice.links.find((l: any) => l.rel === 'self');
+        if (self?.href) invoiceId = self.href.split('/').pop();
+    }
+    if (!invoiceId) throw new Error('PayPal invoice create: no invoice ID in response');
+    console.log('[PayPal] Invoice ID:', invoiceId);
 
     // 2. インボイス送信
     const sendRes = await fetch(`${PAYPAL_API}/v2/invoicing/invoices/${invoiceId}/send`, {
