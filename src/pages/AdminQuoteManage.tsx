@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { keysToCamel, keysToSnake } from '../utils/mapKeys';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { sendNotificationEmail } from '../lib/email';
 import type { QuoteRequest } from '../components/admin/QuoteModals';
@@ -36,18 +37,8 @@ export const AdminQuoteManage: React.FC = () => {
             const data = await api.quotes.list();
 
             if (Array.isArray(data)) {
-                // Map snake_case to camelCase
                 const mappedQuotes = data.map((q: any) => ({
-                    ...q,
-                    travelTypes: q.travel_types || [],
-                    accommodations: q.accommodations || [],
-                    additionalRequest: q.additional_request,
-                    adminNote: q.admin_note,
-                    estimateUrl: q.estimate_url,
-                    attachmentUrl: q.attachment_url, // Map from DB
-                    createdAt: q.created_at,
-                    userId: q.user_id,
-                    // Make sure date format matches UI expectations (YYYY-MM-DD)
+                    ...keysToCamel(q),
                     date: new Date(q.created_at).toLocaleDateString()
                 }));
                 setRequests(mappedQuotes);
@@ -241,21 +232,10 @@ export const AdminQuoteManage: React.FC = () => {
 
     const handleUpdateQuote = async (id: string, updates: Partial<QuoteRequest>) => {
         try {
-            // Map camelCase to snake_case for DB
-            const dbUpdates: any = {};
-            if (updates.destination) dbUpdates.destination = updates.destination;
-            if (updates.headcount) dbUpdates.headcount = updates.headcount;
-            if (updates.period) dbUpdates.period = updates.period;
-            if (updates.budget) dbUpdates.budget = updates.budget;
-
-            // If we support other fields later, map them here
-            if (updates.travelTypes) dbUpdates.travel_types = updates.travelTypes;
-            if (updates.accommodations) dbUpdates.accommodations = updates.accommodations;
-            if (updates.vehicle) dbUpdates.vehicle = updates.vehicle;
-            if (updates.confirmed_price !== undefined) dbUpdates.confirmed_price = updates.confirmed_price;
-            if (updates.deposit !== undefined) dbUpdates.deposit = updates.deposit;
-
-            dbUpdates.updated_at = new Date().toISOString();
+            const dbUpdates = {
+                ...keysToSnake(updates as Record<string, unknown>),
+                updated_at: new Date().toISOString(),
+            };
 
             await api.quotes.update(id, dbUpdates);
 

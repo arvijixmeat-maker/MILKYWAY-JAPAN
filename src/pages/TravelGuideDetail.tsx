@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; 
+import DOMPurify from 'dompurify';
+import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
@@ -100,7 +101,7 @@ export const TravelGuideDetail: React.FC = () => {
             if (node.nodeType === Node.ELEMENT_NODE && (node as Element).classList.contains('magazine-slider')) {
                 // Flush buffer if exists
                 if (htmlBuffer) {
-                    result.push(<div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: htmlBuffer }} />);
+                    result.push(<div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlBuffer) }} />);
                     htmlBuffer = '';
                 }
 
@@ -135,7 +136,7 @@ export const TravelGuideDetail: React.FC = () => {
 
         // Flush remaining buffer
         if (htmlBuffer) {
-            result.push(<div key="html-end" dangerouslySetInnerHTML={{ __html: htmlBuffer }} />);
+            result.push(<div key="html-end" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlBuffer) }} />);
         }
 
         return <>{result}</>;

@@ -18,7 +18,6 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                 const user = await api.auth.me();
 
                 if (!user) {
-                    // Redirect to login, saving the attempted URL
                     navigate('/login', { state: { from: location.pathname } });
                     return;
                 }
@@ -33,7 +32,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         };
 
         checkAuth();
-    }, [navigate, location]);
+    }, [navigate, location.pathname]);
 
     if (isLoading) {
         return (

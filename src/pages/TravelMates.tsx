@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { keysToCamel } from '../utils/mapKeys';
 import { useUser } from '../contexts/UserContext';
 import { BottomNav } from '../components/layout/BottomNav';
 import { optimizeImage } from '../utils/imageOptimizer';
@@ -32,41 +33,29 @@ export const TravelMates: React.FC = () => {
                 const data = await api.travelMates.list();
 
                 if (data) {
-                    // Map snake_case to camelCase
                     const mappedPosts = data.map((post: any) => {
-                        let parsedAgeGroups = [];
-                        let parsedStyles = [];
-                        try {
-                            parsedAgeGroups = typeof post.age_groups === 'string' ? JSON.parse(post.age_groups) : post.age_groups || [];
-                        } catch (e) { console.error('Error parsing age groups JSON:', e); }
+                        const base = keysToCamel<Record<string, any>>(post);
 
-                        try {
-                            parsedStyles = typeof post.styles === 'string' ? JSON.parse(post.styles) : post.styles || [];
-                        } catch (e) { console.error('Error parsing styles JSON:', e); }
+                        let ageGroups = [];
+                        let styles = [];
+                        try { ageGroups = typeof post.age_groups === 'string' ? JSON.parse(post.age_groups) : post.age_groups || []; } catch { /* ignore */ }
+                        try { styles = typeof post.styles === 'string' ? JSON.parse(post.styles) : post.styles || []; } catch { /* ignore */ }
 
-                        // Localize stored English duration like "3N 4D" → "3박 4일"
-                        let localizedDuration = post.duration || '';
-                        const durationMatch = localizedDuration.match(/^(\d+)N\s+(\d+)D$/);
+                        let duration = post.duration || '';
+                        const durationMatch = duration.match(/^(\d+)N\s+(\d+)D$/);
                         if (durationMatch) {
-                            localizedDuration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '박' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '일' })}`;
-                        } else if (localizedDuration === '1 Day') {
-                            localizedDuration = t('travel_mates.detail.one_day', { defaultValue: '당일치기' });
+                            duration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '박' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '일' })}`;
+                        } else if (duration === '1 Day') {
+                            duration = t('travel_mates.detail.one_day', { defaultValue: '당일치기' });
                         }
 
                         return {
-                            ...post,
-                            startDate: post.start_date,
-                            endDate: post.end_date,
-                            recruitCount: post.recruit_count,
-                            ageGroups: parsedAgeGroups,
-                            styles: parsedStyles,
-                            gender: post.gender,
-                            authorImage: post.author_image,
+                            ...base,
+                            ageGroups,
+                            styles,
+                            duration,
                             authorName: post.author_name === 'Anonymous' ? '' : post.author_name,
                             authorInfo: post.author_info === 'Traveler' ? '' : post.author_info,
-                            duration: localizedDuration,
-                            createdAt: post.created_at,
-                            updatedAt: post.updated_at
                         };
                     });
                     setPosts(mappedPosts);

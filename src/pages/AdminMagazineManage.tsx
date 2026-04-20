@@ -55,7 +55,11 @@ class SliderBlot extends BlockEmbed {
 
         // Remove Button
         const removeBtn = document.createElement('div');
-        removeBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">close</span>';
+        const removeBtnIcon = document.createElement('span');
+        removeBtnIcon.className = 'material-symbols-outlined';
+        removeBtnIcon.style.fontSize = '16px';
+        removeBtnIcon.textContent = 'close';
+        removeBtn.appendChild(removeBtnIcon);
         removeBtn.style.cssText = 'position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; background-color: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;';
 
         // Add click listener to remove the blot
@@ -68,17 +72,31 @@ class SliderBlot extends BlockEmbed {
         });
 
         // Content
-        const images = value.split(',');
+        const images = value.split(',').filter(url => /^https?:\/\//.test(url.trim()));
         const content = document.createElement('div');
-        content.innerHTML = `
-            <div style="font-weight: bold; color: #64748b; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                <span class="material-symbols-outlined" style="font-size: 1.25rem;">photo_library</span>
-                <span>이미지 슬라이더 (${images.length}장)</span>
-            </div>
-            <div style="display: flex; gap: 0.5rem; justify-content: center; overflow-x: auto; padding-bottom: 0.5rem;">
-                ${images.map(url => `<img src="${url}" style="height: 60px; width: 60px; object-fit: cover; border-radius: 0.5rem; border: 1px solid #e2e8f0;" />`).join('')}
-            </div>
-        `;
+
+        const label = document.createElement('div');
+        label.style.cssText = 'font-weight: bold; color: #64748b; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;';
+        const labelIcon = document.createElement('span');
+        labelIcon.className = 'material-symbols-outlined';
+        labelIcon.style.fontSize = '1.25rem';
+        labelIcon.textContent = 'photo_library';
+        const labelText = document.createElement('span');
+        labelText.textContent = `이미지 슬라이더 (${images.length}장)`;
+        label.appendChild(labelIcon);
+        label.appendChild(labelText);
+
+        const thumbnails = document.createElement('div');
+        thumbnails.style.cssText = 'display: flex; gap: 0.5rem; justify-content: center; overflow-x: auto; padding-bottom: 0.5rem;';
+        images.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url.trim();
+            img.style.cssText = 'height: 60px; width: 60px; object-fit: cover; border-radius: 0.5rem; border: 1px solid #e2e8f0;';
+            thumbnails.appendChild(img);
+        });
+
+        content.appendChild(label);
+        content.appendChild(thumbnails);
 
         container.appendChild(removeBtn);
         container.appendChild(content);

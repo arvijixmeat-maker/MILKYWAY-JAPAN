@@ -49,6 +49,48 @@ app.get('/', async (c) => {
     return c.json(parsed);
 });
 
+// POST /api/quotes (Create new quote — no auth required, guests can submit)
+app.post('/', async (c) => {
+    try {
+        const body = await c.req.json();
+
+        if (!body.name || !body.type) {
+            return c.json({ error: 'Missing required fields: name, type' }, 400);
+        }
+
+        const db = drizzle(c.env.DB);
+        const id = crypto.randomUUID();
+
+        await db.insert(quotes).values({
+            id,
+            userId: body.user_id || null,
+            type: body.type,
+            name: body.name,
+            phone: body.phone || null,
+            email: body.email || null,
+            destination: body.destination || null,
+            headcount: body.headcount || null,
+            period: body.period || null,
+            budget: body.budget || null,
+            travelTypes: Array.isArray(body.travel_types)
+                ? JSON.stringify(body.travel_types)
+                : (body.travel_types || null),
+            accommodations: Array.isArray(body.accommodations)
+                ? JSON.stringify(body.accommodations)
+                : (body.accommodations || null),
+            vehicle: body.vehicle || null,
+            additionalRequest: body.additional_request || null,
+            status: body.status || 'new',
+            createdAt: body.created_at || new Date().toISOString(),
+        }).run();
+
+        return c.json({ id, success: true });
+    } catch (e: any) {
+        console.error('[Quotes POST Error]', e);
+        return c.json({ error: 'Internal server error' }, 500);
+    }
+});
+
 // PUT /api/quotes/:id
 app.put('/:id', async (c) => {
     const id = c.req.param('id');

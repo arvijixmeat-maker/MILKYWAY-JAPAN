@@ -29,14 +29,22 @@ app.get('/', async (c) => {
 
 // POST /api/notifications (Send notification)
 app.post('/', async (c) => {
-    // Auth check? Internal use mostly.
-    // Or Admin can send.
-
     const body = await c.req.json();
-    // { userId, type, title, message, link }
-
-    // Insert into DB
     console.log('Notification created:', body);
+    return c.json({ success: true });
+});
+
+// PUT /api/notifications/mark-all-read (Bulk mark as read)
+app.put('/mark-all-read', async (c) => {
+    const lucia = initializeLucia(c.env.DB);
+    const sessionId = getCookie(c, lucia.sessionCookieName);
+    if (!sessionId) return c.json({ error: "Unauthorized" }, 401);
+    const { session, user } = await lucia.validateSession(sessionId);
+    if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+    // TODO: UPDATE notifications SET is_read = true WHERE user_id = ? AND is_read = false
+    // const db = drizzle(c.env.DB);
+    // await db.update(notifications).set({ is_read: true }).where(eq(notifications.userId, user.id));
 
     return c.json({ success: true });
 });

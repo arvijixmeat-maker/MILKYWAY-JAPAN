@@ -235,6 +235,9 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }),
+        markAllRead: async () => request(`${API_BASE}/notifications/mark-all-read`, {
+            method: 'PUT',
+        }),
     },
     travelMates: {
         list: async () => request(`${API_BASE}/travel-mates`),

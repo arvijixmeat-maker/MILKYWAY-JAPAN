@@ -93,8 +93,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             // api.ts doesn't show bulk mark read.
             // I'll just iterate for now or assuming backend 'update' can handle it? No.
             // Let's iterate client side for now to be safe, or just fire and forget.
-            const unread = notifications.filter(n => !n.is_read);
-            await Promise.all(unread.map(n => api.notifications.update(n.id, { is_read: true })));
+            await api.notifications.markAllRead();
 
         } catch (error) {
             console.error('Error marking all as read:', error);
