@@ -143,41 +143,43 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         // On error, we just fallback to default meta tags (do not block the user response)
     }
 
-    // 2. Use HTMLRewriter to inject the dynamically fetched tags into the <head>
+    // 2. Use HTMLRewriter to update existing tags in-place.
+    //    Crawlers (LINE, Facebook, Twitter) read the FIRST occurrence,
+    //    so we must replace — not append — the tags already in index.html.
+    const escape = (s: string) => s.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
     return new HTMLRewriter()
         .on('title', {
-            element(element) {
-                // Remove existing title content — we'll inject our own
-                element.setInnerContent(pageTitle);
-            }
+            element(el) { el.setInnerContent(pageTitle); }
         })
         .on('meta[name="description"]', {
-            element(element) {
-                // Update existing description meta
-                element.setAttribute('content', pageDescription);
-            }
+            element(el) { el.setAttribute('content', pageDescription); }
         })
         .on('link[rel="canonical"]', {
-            element(element) {
-                // Update canonical URL
-                element.setAttribute('href', canonicalUrl);
-            }
+            element(el) { el.setAttribute('href', canonicalUrl); }
         })
-        .on('head', {
-            element(element) {
-                element.append(`\n<!-- Injected by Cloudflare Edge SSR -->`, { html: true });
-
-                // Open Graph (appended — browsers/crawlers use last occurrence)
-                element.append(`\n<meta property="og:title" content="${pageTitle}">`, { html: true });
-                element.append(`\n<meta property="og:description" content="${pageDescription}">`, { html: true });
-                element.append(`\n<meta property="og:image" content="${pageImage}">`, { html: true });
-                element.append(`\n<meta property="og:url" content="${pageUrl}">`, { html: true });
-
-                // Twitter Card
-                element.append(`\n<meta name="twitter:title" content="${pageTitle}">`, { html: true });
-                element.append(`\n<meta name="twitter:description" content="${pageDescription}">`, { html: true });
-                element.append(`\n<meta name="twitter:image" content="${pageImage}">`, { html: true });
-            }
+        // Open Graph — replace existing tags in index.html
+        .on('meta[property="og:title"]', {
+            element(el) { el.setAttribute('content', escape(pageTitle)); }
+        })
+        .on('meta[property="og:description"]', {
+            element(el) { el.setAttribute('content', escape(pageDescription)); }
+        })
+        .on('meta[property="og:image"]', {
+            element(el) { el.setAttribute('content', pageImage); }
+        })
+        .on('meta[property="og:url"]', {
+            element(el) { el.setAttribute('content', pageUrl); }
+        })
+        // Twitter Card — replace existing tags
+        .on('meta[name="twitter:title"]', {
+            element(el) { el.setAttribute('content', escape(pageTitle)); }
+        })
+        .on('meta[name="twitter:description"]', {
+            element(el) { el.setAttribute('content', escape(pageDescription)); }
+        })
+        .on('meta[name="twitter:image"]', {
+            element(el) { el.setAttribute('content', pageImage); }
         })
         .transform(response);
 };
