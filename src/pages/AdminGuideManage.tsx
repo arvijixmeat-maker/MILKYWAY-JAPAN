@@ -9,9 +9,10 @@ interface Guide {
     image: string;
     introduction: string;
     phone: string;
-    kakaoId: string;
     languages: string[];
     specialties: string[];
+    status: string;
+    experienceYears: number;
     createdAt: string;
 }
 
@@ -22,64 +23,39 @@ export const AdminGuideManage: React.FC = () => {
     const [editingGuide, setEditingGuide] = useState<Guide | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const [formData, setFormData] = useState<Omit<Guide, 'id' | 'createdAt'>>({
+    const [formData, setFormData] = useState<Omit<Guide, 'id' | 'createdAt' | 'status'>>({
         name: '',
         image: '',
         introduction: '',
         phone: '',
-        kakaoId: '',
+        experienceYears: 0,
         languages: [],
         specialties: []
     });
 
-    // Load guides from API
-    useEffect(() => {
-        const fetchGuides = async () => {
-            try {
-                const data = await api.guides.list();
-                if (Array.isArray(data)) {
-                    setGuides(data.map((g: any) => ({
-                        id: g.id,
-                        name: g.name,
-                        image: g.image,
-                        introduction: g.introduction,
-                        phone: g.phone,
-                        kakaoId: g.kakao_id || g.kakaoId,
-                        languages: typeof g.languages === 'string' ? JSON.parse(g.languages || '[]') : (g.languages || []),
-                        specialties: typeof g.specialties === 'string' ? JSON.parse(g.specialties || '[]') : (g.specialties || []),
-                        createdAt: g.created_at || g.createdAt
-                    })));
-                }
-            } catch (error) {
-                console.error('Error fetching guides:', error);
-            }
-        };
-        fetchGuides();
-    }, []);
-
-    // Save guides via API
-    const saveGuides = async (updatedGuides: Guide[]) => {
+    const loadGuides = async () => {
         try {
-            const inserts = updatedGuides.map(g => ({
-                id: g.id,
-                name: g.name,
-                image: g.image,
-                introduction: g.introduction,
-                phone: g.phone,
-                kakao_id: g.kakaoId,
-                languages: g.languages,
-                specialties: g.specialties,
-                created_at: g.createdAt
-            }));
-            await api.guides.save(inserts);
-            setGuides(updatedGuides);
-            return true;
-        } catch (e) {
-            console.error('Failed to save guides', e);
-            alert('저장에 실패했습니다.');
-            return false;
+            const data = await api.tourGuides.list();
+            if (Array.isArray(data)) {
+                setGuides(data.map((g: any) => ({
+                    id: g.id,
+                    name: g.name,
+                    image: g.image || '',
+                    introduction: g.bio || g.introduction || '',
+                    phone: g.phone || '',
+                    experienceYears: g.experience_years || 0,
+                    languages: typeof g.languages === 'string' ? JSON.parse(g.languages || '[]') : (g.languages || []),
+                    specialties: typeof g.specialties === 'string' ? JSON.parse(g.specialties || '[]') : (g.specialties || []),
+                    status: g.status || 'active',
+                    createdAt: g.created_at || g.createdAt
+                })));
+            }
+        } catch (error) {
+            console.error('Error fetching guides:', error);
         }
     };
+
+    useEffect(() => { loadGuides(); }, []);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -114,26 +90,47 @@ export const AdminGuideManage: React.FC = () => {
             return;
         }
 
-        if (editingGuide) {
-            // Update existing guide
-            const updated = guides.map(g =>
-                g.id === editingGuide.id ? { ...formData, id: g.id, createdAt: g.createdAt } : g
-            );
-            if (await saveGuides(updated)) {
-                setIsModalOpen(false);
-                resetForm();
-            }
-        } else {
-            // Create new guide
-            const newGuide: Guide = {
-                ...formData,
-                id: `GUIDE-${Date.now()}`,
-                createdAt: new Date().toISOString()
+        try {
+            const payload = {
+                name: formData.name,
+                bio: formData.introduction,
+                phone: formData.phone,
+                image: formData.image,
+                experience_years: formData.experienceYears,
+                languages: formData.languages,
+                specialties: formData.specialties,
             };
-            if (await saveGuides([...guides, newGuide])) {
-                setIsModalOpen(false);
-                resetForm();
+
+            if (editingGuide) {
+                await api.tourGuides.update(editingGuide.id, payload);
+            } else {
+                await api.tourGuides.create({ ...payload, status: 'active' });
             }
+
+            await loadGuides();
+            setIsModalOpen(false);
+            resetForm();
+        } catch (error: any) {
+            console.error('Guide save error:', error);
+            alert('저장 실패: ' + error.message);
+        }
+    };
+
+    const handleApprove = async (guide: Guide) => {
+        try {
+            await api.tourGuides.update(guide.id, {
+                name: guide.name,
+                bio: guide.introduction,
+                phone: guide.phone,
+                image: guide.image,
+                experience_years: guide.experienceYears,
+                languages: guide.languages,
+                specialties: guide.specialties,
+                status: 'active',
+            });
+            await loadGuides();
+        } catch (error: any) {
+            alert('승인 실패: ' + error.message);
         }
     };
 
@@ -144,16 +141,21 @@ export const AdminGuideManage: React.FC = () => {
             image: guide.image,
             introduction: guide.introduction,
             phone: guide.phone,
-            kakaoId: guide.kakaoId,
+            experienceYears: guide.experienceYears,
             languages: guide.languages,
             specialties: guide.specialties
         });
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('정말 삭제하시겠습니까?')) {
-            saveGuides(guides.filter(g => g.id !== id));
+            try {
+                await api.tourGuides.delete(id);
+                await loadGuides();
+            } catch (error: any) {
+                alert('삭제 실패: ' + error.message);
+            }
         }
     };
 
@@ -163,7 +165,7 @@ export const AdminGuideManage: React.FC = () => {
             image: '',
             introduction: '',
             phone: '',
-            kakaoId: '',
+            experienceYears: 0,
             languages: [],
             specialties: []
         });
@@ -173,6 +175,8 @@ export const AdminGuideManage: React.FC = () => {
     const filteredGuides = guides.filter(g =>
         g.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const pendingCount = guides.filter(g => g.status === 'pending').length;
 
     const toggleTheme = () => {
         setIsDarkMode(!isDarkMode);
@@ -189,7 +193,14 @@ export const AdminGuideManage: React.FC = () => {
             <main className="ml-64 flex-1 flex flex-col min-h-screen">
                 {/* Header */}
                 <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">가이드 관리</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-xl font-bold text-slate-800 dark:text-white">가이드 관리</h1>
+                        {pendingCount > 0 && (
+                            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-full">
+                                승인대기 {pendingCount}
+                            </span>
+                        )}
+                    </div>
                     <button
                         onClick={() => {
                             resetForm();
@@ -226,6 +237,11 @@ export const AdminGuideManage: React.FC = () => {
                                             <span className="material-symbols-outlined text-6xl text-slate-400">person</span>
                                         </div>
                                     )}
+                                    {guide.status === 'pending' && (
+                                        <div className="absolute top-2 left-2">
+                                            <span className="px-2 py-1 bg-amber-500 text-white text-xs font-bold rounded-md">승인대기</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="p-5">
                                     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">{guide.name}</h3>
@@ -236,6 +252,12 @@ export const AdminGuideManage: React.FC = () => {
                                             <span className="material-symbols-outlined text-slate-400 text-lg">phone</span>
                                             <span className="text-slate-700 dark:text-slate-300">{guide.phone}</span>
                                         </div>
+                                        {guide.experienceYears > 0 && (
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <span className="material-symbols-outlined text-slate-400 text-lg">workspace_premium</span>
+                                                <span className="text-slate-700 dark:text-slate-300">경력 {guide.experienceYears}년</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {guide.languages.length > 0 && (
@@ -246,6 +268,15 @@ export const AdminGuideManage: React.FC = () => {
                                                 </span>
                                             ))}
                                         </div>
+                                    )}
+
+                                    {guide.status === 'pending' && (
+                                        <button
+                                            onClick={() => handleApprove(guide)}
+                                            className="w-full mb-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold transition-colors"
+                                        >
+                                            승인하기
+                                        </button>
                                     )}
 
                                     <div className="flex gap-2">
@@ -350,6 +381,22 @@ export const AdminGuideManage: React.FC = () => {
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     placeholder="010-0000-0000"
                                 />
+                            </div>
+
+                            {/* Experience Years */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">경력 연수</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        value={formData.experienceYears}
+                                        onChange={(e) => setFormData({ ...formData, experienceYears: Number(e.target.value) })}
+                                        className="w-28 px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-center"
+                                    />
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">년</span>
+                                </div>
                             </div>
 
                             {/* Languages */}

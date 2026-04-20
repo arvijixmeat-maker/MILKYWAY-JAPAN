@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { uploadImage } from '../utils/upload';
 
 const LANGUAGES = ['日本語', '英語', 'モンゴル語', '中国語', '韓国語'];
 const SPECIALTIES = ['ゴビ砂漠', 'ホブスゴル', 'テレルジ', '乗馬', '文化体験', '写真撮影'];
@@ -8,9 +9,13 @@ export const GuideApply: React.FC = () => {
         name: '',
         phone: '',
         bio: '',
+        experience_years: '',
+        image: '',
         languages: [] as string[],
         specialties: [] as string[],
     });
+    const [imagePreview, setImagePreview] = useState('');
+    const [imageUploading, setImageUploading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -24,10 +29,29 @@ export const GuideApply: React.FC = () => {
         }));
     };
 
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setImagePreview(URL.createObjectURL(file));
+        setImageUploading(true);
+        try {
+            const url = await uploadImage(file, 'guides');
+            setForm(prev => ({ ...prev, image: url }));
+        } catch {
+            setError('画像のアップロードに失敗しました。もう一度お試しください。');
+        } finally {
+            setImageUploading(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.name.trim() || !form.phone.trim()) {
             setError('お名前と電話番号は必須です。');
+            return;
+        }
+        if (imageUploading) {
+            setError('画像のアップロードが完了するまでお待ちください。');
             return;
         }
         setLoading(true);
@@ -36,7 +60,10 @@ export const GuideApply: React.FC = () => {
             const res = await fetch('/api/tour-guides/apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    ...form,
+                    experience_years: form.experience_years ? Number(form.experience_years) : 0,
+                }),
             });
             if (!res.ok) throw new Error('送信に失敗しました。');
             setSubmitted(true);
@@ -78,6 +105,34 @@ export const GuideApply: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
 
+                    {/* Profile Photo */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">プロフィール写真</label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="material-symbols-outlined text-3xl text-gray-300">person</span>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                                    <span className="material-symbols-outlined text-base">upload</span>
+                                    {imageUploading ? 'アップロード中...' : '写真を選択'}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="hidden"
+                                        disabled={imageUploading}
+                                    />
+                                </label>
+                                <p className="text-xs text-gray-400 mt-1">JPG、PNG、WEBPに対応</p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Name */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1.5">
@@ -104,6 +159,23 @@ export const GuideApply: React.FC = () => {
                             placeholder="090-0000-0000"
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                         />
+                    </div>
+
+                    {/* Experience Years */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1.5">ガイド経験年数</label>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="number"
+                                min="0"
+                                max="50"
+                                value={form.experience_years}
+                                onChange={e => setForm({ ...form, experience_years: e.target.value })}
+                                placeholder="0"
+                                className="w-28 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-center"
+                            />
+                            <span className="text-sm text-gray-600">年</span>
+                        </div>
                     </div>
 
                     {/* Bio */}
@@ -166,7 +238,7 @@ export const GuideApply: React.FC = () => {
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || imageUploading}
                         className="w-full bg-teal-600 text-white font-bold py-4 rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                     >
                         {loading ? (

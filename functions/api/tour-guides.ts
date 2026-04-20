@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 
 interface Env {
-    DB: D1Database;
+    DB: any;
     RESEND_API_KEY: string;
     ADMIN_EMAIL: string;
 }
@@ -31,8 +31,8 @@ app.post('/apply', async (c) => {
 
     try {
         await db.prepare(
-            `INSERT INTO guides (id, name, bio, phone, languages, specialties, image, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`
+            `INSERT INTO guides (id, name, bio, phone, languages, specialties, image, experience_years, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`
         ).bind(
             id,
             String(data.name),
@@ -41,6 +41,7 @@ app.post('/apply', async (c) => {
             JSON.stringify(data.languages || []),
             JSON.stringify(data.specialties || []),
             String(data.image || ''),
+            Number(data.experience_years || 0),
         ).run();
 
         // Admin notification email
@@ -79,8 +80,8 @@ app.post('/', async (c) => {
     const id = data.id || crypto.randomUUID();
     try {
         await db.prepare(
-            `INSERT INTO guides (id, name, bio, phone, languages, specialties, image, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'))`
+            `INSERT INTO guides (id, name, bio, phone, languages, specialties, image, experience_years, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'))`
         ).bind(
             id,
             String(data.name || ''),
@@ -89,6 +90,7 @@ app.post('/', async (c) => {
             JSON.stringify(data.languages || []),
             JSON.stringify(data.specialties || []),
             String(data.image || ''),
+            Number(data.experience_years || 0),
         ).run();
         return c.json({ id, ...data });
     } catch (e: any) {
@@ -103,7 +105,7 @@ app.put('/:id', async (c) => {
     const db = c.env.DB;
     try {
         await db.prepare(
-            `UPDATE guides SET name=?, bio=?, phone=?, languages=?, specialties=?, image=?, status=? WHERE id=?`
+            `UPDATE guides SET name=?, bio=?, phone=?, languages=?, specialties=?, image=?, experience_years=?, status=? WHERE id=?`
         ).bind(
             String(data.name || ''),
             String(data.bio || ''),
@@ -111,6 +113,7 @@ app.put('/:id', async (c) => {
             JSON.stringify(data.languages || []),
             JSON.stringify(data.specialties || []),
             String(data.image || ''),
+            Number(data.experience_years || 0),
             String(data.status || 'active'),
             id
         ).run();

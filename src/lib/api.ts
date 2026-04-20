@@ -147,6 +147,20 @@ export const api = {
         }),
         delete: async (id: string) => request(`${API_BASE}/reviews/${id}`, { method: 'DELETE' }),
     },
+    tourGuides: {
+        list: async () => request(`${API_BASE}/tour-guides`),
+        create: async (data: any) => request(`${API_BASE}/tour-guides`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        update: async (id: string, data: any) => request(`${API_BASE}/tour-guides/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        delete: async (id: string) => request(`${API_BASE}/tour-guides/${id}`, { method: 'DELETE' }),
+    },
     guides: {
         list: async () => request(`${API_BASE}/guides`),
         get: async (id: string) => request(`${API_BASE}/guides/${id}`),

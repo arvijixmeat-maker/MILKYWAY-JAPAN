@@ -195,6 +195,14 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped guides.status: ${e.message}`);
     }
 
+    // Add experience_years column to guides if missing
+    try {
+        await c.env.DB.prepare("ALTER TABLE guides ADD COLUMN experience_years INTEGER DEFAULT 0").run();
+        migrationResults.push('Added guides.experience_years');
+    } catch (e: any) {
+        migrationResults.push(`Skipped guides.experience_years: ${e.message}`);
+    }
+
     return c.json({
         success: true,
         message: "Migrations executed",
