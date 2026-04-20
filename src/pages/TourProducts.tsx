@@ -246,24 +246,6 @@ export const TourProducts: React.FC = () => {
                         </button>
                     </div>
                 </div>
-                {/* 특집 투어 페이지 링크 */}
-                <div className="px-4 pt-2 pb-1 flex gap-2 overflow-x-auto no-scrollbar">
-                    {[
-                        { label: t('nav.horse_riding'), icon: 'hiking', path: '/horse-riding-tour', color: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/40' },
-                        { label: t('nav.gobi_desert'), icon: 'landscape', path: '/gobi-desert', color: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700/40' },
-                    ].map(item => (
-                        <button
-                            key={item.path}
-                            onClick={() => navigate(item.path)}
-                            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-bold text-slate-700 dark:text-slate-200 transition-all active:scale-95 ${item.color}`}
-                        >
-                            <span className="material-symbols-outlined text-[16px]">{item.icon}</span>
-                            {item.label}
-                            <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
-                        </button>
-                    ))}
-                </div>
-
                 {/* Horizontal Tabs */}
                 <div className="pb-2 mt-2">
                     <div className="flex overflow-x-auto hide-scrollbar px-4 gap-4 border-b border-[#d1e6e2] dark:border-white/10 no-scrollbar py-3">
