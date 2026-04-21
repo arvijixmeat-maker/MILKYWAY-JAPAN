@@ -160,6 +160,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [extraDays, setExtraDays] = useState(0);
     const [guideList, setGuideList] = useState<any[]>([]);
     const [accommodationList, setAccommodationList] = useState<any[]>([]);
+    const [memoDraft, setMemoDraft] = useState('');
+    const [memoFocused, setMemoFocused] = useState(false);
+    const [openDocId, setOpenDocId] = useState<string | null>(null);
+    const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
 
     useEffect(() => {
         if (showGuideModal && guideList.length === 0) {
@@ -333,353 +337,543 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         onUpdate(updated);
     };
 
+    // Derived data
+    const memos = (reservation.history || []).filter((h: any) => h.type === 'admin_memo');
+    const timelineEvents = (reservation.history || []).filter((h: any) => h.type !== 'admin_memo');
+    const paidAmount = (editForm.depositStatus === 'paid' ? editForm.deposit : 0) + (editForm.balanceStatus === 'paid' ? (editForm.totalAmount - editForm.deposit) : 0);
+    const paidPercent = editForm.totalAmount > 0 ? Math.round((paidAmount / editForm.totalAmount) * 100) : 0;
+    const getInitials = (name: string) => (name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+    const addMemo = () => {
+        const text = memoDraft.trim();
+        if (!text) return;
+        const updated = {
+            ...reservation,
+            history: [
+                ...(reservation.history || []),
+                { timestamp: new Date().toISOString(), type: 'admin_memo', description: text }
+            ]
+        };
+        onUpdate(updated);
+        setMemoDraft('');
+        setMemoFocused(false);
+    };
+
+    const deleteMemo = (ts: string) => {
+        const updated = {
+            ...reservation,
+            history: (reservation.history || []).filter((h: any) => h.timestamp !== ts)
+        };
+        onUpdate(updated);
+    };
+
+    const copyDocUrl = (url: string | undefined, id: string) => {
+        if (!url) { alert('URL을 먼저 입력해 주세요.'); return; }
+        navigator.clipboard.writeText(url);
+        setCopiedDocId(id);
+        setTimeout(() => setCopiedDocId(null), 1500);
+    };
+
+    const saveDocUrl = (field: 'contractUrl' | 'itineraryUrl', value: string) => {
+        const updated = { ...reservation, [field]: value };
+        onUpdate(updated);
+    };
+
+    const timelineIcon: Record<string, string> = {
+        created: 'add_circle',
+        email: 'mail',
+        note: 'sticky_note_2',
+        call: 'call',
+        modification: 'edit_note',
+        payment: 'payments',
+        document_added: 'description',
+        assignment: 'assignment_ind',
+    };
 
     return (<>
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
-            <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
 
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex-shrink-0">
-                                    {reservation.type !== 'quote' ? '일반상품' : '맞춤견적'}
-                                </span>
-                                <span className="text-slate-400 text-xs font-mono">#{(reservation as any).reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</span>
-                            </div>
-                            <h2 className="text-slate-900 dark:text-white font-bold text-base leading-tight truncate">{reservation.productName}</h2>
+                <div className="px-7 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0 gap-5 bg-white dark:bg-slate-900">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 tracking-wide">
+                                {reservation.type !== 'quote' ? '일반상품' : '맞춤견적'}
+                            </span>
+                            <span className="text-xs font-mono font-semibold text-slate-500">#{(reservation as any).reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-xs text-slate-300">·</span>
+                            <span className="text-xs text-slate-500">접수 {reservation.bookedAt}</span>
                         </div>
+                        <h2 className="text-slate-900 dark:text-white font-bold text-xl leading-tight tracking-tight truncate">{reservation.productName}</h2>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         <StatusDropdown
                             status={editForm.status}
                             onChange={(s) => { setEditForm({ ...editForm, status: s }); if (!isEditing) onUpdate({ ...editForm, status: s }); }}
                         />
-                        <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors flex-shrink-0">
+                        <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors">
                             <span className="material-symbols-outlined text-lg">close</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Body - Two Column */}
-                <div className="flex-1 overflow-y-auto">
-                    <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800">
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto bg-slate-50/60 dark:bg-slate-950/40">
+                    <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                         {/* LEFT COLUMN */}
-                        <div className="flex-1 p-6 space-y-7 min-w-0">
+                        <div className="space-y-5 min-w-0">
 
-                            {/* Customer Info */}
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">예약자 정보</p>
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800">
-                                    <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
-                                        <div className="p-4">
-                                            <p className="text-xs text-slate-400 mb-1">이름</p>
-                                            <p className="font-semibold text-slate-900 dark:text-white text-sm">{reservation.customerName}</p>
+                            {/* Trip Summary Hero */}
+                            <section className="relative rounded-2xl overflow-hidden text-white shadow-xl shadow-teal-500/20"
+                                style={{ background: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)' }}>
+                                <div className="absolute -top-10 -right-8 w-40 h-40 rounded-full bg-white/5 pointer-events-none"></div>
+                                <div className="absolute top-8 right-10 w-20 h-20 rounded-full bg-white/5 pointer-events-none"></div>
+                                <div className="relative p-5">
+                                    <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/70 mb-1.5">여행 기간</p>
+                                    <p className="text-xl font-bold tracking-tight leading-snug">{reservation.date}</p>
+                                    <div className="flex items-center gap-2 mt-2.5 text-[11px] text-white/80">
+                                        <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">event_available</span>접수일 {reservation.bookedAt}</span>
+                                        <span className="opacity-40">·</span>
+                                        <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">group</span>{reservation.headcount || '인원 미정'}</span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Guest Card */}
+                            <section>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base text-slate-500">person</span>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">예약자 정보</h3>
+                                    </div>
+                                </div>
+                                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold tracking-tight shadow-md shadow-teal-500/30 flex-shrink-0"
+                                            style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                                            {getInitials(reservation.customerName)}
                                         </div>
-                                        <div className="p-4">
-                                            <p className="text-xs text-slate-400 mb-1">인원</p>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-bold text-slate-900 dark:text-white text-sm truncate tracking-tight">{reservation.customerName}</p>
                                             {isEditing ? (
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1 mt-1">
                                                     <input
                                                         type="number"
                                                         value={editForm.totalPeople || ''}
                                                         onChange={(e) => setEditForm(prev => prev ? ({ ...prev, totalPeople: parseInt(e.target.value) || 0, headcount: `${e.target.value}명` }) : null)}
-                                                        className="w-full font-semibold text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        className="w-16 text-xs font-semibold bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
                                                     />
-                                                    <span className="text-xs text-slate-500">명</span>
+                                                    <span className="text-xs text-slate-400">명</span>
                                                 </div>
                                             ) : (
-                                                <p className="font-semibold text-slate-900 dark:text-white text-sm">{reservation.headcount || '—'}</p>
+                                                <p className="text-xs text-slate-400 mt-0.5">{reservation.headcount}</p>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
-                                        <div className="p-4">
-                                            <p className="text-xs text-slate-400 mb-1">연락처</p>
-                                            <p className="font-semibold text-slate-900 dark:text-white text-sm">{reservation.phone || '—'}</p>
+                                    <div className="border-t border-slate-100 dark:border-slate-700 pt-3 grid grid-cols-2 gap-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">연락처</p>
+                                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 font-mono truncate">{reservation.phone || '—'}</p>
                                         </div>
-                                        <div className="p-4 min-w-0">
-                                            <p className="text-xs text-slate-400 mb-1">이메일</p>
-                                            <p className="font-semibold text-slate-900 dark:text-white text-sm truncate">{reservation.email || '—'}</p>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">이메일</p>
+                                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{reservation.email || '—'}</p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
 
-                            {/* Travel Schedule */}
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">여행 일정</p>
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                                        <span className="material-symbols-outlined text-teal-600 text-lg">calendar_month</span>
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-slate-900 dark:text-white text-sm">{reservation.date}</p>
-                                        <p className="text-xs text-slate-400 mt-0.5">접수일 {reservation.bookedAt}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Payment */}
-                            <div>
+                            {/* Admin Memo */}
+                            <section>
                                 <div className="flex items-center justify-between mb-3">
-                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">결제 현황</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base text-slate-500">sticky_note_2</span>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">관리자 메모</h3>
+                                    </div>
+                                    <span className="text-[11px] text-slate-400">내부 공유 전용 · 고객 비공개</span>
+                                </div>
+                                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden">
+                                    <div className={`p-3 ${memos.length ? 'border-b border-slate-100 dark:border-slate-700' : ''}`} style={{ background: '#fcfcfa' }}>
+                                        <div className={`bg-white dark:bg-slate-900 rounded-xl transition-all ${memoFocused ? 'ring-2 ring-teal-500 ring-offset-0' : 'border border-slate-200 dark:border-slate-700'}`}>
+                                            <textarea
+                                                value={memoDraft}
+                                                onChange={e => setMemoDraft(e.target.value)}
+                                                onFocus={() => setMemoFocused(true)}
+                                                onBlur={() => setMemoFocused(false)}
+                                                onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') addMemo(); }}
+                                                placeholder="이 예약에 대한 메모를 남기세요. (예: 고객 특이사항, 파트너 연락 결과…)"
+                                                rows={memoFocused || memoDraft ? 3 : 2}
+                                                className="w-full px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 bg-transparent outline-none resize-none leading-relaxed"
+                                            />
+                                            <div className="flex items-center justify-between px-3 pb-2 gap-2">
+                                                <span className="text-[11px] text-slate-400">⌘ + Enter 로 저장</span>
+                                                <button
+                                                    onClick={addMemo}
+                                                    disabled={!memoDraft.trim()}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${memoDraft.trim() ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-default'}`}
+                                                >
+                                                    메모 추가
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {memos.length > 0 && (
+                                        <ul className="p-1">
+                                            {[...memos].reverse().map((m: any) => (
+                                                <li key={m.timestamp} className="group grid grid-cols-[1fr_auto] gap-2 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">{m.description}</p>
+                                                        <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+                                                            <span className="font-semibold text-slate-500">Admin</span>
+                                                            <span>·</span>
+                                                            <span>{new Date(m.timestamp).toLocaleString('ko-KR')}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => deleteMemo(m.timestamp)}
+                                                        className="self-start opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                                                        title="메모 삭제"
+                                                    >
+                                                        <span className="material-symbols-outlined text-base">delete_outline</span>
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </section>
+
+                            {/* Payment with Progress Ring */}
+                            <section>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base text-slate-500">payments</span>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">결제 현황</h3>
+                                    </div>
                                     {isEditing && <span className="text-[11px] font-semibold text-teal-600 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full">수정 중</span>}
                                 </div>
-
-                                {/* Total */}
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 mb-2">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-xs text-slate-400 mb-1">총 상품 금액</p>
-                                            {isEditing ? (
-                                                <input
-                                                    type="number"
-                                                    value={editForm.totalAmount}
-                                                    onChange={(e) => setEditForm({ ...editForm, totalAmount: Number(e.target.value), balance: Number(e.target.value) - editForm.deposit })}
-                                                    className="w-40 font-bold text-xl text-slate-900 dark:text-white bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-5">
+                                    {/* Summary with ring */}
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="relative w-[62px] h-[62px] flex-shrink-0">
+                                            <svg width="62" height="62" viewBox="0 0 62 62">
+                                                <circle cx="31" cy="31" r="26" fill="none" stroke="#f1f5f9" strokeWidth="5" />
+                                                <circle cx="31" cy="31" r="26" fill="none" stroke="#0f766e" strokeWidth="5" strokeLinecap="round"
+                                                    strokeDasharray={2 * Math.PI * 26}
+                                                    strokeDashoffset={2 * Math.PI * 26 * (1 - paidPercent / 100)}
+                                                    transform="rotate(-90 31 31)"
+                                                    style={{ transition: 'stroke-dashoffset 500ms cubic-bezier(0.16, 1, 0.3, 1)' }}
                                                 />
-                                            ) : (
-                                                <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                                                    {typeof reservation.totalAmount === 'number' ? `${reservation.totalAmount.toLocaleString()}` : '0'}<span className="text-base font-semibold text-slate-500 ml-0.5">원</span>
+                                            </svg>
+                                            <div className={`absolute inset-0 flex items-center justify-center text-xs font-extrabold ${paidPercent >= 100 ? 'text-teal-600' : 'text-slate-900 dark:text-white'}`}>
+                                                {paidPercent}%
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">입금 현황</p>
+                                                <p className="text-[11px] text-slate-500">
+                                                    {paidPercent >= 100 ? '완납 완료' : `잔액 ₩${(editForm.totalAmount - paidAmount).toLocaleString()}`}
                                                 </p>
-                                            )}
+                                            </div>
+                                            <div className="flex items-baseline gap-1.5">
+                                                {isEditing ? (
+                                                    <input
+                                                        type="number"
+                                                        value={editForm.totalAmount}
+                                                        onChange={(e) => setEditForm({ ...editForm, totalAmount: Number(e.target.value), balance: Number(e.target.value) - editForm.deposit })}
+                                                        className="w-32 text-xl font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">₩{paidAmount.toLocaleString()}</span>
+                                                        <span className="text-xs text-slate-400 font-medium">/ ₩{(editForm.totalAmount || 0).toLocaleString()}</span>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                         <button
                                             onClick={toggleTotalStatus}
-                                            className={`text-xs px-3 py-2 rounded-xl font-semibold transition-colors ${editForm.status === 'paid' ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+                                            className={`h-9 px-3 rounded-xl text-xs font-bold inline-flex items-center gap-1 transition-colors flex-shrink-0 ${editForm.status === 'paid' ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}
                                         >
-                                            {editForm.status === 'paid' ? '전액완납' : '완납처리'}
+                                            <span className="material-symbols-outlined text-base">done_all</span>
+                                            {editForm.status === 'paid' ? '전액완납' : '완납 처리'}
                                         </button>
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2">
-                                    {/* Deposit */}
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <p className="text-xs text-slate-400">예약금</p>
-                                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${editForm.depositStatus === 'paid' ? 'bg-teal-500/10 text-teal-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                                                {editForm.depositStatus === 'paid' ? '완납' : '미납'}
-                                            </span>
+                                    {/* Deposit + Balance cells */}
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        <div className={`rounded-xl border p-3.5 transition-all ${editForm.depositStatus === 'paid' ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-800' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700'}`}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">예약금</span>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider ${editForm.depositStatus === 'paid' ? 'bg-teal-600 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                                                    {editForm.depositStatus === 'paid' ? '입금' : '미납'}
+                                                </span>
+                                            </div>
+                                            {isEditing ? (
+                                                <input
+                                                    type="number"
+                                                    value={editForm.deposit}
+                                                    onChange={(e) => setEditForm({ ...editForm, deposit: Number(e.target.value), balance: editForm.totalAmount - Number(e.target.value) })}
+                                                    className="w-full text-base font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                />
+                                            ) : (
+                                                <p className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">₩{(editForm.deposit || 0).toLocaleString()}</p>
+                                            )}
+                                            {editForm.depositStatus !== 'paid' && (
+                                                <button onClick={toggleDepositStatus} className="mt-2 w-full py-1 text-[11px] font-bold rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 hover:bg-teal-100 inline-flex items-center justify-center gap-1 transition-colors">
+                                                    <span className="material-symbols-outlined text-xs">check</span>입금 확인
+                                                </button>
+                                            )}
+                                            {editForm.depositStatus === 'paid' && (
+                                                <button onClick={toggleDepositStatus} className="mt-2 w-full py-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                                    입금 취소
+                                                </button>
+                                            )}
                                         </div>
-                                        {isEditing ? (
-                                            <input
-                                                type="number"
-                                                value={editForm.deposit}
-                                                onChange={(e) => setEditForm({ ...editForm, deposit: Number(e.target.value), balance: editForm.totalAmount - Number(e.target.value) })}
-                                                className="w-full font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                            />
-                                        ) : (
-                                            <p className="font-bold text-slate-900 dark:text-white text-sm mb-3">
-                                                {typeof reservation.deposit === 'number' ? `${reservation.deposit.toLocaleString()}원` : '0원'}
+                                        <div className={`rounded-xl border p-3.5 transition-all ${editForm.balanceStatus === 'paid' ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-800' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700'}`}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">잔금</span>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider ${editForm.balanceStatus === 'paid' ? 'bg-teal-600 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                                                    {editForm.balanceStatus === 'paid' ? '입금' : '미납'}
+                                                </span>
+                                            </div>
+                                            <p className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                                                ₩{((editForm.totalAmount || 0) - (editForm.deposit || 0)).toLocaleString()}
                                             </p>
-                                        )}
-                                        <button
-                                            onClick={toggleDepositStatus}
-                                            className={`w-full py-1.5 text-xs rounded-lg font-semibold transition-colors ${editForm.depositStatus === 'paid' ? 'bg-white dark:bg-slate-700 text-slate-500 border border-slate-200 dark:border-slate-600 hover:bg-slate-100' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
-                                        >
-                                            {editForm.depositStatus === 'paid' ? '취소' : '입금확인'}
-                                        </button>
-                                    </div>
-
-                                    {/* Balance */}
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <p className="text-xs text-slate-400">잔금</p>
-                                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${editForm.balanceStatus === 'paid' ? 'bg-teal-500/10 text-teal-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                                                {editForm.balanceStatus === 'paid' ? '완납' : '미납'}
-                                            </span>
+                                            {editForm.balanceStatus !== 'paid' && (
+                                                <button onClick={toggleBalanceStatus} className="mt-2 w-full py-1 text-[11px] font-bold rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 hover:bg-teal-100 inline-flex items-center justify-center gap-1 transition-colors">
+                                                    <span className="material-symbols-outlined text-xs">check</span>입금 확인
+                                                </button>
+                                            )}
+                                            {editForm.balanceStatus === 'paid' && (
+                                                <button onClick={toggleBalanceStatus} className="mt-2 w-full py-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                                    입금 취소
+                                                </button>
+                                            )}
                                         </div>
-                                        <p className="font-bold text-slate-900 dark:text-white text-sm mb-3">
-                                            {typeof editForm.totalAmount === 'number' && typeof editForm.deposit === 'number' ? `${(editForm.totalAmount - editForm.deposit).toLocaleString()}원` : '0원'}
-                                        </p>
-                                        <button
-                                            onClick={toggleBalanceStatus}
-                                            className={`w-full py-1.5 text-xs rounded-lg font-semibold transition-colors ${editForm.balanceStatus === 'paid' ? 'bg-white dark:bg-slate-700 text-slate-500 border border-slate-200 dark:border-slate-600 hover:bg-slate-100' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
-                                        >
-                                            {editForm.balanceStatus === 'paid' ? '취소' : '입금확인'}
-                                        </button>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
 
                         {/* RIGHT COLUMN */}
-                        <div className="lg:w-80 xl:w-96 p-6 space-y-7 flex-shrink-0">
+                        <div className="space-y-5 min-w-0">
 
                             {/* Guide */}
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">담당 가이드</p>
+                            <section>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="material-symbols-outlined text-base text-slate-500">badge</span>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">담당 가이드</h3>
+                                </div>
                                 {reservation.assignedGuide ? (
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            {reservation.assignedGuide.image ? (
-                                                <img src={reservation.assignedGuide.image} alt={reservation.assignedGuide.name} className="w-11 h-11 rounded-full object-cover flex-shrink-0" />
-                                            ) : (
-                                                <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                                                    <span className="material-symbols-outlined text-slate-400">person</span>
-                                                </div>
-                                            )}
-                                            <div className="min-w-0">
-                                                <p className="font-semibold text-slate-900 dark:text-white text-sm">{reservation.assignedGuide.name}</p>
-                                                <p className="text-xs text-slate-400 truncate">{reservation.assignedGuide.phone}</p>
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-3.5 grid grid-cols-[44px_1fr_auto] gap-3 items-center">
+                                        {reservation.assignedGuide.image ? (
+                                            <img src={reservation.assignedGuide.image} alt={reservation.assignedGuide.name} className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-md shadow-teal-500/20" />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md shadow-teal-500/30"
+                                                style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                                                {getInitials(reservation.assignedGuide.name)}
                                             </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{reservation.assignedGuide.name}</p>
+                                            <p className="text-[11px] text-slate-400 truncate">{reservation.assignedGuide.phone}</p>
                                         </div>
-                                        <button
-                                            onClick={() => setShowGuideModal(true)}
-                                            className="w-full py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
-                                        >
-                                            가이드 변경
+                                        <button onClick={() => setShowGuideModal(true)} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 inline-flex items-center gap-1 transition-colors">
+                                            <span className="material-symbols-outlined text-sm">swap_horiz</span>변경
                                         </button>
                                     </div>
                                 ) : (
-                                    <button
-                                        onClick={() => setShowGuideModal(true)}
-                                        className="w-full p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
-                                    >
-                                        <div className="flex flex-col items-center gap-2">
-                                            <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center group-hover:bg-teal-500/10 transition-colors">
-                                                <span className="material-symbols-outlined text-slate-400 group-hover:text-teal-600 text-base transition-colors">add</span>
-                                            </div>
-                                            <p className="text-xs text-slate-500 group-hover:text-teal-600 font-medium transition-colors">가이드 배정하기</p>
-                                        </div>
+                                    <button onClick={() => setShowGuideModal(true)}
+                                        className="w-full py-[18px] bg-white dark:bg-slate-800 border-[1.5px] border-dashed border-slate-200 dark:border-slate-700 rounded-2xl hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 text-slate-400 text-sm font-semibold inline-flex items-center justify-center gap-2 transition-all">
+                                        <span className="material-symbols-outlined text-lg">person_add</span>
+                                        가이드 배정하기
                                     </button>
                                 )}
-                            </div>
+                            </section>
 
-                            {/* Accommodations */}
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">숙소 배정</p>
-                                <div className="space-y-1.5">
-                                    {Array.from({ length: getTripDays() }, (_, i) => i + 1).map(day => {
+                            {/* Trip Timeline */}
+                            <section>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base text-slate-500">route</span>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">여행 일정 & 배정</h3>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!reservation.assignedGuide && (!reservation.dailyAccommodations || reservation.dailyAccommodations.length === 0)) {
+                                                alert('할당된 가이드나 숙소가 없습니다.');
+                                                return;
+                                            }
+                                            const updated = {
+                                                ...reservation,
+                                                areAssignmentsVisibleToUser: true,
+                                                history: [
+                                                    ...(reservation.history || []),
+                                                    { timestamp: new Date().toISOString(), type: 'modification', description: '가이드/숙소 배정 정보가 발송되었습니다.' }
+                                                ]
+                                            };
+                                            onUpdate(updated);
+                                            await sendNotificationEmail(reservation.email, 'GUIDE_ASSIGNED', {
+                                                customerName: reservation.customerName,
+                                                productName: reservation.productName,
+                                                guideName: reservation.assignedGuide?.name,
+                                                guidePhone: reservation.assignedGuide?.phone
+                                            });
+                                            alert('사용자에게 배정 정보를 발송(공개)했습니다.');
+                                        }}
+                                        disabled={reservation.areAssignmentsVisibleToUser}
+                                        className={`text-[11px] font-semibold inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${reservation.areAssignmentsVisibleToUser ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/20 cursor-default' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">{reservation.areAssignmentsVisibleToUser ? 'check_circle' : 'send'}</span>
+                                        {reservation.areAssignmentsVisibleToUser ? '고객 발송 완료' : '배정 정보 고객에게 발송'}
+                                    </button>
+                                </div>
+                                <div className="relative">
+                                    {Array.from({ length: getTripDays() }, (_, i) => i + 1).map((day, idx, arr) => {
                                         const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
+                                        const isLast = idx === arr.length - 1;
+                                        const isFirst = idx === 0;
                                         return (
-                                            <div key={day} className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex-shrink-0">{day}일차</span>
-                                                <p className={`text-xs font-medium truncate flex-1 ${assigned ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>{assigned ? assigned.accommodation.name : '미배정'}</p>
-                                                <button
-                                                    onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}
-                                                    className="flex-shrink-0 px-2.5 py-1 text-[11px] font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors"
-                                                >
-                                                    {assigned ? '변경' : '선택'}
-                                                </button>
+                                            <div key={day} className="grid grid-cols-[40px_1fr] gap-3 pb-3.5" style={{ position: 'relative' }}>
+                                                {/* Node column */}
+                                                <div className="relative" style={{ width: 40 }}>
+                                                    {!isLast && <div className="absolute left-[19px] bg-slate-200 dark:bg-slate-700" style={{ top: 46, bottom: -14, width: 2, borderRadius: 2, zIndex: 1 }} />}
+                                                    {!isFirst && <div className="absolute left-[19px] bg-slate-200 dark:bg-slate-700" style={{ top: 0, height: 14, width: 2, borderRadius: 2, zIndex: 1 }} />}
+                                                    <div className={`absolute top-[14px] left-[4px] w-8 h-8 rounded-full border-2 border-teal-600 flex items-center justify-center text-[10px] font-extrabold tracking-tight shadow-sm ${assigned ? 'bg-teal-600 text-white' : 'bg-white dark:bg-slate-800 text-teal-600'}`} style={{ zIndex: 2 }}>
+                                                        D-{day}
+                                                    </div>
+                                                </div>
+                                                {/* Content */}
+                                                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl">
+                                                    <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
+                                                        <span className="text-sm font-bold text-slate-800 dark:text-white">{day}일차</span>
+                                                        <span className="text-[11px] text-slate-400">{assigned ? (assigned.accommodation.location || '—') : '일정 미지정'}</span>
+                                                    </div>
+                                                    <div className="p-3">
+                                                        <button onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}
+                                                            className={`w-full h-[38px] px-3 text-left text-xs font-semibold rounded-lg inline-flex items-center gap-2 transition-colors ${assigned ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 hover:bg-teal-100' : 'bg-slate-50 dark:bg-slate-700/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                            <span className="material-symbols-outlined text-base">hotel</span>
+                                                            <span className="flex-1 truncate">{assigned ? assigned.accommodation.name : '숙소 선택'}</span>
+                                                            <span className="material-symbols-outlined text-sm opacity-70">{assigned ? 'edit' : 'add'}</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         );
                                     })}
-                                    <button
-                                        onClick={() => setExtraDays(prev => prev + 1)}
-                                        className="w-full py-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold flex items-center justify-center gap-1 transition-all"
-                                    >
+                                    <button onClick={() => setExtraDays(prev => prev + 1)}
+                                        className="ml-[54px] mt-1 inline-flex items-center gap-1 px-3 py-2 text-[11px] font-semibold text-slate-500 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                                         <span className="material-symbols-outlined text-sm">add</span>일차 추가
                                     </button>
                                 </div>
+                            </section>
 
-                                {/* Publish Assignments */}
-                                <button
-                                    onClick={async () => {
-                                        if (!reservation.assignedGuide && (!reservation.dailyAccommodations || reservation.dailyAccommodations.length === 0)) {
-                                            alert('할당된 가이드나 숙소가 없습니다.');
-                                            return;
-                                        }
-                                        const updated = {
-                                            ...reservation,
-                                            areAssignmentsVisibleToUser: true,
-                                            history: [
-                                                ...(reservation.history || []),
-                                                { timestamp: new Date().toISOString(), type: 'modification', description: '가이드/숙소 배정 정보가 발송되었습니다.' }
-                                            ]
-                                        };
-                                        onUpdate(updated);
-                                        await sendNotificationEmail(reservation.email, 'GUIDE_ASSIGNED', {
-                                            customerName: reservation.customerName,
-                                            productName: reservation.productName,
-                                            guideName: reservation.assignedGuide?.name,
-                                            guidePhone: reservation.assignedGuide?.phone
-                                        });
-                                        alert('사용자에게 배정 정보를 발송(공개)했습니다.');
-                                    }}
-                                    disabled={reservation.areAssignmentsVisibleToUser}
-                                    className={`w-full mt-3 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${reservation.areAssignmentsVisibleToUser ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-default' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
-                                >
-                                    <span className="material-symbols-outlined text-base">{reservation.areAssignmentsVisibleToUser ? 'check_circle' : 'send'}</span>
-                                    {reservation.areAssignmentsVisibleToUser ? '배정 정보 발송 완료' : '배정 정보 고객에게 발송'}
-                                </button>
-                            </div>
-
-                            {/* Document Sending */}
-                            <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">문서 발송</p>
-                                <div className="space-y-2">
-                                    {/* Contract */}
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="material-symbols-outlined text-slate-500 text-base">description</span>
-                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">여행 계약서</p>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="URL 입력 후 발송..."
-                                            value={editForm.contractUrl || ''}
-                                            onChange={(e) => { setEditForm({ ...editForm, contractUrl: e.target.value }); if (!isEditing) setIsEditing(true); }}
-                                            className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
-                                        />
-                                        <div className="flex gap-1.5">
-                                            <button
-                                                onClick={() => { if (editForm.contractUrl) { navigator.clipboard.writeText(editForm.contractUrl); alert('링크 복사됨!'); } else alert('URL을 먼저 입력해 주세요.'); }}
-                                                className="flex-1 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center gap-1 transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">content_copy</span>복사
-                                            </button>
-                                            <button
-                                                onClick={() => handleSendLink('여행계약서', editForm.contractUrl)}
-                                                className="flex-1 py-1.5 text-xs font-semibold bg-teal-500 hover:bg-teal-600 text-white rounded-lg flex items-center justify-center gap-1 transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">send</span>발송
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Itinerary */}
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <span className="material-symbols-outlined text-slate-500 text-base">map</span>
-                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">확정 일정표</p>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder="URL 입력 후 발송..."
-                                            value={editForm.itineraryUrl || ''}
-                                            onChange={(e) => { setEditForm({ ...editForm, itineraryUrl: e.target.value }); if (!isEditing) setIsEditing(true); }}
-                                            className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
-                                        />
-                                        <div className="flex gap-1.5">
-                                            <button
-                                                onClick={() => { if (editForm.itineraryUrl) { navigator.clipboard.writeText(editForm.itineraryUrl); alert('링크 복사됨!'); } else alert('URL을 먼저 입력해 주세요.'); }}
-                                                className="flex-1 py-1.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center gap-1 transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">content_copy</span>복사
-                                            </button>
-                                            <button
-                                                onClick={() => handleSendLink('확정일정표', editForm.itineraryUrl)}
-                                                className="flex-1 py-1.5 text-xs font-semibold bg-teal-500 hover:bg-teal-600 text-white rounded-lg flex items-center justify-center gap-1 transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">send</span>발송
-                                            </button>
-                                        </div>
-                                    </div>
+                            {/* Documents Accordion */}
+                            <section>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="material-symbols-outlined text-base text-slate-500">folder_shared</span>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">문서 발송</h3>
                                 </div>
-                            </div>
+                                <div className="flex flex-col gap-2">
+                                    {[
+                                        { id: 'contract', name: '여행 계약서', icon: 'description', field: 'contractUrl' as const },
+                                        { id: 'itinerary', name: '확정 일정표', icon: 'map', field: 'itineraryUrl' as const },
+                                    ].map(doc => {
+                                        const isOpen = openDocId === doc.id;
+                                        const url = (editForm as any)[doc.field] || '';
+                                        const sent = !!url;
+                                        return (
+                                            <div key={doc.id} className={`bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden transition-shadow ${isOpen ? 'shadow-lg' : ''}`}>
+                                                <button onClick={() => setOpenDocId(isOpen ? null : doc.id)}
+                                                    className="w-full grid grid-cols-[36px_1fr_auto_auto] gap-3 items-center px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                    <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
+                                                        <span className="material-symbols-outlined text-lg">{doc.icon}</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{doc.name}</p>
+                                                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                                                            {sent ? `URL 설정됨 · ${url.slice(0, 40)}${url.length > 40 ? '...' : ''}` : 'URL 미설정'}
+                                                        </p>
+                                                    </div>
+                                                    {sent ? (
+                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 text-teal-700">
+                                                            <span className="material-symbols-outlined text-xs">check_circle</span>준비됨
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-700">
+                                                            <span className="material-symbols-outlined text-xs">schedule</span>미설정
+                                                        </span>
+                                                    )}
+                                                    <span className="material-symbols-outlined text-slate-400 transition-transform" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}>expand_more</span>
+                                                </button>
+                                                {isOpen && (
+                                                    <div className="px-3.5 pb-3.5 border-t border-slate-100 dark:border-slate-700">
+                                                        <div className="flex gap-2 mt-3">
+                                                            <div className="flex-1 relative">
+                                                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">link</span>
+                                                                <input
+                                                                    type="text"
+                                                                    value={url}
+                                                                    onChange={e => saveDocUrl(doc.field, e.target.value)}
+                                                                    placeholder="https://..."
+                                                                    className="w-full h-[38px] pl-9 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                                />
+                                                            </div>
+                                                            <button onClick={() => copyDocUrl(url, doc.id)} disabled={!url}
+                                                                className={`h-[38px] px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${url ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}>
+                                                                <span className="material-symbols-outlined text-sm">{copiedDocId === doc.id ? 'check' : 'content_copy'}</span>
+                                                                {copiedDocId === doc.id ? '복사됨' : '복사'}
+                                                            </button>
+                                                            <button onClick={() => handleSendLink(doc.name, url)} disabled={!url}
+                                                                className={`h-[38px] px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${url ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}>
+                                                                <span className="material-symbols-outlined text-sm">send</span>발송
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+
+                            {/* History Timeline */}
+                            {timelineEvents.length > 0 && (
+                                <section>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="material-symbols-outlined text-base text-slate-500">history</span>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">이력</h3>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2">
+                                        {[...timelineEvents].reverse().map((e: any, i: number, arr: any[]) => (
+                                            <div key={i} className={`grid grid-cols-[20px_1fr_auto] gap-3 py-2 ${i < arr.length - 1 ? 'border-b border-dashed border-slate-100 dark:border-slate-700' : ''}`}>
+                                                <span className="material-symbols-outlined text-teal-600 text-base mt-0.5">{timelineIcon[e.type] || 'radio_button_checked'}</span>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-slate-700 dark:text-slate-200 font-medium">{e.description}</p>
+                                                    {e.detail && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{e.detail}</p>}
+                                                </div>
+                                                <span className="text-[11px] text-slate-400 whitespace-nowrap font-mono self-start">
+                                                    {e.timestamp ? new Date(e.timestamp).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center flex-shrink-0">
-                    <p className="text-xs text-slate-400">접수 {reservation.bookedAt}</p>
+                <div className="px-7 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center flex-shrink-0">
+                    <p className="text-[11px] text-slate-400 inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">update</span>
+                        최근 업데이트 {timelineEvents.length > 0 && timelineEvents[timelineEvents.length - 1].timestamp ? new Date(timelineEvents[timelineEvents.length - 1].timestamp).toLocaleString('ko-KR') : reservation.bookedAt}
+                    </p>
                     <div className="flex gap-2">
                         {isEditing ? (
                             <>
