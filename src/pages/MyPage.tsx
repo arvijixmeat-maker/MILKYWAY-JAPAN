@@ -35,6 +35,9 @@ interface Reservation {
     createdAt: string;
     duration?: string;
     history?: any[];
+    priceBreakdown?: { total: number; deposit: number; local: number };
+    depositStatus?: string;
+    balanceStatus?: string;
 }
 
 export const MyPage: React.FC = () => {
@@ -60,11 +63,13 @@ export const MyPage: React.FC = () => {
                         id: r.id,
                         status: r.status,
                         productName: r.productName,
-                        startDate: r.date, // Note: Schema uses 'date' (single string) or we need to check if schema has start/end. 
-                        // 'reservations' schema has 'date'. Adusting to match.
-                        endDate: r.date,   // Placeholder if range not available
-                        createdAt: r.createdAt,
-                        history: r.history
+                        startDate: r.startDate || r.start_date || r.date,
+                        endDate: r.endDate || r.end_date || r.date,
+                        createdAt: r.createdAt || r.created_at,
+                        history: r.history,
+                        priceBreakdown: r.price_breakdown || r.priceBreakdown,
+                        depositStatus: r.depositStatus || r.deposit_status,
+                        balanceStatus: r.balanceStatus || r.balance_status,
                     })));
                 }
 
@@ -301,14 +306,21 @@ export const MyPage: React.FC = () => {
                 <div className="px-5 mb-6">
                     <h3 className="text-lg font-bold text-text-main dark:text-white mb-3 ml-1">{t('mypage.my_reservations')}</h3>
                     <div
-                        onClick={() => navigate('/mypage/reservations')}
+                        onClick={() => upcomingReservation ? navigate(`/mypage/reservations/${upcomingReservation.id}`) : navigate('/mypage/reservations')}
                         className="bg-surface-light dark:bg-surface-dark rounded-3xl p-6 shadow-sm relative overflow-hidden group cursor-pointer transition-transform active:scale-[0.98]"
                     >
                         <div className="absolute top-0 right-0 p-6 opacity-10">
                             <span className="material-symbols-outlined text-8xl text-primary">flight_takeoff</span>
                         </div>
                         <div className="relative z-10">
-                            {upcomingReservation && daysUntilTrip !== null ? (
+                            {upcomingReservation && daysUntilTrip !== null ? (() => {
+                                // Real payment progress instead of fake days-based formula
+                                const pb = upcomingReservation.priceBreakdown;
+                                const depositPaid = upcomingReservation.depositStatus === 'paid' || upcomingReservation.status === 'paid' || upcomingReservation.status === 'confirmed' || upcomingReservation.status === 'completed';
+                                const balancePaid = upcomingReservation.balanceStatus === 'paid' || upcomingReservation.status === 'completed';
+                                const paidAmount = (depositPaid && pb ? pb.deposit : 0) + (balancePaid && pb ? pb.local : 0);
+                                const paidPercent = pb && pb.total > 0 ? Math.round((paidAmount / pb.total) * 100) : 0;
+                                return (
                                 <>
                                     <div className="flex justify-between items-start mb-4">
                                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold ring-1 ring-primary/20">
@@ -320,18 +332,17 @@ export const MyPage: React.FC = () => {
                                         {upcomingReservation.productName}
                                     </h4>
                                     <p className="text-sm text-text-sub dark:text-gray-400 font-medium mb-6">
-                                        {formatDate(upcomingReservation.startDate)} - {formatDate(upcomingReservation.endDate)} • {upcomingReservation.duration}
+                                        {formatDate(upcomingReservation.startDate)} - {formatDate(upcomingReservation.endDate)}
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <div className="flex-1 bg-gray-100 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
-                                            <div className="bg-primary h-full rounded-full" style={{ width: daysUntilTrip <= 7 ? '80%' : daysUntilTrip <= 14 ? '60%' : '40%' }}></div>
+                                            <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${paidPercent}%` }}></div>
                                         </div>
-                                        <span className="text-xs font-bold text-primary">
-                                            {daysUntilTrip <= 7 ? '80%' : daysUntilTrip <= 14 ? '60%' : '40%'}
-                                        </span>
+                                        <span className="text-xs font-bold text-primary">{paidPercent}%</span>
                                     </div>
                                 </>
-                            ) : (
+                                );
+                            })() : (
                                 <>
                                     <div className="flex justify-between items-start mb-4">
                                         {user && quotes.length > 0 ? (
