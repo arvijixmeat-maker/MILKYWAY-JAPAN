@@ -85,7 +85,7 @@ function tplReservationRequested(data: any) {
     ※ 予約金のお支払い確認後、ご予約が確定となります。<br>
     ※ インボイスが届かない場合はお手数ですがご連絡ください。
   </div>
-  <a class="btn" href="https://mongolryokou.com/mypage/reservations">予約確認はこちら</a>
+  <a class="btn" href="https://mongolryokou.com/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}">予約確認はこちら</a>
 </div>
 <div class="footer">
   <a href="https://mongolryokou.com">mongolryokou.com</a> |
@@ -170,7 +170,7 @@ function tplGuideAssigned(data: any) {
     <div class="card-row"><span class="label">ガイド連絡先</span><span class="value">${data.guidePhone || '-'}</span></div>
   </div>
   <p style="font-size:14px;color:#4a6b64;">ご不明な点はいつでもご連絡ください。素敵な旅をお楽しみください！</p>
-  <a class="btn" href="https://mongolryokou.com/mypage/reservations">予約詳細を確認</a>
+  <a class="btn" href="https://mongolryokou.com/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}">予約詳細を確認</a>
 </div>
 <div class="footer">
   <a href="https://mongolryokou.com">mongolryokou.com</a>
@@ -329,10 +329,10 @@ app.post('/', async (c) => {
                 type === 'QUOTE_RECEIVED' ? 'お見積りリクエストを受け付けました。' :
                 type === 'ESTIMATE_COMPLETED' ? 'オーダーメイドお見積りが完成しました。' : '';
             const link =
-                type === 'ITINERARY_READY' ? `/documents/itinerary/${data.reservationId || ''}` :
-                type === 'CONTRACT_READY' ? `/documents/contract/${data.reservationId || ''}` :
+                type === 'ITINERARY_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/itinerary/${data.reservationId || ''}`) :
+                type === 'CONTRACT_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/contract/${data.reservationId || ''}`) :
                 type === 'ESTIMATE_COMPLETED' ? `/estimate/${data.reservationId || ''}` :
-                type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' ? '/mypage/reservations' :
+                type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : '/mypage/reservations') :
                 type === 'QUOTE_RECEIVED' ? '/mypage/estimates' : undefined;
             await createNotification(c.env.DB, {
                 userId: targetUserId,

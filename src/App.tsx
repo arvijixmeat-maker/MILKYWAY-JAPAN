@@ -49,6 +49,7 @@ const MyTravelMates = lazy(() => import('./pages/MyTravelMates').then(module => 
 const MyEstimates = lazy(() => import('./pages/MyEstimates').then(module => ({ default: module.MyEstimates })))
 
 const MyReservations = lazy(() => import('./pages/MyReservations').then(module => ({ default: module.MyReservations })))
+const MyReservationDetail = lazy(() => import('./pages/MyReservationDetail').then(module => ({ default: module.MyReservationDetail })))
 const MyNotifications = lazy(() => import('./pages/MyNotifications').then(module => ({ default: module.MyNotifications })))
 const MyReviews = lazy(() => import('./pages/MyReviews').then(module => ({ default: module.MyReviews })))
 const RecentlyViewed = lazy(() => import('./pages/RecentlyViewed').then(module => ({ default: module.RecentlyViewed })))
@@ -132,6 +133,7 @@ function App() {
             <Route path="/mypage/estimates" element={<AuthGuard><MyEstimates /></AuthGuard>} />
 
             <Route path="/mypage/reservations" element={<AuthGuard><MyReservations /></AuthGuard>} />
+            <Route path="/mypage/reservations/:id" element={<AuthGuard><MyReservationDetail /></AuthGuard>} />
             <Route path="/mypage/notifications" element={<AuthGuard><MyNotifications /></AuthGuard>} />
             <Route path="/mypage/reviews" element={<AuthGuard><MyReviews /></AuthGuard>} />
             <Route path="/mypage/recently-viewed" element={<AuthGuard><RecentlyViewed /></AuthGuard>} />

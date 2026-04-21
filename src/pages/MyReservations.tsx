@@ -298,182 +298,60 @@ export const MyReservations: React.FC = () => {
                                 </div>
                             ) : (
                                 reservations.map((reservation) => {
+                                    const statusInfo = {
+                                        pending_payment: { label: 'お支払い待ち', color: 'bg-amber-100 text-amber-700' },
+                                        waiting_deposit: { label: '入金待ち', color: 'bg-amber-100 text-amber-700' },
+                                        paid: { label: 'お支払い完了', color: 'bg-blue-100 text-blue-700' },
+                                        confirmed: { label: 'ご予約確定', color: 'bg-teal-100 text-teal-700' },
+                                        completed: { label: '旅行終了', color: 'bg-slate-100 text-slate-600' },
+                                        cancelled: { label: 'キャンセル', color: 'bg-red-100 text-red-700' },
+                                    }[reservation.status] || { label: reservation.status, color: 'bg-slate-100 text-slate-600' };
+                                    const pb = reservation.priceBreakdown;
+                                    const daysUntil = reservation.startDate ? Math.ceil((new Date(reservation.startDate).getTime() - Date.now()) / 86400000) : null;
+                                    const depositPaid = reservation.status === "paid" || reservation.status === "confirmed" || reservation.status === "completed";
+                                    const balancePaid = reservation.status === "completed";
+                                    const paidAmount = (depositPaid && pb ? pb.deposit : 0) + (balancePaid && pb ? pb.local : 0);
+                                    const paidPercent = pb && pb.total > 0 ? Math.round((paidAmount / pb.total) * 100) : 0;
+                                    const fmt = (iso?: string) => iso ? new Date(iso).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", weekday: "short" }) : "";
                                     return (
-                                        <div
+                                        <button
                                             key={reservation.id}
-                                            className="bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+                                            onClick={() => navigate(`/mypage/reservations/${reservation.id}`)}
+                                            className="w-full text-left bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-2xl p-4 shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
                                         >
-                                            {/* Header */}
-
-                                            <div className="p-5 border-b border-gray-50 dark:border-zinc-700/50">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold bg-gray-50 dark:bg-zinc-700/50 px-2 py-1 rounded-lg">
-                                                        {reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase()}
-                                                    </span>
-                                                    {getStatusBadge(reservation.status)}
-                                                </div>
-                                                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                                                    {reservation.productName}
-                                                </h3>
-                                            </div>
-
-                                            {/* Details */}
-                                            <div className="p-5 space-y-5">
-                                                <div className="flex items-start gap-4 group">
-                                                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform duration-300">
-                                                        <span className="material-symbols-outlined">calendar_month</span>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">{t('my_reservations.labels.itinerary')}</p>
-                                                        <p className="text-[15px] font-bold text-slate-800 dark:text-slate-200 leading-snug">
-                                                            {reservation.startDate === reservation.endDate 
-                                                                ? formatDate(reservation.startDate)
-                                                                : `${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)}`
-                                                            }
-                                                        </p>
-                                                        {reservation.duration && <p className="text-sm font-medium text-teal-600 dark:text-teal-400 mt-1">{reservation.duration}</p>}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-start gap-4 group">
-                                                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform duration-300">
-                                                        <span className="material-symbols-outlined">group</span>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">{t('my_reservations.labels.people')}</p>
-                                                        <p className="text-[15px] font-bold text-slate-800 dark:text-slate-200">
-                                                            {reservation.totalPeople > 0 ? t('my_reservations.labels.people_count', { count: reservation.totalPeople }) : t('my_reservations.labels.people_undefined')}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-start gap-4 group">
-                                                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform duration-300">
-                                                        <span className="material-symbols-outlined">payments</span>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wider">{t('my_reservations.labels.payment_info')}</p>
-                                                        <div className="flex flex-col gap-1">
-                                                            <p className="text-[17px] font-extrabold text-slate-900 dark:text-white">
-                                                                {reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.total) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}
-                                                            </p>
-                                                            <div className="flex gap-3 text-xs mt-1">
-                                                                <span className="text-slate-500 dark:text-slate-400">{t('my_reservations.labels.deposit')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.deposit) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}</span></span>
-                                                                <span className="w-px h-3 bg-gray-200 dark:bg-zinc-600 my-auto"></span>
-                                                                <span className="text-slate-500 dark:text-slate-400">{t('my_reservations.labels.local_payment')}: <span className="font-semibold text-slate-700 dark:text-slate-300">{reservation.priceBreakdown ? formatPrice(reservation.priceBreakdown.local) : '0'}{t('wishlist.won_suffix', { defaultValue: '원' })}</span></span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-
-                                                {/* PayPal Payment Button */}
-                                                {(reservation.status === 'pending_payment' || reservation.status === 'waiting_deposit') && reservation.priceBreakdown?.deposit > 0 && (
-                                                    <div className="mt-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-center">
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('my_reservations.labels.deposit_amount')}</p>
-                                                        <p className="text-xl font-extrabold text-[#003087] dark:text-blue-300 mb-3">
-                                                            {formatPrice(reservation.priceBreakdown.deposit)}円
-                                                        </p>
-                                                        <a
-                                                            href={`https://paypal.me/MilkywayMongolia/${reservation.priceBreakdown.deposit}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-2 bg-[#003087] text-white font-bold px-6 py-3 rounded-xl text-sm active:scale-95 transition-transform"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">payments</span>
-                                                            PayPalで予約金を支払う
-                                                        </a>
-                                                        <p className="text-[10px] text-gray-400 mt-2">クレジットカード・PayPalで安全にお支払いいただけます</p>
-                                                    </div>
-                                                )}
-
-                                                {/* Documents */}
-                                                {(reservation.status === 'confirmed' || reservation.status === 'completed' || reservation.status === 'paid') && (reservation.contractUrl || reservation.itineraryUrl) && (
-                                                    <div className="mt-4 grid grid-cols-2 gap-2">
-                                                        {reservation.contractUrl && (
-                                                            <a href={reservation.contractUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 p-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800 rounded-xl hover:bg-teal-100 transition-colors">
-                                                                <span className="material-symbols-outlined text-teal-600 text-lg">history_edu</span>
-                                                                <span className="text-xs font-bold text-teal-700 dark:text-teal-300">{t('my_reservations.labels.view_contract')}</span>
-                                                            </a>
-                                                        )}
-                                                        {reservation.itineraryUrl && (
-                                                            <a href={reservation.itineraryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 p-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800 rounded-xl hover:bg-teal-100 transition-colors">
-                                                                <span className="material-symbols-outlined text-teal-600 text-lg">map</span>
-                                                                <span className="text-xs font-bold text-teal-700 dark:text-teal-300">{t('my_reservations.labels.view_itinerary')}</span>
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* History */}
-                                                {reservation.history && reservation.history.length > 0 && (
-                                                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-700/50">
-                                                        <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">{t('my_reservations.labels.timeline')}</p>
-                                                        <div className="space-y-3">
-                                                            {reservation.history.slice(0, 2).reverse().map((h: any, i: number) => (
-                                                                <div key={i} className="flex gap-3 text-xs">
-                                                                    <span className={`material-symbols-outlined text-sm ${getHistoryIcon(h.type).color}`}>{getHistoryIcon(h.type).icon}</span>
-                                                                    <div>
-                                                                        <p className="text-gray-700 dark:text-gray-300 font-medium">{h.description}</p>
-                                                                        <p className="text-[10px] text-gray-400 mt-0.5">{getRelativeTime(h.timestamp)}</p>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Assignments */}
-                                                {reservation.areAssignmentsVisibleToUser && reservation.assignedGuide && (
-                                                    <div className="mt-4 p-4 bg-teal-50/50 dark:bg-zinc-800/50 rounded-xl border border-teal-100/50 dark:border-zinc-700/50">
-                                                        <div className="flex items-start gap-3">
-                                                            <img
-                                                                src={reservation.assignedGuide.image || 'https://placehold.co/100x100?text=Guide'}
-                                                                className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-zinc-800 shadow-sm"
-                                                                alt="Guide"
-                                                            />
-                                                            <div className="flex-1">
-                                                                <div className="flex justify-between items-start">
-                                                                    <div>
-                                                                        <span className="inline-block text-[11px] font-bold text-black dark:text-white mb-1">{t('my_reservations.labels.guide')}</span>
-                                                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{reservation.assignedGuide.name}</p>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Extended Guide Info */}
-                                                                <div className="mt-3 space-y-1 text-xs">
-                                                                    {reservation.assignedGuide.introduction && (
-                                                                        <p className="line-clamp-2 leading-relaxed text-black dark:text-white pb-1">{reservation.assignedGuide.introduction}</p>
-                                                                    )}
-                                                                    <div className="flex gap-4 flex-wrap mt-3">
-                                                                        {reservation.assignedGuide.phone && (
-                                                                            <a href={`tel:${reservation.assignedGuide.phone}`} className="flex items-center gap-2 text-black dark:text-white font-medium">
-                                                                                <img src={phoneIcon} className="w-5 h-5 object-contain" alt="Phone" />
-                                                                                <span>{reservation.assignedGuide.phone}</span>
-                                                                            </a>
-                                                                        )}
-                                                                        {reservation.assignedGuide.kakaoId && (
-                                                                            <div className="flex items-center gap-2 text-black dark:text-white font-medium">
-                                                                                <img src={kakaoIcon} className="w-5 h-5 object-contain" alt="Kakao" />
-                                                                                <span>Kakao: {reservation.assignedGuide.kakaoId}</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    {reservation.assignedGuide.languages && reservation.assignedGuide.languages.length > 0 && (
-                                                                        <div className="flex gap-1 mt-3">
-                                                                            {reservation.assignedGuide.languages.map((lang: string, idx: number) => (
-                                                                                <span key={idx} className="px-1.5 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded text-[10px] text-gray-500">{lang}</span>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
+                                                {daysUntil != null && daysUntil >= 0 && daysUntil <= 60 && (
+                                                    <span className="text-[11px] font-bold text-teal-600">ご旅行まであと{daysUntil}日</span>
                                                 )}
                                             </div>
-                                        </div>
+                                            <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight mb-2">{reservation.productName}</h3>
+                                            <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                                                <span className="inline-flex items-center gap-0.5">
+                                                    <span className="material-symbols-outlined text-sm">event</span>
+                                                    {fmt(reservation.startDate)} 〜 {fmt(reservation.endDate)}
+                                                </span>
+                                                <span className="opacity-40">·</span>
+                                                <span className="inline-flex items-center gap-0.5">
+                                                    <span className="material-symbols-outlined text-sm">group</span>
+                                                    {reservation.totalPeople}名
+                                                </span>
+                                            </div>
+                                            {pb && (
+                                                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-700">
+                                                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+                                                        <span>お支払い {paidPercent}%</span>
+                                                        <span className="font-mono">¥{pb.total.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-teal-500 rounded-full transition-all" style={{ width: paidPercent + "%" }} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-teal-600">
+                                                詳細を見る <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                            </div>
+                                        </button>
                                     );
                                 })
                             )}
