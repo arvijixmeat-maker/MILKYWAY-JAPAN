@@ -76,10 +76,15 @@ export const MyReservations: React.FC = () => {
                 const resData = await api.reservations.list();
                 const quoteData = await api.quotes.list();
 
-                // Client-side filter if API returns everything (Safety)
-                // Fallback to check both user_id and userId
-                const myReservations = Array.isArray(resData) ? resData.filter((r: any) => r.user_id === me.id || r.userId === me.id) : [];
-                const myQuotes = Array.isArray(quoteData) ? quoteData.filter((q: any) => (q.user_id === me.id || q.userId === me.id) && ['personal', 'custom', 'business'].includes(q.type)) : [];
+                // Backend already filters reservations by userId OR customerEmail (see
+                // functions/api/reservations.ts). So trust the API response directly —
+                // a client-side user_id filter would reject guest-made reservations
+                // that were linked by email.
+                const myReservations = Array.isArray(resData) ? resData : [];
+                // Quotes API also filters server-side. Just narrow to personal/custom types.
+                const myQuotes = Array.isArray(quoteData)
+                    ? quoteData.filter((q: any) => ['personal', 'custom', 'business'].includes(q.type))
+                    : [];
 
                 if (myReservations) {
                     const mappedRes = myReservations.map((r: any) => ({

@@ -294,7 +294,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 {
                     timestamp: new Date().toISOString(),
                     type: 'modification',
-                    description: '담당 가이드가 배정되었습니다.',
+                    description: '担当ガイドが決定しました。',
                     detail: `${guide.name}`
                 }
             ]
@@ -338,7 +338,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 {
                     timestamp: new Date().toISOString(),
                     type: 'modification',
-                    description: `${selectedDay}일차 숙소가 배정되었습니다.`,
+                    description: `${selectedDay}日目の宿泊先が確定しました。`,
                     detail: `${accommodation.name}`
                 }
             ]
@@ -711,7 +711,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                 areAssignmentsVisibleToUser: true,
                                                 history: [
                                                     ...(reservation.history || []),
-                                                    { timestamp: new Date().toISOString(), type: 'modification', description: '가이드/숙소 배정 정보가 발송되었습니다.' }
+                                                    { timestamp: new Date().toISOString(), type: 'modification', description: '担当ガイド・宿泊先のご案内を送信しました。' }
                                                 ]
                                             };
                                             onUpdate(updated);
@@ -866,7 +866,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                             itineraryUrl,
                                                                             history: [
                                                                                 ...(reservation.history || []),
-                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '확정 일정표 이메일을 발송했습니다.', detail: itineraryUrl }
+                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '確定日程表をメールで送信しました。', detail: itineraryUrl }
                                                                             ]
                                                                         };
                                                                         onUpdate(updated);
@@ -1065,7 +1065,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                             contractUrl,
                                                                             history: [
                                                                                 ...(reservation.history || []),
-                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '여행 계약서 이메일을 발송했습니다.', detail: contractUrl }
+                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '海外旅行契約書をメールで送信しました。', detail: contractUrl }
                                                                             ]
                                                                         };
                                                                         onUpdate(updated);
@@ -1393,7 +1393,7 @@ export const AdminReservationManage: React.FC = () => {
                 history.push({
                     timestamp: new Date().toISOString(),
                     type: 'status_change',
-                    description: `예약 상태가 변경되었습니다: ${statusLabels[updated.status] || updated.status}`,
+                    description: `ご予約ステータスが変更されました: ${statusLabels[updated.status] || updated.status}`,
                     detail: `${oldReservation.status} -> ${updated.status}`
                 });
             }
@@ -1403,7 +1403,7 @@ export const AdminReservationManage: React.FC = () => {
                 history.push({
                     timestamp: new Date().toISOString(),
                     type: 'document_added',
-                    description: '확정 일정표가 업로드되었습니다',
+                    description: '確定日程表がアップロードされました',
                     detail: updated.itineraryUrl
                 });
             }
@@ -1413,7 +1413,7 @@ export const AdminReservationManage: React.FC = () => {
                 history.push({
                     timestamp: new Date().toISOString(),
                     type: 'document_added',
-                    description: '여행 계약서가 업로드되었습니다',
+                    description: '海外旅行契約書がアップロードされました',
                     detail: updated.contractUrl
                 });
             }
@@ -1475,16 +1475,16 @@ export const AdminReservationManage: React.FC = () => {
             // Notification Logic
             if (oldReservation.status !== updated.status && updated.userId) {
                 const statusMessages: Record<string, string> = {
-                    confirmed: '예약이 확정되었습니다! 😆',
-                    paid: '결제가 완료되었습니다. 곧 확정됩니다!',
-                    cancelled: '예약이 취소되었습니다.'
+                    confirmed: 'ご予約が確定しました！',
+                    paid: 'お支払いが完了しました。まもなく確定となります。',
+                    cancelled: 'ご予約がキャンセルされました。'
                 };
                 if (statusMessages[updated.status]) {
                     await sendNotification({
                         userId: updated.userId,
                         type: 'reservation',
-                        title: '예약 상태 변경',
-                        message: `${updated.productName} ${statusMessages[updated.status]}`,
+                        title: 'ご予約状況の更新',
+                        message: `${updated.productName} — ${statusMessages[updated.status]}`,
                         link: `/mypage/reservations`
                     });
                 }
@@ -1494,9 +1494,9 @@ export const AdminReservationManage: React.FC = () => {
                 await sendNotification({
                     userId: updated.userId,
                     type: 'reservation',
-                    title: '담당 가이드/숙소 배정 완료',
-                    message: `${updated.productName}의 담당 가이드와 숙소가 배정되었습니다. 확인해보세요!`,
-                    link: `/reservation-status`
+                    title: '担当ガイド・宿泊先のご案内',
+                    message: `${updated.productName} の担当ガイドと宿泊先が確定しました。ご確認ください。`,
+                    link: `/mypage/reservations`
                 });
             }
 
@@ -1521,17 +1521,17 @@ export const AdminReservationManage: React.FC = () => {
             const targetItem = reservations.find(r => r.id === id);
             if (targetItem && targetItem.userId) {
                 const statusMessages: Record<string, string> = {
-                    confirmed: '예약이 확정되었습니다! 😆',
-                    paid: '결제가 완료되었습니다.',
-                    cancelled: '예약이 취소되었습니다.',
-                    answered: '견적서가 도착했습니다! 📄',
+                    confirmed: 'ご予約が確定しました！',
+                    paid: 'お支払いが完了しました。',
+                    cancelled: 'ご予約がキャンセルされました。',
+                    answered: 'お見積りが到着しました。',
                 };
                 if (statusMessages[newStatus]) {
                     await sendNotification({
                         userId: targetItem.userId,
                         type: 'reservation',
-                        title: type === 'quote' ? '견적 상태 변경' : '예약 상태 변경',
-                        message: `${targetItem.productName} ${statusMessages[newStatus]}`,
+                        title: type === 'quote' ? 'お見積り状況の更新' : 'ご予約状況の更新',
+                        message: `${targetItem.productName} — ${statusMessages[newStatus]}`,
                         link: type === 'quote' ? '/mypage/estimates' : '/mypage/reservations'
                     });
                 }
