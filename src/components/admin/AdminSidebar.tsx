@@ -20,7 +20,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, isDarkMo
     ];
 
     const settingsItems = [
-        { id: 'settings', icon: 'settings', label: '서비스 설정', href: '/admin/settings' },
         { id: 'banners', icon: 'ad_units', label: '홈 화면 관리', href: '/admin/banners' },
         { id: 'categories', icon: 'category', label: '카테고리 관리', href: '/admin/categories' },
     ];
