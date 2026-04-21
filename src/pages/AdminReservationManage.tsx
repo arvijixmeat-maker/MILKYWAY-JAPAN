@@ -277,17 +277,24 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const handleGuideAssign = (guide: any) => {
         if (!reservation) return;
 
+        const parseArr = (v: any) => {
+            if (Array.isArray(v)) return v;
+            if (typeof v === 'string') {
+                try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+            }
+            return [];
+        };
         const updated = {
             ...reservation,
             assignedGuide: {
                 id: guide.id,
                 name: guide.name,
                 image: guide.image,
-                introduction: guide.introduction,
+                introduction: guide.introduction || guide.bio || '',
                 phone: guide.phone,
                 kakaoId: guide.kakaoId,
-                languages: guide.languages,
-                specialties: guide.specialties
+                languages: parseArr(guide.languages),
+                specialties: parseArr(guide.specialties)
             },
             history: [
                 ...(reservation.history || []),

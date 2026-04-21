@@ -101,7 +101,22 @@ export const MyReservations: React.FC = () => {
                         contractUrl: r.contract_url || r.contractUrl,
                         itineraryUrl: r.itinerary_url || r.itineraryUrl,
                         history: r.history || [],
-                        assignedGuide: r.assigned_guide || r.assignedGuide,
+                        assignedGuide: (() => {
+                            const g = r.assigned_guide || r.assignedGuide;
+                            if (!g) return undefined;
+                            const parseArr = (v: any) => {
+                                if (Array.isArray(v)) return v;
+                                if (typeof v === 'string') {
+                                    try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+                                }
+                                return [];
+                            };
+                            return {
+                                ...g,
+                                languages: parseArr(g.languages),
+                                specialties: parseArr(g.specialties),
+                            };
+                        })(),
                         dailyAccommodations: r.daily_accommodations || r.dailyAccommodations,
                         areAssignmentsVisibleToUser: r.are_assignments_visible_to_user || r.areAssignmentsVisibleToUser
                     }));
