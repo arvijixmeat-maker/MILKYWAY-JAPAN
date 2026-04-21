@@ -87,4 +87,49 @@ app.get('/itinerary/:reservationId', async (c) => {
     });
 });
 
+// GET /api/documents/contract/:reservationId — public
+app.get('/contract/:reservationId', async (c) => {
+    const reservationId = c.req.param('reservationId');
+    const db = c.env.DB;
+
+    const reservation = await db.prepare(
+        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
+    ).bind(reservationId, reservationId).first();
+
+    if (!reservation) {
+        return c.json({ error: 'Reservation not found' }, 404);
+    }
+
+    let contractData: any = {};
+    try { contractData = reservation.contract_data ? JSON.parse(reservation.contract_data) : {}; } catch { contractData = {}; }
+
+    let dailyAccommodations: any[] = [];
+    try { dailyAccommodations = reservation.daily_accommodations ? JSON.parse(reservation.daily_accommodations) : []; } catch { dailyAccommodations = []; }
+
+    let assignedGuide: any = null;
+    try { assignedGuide = reservation.assigned_guide ? JSON.parse(reservation.assigned_guide) : null; } catch { assignedGuide = null; }
+
+    return c.json({
+        reservation: {
+            id: reservation.id,
+            reservationNumber: reservation.reservation_number,
+            productName: reservation.product_name,
+            customerName: reservation.customer_name,
+            customerEmail: reservation.customer_email,
+            customerPhone: reservation.customer_phone,
+            travelers: reservation.travelers,
+            startDate: reservation.start_date,
+            endDate: reservation.end_date,
+            status: reservation.status,
+            totalPrice: reservation.total_price,
+            depositAmount: reservation.deposit_amount,
+            balanceAmount: reservation.balance_amount,
+            createdAt: reservation.created_at,
+        },
+        contract: contractData,
+        accommodations: dailyAccommodations,
+        guide: assignedGuide,
+    });
+});
+
 export default app;

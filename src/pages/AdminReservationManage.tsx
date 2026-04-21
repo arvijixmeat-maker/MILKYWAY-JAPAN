@@ -27,6 +27,15 @@ interface Reservation {
     itineraryUrl?: string; // Excel Sheet URL
     itineraryTemplateId?: string; // selected itinerary template
 
+    contractData?: {
+        travelers?: Array<{ name?: string; passportName?: string; age?: number | string; phone?: string; gender?: string }>;
+        arrival?: { date?: string; time?: string; flight?: string };
+        departure?: { date?: string; time?: string; flight?: string };
+        region?: string;
+        category?: string;
+        issuedDate?: string;
+    };
+
     // Assigned Guide & Accommodation
     assignedGuide?: {
         id: string;
@@ -163,10 +172,11 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [accommodationList, setAccommodationList] = useState<any[]>([]);
     const [memoDraft, setMemoDraft] = useState('');
     const [memoFocused, setMemoFocused] = useState(false);
-    const [openDocId, setOpenDocId] = useState<string | null>(null);
     const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
     const [templatesList, setTemplatesList] = useState<any[]>([]);
     const [sendingItinerary, setSendingItinerary] = useState(false);
+    const [contractEditorOpen, setContractEditorOpen] = useState(false);
+    const [sendingContract, setSendingContract] = useState(false);
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -262,15 +272,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const handleCancel = () => {
         setEditForm(reservation);
         setIsEditing(false);
-    };
-
-    const handleSendLink = (docType: string, url?: string) => {
-        if (!url) {
-            alert(`${docType} URL이 입력되지 않았습니다.\n정보 수정에서 URL을 먼저 입력해 주세요.`);
-            return;
-        }
-        // In a real app, this might open a share dialog or copy to clipboard
-        alert(`${docType} 링크를 발송했습니다!\nURL: ${url}`);
     };
 
     const handleGuideAssign = (guide: any) => {
@@ -373,18 +374,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             ...reservation,
             history: (reservation.history || []).filter((h: any) => h.timestamp !== ts)
         };
-        onUpdate(updated);
-    };
-
-    const copyDocUrl = (url: string | undefined, id: string) => {
-        if (!url) { alert('URL을 먼저 입력해 주세요.'); return; }
-        navigator.clipboard.writeText(url);
-        setCopiedDocId(id);
-        setTimeout(() => setCopiedDocId(null), 1500);
-    };
-
-    const saveDocUrl = (field: 'contractUrl' | 'itineraryUrl', value: string) => {
-        const updated = { ...reservation, [field]: value };
         onUpdate(updated);
     };
 
@@ -898,25 +887,45 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                         );
                                     })()}
 
-                                    {/* Contract — URL-based (legacy, until contract generator is built) */}
+                                    {/* Contract — template-based auto link */}
                                     {(() => {
-                                        const isOpen = openDocId === 'contract';
-                                        const url = editForm.contractUrl || '';
-                                        const sent = !!url;
+                                        const contractUrl = `${window.location.origin}/documents/contract/${(reservation as any).reservationNumber || reservation.id}`;
+                                        const cd = editForm.contractData || {};
+                                        const travelers = cd.travelers || [];
+                                        const ready = travelers.length > 0 && !!travelers[0]?.name;
+
+                                        const updateContract = (patch: any) => {
+                                            const next = { ...(editForm.contractData || {}), ...patch };
+                                            const updated = { ...reservation, contractData: next } as Reservation;
+                                            setEditForm(prev => prev ? { ...prev, contractData: next } : prev);
+                                            onUpdate(updated);
+                                        };
+
+                                        const updateTraveler = (idx: number, patch: any) => {
+                                            const arr = [...(cd.travelers || [])];
+                                            arr[idx] = { ...(arr[idx] || {}), ...patch };
+                                            updateContract({ travelers: arr });
+                                        };
+                                        const addTraveler = () => updateContract({ travelers: [...(cd.travelers || []), { name: '' }] });
+                                        const removeTraveler = (idx: number) => {
+                                            const arr = [...(cd.travelers || [])];
+                                            arr.splice(idx, 1);
+                                            updateContract({ travelers: arr });
+                                        };
+
                                         return (
-                                            <div className={`bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden transition-shadow ${isOpen ? 'shadow-lg' : ''}`}>
-                                                <button onClick={() => setOpenDocId(isOpen ? null : 'contract')}
-                                                    className="w-full grid grid-cols-[36px_1fr_auto_auto] gap-3 items-center px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
+                                                <div className="grid grid-cols-[36px_1fr_auto] gap-3 items-center px-3.5 py-3">
                                                     <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
                                                         <span className="material-symbols-outlined text-lg">description</span>
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-bold text-slate-900 dark:text-white">여행 계약서</p>
                                                         <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                                                            {sent ? `URL 설정됨 · ${url.slice(0, 40)}${url.length > 40 ? '...' : ''}` : 'URL 미설정'}
+                                                            {ready ? `${travelers.length}명 · 자동 생성 링크` : '여행자 정보 입력 필요'}
                                                         </p>
                                                     </div>
-                                                    {sent ? (
+                                                    {ready ? (
                                                         <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 text-teal-700">
                                                             <span className="material-symbols-outlined text-xs">check_circle</span>준비됨
                                                         </span>
@@ -925,33 +934,153 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                             <span className="material-symbols-outlined text-xs">schedule</span>미설정
                                                         </span>
                                                     )}
-                                                    <span className="material-symbols-outlined text-slate-400 transition-transform" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}>expand_more</span>
-                                                </button>
-                                                {isOpen && (
-                                                    <div className="px-3.5 pb-3.5 border-t border-slate-100 dark:border-slate-700">
-                                                        <div className="flex gap-2 mt-3">
-                                                            <div className="flex-1 relative">
-                                                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">link</span>
-                                                                <input
-                                                                    type="text"
-                                                                    value={url}
-                                                                    onChange={e => saveDocUrl('contractUrl', e.target.value)}
-                                                                    placeholder="https://..."
-                                                                    className="w-full h-[38px] pl-9 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                                                />
+                                                </div>
+
+                                                <div className="px-3.5 pb-3.5 border-t border-slate-100 dark:border-slate-700">
+                                                    {/* Editor toggle */}
+                                                    <button
+                                                        onClick={() => setContractEditorOpen(!contractEditorOpen)}
+                                                        className="w-full mt-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg inline-flex items-center justify-center gap-1 transition-colors"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">{contractEditorOpen ? 'expand_less' : 'edit'}</span>
+                                                        {contractEditorOpen ? '계약서 정보 닫기' : '계약서 정보 편집'}
+                                                    </button>
+
+                                                    {contractEditorOpen && (
+                                                        <div className="mt-3 space-y-3 border border-slate-100 dark:border-slate-700 rounded-lg p-3">
+                                                            {/* Travelers */}
+                                                            <div>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">여행자</p>
+                                                                    <button onClick={addTraveler} className="text-[11px] font-semibold text-teal-600 hover:text-teal-700 inline-flex items-center gap-0.5">
+                                                                        <span className="material-symbols-outlined text-xs">add</span>추가
+                                                                    </button>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    {travelers.length === 0 && (
+                                                                        <button onClick={addTraveler} className="w-full py-2 text-[11px] font-semibold text-slate-500 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
+                                                                            여행자 추가
+                                                                        </button>
+                                                                    )}
+                                                                    {travelers.map((t, i) => (
+                                                                        <div key={i} className="bg-slate-50 dark:bg-slate-700/40 rounded-lg p-2.5 space-y-1.5">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-[11px] font-semibold text-slate-500">#{i + 1}</span>
+                                                                                <button onClick={() => removeTraveler(i)} className="text-[11px] text-slate-400 hover:text-red-500">
+                                                                                    <span className="material-symbols-outlined text-sm">close</span>
+                                                                                </button>
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 gap-1.5">
+                                                                                <input type="text" placeholder="氏名" value={t.name || ''} onChange={e => updateTraveler(i, { name: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                                <input type="text" placeholder="パスポート氏名" value={t.passportName || ''} onChange={e => updateTraveler(i, { passportName: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                                <input type="number" placeholder="年齢" value={t.age || ''} onChange={e => updateTraveler(i, { age: e.target.value ? Number(e.target.value) : '' })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                                <select value={t.gender || ''} onChange={e => updateTraveler(i, { gender: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500">
+                                                                                    <option value="">性別</option>
+                                                                                    <option value="男">男</option>
+                                                                                    <option value="女">女</option>
+                                                                                </select>
+                                                                                <input type="text" placeholder="連絡先" value={t.phone || ''} onChange={e => updateTraveler(i, { phone: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                            <button onClick={() => copyDocUrl(url, 'contract')} disabled={!url}
-                                                                className={`h-[38px] px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${url ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}>
+
+                                                            {/* Arrival */}
+                                                            <div>
+                                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">モンゴル到着</p>
+                                                                <div className="grid grid-cols-3 gap-1.5">
+                                                                    <input type="date" value={cd.arrival?.date || ''} onChange={e => updateContract({ arrival: { ...(cd.arrival || {}), date: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                    <input type="time" value={cd.arrival?.time || ''} onChange={e => updateContract({ arrival: { ...(cd.arrival || {}), time: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                    <input type="text" placeholder="航空便" value={cd.arrival?.flight || ''} onChange={e => updateContract({ arrival: { ...(cd.arrival || {}), flight: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Departure */}
+                                                            <div>
+                                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">モンゴル出発</p>
+                                                                <div className="grid grid-cols-3 gap-1.5">
+                                                                    <input type="date" value={cd.departure?.date || ''} onChange={e => updateContract({ departure: { ...(cd.departure || {}), date: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                    <input type="time" value={cd.departure?.time || ''} onChange={e => updateContract({ departure: { ...(cd.departure || {}), time: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                    <input type="text" placeholder="航空便" value={cd.departure?.flight || ''} onChange={e => updateContract({ departure: { ...(cd.departure || {}), flight: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Region & Category */}
+                                                            <div className="grid grid-cols-2 gap-1.5">
+                                                                <div>
+                                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">旅行地域</p>
+                                                                    <input type="text" placeholder="中央モンゴル" value={cd.region || ''} onChange={e => updateContract({ region: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">区分</p>
+                                                                    <input type="text" placeholder="フルパッケージ" value={cd.category || ''} onChange={e => updateContract({ category: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Link + buttons */}
+                                                    <div className="mt-3 space-y-2">
+                                                        {ready && (
+                                                            <div className="text-[11px] text-slate-400 font-mono truncate px-1">
+                                                                {contractUrl}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => window.open(contractUrl, '_blank')}
+                                                                disabled={!ready}
+                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">open_in_new</span>미리보기
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { if (!ready) return; navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}
+                                                                disabled={!ready}
+                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                                            >
                                                                 <span className="material-symbols-outlined text-sm">{copiedDocId === 'contract' ? 'check' : 'content_copy'}</span>
                                                                 {copiedDocId === 'contract' ? '복사됨' : '복사'}
                                                             </button>
-                                                            <button onClick={() => handleSendLink('여행 계약서', url)} disabled={!url}
-                                                                className={`h-[38px] px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${url ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}>
-                                                                <span className="material-symbols-outlined text-sm">send</span>발송
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!ready || !reservation.email) { alert(!reservation.email ? '고객 이메일이 없습니다.' : '여행자 정보를 먼저 입력해 주세요.'); return; }
+                                                                    setSendingContract(true);
+                                                                    try {
+                                                                        await sendNotificationEmail(reservation.email, 'CONTRACT_READY', {
+                                                                            customerName: reservation.customerName,
+                                                                            productName: reservation.productName,
+                                                                            reservationId: (reservation as any).reservationNumber || reservation.id,
+                                                                            reservationNumber: (reservation as any).reservationNumber,
+                                                                            travelDates: reservation.date,
+                                                                            contractUrl,
+                                                                        });
+                                                                        const updated = {
+                                                                            ...reservation,
+                                                                            contractUrl,
+                                                                            history: [
+                                                                                ...(reservation.history || []),
+                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '여행 계약서 이메일을 발송했습니다.', detail: contractUrl }
+                                                                            ]
+                                                                        };
+                                                                        onUpdate(updated);
+                                                                        alert('계약서 링크를 고객에게 발송했습니다.');
+                                                                    } catch (e: any) {
+                                                                        alert(`발송 실패: ${e.message || e}`);
+                                                                    } finally {
+                                                                        setSendingContract(false);
+                                                                    }
+                                                                }}
+                                                                disabled={!ready || sendingContract}
+                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready && !sendingContract ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">send</span>
+                                                                {sendingContract ? '발송중' : '발송'}
                                                             </button>
                                                         </div>
                                                     </div>
-                                                )}
+                                                </div>
                                             </div>
                                         );
                                     })()}
@@ -1163,6 +1292,12 @@ export const AdminReservationManage: React.FC = () => {
                     contractUrl: r.contractUrl || r.contract_url,
                     itineraryUrl: r.itineraryUrl || r.itinerary_url,
                     itineraryTemplateId: r.itineraryTemplateId || r.itinerary_template_id,
+                    contractData: (() => {
+                        const raw = r.contractData || r.contract_data;
+                        if (!raw) return undefined;
+                        if (typeof raw === 'object') return raw;
+                        try { return JSON.parse(raw); } catch { return undefined; }
+                    })(),
                     assignedGuide: r.assignedGuide || r.assigned_guide,
                     dailyAccommodations: r.dailyAccommodations || r.daily_accommodations,
                     history: r.history || [],
@@ -1287,6 +1422,7 @@ export const AdminReservationManage: React.FC = () => {
                 contract_url: updated.contractUrl,
                 itinerary_url: updated.itineraryUrl,
                 itinerary_template_id: updated.itineraryTemplateId,
+                contract_data: updated.contractData,
                 assigned_guide: updated.assignedGuide,
                 daily_accommodations: updated.dailyAccommodations,
                 history: history,

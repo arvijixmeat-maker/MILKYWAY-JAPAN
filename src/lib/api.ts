@@ -165,6 +165,9 @@ export const api = {
         itinerary: {
             get: async (reservationId: string) => request(`${API_BASE}/documents/itinerary/${reservationId}`),
         },
+        contract: {
+            get: async (reservationId: string) => request(`${API_BASE}/documents/contract/${reservationId}`),
+        },
     },
     tourGuides: {
         list: async () => request(`${API_BASE}/tour-guides`),

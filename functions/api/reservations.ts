@@ -161,6 +161,7 @@ app.put('/:id', async (c) => {
         total_amount: 'totalPrice',
         deposit_amount: 'depositAmount',
         itinerary_template_id: 'itineraryTemplateId',
+        contract_data: 'contractData',
         updated_at: 'updatedAt',
     };
     const normalized: any = {};
@@ -183,7 +184,7 @@ app.put('/:id', async (c) => {
         'id', 'type', 'productName', 'customerName', 'customerEmail', 'customerPhone',
         'travelers', 'startDate', 'endDate', 'status', 'totalPrice', 'depositAmount',
         'balanceAmount', 'paymentMethod', 'dailyAccommodations', 'notes', 'history',
-        'userId', 'reservationNumber', 'itineraryTemplateId', 'createdAt', 'updatedAt',
+        'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData', 'createdAt', 'updatedAt',
     ]);
     const filtered: any = {};
     for (const [k, v] of Object.entries(updateData)) {

@@ -200,6 +200,33 @@ function tplEstimateCompleted(data: any) {
 </div>`);
 }
 
+function tplContractReady(data: any) {
+    const url = data.contractUrl || `https://mongolryokou.com/documents/contract/${data.reservationId || ''}`;
+    return baseLayout(`
+<div class="header">
+  <h1>🐴 Milkyway Japan</h1>
+  <p>海外旅行契約書のご案内</p>
+</div>
+<div class="body">
+  <p class="greeting">${data.customerName || ''} 様</p>
+  <p>この度はMilkyway Japanをお選びいただき、誠にありがとうございます。<br>海外旅行契約書が準備できましたのでご案内いたします。ご内容をご確認くださいませ。</p>
+  <div class="card">
+    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
+    ${data.travelDates ? `<div class="card-row"><span class="label">旅行期間</span><span class="value">${data.travelDates}</span></div>` : ''}
+    ${data.reservationNumber ? `<div class="card-row"><span class="label">予約番号</span><span class="value">${data.reservationNumber}</span></div>` : ''}
+  </div>
+  <div style="text-align:center;margin:24px 0;">
+    <a class="btn" href="${url}" style="font-size:16px;">📄 契約書を確認する</a>
+    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">リンクが開かない場合: ${url}</p>
+  </div>
+  <p style="font-size:14px;color:#4a6b64;">予約金のご入金をもって本契約書は効力を生じます。ご不明な点はいつでもご連絡ください。</p>
+</div>
+<div class="footer">
+  <a href="https://mongolryokou.com">mongolryokou.com</a> |
+  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
+</div>`);
+}
+
 function tplItineraryReady(data: any) {
     const url = data.itineraryUrl || `https://mongolryokou.com/documents/itinerary/${data.reservationId || ''}`;
     return baseLayout(`
@@ -273,6 +300,11 @@ app.post('/', async (c) => {
             case 'ITINERARY_READY':
                 subject = `【確定日程表】${data.productName || 'ご旅行'} のご案内 | Milkyway Japan`;
                 html = tplItineraryReady(data);
+                break;
+
+            case 'CONTRACT_READY':
+                subject = `【海外旅行契約書】${data.productName || 'ご旅行'} | Milkyway Japan`;
+                html = tplContractReady(data);
                 break;
 
             default:

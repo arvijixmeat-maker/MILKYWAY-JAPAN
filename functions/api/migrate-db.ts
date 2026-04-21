@@ -25,6 +25,14 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped reservations.itinerary_template_id: ${e.message}`);
     }
 
+    // Contract data (travelers, flights, region, category, etc.) stored as JSON
+    try {
+        await c.env.DB.prepare('ALTER TABLE reservations ADD COLUMN contract_data TEXT').run();
+        migrationResults.push('Added reservations.contract_data');
+    } catch (e: any) {
+        migrationResults.push(`Skipped reservations.contract_data: ${e.message}`);
+    }
+
     // Create quotes table if it doesn't exist
     try {
         await c.env.DB.prepare(`

@@ -10,6 +10,7 @@ const MongolTour = lazy(() => import('./pages/MongolTour').then(module => ({ def
 const HorseRidingTour = lazy(() => import('./pages/HorseRidingTour').then(module => ({ default: module.HorseRidingTour })))
 const GobiDesert = lazy(() => import('./pages/GobiDesert').then(module => ({ default: module.GobiDesert })))
 const DocumentItinerary = lazy(() => import('./pages/DocumentItinerary').then(module => ({ default: module.DocumentItinerary })))
+const DocumentContract = lazy(() => import('./pages/DocumentContract').then(module => ({ default: module.DocumentContract })))
 import { AdminGuard } from './components/auth/AdminGuard'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { SEO } from './components/seo/SEO'
@@ -156,6 +157,7 @@ function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/guide-apply" element={<GuideApply />} />
             <Route path="/documents/itinerary/:reservationId" element={<DocumentItinerary />} />
+            <Route path="/documents/contract/:reservationId" element={<DocumentContract />} />
           </Routes>
         </Suspense>
       </NotificationProvider>

@@ -1,6 +1,6 @@
 import { api } from './api';
 
-type NotificationType = 'ESTIMATE_COMPLETED' | 'GUIDE_ASSIGNED' | 'RESERVATION_REQUESTED' | 'QUOTE_RECEIVED' | 'ITINERARY_READY';
+type NotificationType = 'ESTIMATE_COMPLETED' | 'GUIDE_ASSIGNED' | 'RESERVATION_REQUESTED' | 'QUOTE_RECEIVED' | 'ITINERARY_READY' | 'CONTRACT_READY';
 
 interface EmailData {
     customerName: string;
