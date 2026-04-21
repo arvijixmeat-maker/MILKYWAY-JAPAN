@@ -467,7 +467,7 @@ const GuidesTab: React.FC = () => {
                 </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 {guides.map(g => (
                     <div key={g.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 grid grid-cols-[72px_1fr_auto] gap-4 items-center">
                         <div className="relative w-18 h-18 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0" style={{ width: 72, height: 72 }}>
@@ -490,7 +490,7 @@ const GuidesTab: React.FC = () => {
                         </div>
                     </div>
                 ))}
-                {guides.length === 0 && <div className="text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">person_off</span><p>등록된 가이드가 없습니다</p></div>}
+                {guides.length === 0 && <div className="col-span-full text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">person_off</span><p>등록된 가이드가 없습니다</p></div>}
             </div>
 
             {isModalOpen && (
@@ -575,7 +575,7 @@ const AccommodationsTab: React.FC = () => {
                 </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 {accommodations.map(a => (
                     <div key={a.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 grid grid-cols-[96px_1fr_auto] gap-4 items-center">
                         <div className="rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0" style={{ width: 96, height: 72 }}>
@@ -595,7 +595,7 @@ const AccommodationsTab: React.FC = () => {
                         </div>
                     </div>
                 ))}
-                {accommodations.length === 0 && <div className="text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">hotel</span><p>등록된 숙소가 없습니다</p></div>}
+                {accommodations.length === 0 && <div className="col-span-full text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">hotel</span><p>등록된 숙소가 없습니다</p></div>}
             </div>
 
             {isModalOpen && (
