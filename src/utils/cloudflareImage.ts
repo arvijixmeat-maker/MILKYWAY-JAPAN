@@ -68,9 +68,11 @@ export function getOptimizedImageUrl(
     const fit = (options as any).fit || 'cover';
     const widthParam = 'width' in options ? `width=${(options as any).width},` : '';
 
-    // Applies to both absolute URLs (external) and same-origin paths like /api/images/...
-    // Cloudflare Image Resizing handles both forms.
-    return `/cdn-cgi/image/${widthParam}quality=${quality},format=webp,fit=${fit}/${url}`;
+    // Cloudflare expects the source path WITHOUT a leading slash after the options
+    // (otherwise `/cdn-cgi/image/OPT/` + `/api/...` becomes `/cdn-cgi/image/OPT//api/...`
+    // with a double slash and Cloudflare returns 415).
+    const sourcePath = url.startsWith('/') ? url.slice(1) : url;
+    return `/cdn-cgi/image/${widthParam}quality=${quality},format=webp,fit=${fit}/${sourcePath}`;
 }
 
 /**
