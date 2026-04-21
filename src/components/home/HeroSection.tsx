@@ -91,10 +91,12 @@ export const HeroSection: React.FC = () => {
                         alt={banner.title}
                         fetchPriority={index === 0 ? "high" : "low"}
                         loading={index === 0 ? "eager" : "lazy"}
-                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 opacity-0"
-                        onLoad={(e) => {
+                        decoding="async"
+                        /* First banner renders without opacity fade so it counts as LCP immediately.
+                           Later banners keep the gentle fade-in. */
+                        className={`absolute inset-0 w-full h-full object-cover ${index === 0 ? '' : 'transition-opacity duration-300 opacity-0'}`}
+                        onLoad={index === 0 ? undefined : (e) => {
                             e.currentTarget.classList.remove('opacity-0');
-                            // Add a small scale effect for the "wow" factor as it appears
                             e.currentTarget.parentElement?.classList.add('scale-100');
                         }}
                     />
