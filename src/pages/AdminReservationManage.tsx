@@ -731,13 +731,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                 reservationId: (reservation as any).reservationNumber || reservation.id,
                                                 reservationDbId: reservation.id,
                                             });
-                                            alert('사용자에게 배정 정보를 발송(공개)했습니다.');
+                                            alert('고객에게 배정 알림 이메일을 발송했습니다.');
                                         }}
-                                        disabled={reservation.areAssignmentsVisibleToUser}
-                                        className={`text-[11px] font-semibold inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${reservation.areAssignmentsVisibleToUser ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/20 cursor-default' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                        className="text-[11px] font-semibold inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-colors text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        title="배정 정보가 변경되었을 때 고객에게 이메일+인앱 알림을 보냅니다. 고객 마이페이지에는 이미 자동으로 표시되어 있습니다."
                                     >
-                                        <span className="material-symbols-outlined text-sm">{reservation.areAssignmentsVisibleToUser ? 'check_circle' : 'send'}</span>
-                                        {reservation.areAssignmentsVisibleToUser ? '고객 발송 완료' : '배정 정보 고객에게 발송'}
+                                        <span className="material-symbols-outlined text-sm">{reservation.areAssignmentsVisibleToUser ? 'mark_email_read' : 'send'}</span>
+                                        {reservation.areAssignmentsVisibleToUser ? '알림 재발송' : '고객에게 알림 발송'}
                                     </button>
                                 </div>
                                 <div className="relative">

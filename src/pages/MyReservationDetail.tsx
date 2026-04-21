@@ -165,11 +165,14 @@ export const MyReservationDetail: React.FC = () => {
     const paidAmount = (depositPaid && priceBreakdown ? priceBreakdown.deposit : 0) + (balancePaid && priceBreakdown ? priceBreakdown.local : 0);
     const paidPercent = priceBreakdown && priceBreakdown.total > 0 ? Math.round((paidAmount / priceBreakdown.total) * 100) : 0;
 
-    const guide = reservation.areAssignmentsVisibleToUser ? reservation.assignedGuide : null;
+    // Show guide/accommodations as soon as they're assigned — no separate publish gate.
+    // The areAssignmentsVisibleToUser flag is now only used for triggering email notifications,
+    // not for hiding data on the customer's own page.
+    const guide = reservation.assignedGuide;
     const guideLanguages = parseArr(guide?.languages);
     const guideSpecialties = parseArr(guide?.specialties);
 
-    const accommodations = reservation.areAssignmentsVisibleToUser ? (reservation.dailyAccommodations || []) : [];
+    const accommodations = reservation.dailyAccommodations || [];
 
     const itineraryUrl = reservation.itineraryUrl || (reservation.itineraryTemplateId ? `/documents/itinerary/${reservation.reservationNumber || reservation.id}` : '');
     const contractUrl = reservation.contractUrl || '';
