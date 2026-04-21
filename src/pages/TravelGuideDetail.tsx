@@ -180,8 +180,7 @@ export const TravelGuideDetail: React.FC = () => {
                     <img
                         src={magazine.image}
                         alt={magazine.title}
-                        className="w-full h-full object-cover"
-                    />
+                        className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 ) : (
                     <div className="w-full h-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
                         <span className="material-symbols-outlined text-6xl text-slate-400">image</span>
@@ -256,8 +255,7 @@ export const TravelGuideDetail: React.FC = () => {
                                             <img
                                                 src={item.image}
                                                 alt={item.title}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
                                         ) : (
                                             <div className="w-full h-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
                                                 <span className="material-symbols-outlined text-slate-400">image</span>

@@ -181,7 +181,7 @@ export const DocumentItinerary: React.FC = () => {
                                 className="no-print w-full text-left bg-slate-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-slate-100 transition-colors"
                             >
                                 {guide.image ? (
-                                    <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-white shadow-sm" />
+                                    <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-white shadow-sm" loading="lazy" decoding="async" />
                                 ) : (
                                     <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                                         style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
@@ -253,7 +253,7 @@ export const DocumentItinerary: React.FC = () => {
                                                         className="no-print w-full text-left bg-slate-50 rounded-xl p-3 flex items-center gap-3 mt-2 hover:bg-slate-100 transition-colors"
                                                     >
                                                         {accImage ? (
-                                                            <img src={accImage} alt={acc.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+                                                            <img src={accImage} alt={acc.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" loading="lazy" decoding="async" />
                                                         ) : (
                                                             <div className="w-14 h-14 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
                                                                 <span className="material-symbols-outlined text-slate-400">hotel</span>

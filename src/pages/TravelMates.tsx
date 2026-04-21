@@ -184,7 +184,7 @@ export const TravelMates: React.FC = () => {
                             {t('travel_mates.title')}
                         </button>
                         <button className="relative p-2 -mr-2 rounded-full hover:scale-105 transition-transform">
-                            <img src={notificationBell} alt={t('header.notification')} className="w-7 h-7 object-contain" />
+                            <img src={notificationBell} alt={t('header.notification')} className="w-7 h-7 object-contain" loading="lazy" decoding="async" />
                             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 border-2 border-white dark:border-card-dark"></span>
                         </button>
                     </div>

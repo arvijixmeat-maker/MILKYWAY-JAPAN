@@ -355,7 +355,7 @@ export const MyReservationDetail: React.FC = () => {
                             >
                                 <div className="flex items-center gap-3">
                                     {guide.image ? (
-                                        <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0" />
+                                        <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0" loading="lazy" decoding="async" />
                                     ) : (
                                         <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
                                             style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
@@ -409,7 +409,7 @@ export const MyReservationDetail: React.FC = () => {
                                         >
                                             <div className="flex gap-3 p-3 items-center">
                                                 {img ? (
-                                                    <img src={img} alt={acc?.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                                                    <img src={img} alt={acc?.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" loading="lazy" decoding="async" />
                                                 ) : (
                                                     <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
                                                         <span className="material-symbols-outlined text-slate-300 text-3xl">hotel</span>

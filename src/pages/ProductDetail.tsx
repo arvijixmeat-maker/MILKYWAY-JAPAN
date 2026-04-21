@@ -290,8 +290,7 @@ export const ProductDetail: React.FC = () => {
                                 <img
                                     {...getResponsiveImageProps(img, 'banner')}
                                     alt={`${product.name} - ${index + 1}`}
-                                    className="w-full h-full object-cover"
-                                />
+                                    className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent pointer-events-none" />
                             </div>
                         ))

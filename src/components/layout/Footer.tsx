@@ -39,15 +39,15 @@ export const Footer: React.FC = () => {
             <div className="flex justify-center gap-4 mb-6">
                 {/* Instagram */}
                 <a href="https://www.instagram.com/milkyway_mongolia" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
-                    <img src="/assets/icons/instagram.png" alt="Instagram" className="w-full h-full object-contain" />
+                    <img src="/assets/icons/instagram.png" alt="Instagram" className="w-full h-full object-contain" loading="lazy" decoding="async" />
                 </a>
                 {/* Line */}
                 <a href="https://line.me/ti/p/2mQyucsGcT" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
-                    <img src="/assets/icons/line.png" alt="Line" className="w-full h-full object-contain" />
+                    <img src="/assets/icons/line.png" alt="Line" className="w-full h-full object-contain" loading="lazy" decoding="async" />
                 </a>
                 {/* Channel Talk */}
                 <a href="https://jzz1k.channel.io/home" target="_blank" rel="noopener noreferrer" className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-110">
-                    <img src="/assets/icons/channel_talk.png" alt="Channel Talk" className="w-full h-full object-contain" />
+                    <img src="/assets/icons/channel_talk.png" alt="Channel Talk" className="w-full h-full object-contain" loading="lazy" decoding="async" />
                 </a>
             </div>
 

@@ -40,8 +40,7 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                                         src={optimizedUrl}
                                         alt=""
                                         className="w-full h-full object-cover blur-2xl opacity-40 scale-110"
-                                        aria-hidden="true"
-                                    />
+                                        aria-hidden="true" loading="lazy" decoding="async" />
                                     <div className="absolute inset-0 bg-white/10 dark:bg-black/20" />
                                 </div>
 

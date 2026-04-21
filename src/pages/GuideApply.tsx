@@ -111,7 +111,7 @@ export const GuideApply: React.FC = () => {
                         <div className="flex items-center gap-4">
                             <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
                                 {imagePreview ? (
-                                    <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+                                    <img src={imagePreview} alt="preview" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                 ) : (
                                     <span className="material-symbols-outlined text-3xl text-gray-300">person</span>
                                 )}

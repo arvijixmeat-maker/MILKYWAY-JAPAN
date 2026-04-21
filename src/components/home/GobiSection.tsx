@@ -42,8 +42,7 @@ export const GobiSection: React.FC = () => {
                         className="w-full h-full object-cover"
                         src={getOptimizedImageUrl(products[0].mainImages[0], 'heroBanner')}
                         width={1920}
-                        height={600}
-                    />
+                        height={600} loading="lazy" decoding="async" />
                 ) : null}
             </div>
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/90"></div>

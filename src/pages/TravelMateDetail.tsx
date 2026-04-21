@@ -204,8 +204,7 @@ export const TravelMateDetail: React.FC = () => {
                     <img
                         src={post.image ? optimizeImage(post.image, { width: 600 }) : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4'}
                         alt={post.title}
-                        className="w-full h-full object-cover"
-                    />
+                        className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
 
                     {/* Top Nav */}
@@ -239,7 +238,7 @@ export const TravelMateDetail: React.FC = () => {
                         </div>
                         <h1 className="text-2xl font-bold leading-tight mb-3 drop-shadow-sm">{post.title}</h1>
                         <div className="flex items-center gap-3">
-                            <img src={post.authorImage || `https://ui-avatars.com/api/?name=${post.authorName || 'Traveler'}&background=159e82&color=fff`} alt={post.authorName} className="w-10 h-10 rounded-full border-2 border-white/20" />
+                            <img src={post.authorImage || `https://ui-avatars.com/api/?name=${post.authorName || 'Traveler'}&background=159e82&color=fff`} alt={post.authorName} className="w-10 h-10 rounded-full border-2 border-white/20" loading="lazy" decoding="async" />
                             <div>
                                 <p className="font-bold text-sm">{post.authorName || t('travel_mates.detail.anonymous', { defaultValue: 'Anonymous' })}</p>
                                 <p className="text-xs text-white/70">{post.authorInfo || t('travel_mates.detail.traveler', { defaultValue: 'Traveler' })}</p>
@@ -330,8 +329,7 @@ export const TravelMateDetail: React.FC = () => {
                                 <img
                                     src={currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${currentUser.name || currentUser.email?.split('@')[0] || 'U'}&background=159e82&color=fff`}
                                     alt="me"
-                                    className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5"
-                                />
+                                    className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5" loading="lazy" decoding="async" />
                                 <div className="flex-1">
                                     <textarea
                                         value={commentText}
@@ -376,8 +374,7 @@ export const TravelMateDetail: React.FC = () => {
                                         <img
                                             src={comment.user_image || `https://ui-avatars.com/api/?name=${comment.user_name || 'U'}&background=e0e0e0&color=666`}
                                             alt={comment.user_name}
-                                            className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5"
-                                        />
+                                            className="w-9 h-9 rounded-full flex-shrink-0 mt-0.5" loading="lazy" decoding="async" />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-2">

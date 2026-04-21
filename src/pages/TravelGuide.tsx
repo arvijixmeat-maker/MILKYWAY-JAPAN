@@ -166,8 +166,7 @@ export const TravelGuide: React.FC = () => {
                                         <img
                                             alt={item.title}
                                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                            src={item.image}
-                                        />
+                                            src={item.image} loading="lazy" decoding="async" />
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-slate-400">
                                             <span className="material-symbols-outlined text-4xl">image</span>
@@ -223,8 +222,7 @@ export const TravelGuide: React.FC = () => {
                                         <img
                                             alt={item.title}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            src={item.image}
-                                        />
+                                            src={item.image} loading="lazy" decoding="async" />
                                     )}
                                 </div>
                             </div>

@@ -47,6 +47,8 @@ export const Header: React.FC = () => {
                         alt="Mongolia Milkyway"
                         className="h-9 w-auto object-contain cursor-pointer"
                         onClick={() => navigate('/')}
+                        loading="eager"
+                        decoding="async"
                     />
                 </div>
 
@@ -70,7 +72,7 @@ export const Header: React.FC = () => {
             >
                 {/* Drawer header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                    <img src={logoSquare} alt="Mongolia Milkyway" className="h-8 w-auto object-contain" />
+                    <img src={logoSquare} alt="Mongolia Milkyway" className="h-8 w-auto object-contain" loading="lazy" decoding="async" />
                     <button
                         onClick={() => setIsMenuOpen(false)}
                         className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"

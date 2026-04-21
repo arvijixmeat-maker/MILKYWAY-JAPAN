@@ -272,7 +272,7 @@ export const DocumentContract: React.FC = () => {
                                     <td className="label" rowSpan={5} style={{ width: 140, textAlign: 'center' }}>
                                         旅行会社押印
                                         <div className="mt-2">
-                                            <img src={COMPANY_INFO.stampImage} alt="stamp" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ maxWidth: 120, margin: '0 auto' }} />
+                                            <img src={COMPANY_INFO.stampImage} alt="stamp" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ maxWidth: 120, margin: '0 auto' }} loading="lazy" decoding="async" />
                                         </div>
                                     </td>
                                     <td className="label" style={{ width: 160 }}>電話番号（KR）</td>

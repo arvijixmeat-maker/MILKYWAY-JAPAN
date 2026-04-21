@@ -111,8 +111,7 @@ export const EstimateComplete: React.FC = () => {
                                             <img
                                                 src={category.icon}
                                                 alt={category.name}
-                                                className="w-full h-full object-cover"
-                                            />
+                                                className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                         ) : (
                                             <span className="material-symbols-outlined text-2xl text-primary">
                                                 {category.icon || 'category'}

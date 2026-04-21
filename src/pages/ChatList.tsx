@@ -88,7 +88,7 @@ export const ChatList: React.FC = () => {
                                     <div className="relative">
                                         <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
                                             {partner.avatar_url ? (
-                                                <img src={partner.avatar_url} alt={partner.full_name} className="w-full h-full object-cover" />
+                                                <img src={partner.avatar_url} alt={partner.full_name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
                                                     <span className="material-symbols-outlined text-2xl">person</span>

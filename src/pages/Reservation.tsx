@@ -385,7 +385,7 @@ export const Reservation: React.FC = () => {
                                 >
                                     {option.imageUrl && (
                                         <div className="size-12 rounded-lg bg-primary/20 flex items-center justify-center overflow-hidden">
-                                            <img className="w-full h-full object-cover" src={option.imageUrl} alt={option.name} />
+                                            <img className="w-full h-full object-cover" src={option.imageUrl} alt={option.name} loading="lazy" decoding="async" />
                                         </div>
                                     )}
                                     <div className="flex-1">

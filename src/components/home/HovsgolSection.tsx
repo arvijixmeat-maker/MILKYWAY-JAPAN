@@ -56,8 +56,7 @@ export const HovsgolSection: React.FC = () => {
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                         src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
                                         width={96}
-                                        height={96}
-                                    />
+                                        height={96} loading="lazy" decoding="async" />
                                 </div>
                                 <div className="flex flex-col justify-center py-1 flex-1">
                                     <span className="text-[10px] font-bold text-primary mb-1">

@@ -29,7 +29,7 @@ const ScrollingColumn: React.FC<{ images: string[]; direction: 'up' | 'down'; du
             >
                 {displayImages.map((src, idx) => (
                     <div key={idx} className="w-full rounded-2xl overflow-hidden shadow-lg aspect-[3/4]">
-                        <img src={src} alt="Mongolia" className="w-full h-full object-cover" />
+                        <img src={src} alt="Mongolia" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     </div>
                 ))}
             </div>
@@ -61,7 +61,7 @@ export const Login: React.FC = () => {
             {/* Content Content - Centered */}
             <div className="relative z-20 flex flex-col items-center justify-center h-full text-center px-6">
                 <div className="mb-8 animate-fade-in-up">
-                    <img src={logo} alt="몽골리아 은하수" className="h-32 mb-6 mx-auto object-contain drop-shadow-xl" />
+                    <img src={logo} alt="몽골리아 은하수" className="h-32 mb-6 mx-auto object-contain drop-shadow-xl" loading="lazy" decoding="async" />
 
                     <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-2 drop-shadow-xl">
                         {t('auth.title_line1')}<br />
@@ -80,8 +80,7 @@ export const Login: React.FC = () => {
                     <img
                         src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
                         alt="Google"
-                        className="w-6 h-6"
-                    />
+                        className="w-6 h-6" loading="lazy" decoding="async" />
                     <span>{t('auth.google_login')}</span>
                 </button>
 

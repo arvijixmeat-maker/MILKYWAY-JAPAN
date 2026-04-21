@@ -93,7 +93,7 @@ export const GuideDetailModal: React.FC<GuideDetailModalProps> = ({ guide, open,
             <div className="flex-1 overflow-y-auto p-5">
                 <div className="flex flex-col items-center text-center mb-5">
                     {guide.image ? (
-                        <img src={guide.image} alt={guide.name} className="w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-lg shadow-teal-500/20 mb-3" />
+                        <img src={guide.image} alt={guide.name} className="w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-lg shadow-teal-500/20 mb-3" loading="lazy" decoding="async" />
                     ) : (
                         <div className="w-28 h-28 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-3"
                             style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
@@ -202,7 +202,7 @@ export const AccommodationDetailModal: React.FC<AccommodationDetailModalProps> =
                 {/* Image carousel */}
                 {images.length > 0 ? (
                     <div className="relative aspect-video bg-slate-100 dark:bg-slate-800">
-                        <img src={images[imageIdx]} alt={accommodation.name} className="w-full h-full object-cover" />
+                        <img src={images[imageIdx]} alt={accommodation.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                         {images.length > 1 && (
                             <>
                                 <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md text-slate-700">

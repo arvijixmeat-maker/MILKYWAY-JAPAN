@@ -160,7 +160,7 @@ export const TravelMateWrite: React.FC = () => {
                         >
                             {image ? (
                                 <>
-                                    <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                                    <img src={image} alt="Preview" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                     <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <span className="text-white font-medium">{t('travel_mates.write.image_upload_btn')}</span>
                                     </div>
