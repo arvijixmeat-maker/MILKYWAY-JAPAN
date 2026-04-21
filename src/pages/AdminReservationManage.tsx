@@ -1121,7 +1121,9 @@ export const AdminReservationManage: React.FC = () => {
 
             if (!oldReservation) throw new Error('Reservation not found');
 
-            let history = oldReservation.history ? [...oldReservation.history] : [];
+            // Use updated.history as base so memos/entries added inside the modal are preserved.
+            // Fall back to oldReservation.history if updated didn't provide one.
+            let history = updated.history ? [...updated.history] : (oldReservation.history ? [...oldReservation.history] : []);
 
             // Add history entry for status change if changed
             if (oldReservation.status !== updated.status) {
