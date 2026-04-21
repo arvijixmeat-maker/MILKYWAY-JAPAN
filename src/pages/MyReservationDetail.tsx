@@ -403,10 +403,9 @@ export const MyReservationDetail: React.FC = () => {
                                     const acc = item.accommodation;
                                     const img = parseImage(acc?.images);
                                     return (
-                                        <button
+                                        <div
                                             key={item.day}
-                                            onClick={() => acc && setAccModal({ accommodation: acc, day: item.day })}
-                                            className="w-full text-left bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-md active:scale-[0.99] transition-all"
+                                            className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden"
                                         >
                                             <div className="flex gap-3 p-3 items-center">
                                                 {img ? (
@@ -422,16 +421,16 @@ export const MyReservationDetail: React.FC = () => {
                                                         {acc?.type && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{acc.type}</span>}
                                                     </div>
                                                     <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{acc?.name || '—'}</p>
-                                                    {acc?.location && (
-                                                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1 inline-flex items-start gap-0.5">
-                                                            <span className="material-symbols-outlined text-xs mt-0.5">location_on</span>
-                                                            {acc.location}
-                                                        </p>
-                                                    )}
+                                                    <button
+                                                        onClick={() => acc && setAccModal({ accommodation: acc, day: item.day })}
+                                                        className="inline-flex items-center gap-0.5 mt-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-700"
+                                                    >
+                                                        詳しく見る
+                                                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                                    </button>
                                                 </div>
-                                                <span className="material-symbols-outlined text-slate-400 flex-shrink-0">chevron_right</span>
                                             </div>
-                                        </button>
+                                        </div>
                                     );
                                 })}
                             </div>
