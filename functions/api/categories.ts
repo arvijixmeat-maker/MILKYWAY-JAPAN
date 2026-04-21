@@ -18,7 +18,34 @@ app.get('/', async (c) => {
         } else {
             result = await db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
         }
-        return c.json(result.results);
+        // Parse JSON landing_highlights if present
+        const rows = (result.results || []).map((r: any) => ({
+            ...r,
+            landing_highlights: (() => {
+                if (!r.landing_highlights) return [];
+                if (typeof r.landing_highlights !== 'string') return r.landing_highlights;
+                try { return JSON.parse(r.landing_highlights); } catch { return []; }
+            })(),
+        }));
+        return c.json(rows);
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// GET /api/categories/:slug — single category by id (used by /category/:slug page)
+app.get('/:slug', async (c) => {
+    const slug = c.req.param('slug');
+    const db = c.env.DB;
+    try {
+        const row: any = await db.prepare('SELECT * FROM categories WHERE id = ? LIMIT 1').bind(slug).first();
+        if (!row) return c.json({ error: 'Not found' }, 404);
+        row.landing_highlights = (() => {
+            if (!row.landing_highlights) return [];
+            if (typeof row.landing_highlights !== 'string') return row.landing_highlights;
+            try { return JSON.parse(row.landing_highlights); } catch { return []; }
+        })();
+        return c.json(row);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
@@ -30,10 +57,28 @@ app.post('/', async (c) => {
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
     const type = data.type || 'product'; // Default to product
+    const highlightsJson = Array.isArray(data.landing_highlights)
+        ? JSON.stringify(data.landing_highlights)
+        : (typeof data.landing_highlights === 'string' ? data.landing_highlights : null);
     try {
         await db.prepare(
-            "INSERT INTO categories (id, name, description, icon, image, sort_order, is_active, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(id, data.name, data.description || '', data.icon || '', data.image || '', data.sort_order || 0, data.is_active ?? 1, type).run();
+            `INSERT INTO categories (
+                id, name, description, icon, image, sort_order, is_active, type,
+                landing_hero_image, landing_hero_tagline, landing_hero_title,
+                landing_hero_subtitle, landing_accent_color, landing_highlights,
+                landing_product_grid_title
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            id, data.name, data.description || '', data.icon || '', data.image || '',
+            data.sort_order || 0, data.is_active ?? 1, type,
+            data.landing_hero_image || null,
+            data.landing_hero_tagline || null,
+            data.landing_hero_title || null,
+            data.landing_hero_subtitle || null,
+            data.landing_accent_color || null,
+            highlightsJson,
+            data.landing_product_grid_title || null,
+        ).run();
         return c.json({ id, ...data });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -45,11 +90,29 @@ app.put('/:id', async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
+    const highlightsJson = Array.isArray(data.landing_highlights)
+        ? JSON.stringify(data.landing_highlights)
+        : (typeof data.landing_highlights === 'string' ? data.landing_highlights : null);
     try {
         await db.prepare(
-            "UPDATE categories SET name=?, description=?, icon=?, image=?, sort_order=?, is_active=? WHERE id=?"
-        ).bind(data.name, data.description || '', data.icon || '', data.image || '', data.sort_order || 0, data.is_active ?? 1, id).run();
-        // Note: intentionally not updating 'type' as it shouldn't change, but if needed, we'll keep it simple for now.
+            `UPDATE categories SET
+                name=?, description=?, icon=?, image=?, sort_order=?, is_active=?,
+                landing_hero_image=?, landing_hero_tagline=?, landing_hero_title=?,
+                landing_hero_subtitle=?, landing_accent_color=?, landing_highlights=?,
+                landing_product_grid_title=?
+             WHERE id=?`
+        ).bind(
+            data.name, data.description || '', data.icon || '', data.image || '',
+            data.sort_order || 0, data.is_active ?? 1,
+            data.landing_hero_image || null,
+            data.landing_hero_tagline || null,
+            data.landing_hero_title || null,
+            data.landing_hero_subtitle || null,
+            data.landing_accent_color || null,
+            highlightsJson,
+            data.landing_product_grid_title || null,
+            id,
+        ).run();
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);

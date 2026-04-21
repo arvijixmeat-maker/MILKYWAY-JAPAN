@@ -120,6 +120,25 @@ app.get('/', async (c) => {
     } catch (e: any) {
         console.log("categories migration: ", e.message);
     }
+
+    // Category landing page content columns
+    const categoryLandingCols = [
+        "landing_hero_image TEXT",
+        "landing_hero_tagline TEXT",
+        "landing_hero_title TEXT",
+        "landing_hero_subtitle TEXT",
+        "landing_accent_color TEXT",
+        "landing_highlights TEXT",         // JSON string
+        "landing_product_grid_title TEXT",
+    ];
+    for (const colDef of categoryLandingCols) {
+        try {
+            await c.env.DB.prepare(`ALTER TABLE categories ADD COLUMN ${colDef}`).run();
+            migrationResults.push(`Added categories.${colDef}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped categories.${colDef}: ${e.message}`);
+        }
+    }
     
     // Travel Mates Migrations
     const travelMatesColumns = [

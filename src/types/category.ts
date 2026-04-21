@@ -1,3 +1,18 @@
+export interface HighlightCardData {
+    image: string;
+    tags?: string[];
+    title: string;
+    description?: string;
+    link?: string;
+}
+
+export interface HighlightSectionData {
+    label: string;
+    title: string;
+    subtitle?: string;
+    cards: HighlightCardData[];
+}
+
 export interface Category {
     id: string;
     name: string;
@@ -6,6 +21,15 @@ export interface Category {
     order: number;
     isActive: boolean;
     type?: 'product' | 'magazine'; // 'product' by default if undefined
+
+    // Landing page content (customer-facing /category/:slug)
+    landing_hero_image?: string;
+    landing_hero_tagline?: string;
+    landing_hero_title?: string;
+    landing_hero_subtitle?: string;
+    landing_accent_color?: string;
+    landing_highlights?: HighlightSectionData[];
+    landing_product_grid_title?: string;
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [

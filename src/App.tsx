@@ -11,6 +11,7 @@ const HorseRidingTour = lazy(() => import('./pages/HorseRidingTour').then(module
 const GobiDesert = lazy(() => import('./pages/GobiDesert').then(module => ({ default: module.GobiDesert })))
 const DocumentItinerary = lazy(() => import('./pages/DocumentItinerary').then(module => ({ default: module.DocumentItinerary })))
 const DocumentContract = lazy(() => import('./pages/DocumentContract').then(module => ({ default: module.DocumentContract })))
+const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })))
 import { AdminGuard } from './components/auth/AdminGuard'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { SEO } from './components/seo/SEO'
@@ -108,6 +109,7 @@ function App() {
             <Route path="/mongol-tour" element={<Layout><MongolTour /></Layout>} />
             <Route path="/horse-riding-tour" element={<Layout><HorseRidingTour /></Layout>} />
             <Route path="/gobi-desert" element={<Layout><GobiDesert /></Layout>} />
+            <Route path="/category/:slug" element={<Layout><CategoryPage /></Layout>} />
             <Route path="/products" element={<TourProducts />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/reservation/:id" element={<Reservation />} />

@@ -24,8 +24,15 @@ export const AdminCategoryManage: React.FC = () => {
                     name: c.name,
                     description: c.description,
                     isActive: c.is_active,
-                    order: c.order,
-                    type: c.type || 'product'
+                    order: c.order ?? c.sort_order ?? 0,
+                    type: c.type || 'product',
+                    landing_hero_image: c.landing_hero_image,
+                    landing_hero_tagline: c.landing_hero_tagline,
+                    landing_hero_title: c.landing_hero_title,
+                    landing_hero_subtitle: c.landing_hero_subtitle,
+                    landing_accent_color: c.landing_accent_color,
+                    landing_highlights: Array.isArray(c.landing_highlights) ? c.landing_highlights : [],
+                    landing_product_grid_title: c.landing_product_grid_title,
                 })));
             } else {
                 // Seed default categories if empty
@@ -122,13 +129,23 @@ export const AdminCategoryManage: React.FC = () => {
 
     const handleSaveCategory = async (category: Category) => {
         try {
+            const landingPayload = {
+                landing_hero_image: category.landing_hero_image || null,
+                landing_hero_tagline: category.landing_hero_tagline || null,
+                landing_hero_title: category.landing_hero_title || null,
+                landing_hero_subtitle: category.landing_hero_subtitle || null,
+                landing_accent_color: category.landing_accent_color || null,
+                landing_highlights: category.landing_highlights || [],
+                landing_product_grid_title: category.landing_product_grid_title || null,
+            };
             if (selectedCategory) {
                 // Update
                 await api.categories.update(category.id, {
                     icon: category.icon,
                     name: category.name,
                     description: category.description,
-                    is_active: category.isActive
+                    is_active: category.isActive,
+                    ...landingPayload,
                 });
             } else {
                 // Add New
@@ -139,7 +156,8 @@ export const AdminCategoryManage: React.FC = () => {
                     description: category.description,
                     is_active: category.isActive ?? true,
                     order: sortedCategories.length,
-                    type: 'product'
+                    type: 'product',
+                    ...landingPayload,
                 };
                 await api.categories.create(newCategory);
             }
@@ -427,6 +445,14 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                                 활성화
                             </label>
                         </div>
+
+                        {/* Landing page editor — only for product categories */}
+                        {type === 'product' && (
+                            <LandingPageEditor
+                                formData={formData}
+                                setFormData={setFormData}
+                            />
+                        )}
                     </div>
 
                     {/* Footer */}
@@ -447,6 +473,261 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                     </div>
                 </form>
             </div>
+        </div>
+    );
+};
+
+// ─── Landing Page Editor ────────────────────────────────────────────
+interface LandingEditorProps {
+    formData: Partial<Category>;
+    setFormData: React.Dispatch<React.SetStateAction<Partial<Category>>>;
+}
+
+const LandingPageEditor: React.FC<LandingEditorProps> = ({ formData, setFormData }) => {
+    const [expanded, setExpanded] = useState(false);
+    const highlights = formData.landing_highlights || [];
+
+    const updateHighlights = (next: any[]) => setFormData({ ...formData, landing_highlights: next });
+
+    const addSection = () => {
+        updateHighlights([...highlights, { label: `ハイライト ${highlights.length + 1}`, title: '', subtitle: '', cards: [] }]);
+    };
+    const updateSection = (idx: number, patch: any) => {
+        const next = [...highlights];
+        next[idx] = { ...next[idx], ...patch };
+        updateHighlights(next);
+    };
+    const removeSection = (idx: number) => {
+        updateHighlights(highlights.filter((_, i) => i !== idx));
+    };
+    const addCard = (sectionIdx: number) => {
+        const next = [...highlights];
+        next[sectionIdx] = { ...next[sectionIdx], cards: [...(next[sectionIdx].cards || []), { image: '', tags: [], title: '', description: '' }] };
+        updateHighlights(next);
+    };
+    const updateCard = (sectionIdx: number, cardIdx: number, patch: any) => {
+        const next = [...highlights];
+        const cards = [...next[sectionIdx].cards];
+        cards[cardIdx] = { ...cards[cardIdx], ...patch };
+        next[sectionIdx] = { ...next[sectionIdx], cards };
+        updateHighlights(next);
+    };
+    const removeCard = (sectionIdx: number, cardIdx: number) => {
+        const next = [...highlights];
+        next[sectionIdx] = { ...next[sectionIdx], cards: next[sectionIdx].cards.filter((_: any, i: number) => i !== cardIdx) };
+        updateHighlights(next);
+    };
+
+    const uploadImageTo = async (file: File, cb: (url: string) => void) => {
+        try {
+            const url = await uploadImage(file, 'categories');
+            cb(url);
+        } catch (e) { alert('이미지 업로드 실패'); }
+    };
+
+    return (
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+            <button
+                type="button"
+                onClick={() => setExpanded(!expanded)}
+                className="w-full px-4 py-3 flex items-center justify-between text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
+                <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-teal-600">web</span>
+                    랜딩 페이지 편집 (/category/{formData.id || '...'})
+                </span>
+                <span className={`material-symbols-outlined transition-transform ${expanded ? 'rotate-180' : ''}`}>expand_more</span>
+            </button>
+
+            {expanded && (
+                <div className="p-4 space-y-4 border-t border-slate-200 dark:border-slate-700">
+                    {/* Hero */}
+                    <div className="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-700">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">히어로 배너</p>
+
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">배경 이미지</label>
+                            {formData.landing_hero_image && (
+                                <img src={formData.landing_hero_image} alt="hero" className="mb-2 w-full aspect-video object-cover rounded-lg border border-slate-200" />
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) uploadImageTo(file, (url) => setFormData({ ...formData, landing_hero_image: url }));
+                                }}
+                                className="text-xs"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">소제목 (tagline)</label>
+                                <input
+                                    type="text"
+                                    value={formData.landing_hero_tagline || ''}
+                                    onChange={(e) => setFormData({ ...formData, landing_hero_tagline: e.target.value })}
+                                    placeholder="例: 満天の星空が待っている"
+                                    className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">강조 색상 (accent)</label>
+                                <input
+                                    type="color"
+                                    value={formData.landing_accent_color || '#0f766e'}
+                                    onChange={(e) => setFormData({ ...formData, landing_accent_color: e.target.value })}
+                                    className="w-full h-10 border border-slate-200 dark:border-slate-700 rounded-lg"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">메인 제목</label>
+                            <input
+                                type="text"
+                                value={formData.landing_hero_title || ''}
+                                onChange={(e) => setFormData({ ...formData, landing_hero_title: e.target.value })}
+                                placeholder="例: ゴビ砂漠ツアー"
+                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">서브 제목 (설명)</label>
+                            <textarea
+                                value={formData.landing_hero_subtitle || ''}
+                                onChange={(e) => setFormData({ ...formData, landing_hero_subtitle: e.target.value })}
+                                rows={2}
+                                placeholder="例: 天の川がはっきり見える空、夕陽に染まる砂丘..."
+                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">상품 섹션 제목</label>
+                            <input
+                                type="text"
+                                value={formData.landing_product_grid_title || ''}
+                                onChange={(e) => setFormData({ ...formData, landing_product_grid_title: e.target.value })}
+                                placeholder="例: ゴビ砂漠の人気ツアー"
+                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Highlights */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">하이라이트 섹션 ({highlights.length})</p>
+                            <button type="button" onClick={addSection} className="text-xs font-bold text-teal-600 hover:text-teal-700 inline-flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-sm">add</span>섹션 추가
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {highlights.map((section: any, sIdx: number) => (
+                                <div key={sIdx} className="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <span className="text-[10px] font-bold text-teal-600">섹션 {sIdx + 1}</span>
+                                        <button type="button" onClick={() => removeSection(sIdx)} className="text-slate-400 hover:text-red-500">
+                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input
+                                            type="text"
+                                            value={section.label || ''}
+                                            onChange={(e) => updateSection(sIdx, { label: e.target.value })}
+                                            placeholder="뱃지 라벨 (例: ハイライト 1)"
+                                            className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={section.title || ''}
+                                            onChange={(e) => updateSection(sIdx, { title: e.target.value })}
+                                            placeholder="섹션 제목"
+                                            className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={section.subtitle || ''}
+                                        onChange={(e) => updateSection(sIdx, { subtitle: e.target.value })}
+                                        placeholder="섹션 서브타이틀"
+                                        className="mt-2 w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    />
+
+                                    {/* Cards */}
+                                    <div className="mt-3 space-y-2">
+                                        {(section.cards || []).map((card: any, cIdx: number) => (
+                                            <div key={cIdx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded p-2">
+                                                <div className="flex items-start gap-2">
+                                                    <div className="flex-shrink-0 w-16 h-16 rounded bg-slate-100 overflow-hidden">
+                                                        {card.image ? (
+                                                            <img src={card.image} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                                                <span className="material-symbols-outlined">image</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                onChange={(e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) uploadImageTo(file, (url) => updateCard(sIdx, cIdx, { image: url }));
+                                                                }}
+                                                                className="text-[10px] w-28"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={(card.tags || []).join(', ')}
+                                                                onChange={(e) => updateCard(sIdx, cIdx, { tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                                                placeholder="태그 (콤마 구분)"
+                                                                className="flex-1 px-1.5 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded"
+                                                            />
+                                                            <button type="button" onClick={() => removeCard(sIdx, cIdx)} className="text-slate-400 hover:text-red-500">
+                                                                <span className="material-symbols-outlined text-xs">close</span>
+                                                            </button>
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            value={card.title || ''}
+                                                            onChange={(e) => updateCard(sIdx, cIdx, { title: e.target.value })}
+                                                            placeholder="카드 제목"
+                                                            className="w-full px-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={card.description || ''}
+                                                            onChange={(e) => updateCard(sIdx, cIdx, { description: e.target.value })}
+                                                            placeholder="카드 설명"
+                                                            className="w-full px-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button type="button" onClick={() => addCard(sIdx)} className="w-full py-2 text-[11px] font-semibold text-slate-500 border border-dashed border-slate-300 rounded hover:text-teal-600 hover:border-teal-300">
+                                            <span className="material-symbols-outlined text-xs">add</span> 카드 추가
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {highlights.length === 0 && (
+                                <p className="text-xs text-center text-slate-400 py-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+                                    위 "섹션 추가" 버튼으로 하이라이트를 만드세요
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

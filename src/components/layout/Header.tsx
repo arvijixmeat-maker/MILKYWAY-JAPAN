@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '../../contexts/NotificationContext';
+import { api } from '../../lib/api';
 import logoSquare from '../../assets/logo_square.png';
 
-const TOUR_SUB_ITEMS = [
-    { path: '/products', icon: 'grid_view', labelKey: 'nav.all_tours' },
-    { path: '/horse-riding-tour', icon: 'hiking', labelKey: 'nav.horse_riding' },
-    { path: '/gobi-desert', icon: 'landscape', labelKey: 'nav.gobi_desert' },
-] as const;
+interface TourSubItem {
+    path: string;
+    icon: string;
+    label: string;
+}
+
+// Fallback sub-items if categories haven't loaded yet or are empty.
+const FALLBACK_TOUR_SUB_ITEMS: TourSubItem[] = [
+    { path: '/products', icon: 'grid_view', label: '全ツアー一覧' },
+];
 
 export const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -17,6 +23,26 @@ export const Header: React.FC = () => {
     const { t } = useTranslation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isTourExpanded, setIsTourExpanded] = useState(false);
+    const [tourSubItems, setTourSubItems] = useState<TourSubItem[]>(FALLBACK_TOUR_SUB_ITEMS);
+
+    // Load active product categories dynamically so new admin-created categories
+    // appear in the hamburger menu without a code change.
+    useEffect(() => {
+        api.categories.list('product').then((data: any) => {
+            if (!Array.isArray(data)) return;
+            const items: TourSubItem[] = [
+                { path: '/products', icon: 'grid_view', label: '全ツアー一覧' },
+                ...data
+                    .filter((c: any) => c.is_active && c.id !== 'all')
+                    .map((c: any) => ({
+                        path: `/category/${c.id}`,
+                        icon: c.icon && !c.icon.startsWith('http') && !c.icon.startsWith('/') && !c.icon.startsWith('data:') ? c.icon : 'category',
+                        label: c.name,
+                    })),
+            ];
+            setTourSubItems(items);
+        }).catch(() => {});
+    }, []);
 
     const toggleMenu = () => {
         setIsMenuOpen(prev => !prev);
@@ -36,7 +62,7 @@ export const Header: React.FC = () => {
         setIsTourExpanded(false);
     };
 
-    const isTourActive = ['/products', '/horse-riding-tour', '/gobi-desert'].includes(location.pathname);
+    const isTourActive = location.pathname === '/products' || location.pathname.startsWith('/category/');
 
     return (
         <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shadow-sm font-sans">
@@ -102,7 +128,7 @@ export const Header: React.FC = () => {
                     {/* 서브메뉴 */}
                     <div className={`overflow-hidden transition-all duration-300 ${isTourExpanded ? 'max-h-64' : 'max-h-0'}`}>
                         <div className="bg-slate-50 dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
-                            {TOUR_SUB_ITEMS.map(item => (
+                            {tourSubItems.map(item => (
                                 <button
                                     key={item.path}
                                     onClick={() => handleNavigate(item.path)}
@@ -113,7 +139,7 @@ export const Header: React.FC = () => {
                                     }`}
                                 >
                                     <span className="material-symbols-outlined text-lg">{item.icon}</span>
-                                    {t(item.labelKey)}
+                                    {item.label}
                                     {location.pathname === item.path && (
                                         <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
                                     )}
