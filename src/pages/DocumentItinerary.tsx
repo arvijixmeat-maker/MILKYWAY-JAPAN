@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { GuideDetailModal, AccommodationDetailModal } from '../components/common/DetailModals';
 
 interface Activity {
     time?: string;
@@ -81,6 +82,8 @@ export const DocumentItinerary: React.FC = () => {
     const [data, setData] = useState<ItineraryData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [guideModalOpen, setGuideModalOpen] = useState(false);
+    const [accModal, setAccModal] = useState<{ accommodation: any; day: number } | null>(null);
 
     useEffect(() => {
         if (!reservationId) return;
@@ -173,7 +176,10 @@ export const DocumentItinerary: React.FC = () => {
                     {guide && (
                         <div className="px-8 py-6 border-b border-slate-100">
                             <h2 className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-3">担当ガイド</h2>
-                            <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-4">
+                            <button
+                                onClick={() => setGuideModalOpen(true)}
+                                className="no-print w-full text-left bg-slate-50 rounded-2xl p-4 flex items-center gap-4 hover:bg-slate-100 transition-colors"
+                            >
                                 {guide.image ? (
                                     <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-white shadow-sm" />
                                 ) : (
@@ -196,7 +202,8 @@ export const DocumentItinerary: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                                <span className="material-symbols-outlined text-slate-400 flex-shrink-0">chevron_right</span>
+                            </button>
                         </div>
                     )}
 
@@ -241,7 +248,10 @@ export const DocumentItinerary: React.FC = () => {
                                                     </ul>
                                                 )}
                                                 {acc && (
-                                                    <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3 mt-2">
+                                                    <button
+                                                        onClick={() => setAccModal({ accommodation: acc, day: d.day })}
+                                                        className="no-print w-full text-left bg-slate-50 rounded-xl p-3 flex items-center gap-3 mt-2 hover:bg-slate-100 transition-colors"
+                                                    >
                                                         {accImage ? (
                                                             <img src={accImage} alt={acc.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
                                                         ) : (
@@ -249,7 +259,7 @@ export const DocumentItinerary: React.FC = () => {
                                                                 <span className="material-symbols-outlined text-slate-400">hotel</span>
                                                             </div>
                                                         )}
-                                                        <div className="min-w-0">
+                                                        <div className="min-w-0 flex-1">
                                                             <div className="flex items-center gap-1.5 mb-0.5">
                                                                 <span className="material-symbols-outlined text-sm text-slate-400">bed</span>
                                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">宿泊</p>
@@ -257,7 +267,8 @@ export const DocumentItinerary: React.FC = () => {
                                                             <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
                                                             {acc.location && <p className="text-xs text-slate-500 truncate">{acc.location}</p>}
                                                         </div>
-                                                    </div>
+                                                        <span className="material-symbols-outlined text-slate-400 flex-shrink-0">chevron_right</span>
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
@@ -295,6 +306,15 @@ export const DocumentItinerary: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Detail Modals */}
+            <GuideDetailModal guide={guide || null} open={guideModalOpen} onClose={() => setGuideModalOpen(false)} />
+            <AccommodationDetailModal
+                accommodation={accModal?.accommodation || null}
+                day={accModal?.day}
+                open={!!accModal}
+                onClose={() => setAccModal(null)}
+            />
         </>
     );
 };

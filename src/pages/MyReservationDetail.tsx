@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
+import { GuideDetailModal, AccommodationDetailModal } from '../components/common/DetailModals';
 
 interface Guide {
     id?: string;
@@ -122,6 +123,8 @@ export const MyReservationDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showAllHistory, setShowAllHistory] = useState(false);
+    const [guideModalOpen, setGuideModalOpen] = useState(false);
+    const [accModal, setAccModal] = useState<{ accommodation: any; day: number } | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -346,18 +349,21 @@ export const MyReservationDetail: React.FC = () => {
                     <section>
                         <SectionHeader icon="badge" title="担当ガイド" />
                         {guide && guide.name ? (
-                            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4">
-                                <div className="flex items-center gap-3 mb-3">
+                            <button
+                                onClick={() => setGuideModalOpen(true)}
+                                className="w-full text-left bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 hover:shadow-md active:scale-[0.99] transition-all"
+                            >
+                                <div className="flex items-center gap-3">
                                     {guide.image ? (
-                                        <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-white shadow-sm" />
+                                        <img src={guide.image} alt={guide.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0" />
                                     ) : (
-                                        <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold"
+                                        <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
                                             style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
                                             {guide.name[0]}
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-slate-900 dark:text-white">{guide.name}</p>
+                                        <p className="font-bold text-slate-900 dark:text-white truncate">{guide.name}</p>
                                         {(guideLanguages.length > 0 || guideSpecialties.length > 0) && (
                                             <div className="flex flex-wrap gap-1 mt-1">
                                                 {guideLanguages.map((l, i) => (
@@ -369,25 +375,16 @@ export const MyReservationDetail: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
+                                    <span className="material-symbols-outlined text-slate-400 flex-shrink-0">chevron_right</span>
                                 </div>
                                 {(guide.introduction || guide.bio) && (
-                                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3 line-clamp-3">{guide.introduction || guide.bio}</p>
+                                    <p className="text-xs text-slate-500 leading-relaxed mt-3 line-clamp-2">{guide.introduction || guide.bio}</p>
                                 )}
-                                <div className="flex gap-2">
-                                    {guide.phone && (
-                                        <a href={`tel:${guide.phone}`} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-xl text-xs font-bold transition-colors">
-                                            <span className="material-symbols-outlined text-sm">call</span>
-                                            電話
-                                        </a>
-                                    )}
-                                    {guide.kakaoId && (
-                                        <div className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-yellow-50 text-yellow-700 rounded-xl text-xs font-bold">
-                                            <span className="material-symbols-outlined text-sm">chat</span>
-                                            KakaoTalk: {guide.kakaoId}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                                <p className="text-[11px] text-teal-600 font-semibold mt-2 inline-flex items-center gap-0.5">
+                                    詳細を見る
+                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                </p>
+                            </button>
                         ) : (
                             <div className="bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center">
                                 <span className="material-symbols-outlined text-3xl text-slate-300">person</span>
@@ -406,8 +403,12 @@ export const MyReservationDetail: React.FC = () => {
                                     const acc = item.accommodation;
                                     const img = parseImage(acc?.images);
                                     return (
-                                        <div key={item.day} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden">
-                                            <div className="flex gap-3 p-3">
+                                        <button
+                                            key={item.day}
+                                            onClick={() => acc && setAccModal({ accommodation: acc, day: item.day })}
+                                            className="w-full text-left bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-md active:scale-[0.99] transition-all"
+                                        >
+                                            <div className="flex gap-3 p-3 items-center">
                                                 {img ? (
                                                     <img src={img} alt={acc?.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
                                                 ) : (
@@ -422,14 +423,15 @@ export const MyReservationDetail: React.FC = () => {
                                                     </div>
                                                     <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{acc?.name || '—'}</p>
                                                     {acc?.location && (
-                                                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 inline-flex items-start gap-0.5">
+                                                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1 inline-flex items-start gap-0.5">
                                                             <span className="material-symbols-outlined text-xs mt-0.5">location_on</span>
                                                             {acc.location}
                                                         </p>
                                                     )}
                                                 </div>
+                                                <span className="material-symbols-outlined text-slate-400 flex-shrink-0">chevron_right</span>
                                             </div>
-                                        </div>
+                                        </button>
                                     );
                                 })}
                             </div>
@@ -475,6 +477,15 @@ export const MyReservationDetail: React.FC = () => {
                 </div>
             </div>
             <BottomNav />
+
+            {/* Detail Modals */}
+            <GuideDetailModal guide={guide || null} open={guideModalOpen} onClose={() => setGuideModalOpen(false)} />
+            <AccommodationDetailModal
+                accommodation={accModal?.accommodation || null}
+                day={accModal?.day}
+                open={!!accModal}
+                onClose={() => setAccModal(null)}
+            />
         </div>
     );
 };
