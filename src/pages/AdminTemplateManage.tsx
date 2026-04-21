@@ -467,28 +467,30 @@ const GuidesTab: React.FC = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
                 {guides.map(g => (
-                    <div key={g.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div className="aspect-square bg-slate-100 dark:bg-slate-700 relative">
-                            {g.image ? <img src={g.image} alt={g.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-5xl text-slate-300">person</span></div>}
-                            {g.status === 'pending' && <span className="absolute top-2 left-2 px-2 py-1 bg-amber-500 text-white text-xs font-bold rounded-md">승인대기</span>}
+                    <div key={g.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 grid grid-cols-[72px_1fr_auto] gap-4 items-center">
+                        <div className="relative w-18 h-18 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0" style={{ width: 72, height: 72 }}>
+                            {g.image ? <img src={g.image} alt={g.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-3xl text-slate-300">person</span></div>}
+                            {g.status === 'pending' && <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-bold rounded">대기</span>}
                         </div>
-                        <div className="p-4">
-                            <h3 className="font-bold text-slate-800 dark:text-white mb-1">{g.name}</h3>
-                            <p className="text-xs text-slate-500 mb-2 line-clamp-2">{g.introduction || '소개글 없음'}</p>
-                            <div className="flex items-center gap-1 text-xs text-slate-500 mb-1"><span className="material-symbols-outlined text-sm">phone</span>{g.phone}</div>
-                            {g.experienceYears > 0 && <div className="flex items-center gap-1 text-xs text-slate-500 mb-2"><span className="material-symbols-outlined text-sm">workspace_premium</span>경력 {g.experienceYears}년</div>}
-                            {g.languages.length > 0 && <div className="flex flex-wrap gap-1 mb-3">{g.languages.map(l => <span key={l} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-xs rounded">{l}</span>)}</div>}
-                            {g.status === 'pending' && <button onClick={() => handleApprove(g)} className="w-full mb-2 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold">승인하기</button>}
-                            <div className="flex gap-2">
-                                <button onClick={() => { setEditing(g); setForm({ name: g.name, image: g.image, introduction: g.introduction, phone: g.phone, experienceYears: g.experienceYears, languages: g.languages, specialties: g.specialties }); setIsModalOpen(true); }} className="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium">수정</button>
-                                <button onClick={() => handleDelete(g.id)} className="flex-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-xs font-medium">삭제</button>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h3 className="font-bold text-slate-800 dark:text-white truncate">{g.name}</h3>
+                                {g.experienceYears > 0 && <span className="text-[11px] text-slate-500 inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">workspace_premium</span>{g.experienceYears}년</span>}
+                                <span className="text-[11px] text-slate-400 font-mono inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">phone</span>{g.phone}</span>
                             </div>
+                            <p className="text-xs text-slate-500 line-clamp-1 mb-1.5">{g.introduction || '소개글 없음'}</p>
+                            {g.languages.length > 0 && <div className="flex flex-wrap gap-1">{g.languages.map(l => <span key={l} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-[10px] font-semibold rounded">{l}</span>)}</div>}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {g.status === 'pending' && <button onClick={() => handleApprove(g)} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold">승인</button>}
+                            <button onClick={() => { setEditing(g); setForm({ name: g.name, image: g.image, introduction: g.introduction, phone: g.phone, experienceYears: g.experienceYears, languages: g.languages, specialties: g.specialties }); setIsModalOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="수정"><span className="material-symbols-outlined text-base">edit</span></button>
+                            <button onClick={() => handleDelete(g.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-base">delete</span></button>
                         </div>
                     </div>
                 ))}
-                {guides.length === 0 && <div className="col-span-3 text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">person_off</span><p>등록된 가이드가 없습니다</p></div>}
+                {guides.length === 0 && <div className="text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">person_off</span><p>등록된 가이드가 없습니다</p></div>}
             </div>
 
             {isModalOpen && (
@@ -573,27 +575,27 @@ const AccommodationsTab: React.FC = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
                 {accommodations.map(a => (
-                    <div key={a.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div className="aspect-video bg-slate-100 dark:bg-slate-700">
-                            {a.images.length > 0 ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-5xl text-slate-300">hotel</span></div>}
+                    <div key={a.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 grid grid-cols-[96px_1fr_auto] gap-4 items-center">
+                        <div className="rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0" style={{ width: 96, height: 72 }}>
+                            {a.images.length > 0 ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-3xl text-slate-300">hotel</span></div>}
                         </div>
-                        <div className="p-4">
-                            <div className="flex items-start justify-between mb-1">
-                                <h3 className="font-bold text-slate-800 dark:text-white">{a.name}</h3>
-                                <span className="px-2 py-0.5 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-xs rounded">{a.type}</span>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h3 className="font-bold text-slate-800 dark:text-white truncate">{a.name}</h3>
+                                {a.type && <span className="px-1.5 py-0.5 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-[10px] font-semibold rounded">{a.type}</span>}
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-slate-500 mb-2"><span className="material-symbols-outlined text-sm">location_on</span>{a.location}</div>
-                            <p className="text-xs text-slate-500 mb-3 line-clamp-2">{a.description || '설명 없음'}</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => { setEditing(a); setForm({ name: a.name, images: a.images, description: a.description, type: a.type, location: a.location }); setIsModalOpen(true); }} className="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium">수정</button>
-                                <button onClick={() => handleDelete(a.id)} className="flex-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-xs font-medium">삭제</button>
-                            </div>
+                            <div className="text-[11px] text-slate-500 mb-1 inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">location_on</span>{a.location}</div>
+                            <p className="text-xs text-slate-500 line-clamp-1">{a.description || '설명 없음'}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button onClick={() => { setEditing(a); setForm({ name: a.name, images: a.images, description: a.description, type: a.type, location: a.location }); setIsModalOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="수정"><span className="material-symbols-outlined text-base">edit</span></button>
+                            <button onClick={() => handleDelete(a.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-base">delete</span></button>
                         </div>
                     </div>
                 ))}
-                {accommodations.length === 0 && <div className="col-span-3 text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">hotel</span><p>등록된 숙소가 없습니다</p></div>}
+                {accommodations.length === 0 && <div className="text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">hotel</span><p>등록된 숙소가 없습니다</p></div>}
             </div>
 
             {isModalOpen && (
