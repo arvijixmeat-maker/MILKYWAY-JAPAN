@@ -17,7 +17,9 @@ export const api = {
                 if (!res.ok) return null;
                 const data = await res.json();
                 if (data.error) return null;
-                return data;
+                // Backend returns { user: {...} } — unwrap so callers can use me.id directly.
+                // Falls back to data itself if not wrapped (defensive).
+                return data.user ?? (data.id ? data : null);
             } catch (e) {
                 return null;
             }

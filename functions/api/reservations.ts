@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { drizzle } from 'drizzle-orm/d1';
 import { reservations } from '../../src/db/schema/reservations';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, or } from 'drizzle-orm';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { sendPayPalInvoice } from '../lib/paypal';
@@ -40,7 +40,12 @@ app.get('/', async (c) => {
     if (user.role === 'admin') {
         result = await db.select().from(reservations).orderBy(desc(reservations.createdAt)).all();
     } else {
-        result = await db.select().from(reservations).where(eq(reservations.userId, user.id)).orderBy(desc(reservations.createdAt)).all();
+        // Match by userId primarily, but also by customerEmail so guest-made
+        // reservations (userId=null) with the same email appear after login.
+        const conditions = user.email
+            ? or(eq(reservations.userId, user.id), eq(reservations.customerEmail, user.email))
+            : eq(reservations.userId, user.id);
+        result = await db.select().from(reservations).where(conditions).orderBy(desc(reservations.createdAt)).all();
     }
 
     // Helper: safe JSON.parse

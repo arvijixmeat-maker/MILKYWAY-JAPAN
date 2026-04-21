@@ -25,13 +25,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkUser = async () => {
         try {
             const data = await api.auth.me();
-            if (data.user) {
+            if (data) {
                 setUserState({
-                    id: data.user.id,
-                    name: data.user.name || 'User',
-                    email: data.user.email,
-                    image: data.user.avatarUrl,
-                    role: data.user.role
+                    id: data.id,
+                    name: data.name || 'User',
+                    email: data.email,
+                    image: data.avatarUrl,
+                    role: data.role
                 });
             } else {
                 setUserState(null);
