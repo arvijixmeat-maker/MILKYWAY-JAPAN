@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
+import { createNotification } from './index';
 
 interface Env {
+    DB: any;
     RESEND_API_KEY: string;
     ADMIN_EMAIL: string;
 }
@@ -313,6 +315,33 @@ app.post('/', async (c) => {
 
         // Send to customer
         await sendEmail(apiKey, to, subject, html);
+
+        // Also create an in-app notification when we know the user's id.
+        // Caller passes data.userId or data.user_id when available.
+        const targetUserId = data.userId || data.user_id;
+        if (targetUserId && c.env.DB) {
+            const inAppTitle = subject.replace(/\s*\|\s*Milkyway Japan\s*$/, '');
+            const inAppMessage =
+                type === 'ITINERARY_READY' ? '確定日程表をご確認ください。' :
+                type === 'CONTRACT_READY' ? '海外旅行契約書をご確認ください。' :
+                type === 'GUIDE_ASSIGNED' ? '担当ガイドが決定しました。' :
+                type === 'RESERVATION_REQUESTED' ? 'ご予約を受け付けました。' :
+                type === 'QUOTE_RECEIVED' ? 'お見積りリクエストを受け付けました。' :
+                type === 'ESTIMATE_COMPLETED' ? 'オーダーメイドお見積りが完成しました。' : '';
+            const link =
+                type === 'ITINERARY_READY' ? `/documents/itinerary/${data.reservationId || ''}` :
+                type === 'CONTRACT_READY' ? `/documents/contract/${data.reservationId || ''}` :
+                type === 'ESTIMATE_COMPLETED' ? `/estimate/${data.reservationId || ''}` :
+                type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' ? '/mypage/reservations' :
+                type === 'QUOTE_RECEIVED' ? '/mypage/estimates' : undefined;
+            await createNotification(c.env.DB, {
+                userId: targetUserId,
+                type: 'reservation',
+                title: inAppTitle,
+                message: inAppMessage,
+                link,
+            });
+        }
 
         // Send admin notification (reservation + quote)
         if (adminSubject && adminHtml) {

@@ -33,6 +33,50 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped reservations.contract_data: ${e.message}`);
     }
 
+    // Admin-managed reservation columns that were previously dropped silently
+    const reservationColumns = [
+        "assigned_guide TEXT",                          // JSON: guide object
+        "contract_url TEXT",                            // legacy external URL (for pre-digital contracts)
+        "itinerary_url TEXT",                           // legacy external URL
+        "deposit_status TEXT DEFAULT 'unpaid'",
+        "balance_status TEXT DEFAULT 'unpaid'",
+        "are_assignments_visible_to_user INTEGER DEFAULT 0",
+        "price_breakdown TEXT",                         // JSON: { total, deposit, local }
+    ];
+    for (const colDef of reservationColumns) {
+        try {
+            await c.env.DB.prepare(`ALTER TABLE reservations ADD COLUMN ${colDef}`).run();
+            migrationResults.push(`Added reservations.${colDef}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped reservations.${colDef}: ${e.message}`);
+        }
+    }
+
+    // In-app notifications table
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id TEXT PRIMARY KEY NOT NULL,
+                user_id TEXT NOT NULL,
+                type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT,
+                link TEXT,
+                read INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created notifications table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped notifications table: ${e.message}`);
+    }
+    try {
+        await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at)').run();
+        migrationResults.push('Created idx_notifications_user');
+    } catch (e: any) {
+        migrationResults.push(`Skipped idx_notifications_user: ${e.message}`);
+    }
+
     // Create quotes table if it doesn't exist
     try {
         await c.env.DB.prepare(`

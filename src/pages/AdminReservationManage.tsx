@@ -719,7 +719,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                 customerName: reservation.customerName,
                                                 productName: reservation.productName,
                                                 guideName: reservation.assignedGuide?.name,
-                                                guidePhone: reservation.assignedGuide?.phone
+                                                guidePhone: reservation.assignedGuide?.phone,
+                                                userId: reservation.userId,
+                                                reservationId: (reservation as any).reservationNumber || reservation.id,
                                             });
                                             alert('사용자에게 배정 정보를 발송(공개)했습니다.');
                                         }}
@@ -855,6 +857,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                             productName: reservation.productName,
                                                                             reservationId: (reservation as any).reservationNumber || reservation.id,
                                                                             reservationNumber: (reservation as any).reservationNumber,
+                                                                            userId: reservation.userId,
                                                                             travelDates: reservation.date,
                                                                             itineraryUrl,
                                                                         });
@@ -1053,6 +1056,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                             productName: reservation.productName,
                                                                             reservationId: (reservation as any).reservationNumber || reservation.id,
                                                                             reservationNumber: (reservation as any).reservationNumber,
+                                                                            userId: reservation.userId,
                                                                             travelDates: reservation.date,
                                                                             contractUrl,
                                                                         });

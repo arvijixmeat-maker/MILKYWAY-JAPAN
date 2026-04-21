@@ -23,6 +23,13 @@ export const reservations = sqliteTable('reservations', {
     reservationNumber: text('reservation_number'),
     itineraryTemplateId: text('itinerary_template_id'),
     contractData: text('contract_data'),
+    assignedGuide: text('assigned_guide'),
+    contractUrl: text('contract_url'),
+    itineraryUrl: text('itinerary_url'),
+    depositStatus: text('deposit_status').default('unpaid'),
+    balanceStatus: text('balance_status').default('unpaid'),
+    areAssignmentsVisibleToUser: integer('are_assignments_visible_to_user').default(0),
+    priceBreakdown: text('price_breakdown'),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });

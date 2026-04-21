@@ -8,8 +8,8 @@ import { sendPayPalInvoice } from '../lib/paypal';
 
 // Define Env locally if global scope is not picked up
 interface Env {
-    DB: D1Database;
-    BUCKET: R2Bucket;
+    DB: any;
+    BUCKET: any;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
     ENVIRONMENT: string;
@@ -43,8 +43,15 @@ app.get('/', async (c) => {
         result = await db.select().from(reservations).where(eq(reservations.userId, user.id)).orderBy(desc(reservations.createdAt)).all();
     }
 
+    // Helper: safe JSON.parse
+    const tryParse = (v: any) => {
+        if (!v) return undefined;
+        if (typeof v !== 'string') return v;
+        try { return JSON.parse(v); } catch { return undefined; }
+    };
+
     // Parse JSON fields and map to legacy frontend schema interface
-    const parsed = result.map(r => ({
+    const parsed = result.map((r: any) => ({
         ...r,
         email: r.customerEmail,
         phone: r.customerPhone,
@@ -54,15 +61,18 @@ app.get('/', async (c) => {
         totalAmount: r.totalPrice,
         deposit: r.depositAmount,
         balance: r.balanceAmount,
-        price_breakdown: {
+        price_breakdown: tryParse(r.priceBreakdown) || {
             total: r.totalPrice,
             deposit: r.depositAmount,
-            local: r.balanceAmount
+            local: r.balanceAmount,
         },
-        depositStatus: r.status === 'confirmed' ? 'paid' : 'unpaid',
-        balanceStatus: r.status === 'completed' ? 'paid' : 'unpaid',
-        dailyAccommodations: r.dailyAccommodations ? JSON.parse(r.dailyAccommodations) : undefined,
-        history: r.history ? JSON.parse(r.history) : undefined,
+        depositStatus: r.depositStatus || (r.status === 'confirmed' ? 'paid' : 'unpaid'),
+        balanceStatus: r.balanceStatus || (r.status === 'completed' ? 'paid' : 'unpaid'),
+        dailyAccommodations: tryParse(r.dailyAccommodations),
+        assignedGuide: tryParse(r.assignedGuide),
+        contractData: tryParse(r.contractData),
+        areAssignmentsVisibleToUser: !!r.areAssignmentsVisibleToUser,
+        history: tryParse(r.history) || [],
     }));
 
     return c.json(parsed);
@@ -106,15 +116,14 @@ app.get('/:id', async (c) => {
         totalAmount: result.totalPrice,
         deposit: result.depositAmount,
         balance: result.balanceAmount,
-        price_breakdown: {
-            total: result.totalPrice,
-            deposit: result.depositAmount,
-            local: result.balanceAmount
-        },
-        depositStatus: result.status === 'confirmed' ? 'paid' : 'unpaid',
-        balanceStatus: result.status === 'completed' ? 'paid' : 'unpaid',
-        dailyAccommodations: result.dailyAccommodations ? JSON.parse(result.dailyAccommodations) : undefined,
-        history: result.history ? JSON.parse(result.history) : undefined,
+        price_breakdown: (() => { try { return result.priceBreakdown ? JSON.parse(result.priceBreakdown) : { total: result.totalPrice, deposit: result.depositAmount, local: result.balanceAmount }; } catch { return { total: result.totalPrice, deposit: result.depositAmount, local: result.balanceAmount }; } })(),
+        depositStatus: result.depositStatus || (result.status === 'confirmed' ? 'paid' : 'unpaid'),
+        balanceStatus: result.balanceStatus || (result.status === 'completed' ? 'paid' : 'unpaid'),
+        dailyAccommodations: (() => { try { return result.dailyAccommodations ? JSON.parse(result.dailyAccommodations) : undefined; } catch { return undefined; } })(),
+        assignedGuide: (() => { try { return result.assignedGuide ? JSON.parse(result.assignedGuide) : undefined; } catch { return undefined; } })(),
+        contractData: (() => { try { return result.contractData ? JSON.parse(result.contractData) : undefined; } catch { return undefined; } })(),
+        areAssignmentsVisibleToUser: !!result.areAssignmentsVisibleToUser,
+        history: (() => { try { return result.history ? JSON.parse(result.history) : []; } catch { return []; } })(),
     };
 
     return c.json(parsed);
@@ -184,7 +193,10 @@ app.put('/:id', async (c) => {
         'id', 'type', 'productName', 'customerName', 'customerEmail', 'customerPhone',
         'travelers', 'startDate', 'endDate', 'status', 'totalPrice', 'depositAmount',
         'balanceAmount', 'paymentMethod', 'dailyAccommodations', 'notes', 'history',
-        'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData', 'createdAt', 'updatedAt',
+        'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData',
+        'assignedGuide', 'contractUrl', 'itineraryUrl',
+        'depositStatus', 'balanceStatus', 'areAssignmentsVisibleToUser', 'priceBreakdown',
+        'createdAt', 'updatedAt',
     ]);
     const filtered: any = {};
     for (const [k, v] of Object.entries(updateData)) {
