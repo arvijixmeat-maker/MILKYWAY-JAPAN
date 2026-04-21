@@ -56,6 +56,7 @@ app.get('/itinerary/:reservationId', async (c) => {
         return {
             day: dayNumber,
             title: tday.title || '',
+            region: tday.region || '',
             activities: Array.isArray(tday.activities) ? tday.activities : [],
             accommodation,
         };

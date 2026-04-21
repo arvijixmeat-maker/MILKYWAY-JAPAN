@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 
 interface Activity {
+    time?: string;
+    type?: string;
     title: string;
     description: string;
 }
@@ -10,6 +12,7 @@ interface Activity {
 interface DayData {
     day: number;
     title: string;
+    region?: string;
     activities: Activity[];
     accommodation: {
         id: string;
@@ -21,6 +24,17 @@ interface DayData {
         facilities?: string[];
     } | null;
 }
+
+const ACTIVITY_ICON: Record<string, string> = {
+    pickup: 'flight_land',
+    transport: 'directions_car',
+    meal: 'restaurant',
+    sightseeing: 'photo_camera',
+    activity: 'sports_handball',
+    checkin: 'hotel',
+    free: 'park',
+    other: 'check_circle',
+};
 
 interface ItineraryData {
     reservation: {
@@ -206,12 +220,18 @@ export const DocumentItinerary: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="min-w-0">
-                                                {d.title && <p className="font-bold text-slate-900 mb-2">{d.title}</p>}
+                                                {(d.title || d.region) && (
+                                                    <div className="mb-2">
+                                                        {d.region && <p className="text-[11px] font-bold text-teal-600 uppercase tracking-widest">{d.region}</p>}
+                                                        {d.title && <p className="font-bold text-slate-900 mt-0.5">{d.title}</p>}
+                                                    </div>
+                                                )}
                                                 {d.activities.length > 0 && (
                                                     <ul className="space-y-2 mb-3">
                                                         {d.activities.map((a, i) => (
-                                                            <li key={i} className="flex gap-2">
-                                                                <span className="material-symbols-outlined text-teal-600 text-base mt-0.5 flex-shrink-0">check_circle</span>
+                                                            <li key={i} className="grid grid-cols-[48px_24px_1fr] gap-2 items-start">
+                                                                <span className="text-[11px] font-bold font-mono text-slate-400 mt-0.5 tabular-nums">{a.time || '--:--'}</span>
+                                                                <span className="material-symbols-outlined text-teal-600 text-base mt-0.5 flex-shrink-0">{ACTIVITY_ICON[a.type || 'other'] || 'check_circle'}</span>
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-semibold text-slate-800">{a.title}</p>
                                                                     {a.description && <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{a.description}</p>}

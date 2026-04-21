@@ -4,9 +4,22 @@ import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 
 // ─── Types ───────────────────────────────────────────────
-interface Activity { title: string; description: string; }
-interface TemplateDay { day: number; title: string; activities: Activity[]; }
+type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
+interface Activity { time?: string; type?: ActivityType; title: string; description: string; }
+interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
 interface ItineraryTemplate { id: string; name: string; description: string; days: TemplateDay[]; createdAt: string; }
+
+const ACTIVITY_TYPES: { id: ActivityType; label: string; icon: string }[] = [
+    { id: 'pickup', label: '픽업', icon: 'flight_land' },
+    { id: 'transport', label: '이동', icon: 'directions_car' },
+    { id: 'meal', label: '식사', icon: 'restaurant' },
+    { id: 'sightseeing', label: '관광', icon: 'photo_camera' },
+    { id: 'activity', label: '체험', icon: 'sports_handball' },
+    { id: 'checkin', label: '체크인', icon: 'hotel' },
+    { id: 'free', label: '자유시간', icon: 'park' },
+    { id: 'other', label: '기타', icon: 'more_horiz' },
+];
+const TYPE_MAP = Object.fromEntries(ACTIVITY_TYPES.map(t => [t.id, t]));
 
 interface Guide {
     id: string; name: string; image: string; introduction: string;
@@ -21,6 +34,65 @@ interface Accommodation {
 const LANGUAGES = ['한국어', '영어', '몽골어', '중국어', '일본어'];
 const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
 const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
+
+// ─── Live Preview (mini DocumentItinerary) ───────────────
+const TemplatePreview: React.FC<{ name: string; description: string; days: TemplateDay[] }> = ({ name, description, days }) => (
+    <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-4 h-full overflow-y-auto">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-5 py-5 text-white" style={{ background: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)' }}>
+                <p className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-1">고객 화면 미리보기</p>
+                <h3 className="font-bold text-base leading-tight tracking-tight">{name || '템플릿 이름'}</h3>
+                {description && <p className="text-xs text-white/80 mt-1.5">{description}</p>}
+            </div>
+            <div className="px-5 py-4">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-3">日程 ({days.length}日間)</p>
+                {days.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-6 text-center">일정이 비어있습니다</p>
+                ) : (
+                    <div className="space-y-4">
+                        {days.map(d => (
+                            <div key={d.day} className="grid grid-cols-[36px_1fr] gap-3">
+                                <div>
+                                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[10px] font-bold tracking-tight shadow-md shadow-teal-500/30"
+                                        style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
+                                        D-{d.day}
+                                    </div>
+                                </div>
+                                <div className="min-w-0">
+                                    {(d.title || d.region) && (
+                                        <div className="mb-2">
+                                            {d.region && <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wide">{d.region}</p>}
+                                            {d.title && <p className="font-bold text-sm text-slate-900 dark:text-white">{d.title}</p>}
+                                        </div>
+                                    )}
+                                    {d.activities.length === 0 ? (
+                                        <p className="text-[11px] text-slate-400 italic">활동이 비어있습니다</p>
+                                    ) : (
+                                        <ul className="space-y-2">
+                                            {d.activities.map((a, i) => {
+                                                const t = a.type ? TYPE_MAP[a.type] : null;
+                                                return (
+                                                    <li key={i} className="grid grid-cols-[40px_24px_1fr] gap-1.5 items-start">
+                                                        <span className="text-[10px] font-bold text-slate-400 font-mono mt-0.5">{a.time || '--:--'}</span>
+                                                        <span className="material-symbols-outlined text-teal-600 text-base mt-0.5">{t?.icon || 'check_circle'}</span>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{a.title || '(활동 제목)'}</p>
+                                                            {a.description && <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{a.description}</p>}
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    </div>
+);
 
 // ─── Tab: Itinerary Templates ────────────────────────────
 const TemplatesTab: React.FC = () => {
@@ -46,12 +118,43 @@ const TemplatesTab: React.FC = () => {
 
     const resetForm = () => { setForm({ name: '', description: '', days: [] }); setEditing(null); };
 
-    const addDay = () => setForm(f => ({ ...f, days: [...f.days, { day: f.days.length + 1, title: `${f.days.length + 1}일차`, activities: [] }] }));
+    // Day operations
+    const addDay = () => setForm(f => ({ ...f, days: [...f.days, { day: f.days.length + 1, title: '', region: '', activities: [] }] }));
     const removeDay = (idx: number) => setForm(f => ({ ...f, days: f.days.filter((_, i) => i !== idx).map((d, i) => ({ ...d, day: i + 1 })) }));
     const updateDay = (idx: number, field: keyof TemplateDay, value: any) => setForm(f => { const d = [...f.days]; d[idx] = { ...d[idx], [field]: value }; return { ...f, days: d }; });
-    const addActivity = (dayIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = [...d[dayIdx].activities, { title: '', description: '' }]; return { ...f, days: d }; });
+    const moveDay = (idx: number, dir: -1 | 1) => setForm(f => {
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= f.days.length) return f;
+        const d = [...f.days];
+        [d[idx], d[newIdx]] = [d[newIdx], d[idx]];
+        return { ...f, days: d.map((x, i) => ({ ...x, day: i + 1 })) };
+    });
+    const duplicateDay = (idx: number) => setForm(f => {
+        const src = f.days[idx];
+        const copy = { ...src, activities: src.activities.map(a => ({ ...a })) };
+        const d = [...f.days.slice(0, idx + 1), copy, ...f.days.slice(idx + 1)];
+        return { ...f, days: d.map((x, i) => ({ ...x, day: i + 1 })) };
+    });
+
+    // Activity operations
+    const addActivity = (dayIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = [...d[dayIdx].activities, { time: '', type: 'sightseeing', title: '', description: '' }]; return { ...f, days: d }; });
     const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
-    const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: string) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
+    const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: any) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
+    const moveActivity = (dayIdx: number, actIdx: number, dir: -1 | 1) => setForm(f => {
+        const acts = [...f.days[dayIdx].activities];
+        const newIdx = actIdx + dir;
+        if (newIdx < 0 || newIdx >= acts.length) return f;
+        [acts[actIdx], acts[newIdx]] = [acts[newIdx], acts[actIdx]];
+        const d = [...f.days];
+        d[dayIdx] = { ...d[dayIdx], activities: acts };
+        return { ...f, days: d };
+    });
+    const sortByTime = (dayIdx: number) => setForm(f => {
+        const acts = [...f.days[dayIdx].activities].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        const d = [...f.days];
+        d[dayIdx] = { ...d[dayIdx], activities: acts };
+        return { ...f, days: d };
+    });
 
     const handleSubmit = async () => {
         if (!form.name.trim()) { alert('템플릿 이름을 입력하세요.'); return; }
@@ -64,6 +167,22 @@ const TemplatesTab: React.FC = () => {
 
     const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days }); setIsModalOpen(true); };
     const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.itineraryTemplates.delete(id); await load(); } catch (e: any) { alert('삭제 실패'); } };
+    const handleDuplicate = (t: ItineraryTemplate) => {
+        setEditing(null);
+        setForm({
+            name: `${t.name} (복사본)`,
+            description: t.description,
+            days: t.days.map(d => ({ ...d, activities: d.activities.map(a => ({ ...a })) })),
+        });
+        setIsModalOpen(true);
+    };
+
+    const closeEditor = () => {
+        if (form.name || form.days.length > 0) {
+            if (!confirm('편집 중인 내용이 사라집니다. 닫으시겠습니까?')) return;
+        }
+        setIsModalOpen(false); resetForm();
+    };
 
     return (
         <div>
@@ -84,25 +203,30 @@ const TemplatesTab: React.FC = () => {
                     {templates.map(t => (
                         <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
                             <div className="flex items-start justify-between mb-2">
-                                <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white">{t.name}</h3>
-                                    {t.description && <p className="text-sm text-slate-500 mt-0.5">{t.description}</p>}
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-slate-800 dark:text-white truncate">{t.name}</h3>
+                                    {t.description && <p className="text-sm text-slate-500 mt-0.5 truncate">{t.description}</p>}
                                 </div>
-                                <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-xs font-bold rounded-lg">{t.days.length}일</span>
+                                <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-xs font-bold rounded-lg flex-shrink-0 ml-2">{t.days.length}일</span>
                             </div>
                             <div className="space-y-1 mb-4">
                                 {t.days.slice(0, 3).map(d => (
                                     <div key={d.day} className="flex items-center gap-2 text-xs text-slate-500">
-                                        <span className="w-10 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded font-bold text-center">{d.day}일차</span>
-                                        <span className="truncate">{d.title}</span>
-                                        <span className="text-slate-300">({d.activities.length}개 활동)</span>
+                                        <span className="w-10 px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900/30 text-teal-600 rounded font-bold text-center">{d.day}일차</span>
+                                        <span className="truncate">{d.region ? `${d.region} · ` : ''}{d.title || '제목 없음'}</span>
+                                        <span className="text-slate-300 flex-shrink-0">({d.activities.length})</span>
                                     </div>
                                 ))}
                                 {t.days.length > 3 && <p className="text-xs text-slate-400 pl-12">+ {t.days.length - 3}일 더...</p>}
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={() => handleEdit(t)} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium">수정</button>
-                                <button onClick={() => handleDelete(t.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-sm font-medium">삭제</button>
+                                <button onClick={() => handleDuplicate(t)} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium inline-flex items-center gap-1" title="이 템플릿 복제">
+                                    <span className="material-symbols-outlined text-sm">content_copy</span>복제
+                                </button>
+                                <button onClick={() => handleDelete(t.id)} className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-sm font-medium" title="삭제">
+                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -110,56 +234,170 @@ const TemplatesTab: React.FC = () => {
             )}
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
-                            <h2 className="font-bold text-slate-800 dark:text-white">{editing ? '템플릿 수정' : '템플릿 추가'}</h2>
-                            <button onClick={() => { setIsModalOpen(false); resetForm(); }}><span className="material-symbols-outlined text-slate-400">close</span></button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">템플릿 이름 *</label>
-                                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="예: 고비사막 4박5일 기본형" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">설명</label>
-                                <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="간단한 설명" />
-                            </div>
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 p-3 sm:p-6">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full h-full flex flex-col overflow-hidden shadow-2xl">
 
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">일정</label>
-                                    <button onClick={addDay} className="text-xs px-3 py-1.5 bg-teal-500 text-white rounded-lg font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">add</span> 일차 추가</button>
+                        {/* Sticky header */}
+                        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <button onClick={closeEditor} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+                                    <span className="material-symbols-outlined">arrow_back</span>
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400">{editing ? '템플릿 수정' : '새 템플릿'}</p>
+                                    <input
+                                        value={form.name}
+                                        onChange={e => setForm({ ...form, name: e.target.value })}
+                                        placeholder="템플릿 이름 (예: 고비사막 4박5일 기본형)"
+                                        className="w-full text-lg font-bold bg-transparent text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-300"
+                                    />
                                 </div>
-                                <div className="space-y-4">
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <button onClick={closeEditor} className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">취소</button>
+                                <button onClick={handleSubmit} className="px-5 py-2 text-sm font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-lg inline-flex items-center gap-1.5 shadow-md shadow-teal-500/20">
+                                    <span className="material-symbols-outlined text-base">check</span>{editing ? '저장' : '생성'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Body: editor + preview */}
+                        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_440px] overflow-hidden">
+
+                            {/* Editor */}
+                            <div className="overflow-y-auto px-6 py-5 bg-slate-50/50 dark:bg-slate-950/30">
+
+                                {/* Description */}
+                                <div className="mb-5">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">설명 (선택)</label>
+                                    <input
+                                        value={form.description}
+                                        onChange={e => setForm({ ...form, description: e.target.value })}
+                                        placeholder="이 템플릿이 어떤 일정인지 한 줄 설명"
+                                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                    />
+                                </div>
+
+                                {/* Days */}
+                                <div className="mb-3 flex items-center justify-between">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">일정 ({form.days.length}일)</label>
+                                    <button onClick={addDay} className="text-xs px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold inline-flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-sm">add</span>일차 추가
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
                                     {form.days.map((day, dayIdx) => (
-                                        <div key={dayIdx} className="border border-slate-200 dark:border-slate-600 rounded-xl p-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <span className="px-2 py-1 bg-indigo-500 text-white text-xs font-bold rounded">{day.day}일차</span>
-                                                <input value={day.title} onChange={e => updateDay(dayIdx, 'title', e.target.value)} className="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-teal-500" placeholder="일차 제목 (예: 울란바토르 도착)" />
-                                                <button onClick={() => removeDay(dayIdx)} className="text-red-400 hover:text-red-600"><span className="material-symbols-outlined text-sm">delete</span></button>
+                                        <div key={dayIdx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                            {/* Day header */}
+                                            <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 grid grid-cols-[auto_120px_1fr_auto] gap-2 items-center">
+                                                <span className="px-2 py-1 bg-teal-500 text-white text-[10px] font-bold rounded">D-{day.day}</span>
+                                                <input
+                                                    value={day.region || ''}
+                                                    onChange={e => updateDay(dayIdx, 'region', e.target.value)}
+                                                    placeholder="지역"
+                                                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                />
+                                                <input
+                                                    value={day.title}
+                                                    onChange={e => updateDay(dayIdx, 'title', e.target.value)}
+                                                    placeholder="일차 제목 (예: 울란바토르 도착 & 시내 투어)"
+                                                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                />
+                                                <div className="flex items-center gap-0.5">
+                                                    <button onClick={() => moveDay(dayIdx, -1)} disabled={dayIdx === 0} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
+                                                        <span className="material-symbols-outlined text-base">arrow_upward</span>
+                                                    </button>
+                                                    <button onClick={() => moveDay(dayIdx, 1)} disabled={dayIdx === form.days.length - 1} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="아래로">
+                                                        <span className="material-symbols-outlined text-base">arrow_downward</span>
+                                                    </button>
+                                                    <button onClick={() => duplicateDay(dayIdx)} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/30" title="이 일차 복제">
+                                                        <span className="material-symbols-outlined text-base">content_copy</span>
+                                                    </button>
+                                                    <button onClick={() => removeDay(dayIdx)} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50" title="삭제">
+                                                        <span className="material-symbols-outlined text-base">delete</span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="space-y-2 pl-2">
-                                                {day.activities.map((act, actIdx) => (
-                                                    <div key={actIdx} className="flex gap-2">
-                                                        <div className="flex-1 space-y-1">
-                                                            <input value={act.title} onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-none" placeholder="활동명 (예: 공항 픽업)" />
-                                                            <input value={act.description} onChange={e => updateActivity(dayIdx, actIdx, 'description', e.target.value)} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs focus:outline-none text-slate-500" placeholder="세부 내용" />
+
+                                            {/* Activities */}
+                                            <div className="p-2 space-y-1.5">
+                                                {day.activities.map((act, actIdx) => {
+                                                    const t = act.type ? TYPE_MAP[act.type] : null;
+                                                    return (
+                                                        <div key={actIdx} className="grid grid-cols-[60px_120px_1fr_auto] gap-1.5 items-start bg-slate-50/50 dark:bg-slate-700/20 rounded-lg p-1.5">
+                                                            <input
+                                                                type="time"
+                                                                value={act.time || ''}
+                                                                onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
+                                                                className="px-1.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500 text-center"
+                                                            />
+                                                            <select
+                                                                value={act.type || 'other'}
+                                                                onChange={e => updateActivity(dayIdx, actIdx, 'type', e.target.value)}
+                                                                className="px-1.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                            >
+                                                                {ACTIVITY_TYPES.map(opt => (
+                                                                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                                                                ))}
+                                                            </select>
+                                                            <div className="space-y-1 min-w-0">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {t && <span className="material-symbols-outlined text-teal-600 text-base flex-shrink-0">{t.icon}</span>}
+                                                                    <input
+                                                                        value={act.title}
+                                                                        onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)}
+                                                                        placeholder="활동 제목"
+                                                                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                                    />
+                                                                </div>
+                                                                <input
+                                                                    value={act.description}
+                                                                    onChange={e => updateActivity(dayIdx, actIdx, 'description', e.target.value)}
+                                                                    placeholder="세부 내용 (선택)"
+                                                                    className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                                />
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <button onClick={() => moveActivity(dayIdx, actIdx, -1)} disabled={actIdx === 0} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
+                                                                    <span className="material-symbols-outlined text-sm">arrow_upward</span>
+                                                                </button>
+                                                                <button onClick={() => moveActivity(dayIdx, actIdx, 1)} disabled={actIdx === day.activities.length - 1} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="아래로">
+                                                                    <span className="material-symbols-outlined text-sm">arrow_downward</span>
+                                                                </button>
+                                                                <button onClick={() => removeActivity(dayIdx, actIdx)} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50" title="삭제">
+                                                                    <span className="material-symbols-outlined text-sm">close</span>
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <button onClick={() => removeActivity(dayIdx, actIdx)} className="text-slate-300 hover:text-red-400 mt-1"><span className="material-symbols-outlined text-sm">close</span></button>
-                                                    </div>
-                                                ))}
-                                                <button onClick={() => addActivity(dayIdx)} className="text-xs text-teal-500 hover:text-teal-600 flex items-center gap-1 mt-1"><span className="material-symbols-outlined text-sm">add</span> 활동 추가</button>
+                                                    );
+                                                })}
+                                                <div className="flex items-center gap-2 pt-1">
+                                                    <button onClick={() => addActivity(dayIdx)} className="text-xs text-teal-500 hover:text-teal-600 inline-flex items-center gap-1 font-semibold">
+                                                        <span className="material-symbols-outlined text-sm">add</span>활동 추가
+                                                    </button>
+                                                    {day.activities.length > 1 && (
+                                                        <button onClick={() => sortByTime(dayIdx)} className="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 font-semibold ml-auto" title="시간 순으로 정렬">
+                                                            <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
-                                    {form.days.length === 0 && <p className="text-center text-sm text-slate-400 py-4 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl">위 "일차 추가" 버튼을 눌러 일정을 작성하세요</p>}
+
+                                    {form.days.length === 0 && (
+                                        <button onClick={addDay} className="w-full py-10 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-slate-400 hover:text-teal-500 hover:border-teal-400 hover:bg-teal-50/30 transition-colors flex flex-col items-center gap-2">
+                                            <span className="material-symbols-outlined text-2xl">add_circle</span>
+                                            <span className="text-sm font-semibold">첫 번째 일차 추가</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-2">
-                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium">취소</button>
-                                <button onClick={handleSubmit} className="flex-1 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold">{editing ? '수정' : '저장'}</button>
+                            {/* Live preview */}
+                            <div className="hidden lg:block border-l border-slate-200 dark:border-slate-800 overflow-hidden p-4 bg-white dark:bg-slate-900">
+                                <TemplatePreview name={form.name} description={form.description} days={form.days} />
                             </div>
                         </div>
                     </div>
