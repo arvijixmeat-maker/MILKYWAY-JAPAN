@@ -161,6 +161,11 @@ export const api = {
         }),
         delete: async (id: string) => request(`${API_BASE}/itinerary-templates/${id}`, { method: 'DELETE' }),
     },
+    documents: {
+        itinerary: {
+            get: async (reservationId: string) => request(`${API_BASE}/documents/itinerary/${reservationId}`),
+        },
+    },
     tourGuides: {
         list: async () => request(`${API_BASE}/tour-guides`),
         create: async (data: any) => request(`${API_BASE}/tour-guides`, {

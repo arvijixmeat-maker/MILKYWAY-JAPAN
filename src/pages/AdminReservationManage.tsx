@@ -25,6 +25,7 @@ interface Reservation {
     // Document URLs
     contractUrl?: string; // Excel Sheet URL
     itineraryUrl?: string; // Excel Sheet URL
+    itineraryTemplateId?: string; // selected itinerary template
 
     // Assigned Guide & Accommodation
     assignedGuide?: {
@@ -164,6 +165,14 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [memoFocused, setMemoFocused] = useState(false);
     const [openDocId, setOpenDocId] = useState<string | null>(null);
     const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
+    const [templatesList, setTemplatesList] = useState<any[]>([]);
+    const [sendingItinerary, setSendingItinerary] = useState(false);
+
+    useEffect(() => {
+        api.itineraryTemplates.list().then((data: any) => {
+            if (Array.isArray(data)) setTemplatesList(data);
+        }).catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (showGuideModal && guideList.length === 0) {
@@ -772,29 +781,137 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </section>
 
-                            {/* Documents Accordion */}
+                            {/* Documents */}
                             <section>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="material-symbols-outlined text-base text-slate-500">folder_shared</span>
                                     <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">문서 발송</h3>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    {[
-                                        { id: 'contract', name: '여행 계약서', icon: 'description', field: 'contractUrl' as const },
-                                        { id: 'itinerary', name: '확정 일정표', icon: 'map', field: 'itineraryUrl' as const },
-                                    ].map(doc => {
-                                        const isOpen = openDocId === doc.id;
-                                        const url = (editForm as any)[doc.field] || '';
-                                        const sent = !!url;
+
+                                    {/* Itinerary — template-based auto link */}
+                                    {(() => {
+                                        const itineraryUrl = `${window.location.origin}/documents/itinerary/${(reservation as any).reservationNumber || reservation.id}`;
+                                        const templateId = editForm.itineraryTemplateId || '';
+                                        const selectedTemplate = templatesList.find((t: any) => t.id === templateId);
+                                        const ready = !!templateId;
                                         return (
-                                            <div key={doc.id} className={`bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden transition-shadow ${isOpen ? 'shadow-lg' : ''}`}>
-                                                <button onClick={() => setOpenDocId(isOpen ? null : doc.id)}
-                                                    className="w-full grid grid-cols-[36px_1fr_auto_auto] gap-3 items-center px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
+                                                <div className="grid grid-cols-[36px_1fr_auto] gap-3 items-center px-3.5 py-3">
                                                     <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
-                                                        <span className="material-symbols-outlined text-lg">{doc.icon}</span>
+                                                        <span className="material-symbols-outlined text-lg">map</span>
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{doc.name}</p>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">확정 일정표</p>
+                                                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                                                            {ready ? `${selectedTemplate?.name || '템플릿'} · 자동 생성 링크` : '템플릿 선택 필요'}
+                                                        </p>
+                                                    </div>
+                                                    {ready ? (
+                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 text-teal-700">
+                                                            <span className="material-symbols-outlined text-xs">check_circle</span>준비됨
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-700">
+                                                            <span className="material-symbols-outlined text-xs">schedule</span>미설정
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="px-3.5 pb-3.5 border-t border-slate-100 dark:border-slate-700">
+                                                    <div className="mt-3 space-y-2">
+                                                        <label className="text-[11px] font-semibold text-slate-500">일정 템플릿</label>
+                                                        <select
+                                                            value={templateId}
+                                                            onChange={e => {
+                                                                const newId = e.target.value || undefined;
+                                                                const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
+                                                                setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
+                                                                onUpdate(updated);
+                                                            }}
+                                                            className="w-full h-[38px] px-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        >
+                                                            <option value="">— 템플릿 선택 —</option>
+                                                            {templatesList.map((t: any) => (
+                                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        {ready && (
+                                                            <div className="text-[11px] text-slate-400 font-mono truncate px-1">
+                                                                {itineraryUrl}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex gap-2 pt-1">
+                                                            <button
+                                                                onClick={() => window.open(itineraryUrl, '_blank')}
+                                                                disabled={!ready}
+                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">open_in_new</span>미리보기
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { if (!ready) return; navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}
+                                                                disabled={!ready}
+                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">{copiedDocId === 'itinerary' ? 'check' : 'content_copy'}</span>
+                                                                {copiedDocId === 'itinerary' ? '복사됨' : '복사'}
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!ready || !reservation.email) { alert(!reservation.email ? '고객 이메일이 없습니다.' : '템플릿을 먼저 선택해 주세요.'); return; }
+                                                                    setSendingItinerary(true);
+                                                                    try {
+                                                                        await sendNotificationEmail(reservation.email, 'ITINERARY_READY', {
+                                                                            customerName: reservation.customerName,
+                                                                            productName: reservation.productName,
+                                                                            reservationId: (reservation as any).reservationNumber || reservation.id,
+                                                                            reservationNumber: (reservation as any).reservationNumber,
+                                                                            travelDates: reservation.date,
+                                                                            itineraryUrl,
+                                                                        });
+                                                                        const updated = {
+                                                                            ...reservation,
+                                                                            itineraryUrl,
+                                                                            history: [
+                                                                                ...(reservation.history || []),
+                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '확정 일정표 이메일을 발송했습니다.', detail: itineraryUrl }
+                                                                            ]
+                                                                        };
+                                                                        onUpdate(updated);
+                                                                        alert('일정표 링크를 고객에게 발송했습니다.');
+                                                                    } catch (e: any) {
+                                                                        alert(`발송 실패: ${e.message || e}`);
+                                                                    } finally {
+                                                                        setSendingItinerary(false);
+                                                                    }
+                                                                }}
+                                                                disabled={!ready || sendingItinerary}
+                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready && !sendingItinerary ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">send</span>
+                                                                {sendingItinerary ? '발송중' : '발송'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Contract — URL-based (legacy, until contract generator is built) */}
+                                    {(() => {
+                                        const isOpen = openDocId === 'contract';
+                                        const url = editForm.contractUrl || '';
+                                        const sent = !!url;
+                                        return (
+                                            <div className={`bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden transition-shadow ${isOpen ? 'shadow-lg' : ''}`}>
+                                                <button onClick={() => setOpenDocId(isOpen ? null : 'contract')}
+                                                    className="w-full grid grid-cols-[36px_1fr_auto_auto] gap-3 items-center px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                    <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
+                                                        <span className="material-symbols-outlined text-lg">description</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">여행 계약서</p>
                                                         <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                                                             {sent ? `URL 설정됨 · ${url.slice(0, 40)}${url.length > 40 ? '...' : ''}` : 'URL 미설정'}
                                                         </p>
@@ -818,17 +935,17 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                 <input
                                                                     type="text"
                                                                     value={url}
-                                                                    onChange={e => saveDocUrl(doc.field, e.target.value)}
+                                                                    onChange={e => saveDocUrl('contractUrl', e.target.value)}
                                                                     placeholder="https://..."
                                                                     className="w-full h-[38px] pl-9 pr-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                                                                 />
                                                             </div>
-                                                            <button onClick={() => copyDocUrl(url, doc.id)} disabled={!url}
+                                                            <button onClick={() => copyDocUrl(url, 'contract')} disabled={!url}
                                                                 className={`h-[38px] px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${url ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}>
-                                                                <span className="material-symbols-outlined text-sm">{copiedDocId === doc.id ? 'check' : 'content_copy'}</span>
-                                                                {copiedDocId === doc.id ? '복사됨' : '복사'}
+                                                                <span className="material-symbols-outlined text-sm">{copiedDocId === 'contract' ? 'check' : 'content_copy'}</span>
+                                                                {copiedDocId === 'contract' ? '복사됨' : '복사'}
                                                             </button>
-                                                            <button onClick={() => handleSendLink(doc.name, url)} disabled={!url}
+                                                            <button onClick={() => handleSendLink('여행 계약서', url)} disabled={!url}
                                                                 className={`h-[38px] px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors ${url ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}>
                                                                 <span className="material-symbols-outlined text-sm">send</span>발송
                                                             </button>
@@ -837,7 +954,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                 )}
                                             </div>
                                         );
-                                    })}
+                                    })()}
                                 </div>
                             </section>
 
@@ -1045,6 +1162,7 @@ export const AdminReservationManage: React.FC = () => {
                     balanceStatus: r.balanceStatus || r.balance_status || 'unpaid',
                     contractUrl: r.contractUrl || r.contract_url,
                     itineraryUrl: r.itineraryUrl || r.itinerary_url,
+                    itineraryTemplateId: r.itineraryTemplateId || r.itinerary_template_id,
                     assignedGuide: r.assignedGuide || r.assigned_guide,
                     dailyAccommodations: r.dailyAccommodations || r.daily_accommodations,
                     history: r.history || [],
@@ -1168,6 +1286,7 @@ export const AdminReservationManage: React.FC = () => {
                 balance_status: updated.balanceStatus,
                 contract_url: updated.contractUrl,
                 itinerary_url: updated.itineraryUrl,
+                itinerary_template_id: updated.itineraryTemplateId,
                 assigned_guide: updated.assignedGuide,
                 daily_accommodations: updated.dailyAccommodations,
                 history: history,

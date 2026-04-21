@@ -38,6 +38,7 @@ import paypalWebhook from './webhooks/paypal';
 import testPaypal from './test-paypal';
 import tourGuides from './tour-guides';
 import itineraryTemplates from './itinerary-templates';
+import documents from './documents';
 
 // Register routes
 app.route('/products', products);
@@ -70,5 +71,6 @@ app.route('/webhooks/paypal', paypalWebhook);
 app.route('/test-paypal', testPaypal);
 app.route('/tour-guides', tourGuides);
 app.route('/itinerary-templates', itineraryTemplates);
+app.route('/documents', documents);
 
 export const onRequest = handle(app);

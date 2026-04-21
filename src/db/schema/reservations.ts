@@ -21,6 +21,7 @@ export const reservations = sqliteTable('reservations', {
     history: text('history').default('[]'),
     userId: text('user_id'),
     reservationNumber: text('reservation_number'),
+    itineraryTemplateId: text('itinerary_template_id'),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });

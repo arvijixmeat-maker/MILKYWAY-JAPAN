@@ -200,6 +200,33 @@ function tplEstimateCompleted(data: any) {
 </div>`);
 }
 
+function tplItineraryReady(data: any) {
+    const url = data.itineraryUrl || `https://mongolryokou.com/documents/itinerary/${data.reservationId || ''}`;
+    return baseLayout(`
+<div class="header">
+  <h1>🐴 Milkyway Japan</h1>
+  <p>確定日程表のご案内</p>
+</div>
+<div class="body">
+  <p class="greeting">${data.customerName || ''} 様</p>
+  <p>この度はMilkyway Japanをご利用いただき、誠にありがとうございます。<br>確定日程表が準備できましたのでご案内いたします。</p>
+  <div class="card">
+    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
+    ${data.travelDates ? `<div class="card-row"><span class="label">旅行期間</span><span class="value">${data.travelDates}</span></div>` : ''}
+    ${data.reservationNumber ? `<div class="card-row"><span class="label">予約番号</span><span class="value">${data.reservationNumber}</span></div>` : ''}
+  </div>
+  <div style="text-align:center;margin:24px 0;">
+    <a class="btn" href="${url}" style="font-size:16px;">📋 日程表を確認する</a>
+    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">リンクが開かない場合: ${url}</p>
+  </div>
+  <p style="font-size:14px;color:#4a6b64;">行程・宿泊先・ガイド情報が更新されれば、同じリンクから最新の内容をご確認いただけます。</p>
+</div>
+<div class="footer">
+  <a href="https://mongolryokou.com">mongolryokou.com</a> |
+  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
+</div>`);
+}
+
 // ─── Route Handler ───────────────────────────────────────────────────
 
 app.post('/', async (c) => {
@@ -241,6 +268,11 @@ app.post('/', async (c) => {
             case 'ESTIMATE_COMPLETED':
                 subject = '【見積もり完了】モンゴル旅行のお見積もりをお送りします | Milkyway Japan';
                 html = tplEstimateCompleted(data);
+                break;
+
+            case 'ITINERARY_READY':
+                subject = `【確定日程表】${data.productName || 'ご旅行'} のご案内 | Milkyway Japan`;
+                html = tplItineraryReady(data);
                 break;
 
             default:

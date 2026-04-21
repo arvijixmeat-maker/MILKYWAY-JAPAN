@@ -17,6 +17,14 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped reservations.reservation_number: ${e.message}`);
     }
 
+    // Link reservations to itinerary templates
+    try {
+        await c.env.DB.prepare('ALTER TABLE reservations ADD COLUMN itinerary_template_id TEXT').run();
+        migrationResults.push('Added reservations.itinerary_template_id');
+    } catch (e: any) {
+        migrationResults.push(`Skipped reservations.itinerary_template_id: ${e.message}`);
+    }
+
     // Create quotes table if it doesn't exist
     try {
         await c.env.DB.prepare(`

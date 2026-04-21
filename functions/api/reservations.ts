@@ -148,12 +148,51 @@ app.put('/:id', async (c) => {
     // We expect partial updates or full updates.
     // Drizzle update
 
-    // Flatten nested objects for DB storage if needed
-    const updateData: any = { ...body };
-    if (body.dailyAccommodations) updateData.dailyAccommodations = JSON.stringify(body.dailyAccommodations);
-    if (body.history) updateData.history = JSON.stringify(body.history);
+    // Normalize snake_case keys from admin frontend to camelCase schema keys
+    const snakeToCamel: Record<string, string> = {
+        deposit_status: 'depositStatus',
+        balance_status: 'balanceStatus',
+        contract_url: 'contractUrl',
+        itinerary_url: 'itineraryUrl',
+        assigned_guide: 'assignedGuide',
+        daily_accommodations: 'dailyAccommodations',
+        are_assignments_visible_to_user: 'areAssignmentsVisibleToUser',
+        total_people: 'travelers',
+        total_amount: 'totalPrice',
+        deposit_amount: 'depositAmount',
+        itinerary_template_id: 'itineraryTemplateId',
+        updated_at: 'updatedAt',
+    };
+    const normalized: any = {};
+    for (const [k, v] of Object.entries(body)) {
+        normalized[snakeToCamel[k] || k] = v;
+    }
 
-    await db.update(reservations).set(updateData).where(eq(reservations.id, id)).run();
+    // Serialize nested objects/arrays to JSON strings for TEXT columns
+    const updateData: any = {};
+    for (const [k, v] of Object.entries(normalized)) {
+        if (v !== undefined && typeof v === 'object' && v !== null) {
+            updateData[k] = JSON.stringify(v);
+        } else {
+            updateData[k] = v;
+        }
+    }
+
+    // Known schema keys (from src/db/schema/reservations.ts)
+    const schemaKeys = new Set([
+        'id', 'type', 'productName', 'customerName', 'customerEmail', 'customerPhone',
+        'travelers', 'startDate', 'endDate', 'status', 'totalPrice', 'depositAmount',
+        'balanceAmount', 'paymentMethod', 'dailyAccommodations', 'notes', 'history',
+        'userId', 'reservationNumber', 'itineraryTemplateId', 'createdAt', 'updatedAt',
+    ]);
+    const filtered: any = {};
+    for (const [k, v] of Object.entries(updateData)) {
+        if (schemaKeys.has(k)) filtered[k] = v;
+    }
+
+    if (Object.keys(filtered).length > 0) {
+        await db.update(reservations).set(filtered).where(eq(reservations.id, id)).run();
+    }
 
     // Fetch updated
     const updated = await db.select().from(reservations).where(eq(reservations.id, id)).get();
