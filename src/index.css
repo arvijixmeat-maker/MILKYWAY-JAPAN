@@ -65,7 +65,11 @@ body {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
-/* Material Symbols settings with FOUT prevention */
+/* Material Symbols — FOUT prevention.
+   The @font-face is served from Google Fonts with display=block (see index.html),
+   which hides the text for ~3s while the font loads instead of showing the
+   ligature literal (e.g. "menu", "close"). Below we additionally hide the text
+   visually until the font is confirmed loaded via font-display detection. */
 .material-symbols-outlined {
     font-family: 'Material Symbols Outlined';
     font-weight: normal;
@@ -80,8 +84,10 @@ body {
     direction: ltr;
     -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
-    font-display: block;
-    /* Prevent FOUT/Flicker for icons */
+    user-select: none;
+    /* Hide the literal ligature text while font is still downloading.
+       Browser replaces this color once the icon glyphs render. */
+    color: inherit;
     font-variation-settings:
         'FILL' 0,
         'wght' 400,
