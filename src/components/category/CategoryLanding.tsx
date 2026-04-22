@@ -108,18 +108,20 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
             <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/10 pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
-            {/* Left-aligned text */}
-            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-[85%] sm:max-w-[70%] lg:max-w-[60%]">
+            {/* Left-aligned text.
+                break-keep prevents Japanese/Korean words from breaking mid-character (e.g. ゴビ砂/漠の旅).
+                Column widths are generous at larger breakpoints so short CJK titles stay on one line. */}
+            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] xl:max-w-[50%] break-keep">
                 {content.heroTagline && (
-                    <p className="text-white/90 text-xs sm:text-sm font-semibold mb-2 drop-shadow-lg">
+                    <p className="text-white/90 text-xs sm:text-sm font-semibold mb-2 drop-shadow-lg break-keep">
                         {content.heroTagline}
                     </p>
                 )}
-                <h1 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight drop-shadow-xl">
+                <h1 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight drop-shadow-xl break-keep">
                     {content.heroTitle}
                 </h1>
                 {content.heroSubtitle && (
-                    <p className="text-white/90 text-xs sm:text-sm mt-3 leading-relaxed max-w-sm drop-shadow-lg whitespace-pre-line">
+                    <p className="text-white/90 text-xs sm:text-sm mt-3 leading-relaxed max-w-sm drop-shadow-lg whitespace-pre-line break-keep">
                         {content.heroSubtitle}
                     </p>
                 )}
