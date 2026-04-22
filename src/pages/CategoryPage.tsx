@@ -25,21 +25,24 @@ export const CategoryPage: React.FC = () => {
         staleTime: 1000 * 60 * 5,
     });
 
+    const categoryName: string | undefined = category?.name;
+
     const { data: products = [], isLoading: isLoadingProducts } = useQuery({
-        queryKey: ['products-by-category', slug],
+        queryKey: ['products-by-category', slug, categoryName],
+        enabled: !!slug,
         queryFn: async () => {
             if (!slug) return [];
             const data = await api.products.list();
             if (!Array.isArray(data)) return [];
             const normalize = (t: string) => t ? t.toLowerCase().replace(/\s+/g, '') : '';
-            const target = normalize(slug);
+            const targets = [normalize(slug), categoryName ? normalize(categoryName) : ''].filter(Boolean);
             return data
                 .filter((item: any) => {
                     if (item.status !== 'active') return false;
                     const cat = normalize(item.category || '');
-                    const tags = (item.tags || []).map((t: string) => normalize(t)).join(',');
-                    // Match by id, category name, or tag
-                    return cat === target || cat.includes(target) || tags.includes(target);
+                    const tags: string[] = (item.tags || []).map((t: string) => normalize(t));
+                    // Match if the product's stored category OR any of its tags matches the slug or the category display name.
+                    return targets.some((t) => cat === t || cat.includes(t) || tags.some((tag) => tag === t || tag.includes(t)));
                 })
                 .map((item: any) => ({
                     id: item.id,
@@ -91,12 +94,51 @@ export const CategoryPage: React.FC = () => {
         productGridTitle: category.landing_product_grid_title || `${category.name}のツアー`,
     };
 
+    // ─── Structured Data (JSON-LD) for SEO ──────────────────────────
+    const seoDescription = category.landing_hero_subtitle || category.description || `${category.name}のモンゴルツアーをご案内します。`;
+    const seoUrl = `https://mongolryokou.com/category/${slug}`;
+    const heroOgImage = heroImages[0]?.startsWith('http') ? heroImages[0] : undefined;
+
+    const breadcrumbLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://mongolryokou.com/' },
+            { '@type': 'ListItem', position: 2, name: 'ツアー商品', item: 'https://mongolryokou.com/products' },
+            { '@type': 'ListItem', position: 3, name: category.name, item: seoUrl },
+        ],
+    };
+
+    const itemListLd = {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: `${category.name}のツアー商品`,
+        itemListElement: products.slice(0, 20).map((p: any, i: number) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `https://mongolryokou.com/products/${p.id}`,
+            name: p.name,
+        })),
+    };
+
+    const collectionLd = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${category.name} | Milkyway Japan`,
+        description: seoDescription,
+        url: seoUrl,
+        inLanguage: 'ja',
+        isPartOf: { '@type': 'WebSite', name: 'Milkyway Japan', url: 'https://mongolryokou.com' },
+    };
+
     return (
         <>
             <SEO
-                title={`${category.name} | Milkyway Japan`}
-                description={category.landing_hero_subtitle || category.description || `${category.name}のモンゴルツアーをご案内します。`}
+                title={category.name}
+                description={seoDescription}
                 canonical={`/category/${slug}`}
+                image={heroOgImage}
+                structuredData={[collectionLd, breadcrumbLd, itemListLd]}
             />
             <CategoryLanding
                 content={content}

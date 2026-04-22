@@ -146,8 +146,24 @@ export const AdminCategoryManage: React.FC = () => {
                 landing_product_grid_title: category.landing_product_grid_title || null,
             };
             if (selectedCategory) {
+                // If the admin changed the URL slug (id), rename on the server first so the
+                // subsequent update hits the new row.
+                let effectiveId = category.id;
+                if (selectedCategory.id !== category.id) {
+                    const newId = (category.id || '').trim();
+                    if (!newId || !/^[a-z0-9][a-z0-9-]*$/.test(newId)) {
+                        alert('URL 슬러그는 영문 소문자/숫자/하이픈으로, 문자나 숫자로 시작해야 합니다.');
+                        return;
+                    }
+                    if (!confirm(`URL 슬러그를 "${selectedCategory.id}" → "${newId}" 로 변경하시겠습니까?\n기존 /category/${selectedCategory.id} 링크는 더이상 열리지 않습니다.`)) {
+                        return;
+                    }
+                    await api.categories.rename(selectedCategory.id, newId);
+                    effectiveId = newId;
+                }
+
                 // Update
-                await api.categories.update(category.id, {
+                await api.categories.update(effectiveId, {
                     icon: category.icon,
                     name: category.name,
                     description: category.description,
@@ -384,6 +400,28 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                                 placeholder={type === 'product' ? "예: 서부몽골" : "예: 몽골 기본 정보"}
                             />
                         </div>
+
+                        {/* URL Slug (editable only in edit mode, and not for the "all" category) */}
+                        {category && category.id !== 'all' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    URL 슬러그 (ID)
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-400 whitespace-nowrap">/category/</span>
+                                    <input
+                                        type="text"
+                                        value={formData.id || ''}
+                                        onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                                        className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none font-mono text-sm"
+                                        placeholder="예: gobi"
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                    영문 소문자/숫자/하이픈만 허용. 변경 시 기존 URL이 더이상 열리지 않으니 주의하세요.
+                                </p>
+                            </div>
+                        )}
 
                         {/* Description */}
                         <div>

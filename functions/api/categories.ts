@@ -137,6 +137,43 @@ app.put('/:id', async (c) => {
     }
 });
 
+// POST /api/categories/:id/rename - change the category's id (URL slug)
+app.post('/:id/rename', async (c) => {
+    const oldId = c.req.param('id');
+    const db = c.env.DB;
+    let body: any = {};
+    try { body = await c.req.json(); } catch { /* empty body */ }
+    const newId: string = (body.new_id || '').trim();
+
+    if (!newId) return c.json({ error: 'new_id is required' }, 400);
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(newId)) {
+        return c.json({ error: 'new_id must be lowercase alphanumeric/hyphens and start with a letter or digit' }, 400);
+    }
+    if (newId === oldId) return c.json({ success: true, message: 'no change' });
+    if (oldId === 'all') return c.json({ error: 'cannot rename the "all" category' }, 400);
+
+    try {
+        const existing: any = await db.prepare('SELECT id FROM categories WHERE id = ? LIMIT 1').bind(newId).first();
+        if (existing) return c.json({ error: `id "${newId}" already in use` }, 409);
+
+        const current: any = await db.prepare('SELECT id, name FROM categories WHERE id = ? LIMIT 1').bind(oldId).first();
+        if (!current) return c.json({ error: 'category not found' }, 404);
+
+        // SQLite allows updating a PK value in place as long as no FK references block it.
+        await db.prepare('UPDATE categories SET id = ? WHERE id = ?').bind(newId, oldId).run();
+
+        // Products store the category by NAME (not id), so product rows are unaffected.
+        // Still, update any product rows that happen to store the id literally (defensive).
+        try {
+            await db.prepare('UPDATE products SET category = ? WHERE category = ?').bind(newId, oldId).run();
+        } catch { /* products.category may not exist in legacy schemas; ignore */ }
+
+        return c.json({ success: true, old_id: oldId, new_id: newId });
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
 // DELETE /api/categories/:id
 app.delete('/:id', async (c) => {
     const id = c.req.param('id');

@@ -253,6 +253,11 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }),
+        rename: async (oldId: string, newId: string) => request(`${API_BASE}/categories/${oldId}/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_id: newId })
+        }),
         delete: async (id: string) => request(`${API_BASE}/categories/${id}`, { method: 'DELETE' }),
         bulkSave: async (categories: any[]) => request(`${API_BASE}/categories/bulk`, {
             method: 'PUT',

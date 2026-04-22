@@ -109,13 +109,13 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
             {/* Left-aligned text */}
-            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 max-w-[80%]">
+            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-[85%] sm:max-w-[70%] lg:max-w-[60%]">
                 {content.heroTagline && (
                     <p className="text-white/90 text-xs sm:text-sm font-semibold mb-2 drop-shadow-lg">
                         {content.heroTagline}
                     </p>
                 )}
-                <h1 className="text-white text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight drop-shadow-xl">
+                <h1 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight drop-shadow-xl">
                     {content.heroTitle}
                 </h1>
                 {content.heroSubtitle && (

@@ -51,6 +51,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             });
         });
 
+        // Add dynamic category landing page URLs (/category/:slug)
+        try {
+            const categoriesResult = await context.env.DB.prepare(
+                "SELECT id, COALESCE(updated_at, created_at) AS updated_at FROM categories WHERE (type = 'product' OR type IS NULL) AND is_active = 1 AND id != 'all'"
+            ).all();
+            if (categoriesResult && categoriesResult.results) {
+                categoriesResult.results.forEach((cat: any) => {
+                    const lastModFormat = cat.updated_at ? String(cat.updated_at).split(' ')[0] : today;
+                    urls.push({
+                        loc: `${baseUrl}/category/${cat.id}`,
+                        lastmod: lastModFormat,
+                        changefreq: 'weekly',
+                        priority: '0.8'
+                    });
+                });
+            }
+        } catch (e) {
+            console.error('Failed to fetch categories for sitemap:', e);
+        }
+
         // Add dynamic travel guide (magazine) URLs using raw D1 query
         let magazinesResult;
         try {
