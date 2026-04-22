@@ -16,6 +16,19 @@ interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Fields stored as JSON strings — parse for client convenience.
+const JSON_ARRAY_FIELDS = ['travelTypes', 'travel_types', 'accommodations'] as const;
+const parseQuoteRow = (q: any) => {
+    const out: any = { ...q };
+    for (const f of JSON_ARRAY_FIELDS) {
+        const v = out[f];
+        if (typeof v === 'string' && v.trim().startsWith('[')) {
+            try { out[f] = JSON.parse(v); } catch { /* leave as string */ }
+        }
+    }
+    return out;
+};
+
 // GET /api/quotes
 app.get('/', async (c) => {
     const lucia = initializeLucia(c.env.DB);
@@ -40,13 +53,7 @@ app.get('/', async (c) => {
         result = await db.select().from(quotes).where(eq(quotes.userId, user.id)).orderBy(desc(quotes.createdAt)).all();
     }
 
-    // Parse JSON fields if any (e.g. travel details)
-    const parsed = result.map(q => ({
-        ...q,
-        // Add parsing logic if fields are JSON strings
-    }));
-
-    return c.json(parsed);
+    return c.json(result.map(parseQuoteRow));
 });
 
 // GET /api/quotes/:id (public — no auth required so users can view own quotes from email link)
@@ -59,7 +66,7 @@ app.get('/:id', async (c) => {
         return c.json({ error: 'Not found' }, 404);
     }
 
-    return c.json(result);
+    return c.json(parseQuoteRow(result));
 });
 
 // POST /api/quotes (Create new quote — no auth required, guests can submit)

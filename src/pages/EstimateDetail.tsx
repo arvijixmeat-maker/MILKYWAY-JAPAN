@@ -103,50 +103,66 @@ export const EstimateDetail: React.FC = () => {
     };
 
     useEffect(() => {
+        // Helper: quote fields like travel_types / accommodations are stored as JSON strings in D1.
+        // If the server hasn't parsed them, we parse defensively here.
+        const asArray = (val: any): string[] => {
+            if (!val) return [];
+            if (Array.isArray(val)) return val.filter(Boolean);
+            if (typeof val === 'string') {
+                const trimmed = val.trim();
+                if (trimmed.startsWith('[')) {
+                    try {
+                        const parsed = JSON.parse(trimmed);
+                        return Array.isArray(parsed) ? parsed.filter(Boolean) : [trimmed];
+                    } catch {
+                        return [trimmed];
+                    }
+                }
+                // Comma-separated fallback (e.g. "中央モンゴル, ゴビ砂漠")
+                return trimmed.split(/,\s*/).filter(Boolean);
+            }
+            return [];
+        };
+
         const fetchEstimate = async () => {
             try {
                 const data = await api.quotes.get(id as string);
-                if (data) {
-                    setEstimate({
-                        id: data.id,
-                        status: data.status,
-                        statusLabel:
-                            data.status === 'converted' ? '予約確定済' :
-                                data.status === 'reservation_requested' ? '予約リクエスト済' :
-                                    data.status === 'answered' ? 'お見積り到着' :
-                                        data.status === 'processing' ? 'お見積り作成中' : '受付完了',
-                        adminStatus: data.status,
-                        // Fix: Use data.destination (string) and split it if needed for title
-                        title: data.title || `${data.destination} 旅行見積もり`,
-                        date: data.travel_dates || data.period, // data.period is used in CustomEstimate
-                        type: data.trip_type || 'オーダーメイド',
-                        people: data.travelers || data.headcount,
-                        requestDate: new Date(data.created_at).toLocaleDateString('ko-KR') + ' リクエスト',
-                        // Fix: Map data.destination (string) to array
-                        destinations: data.destination ? data.destination.split(', ') : [],
-                        // Fix: Map data.travel_types to themes
-                        themes: data.travel_types,
-                        // Fix: Map data.accommodations (plural)
-                        accommodations: data.accommodations,
-                        vehicle: data.vehicle,
-                        // Fix: Remove '만원' if it exists in data, or handled in UI. 
-                        // Let's keep data raw here and handle UI carefully.
-                        priceRange: data.budget,
-                        additionalRequest: data.additional_request, // Check column name in CustomEstimate: additional_request
-                        contact: { name: data.name, phone: data.phone, email: data.email }, // CustomEstimate uses name/phone/email columns directly on quotes? or joined?
-                        // Wait, CustomEstimate inserts name, phone, email into quotes table directly.
-                        // EstimateDetail line 50 was: contact: { name: data.customer_name, phone: data.phone, email: data.email }
-                        // CustomEstimate Line 43: name: name, phone: phone...
-                        // So it should be data.name.
-                        estimateUrl: data.estimate_url,
-                        adminNote: data.admin_note,
-                        // Admin confirmed values
-                        confirmedPrice: data.confirmed_price,
-                        deposit: data.deposit,
-                        confirmedStartDate: data.confirmed_start_date,
-                        confirmedEndDate: data.confirmed_end_date
-                    });
-                }
+                if (!data) return;
+
+                const createdAtRaw = data.created_at || data.createdAt;
+                const createdAtDate = createdAtRaw ? new Date(createdAtRaw) : null;
+                const createdAtStr = createdAtDate && !isNaN(createdAtDate.getTime())
+                    ? createdAtDate.toLocaleDateString('ko-KR') + ' リクエスト'
+                    : 'リクエスト';
+
+                setEstimate({
+                    id: data.id,
+                    status: data.status,
+                    statusLabel:
+                        data.status === 'converted' ? '予約確定済' :
+                            data.status === 'reservation_requested' ? '予約リクエスト済' :
+                                data.status === 'answered' ? 'お見積り到着' :
+                                    data.status === 'processing' ? 'お見積り作成中' : '受付完了',
+                    adminStatus: data.status,
+                    title: data.title || `${data.destination || 'オーダーメイド'} 旅行見積もり`,
+                    date: data.travel_dates || data.period,
+                    type: data.trip_type || 'オーダーメイド',
+                    people: data.travelers || data.headcount,
+                    requestDate: createdAtStr,
+                    destinations: asArray(data.destination),
+                    themes: asArray(data.travel_types ?? data.travelTypes),
+                    accommodations: asArray(data.accommodations),
+                    vehicle: data.vehicle,
+                    priceRange: data.budget,
+                    additionalRequest: data.additional_request,
+                    contact: { name: data.name, phone: data.phone, email: data.email },
+                    estimateUrl: data.estimate_url,
+                    adminNote: data.admin_note,
+                    confirmedPrice: data.confirmed_price,
+                    deposit: data.deposit,
+                    confirmedStartDate: data.confirmed_start_date,
+                    confirmedEndDate: data.confirmed_end_date,
+                });
             } catch (error) {
                 console.error('Error fetching estimate:', error);
             }
