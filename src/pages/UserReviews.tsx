@@ -227,17 +227,12 @@ export const UserReviews: React.FC = () => {
                                 className="bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm border border-gray-50 dark:border-zinc-800 cursor-pointer hover:shadow-md transition-shadow"
                             >
                                 <div className="flex items-start justify-between mb-3 gap-2">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div
-                                            className="w-10 h-10 shrink-0 rounded-full bg-gray-200 bg-cover bg-center"
-                                            style={{ backgroundImage: review.userImage ? `url('${review.userImage}')` : undefined }}
-                                        >
-                                            {!review.userImage && <span className="material-symbols-outlined text-gray-400 w-full h-full flex items-center justify-center">person</span>}
-                                        </div>
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <ReviewAvatar src={review.userImage} name={review.author} />
                                         <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                                <p className="text-sm font-bold text-[#0e1a18] dark:text-white truncate">{review.author}</p>
-                                                <span className="text-sm font-medium text-[#0e1a18] dark:text-white">様</span>
+                                            <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 min-w-0">
+                                                <p className="text-sm font-bold text-[#0e1a18] dark:text-white truncate max-w-[160px]">{review.author}</p>
+                                                <span className="text-sm font-medium text-[#0e1a18] dark:text-white shrink-0">様</span>
                                             </div>
                                             <div className="flex gap-0.5 mt-0.5">
                                                 {[...Array(5)].map((_, i) => (
@@ -274,12 +269,16 @@ export const UserReviews: React.FC = () => {
                                 </div>
                                 {review.images && review.images.length > 0 && (
                                     <div className={`grid gap-2 mt-4 ${review.images.length === 1 ? 'grid-cols-1' : review.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                                        {review.images.slice(0, 3).map((img, idx) => (
-                                            <div
+                                        {review.images.slice(0, 3).map((img: string, idx: number) => (
+                                            <img
                                                 key={idx}
-                                                className="aspect-square rounded-lg bg-cover bg-center"
-                                                style={{ backgroundImage: `url('${img}')` }}
-                                            ></div>
+                                                src={img}
+                                                alt={`${review.author}様のレビュー写真 ${idx + 1}`}
+                                                className="aspect-square rounded-lg object-cover w-full bg-gray-100 dark:bg-zinc-800"
+                                                loading="lazy"
+                                                decoding="async"
+                                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -302,6 +301,29 @@ export const UserReviews: React.FC = () => {
             </main>
 
             <BottomNav />
+        </div>
+    );
+};
+
+// Avatar with automatic fallback to initial when src is missing / fails to load
+const ReviewAvatar: React.FC<{ src?: string; name?: string }> = ({ src, name }) => {
+    const [failed, setFailed] = React.useState(false);
+    const showImage = !!src && !failed;
+    const initial = (name || '?').trim().charAt(0);
+    return (
+        <div className="w-10 h-10 shrink-0 rounded-full bg-primary/10 dark:bg-primary/20 overflow-hidden flex items-center justify-center">
+            {showImage ? (
+                <img
+                    src={src}
+                    alt={name || 'reviewer avatar'}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setFailed(true)}
+                />
+            ) : (
+                <span className="text-sm font-bold text-primary">{initial}</span>
+            )}
         </div>
     );
 };

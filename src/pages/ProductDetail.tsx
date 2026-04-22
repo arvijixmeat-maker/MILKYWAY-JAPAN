@@ -623,6 +623,80 @@ export const ProductDetail: React.FC = () => {
                 )}
             </div>
 
+            {/* Customer Reviews Section */}
+            {approvedReviews.length > 0 && (
+                <div className="p-6 bg-white dark:bg-background-dark mt-2" id="reviews">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            お客様の口コミ
+                            <span className="text-sm font-normal text-gray-400">({approvedReviews.length})</span>
+                        </h3>
+                        {avgRating > 0 && (
+                            <div className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-yellow-500 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                <span className="text-lg font-bold">{avgRating}</span>
+                                <span className="text-xs text-gray-400">/ 5</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-5">
+                        {approvedReviews.slice(0, 3).map((review: any) => {
+                            const reviewImages = (() => {
+                                const imgs = review.images;
+                                if (!imgs) return [];
+                                if (Array.isArray(imgs)) return imgs;
+                                if (typeof imgs === 'string') {
+                                    try { const parsed = JSON.parse(imgs); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+                                }
+                                return [];
+                            })();
+                            const displayName = review.user_name || review.author_name || '匿名';
+                            const initial = displayName.charAt(0);
+                            return (
+                                <div key={review.id} className="pb-5 border-b border-gray-100 dark:border-gray-800 last:border-b-0 last:pb-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                                            {initial}
+                                        </div>
+                                        <span className="text-sm font-semibold truncate min-w-0">{displayName} 様</span>
+                                        <span className="text-yellow-500 text-xs shrink-0" aria-label={`${review.rating || 5}点中5点`}>
+                                            {'★'.repeat(Math.max(0, Math.min(5, Number(review.rating) || 5)))}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                                        {review.content}
+                                    </p>
+                                    {reviewImages.length > 0 && (
+                                        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide">
+                                            {reviewImages.slice(0, 4).map((img: string, i: number) => (
+                                                <img
+                                                    key={i}
+                                                    src={getOptimizedImageUrl(img, 'thumbnailSmall')}
+                                                    alt={`${displayName}様のレビュー写真 ${i + 1}`}
+                                                    className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <button
+                        onClick={() => navigate('/reviews')}
+                        className="w-full mt-5 py-3 text-center text-sm font-semibold text-primary border border-primary/30 rounded-xl hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+                    >
+                        すべての口コミを見る
+                        <span className="material-symbols-outlined text-base">chevron_right</span>
+                    </button>
+                </div>
+            )}
+
             {/* Inclusions / Exclusions */}
             <div className="p-6 bg-white dark:bg-background-dark mt-2" id="guide">
                 <h3 className="text-lg font-bold mb-4">{t('product_detail.inclusions_title')}</h3>

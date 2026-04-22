@@ -269,14 +269,26 @@ export const ReviewDetail: React.FC = () => {
                     {review.images && review.images.length > 0 && (
                         <div className={`grid gap-2 mb-8 ${review.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                             {review.images.slice(0, 3).map((img: string, idx: number) => (
-                                <div
+                                <img
                                     key={idx}
-                                    className="aspect-square rounded-2xl bg-cover bg-center"
-                                    style={{ backgroundImage: `url('${optimizeImage(img, { width: 300, height: 300 })}')` }}
-                                ></div>
+                                    src={optimizeImage(img, { width: 600, height: 600 })}
+                                    alt={`レビュー写真 ${idx + 1}`}
+                                    className="aspect-square rounded-2xl object-cover w-full bg-gray-100 dark:bg-zinc-800"
+                                    loading="lazy"
+                                    decoding="async"
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                />
                             ))}
                             {review.images.length > 3 && (
-                                <div className="relative aspect-square rounded-2xl bg-cover bg-center" style={{ backgroundImage: `url('${optimizeImage(review.images[2], { width: 300, height: 300 })}')` }}>
+                                <div className="relative aspect-square rounded-2xl overflow-hidden">
+                                    <img
+                                        src={optimizeImage(review.images[2], { width: 600, height: 600 })}
+                                        alt={`レビュー写真 3`}
+                                        className="absolute inset-0 w-full h-full object-cover bg-gray-100 dark:bg-zinc-800"
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                    />
                                     <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
                                         <span className="text-white text-sm font-bold">+{review.images.length - 2}장 더보기</span>
                                     </div>

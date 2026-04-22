@@ -11,12 +11,14 @@ export const MyReviews: React.FC = () => {
     const { t, i18n } = useTranslation();
 
     const [myReviews, setMyReviews] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchMyReviews = async () => {
+            setIsLoading(true);
             try {
                 const me = await api.auth.me();
-                if (!me) return;
+                if (!me) { setIsLoading(false); return; }
 
                 const data = await api.reviews.list();
                 if (data) {
@@ -50,6 +52,8 @@ export const MyReviews: React.FC = () => {
                 }
             } catch (e) {
                 console.error('Error fetching my reviews:', e);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchMyReviews();
@@ -96,6 +100,25 @@ export const MyReviews: React.FC = () => {
                             {t('my_reviews.go_login')}
                         </button>
                     </div>
+                ) : isLoading ? (
+                    <div className="p-4 space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm border border-gray-50 dark:border-zinc-800 animate-pulse">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-3 w-24 bg-gray-200 dark:bg-zinc-700 rounded" />
+                                        <div className="h-3 w-16 bg-gray-200 dark:bg-zinc-700 rounded" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="h-3 w-full bg-gray-200 dark:bg-zinc-700 rounded" />
+                                    <div className="h-3 w-5/6 bg-gray-200 dark:bg-zinc-700 rounded" />
+                                    <div className="h-3 w-2/3 bg-gray-200 dark:bg-zinc-700 rounded" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 ) : myReviews && myReviews.length > 0 ? (
                     <div className="p-4 space-y-4">
                         <div className="mb-4">
@@ -107,20 +130,15 @@ export const MyReviews: React.FC = () => {
                                 onClick={() => navigate(`/reviews/${review.id}`)}
                                 className="bg-white dark:bg-zinc-900 rounded-xl p-5 shadow-sm border border-gray-50 dark:border-zinc-800 cursor-pointer hover:shadow-md transition-shadow"
                             >
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="w-10 h-10 rounded-full bg-gray-200 bg-cover bg-center"
-                                            style={{ backgroundImage: review.userImage ? `url('${review.userImage}')` : undefined }}
-                                        >
-                                            {!review.userImage && <span className="material-symbols-outlined text-gray-400 w-full h-full flex items-center justify-center">person</span>}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-[#0e1a18] dark:text-white">{review.author}</p>
+                                <div className="flex items-center justify-between mb-3 gap-2">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <MyReviewAvatar src={review.userImage} name={review.author} />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-bold text-[#0e1a18] dark:text-white truncate max-w-[140px]">{review.author}</p>
                                             <p className="text-[11px] text-gray-400">{formatDate(review.date)}</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-0.5">
+                                    <div className="flex gap-0.5 shrink-0" aria-label={`${review.rating}点中5点`}>
                                         {[...Array(5)].map((_, i) => (
                                             <span key={i} className={`material-symbols-outlined text-[16px] ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
                                         ))}
@@ -141,11 +159,15 @@ export const MyReviews: React.FC = () => {
                                 {review.images && review.images.length > 0 && (
                                     <div className={`grid gap-2 mt-4 ${review.images.length === 1 ? 'grid-cols-1' : review.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                                         {review.images.slice(0, 3).map((img: string, idx: number) => (
-                                            <div
+                                            <img
                                                 key={idx}
-                                                className="aspect-square rounded-lg bg-cover bg-center"
-                                                style={{ backgroundImage: `url('${img}')` }}
-                                            ></div>
+                                                src={img}
+                                                alt={`${review.author}様のレビュー写真 ${idx + 1}`}
+                                                className="aspect-square rounded-lg object-cover w-full bg-gray-100 dark:bg-zinc-800"
+                                                loading="lazy"
+                                                decoding="async"
+                                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -176,6 +198,29 @@ export const MyReviews: React.FC = () => {
                     </div>
                 )}
             </main>
+        </div>
+    );
+};
+
+// Avatar with automatic fallback to initial on missing / failed load
+const MyReviewAvatar: React.FC<{ src?: string; name?: string }> = ({ src, name }) => {
+    const [failed, setFailed] = useState(false);
+    const showImage = !!src && !failed;
+    const initial = (name || '?').trim().charAt(0);
+    return (
+        <div className="w-10 h-10 shrink-0 rounded-full bg-primary/10 dark:bg-primary/20 overflow-hidden flex items-center justify-center">
+            {showImage ? (
+                <img
+                    src={src}
+                    alt={name || 'avatar'}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setFailed(true)}
+                />
+            ) : (
+                <span className="text-sm font-bold text-primary">{initial}</span>
+            )}
         </div>
     );
 };
