@@ -221,6 +221,20 @@
         "empty_sub": "여행 후 소중한 경험을 공유해주세요",
         "write_review": "리뷰 작성하기"
     },
+    "user_reviews": {
+        "header_title": "사용자 리뷰",
+        "page_h1": "몽골 여행 고객 리뷰",
+        "page_intro": "실제로 몽골 투어에 참여하신 고객님들의 생생한 후기를 만나보세요.",
+        "real_reviews_count": "{{num}}개의 진짜 리뷰",
+        "filter_latest": "최신순",
+        "filter_rating": "평점순",
+        "filter_photo": "사진 리뷰만",
+        "section_all": "전체 리뷰",
+        "total_badge": "총 {{count}}개",
+        "empty": "아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해주세요!",
+        "empty_photo_filter": "사진이 포함된 리뷰가 아직 없습니다.",
+        "write_cta": "리뷰 작성"
+    },
     "travel_mates": {
         "title": "동행 찾기",
         "search_placeholder": "도시나 국가를 검색해보세요",

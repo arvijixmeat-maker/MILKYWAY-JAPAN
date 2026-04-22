@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api'; 
+import { useTranslation } from 'react-i18next';
+import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
+import { formatShortDate } from '../utils/formatDate';
 
 // Define Review type locally or import if available, matching Cloudflare + Frontend needs
 interface Review {
@@ -20,6 +22,7 @@ interface Review {
 
 export const UserReviews: React.FC = () => {
     const navigate = useNavigate();
+    const { t, i18n } = useTranslation();
     const [filter, setFilter] = React.useState<'latest' | 'rating' | 'photo'>('latest');
     const [allReviews, setAllReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +46,7 @@ export const UserReviews: React.FC = () => {
                         return {
                             id: r.id,
                             author: r.user_name,
-                            date: r.created_at ? r.created_at.substring(0, 10) : '',
+                            date: formatShortDate(r.created_at, i18n.language),
                             rating: r.rating,
                             title: r.title,
                             productName: r.product_name,
@@ -137,16 +140,16 @@ export const UserReviews: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <span className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">ユーザーレビュー</span>
+                    <span className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">{t('user_reviews.header_title')}</span>
                 </div>
             </nav>
 
             <main className="max-w-md mx-auto pb-24 relative">
                 {/* SEO: H1 + Intro */}
                 <section className="px-4 pt-4 pb-2">
-                    <h1 className="text-xl font-bold text-[#0e1a18] dark:text-white mb-1">モンゴル旅行のお客様レビュー</h1>
+                    <h1 className="text-xl font-bold text-[#0e1a18] dark:text-white mb-1">{t('user_reviews.page_h1')}</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                        実際にモンゴルツアーに参加されたお客様の体験談をご紹介。ツアー選びの参考にしてください。
+                        {t('user_reviews.page_intro')}
                     </p>
                 </section>
 
@@ -160,7 +163,7 @@ export const UserReviews: React.FC = () => {
                                     <span key={i} className={`material-symbols-outlined text-primary text-xl ${i < Math.round(Number(averageRating)) ? 'fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < Math.round(Number(averageRating)) ? "'FILL' 1" : "'FILL' 0" }}>star</span>
                                 ))}
                             </div>
-                            <p className="text-gray-500 text-sm font-medium">{totalReviews.toLocaleString()}件のリアルなレビュー</p>
+                            <p className="text-gray-500 text-sm font-medium">{t('user_reviews.real_reviews_count', { num: totalReviews.toLocaleString() })}</p>
                         </div>
                         <div className="flex-1 space-y-2 mt-2">
                             {[5, 4, 3, 2, 1].map((score) => (
@@ -186,7 +189,7 @@ export const UserReviews: React.FC = () => {
                                 : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <span className="text-sm font-bold">新着順</span>
+                            <span className="text-sm font-bold">{t('user_reviews.filter_latest')}</span>
                         </button>
                         <button
                             onClick={() => setFilter('rating')}
@@ -195,7 +198,7 @@ export const UserReviews: React.FC = () => {
                                 : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <span className="text-sm font-bold">評価順</span>
+                            <span className="text-sm font-bold">{t('user_reviews.filter_rating')}</span>
                         </button>
                         <button
                             onClick={() => setFilter('photo')}
@@ -204,20 +207,22 @@ export const UserReviews: React.FC = () => {
                                 : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <span className="text-sm font-bold">写真レビューのみ</span>
+                            <span className="text-sm font-bold">{t('user_reviews.filter_photo')}</span>
                         </button>
                     </div>
                 </section>
 
                 <div className="px-4 py-4 flex items-center justify-between">
-                    <h3 className="text-lg font-bold tracking-tight text-[#0e1a18] dark:text-white">全てのレビュー</h3>
-                    <span className="text-xs text-gray-400 font-medium">全 {reviews?.length.toLocaleString() || 0}件</span>
+                    <h3 className="text-lg font-bold tracking-tight text-[#0e1a18] dark:text-white">{t('user_reviews.section_all')}</h3>
+                    <span className="text-xs text-gray-400 font-medium">{t('user_reviews.total_badge', { count: reviews?.length || 0 })}</span>
                 </div>
 
                 <div className="space-y-4 px-4">
                     {reviews.length === 0 && !isLoading ? (
                         <div className="text-center py-20 text-gray-400">
-                            レビューはまだありません。最初のレビューを書いてみましょう！
+                            {filter === 'photo'
+                                ? t('user_reviews.empty_photo_filter')
+                                : t('user_reviews.empty')}
                         </div>
                     ) : (
                         reviews.map((review) => (
@@ -294,7 +299,7 @@ export const UserReviews: React.FC = () => {
                             className="pointer-events-auto flex items-center gap-2 bg-primary text-white px-5 py-3.5 rounded-full shadow-[0_4px_12px_rgba(30,180,150,0.3)] active:scale-95 transition-transform duration-100"
                         >
                             <span className="material-symbols-outlined text-[20px]">edit</span>
-                            <span className="text-sm font-bold">レビューを書く</span>
+                            <span className="text-sm font-bold">{t('user_reviews.write_cta')}</span>
                         </button>
                     </div>
                 </div>

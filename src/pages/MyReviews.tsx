@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-
 import { useUser } from '../contexts/UserContext';
 import { useTranslation } from 'react-i18next';
+import { formatDateWithWeekday } from '../utils/formatDate';
 
 export const MyReviews: React.FC = () => {
     const navigate = useNavigate();
@@ -59,19 +59,7 @@ export const MyReviews: React.FC = () => {
         fetchMyReviews();
     }, []);
 
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const weekday = date.toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'ko-KR', { weekday: 'short' });
-
-        if (i18n.language === 'ja') {
-            return `${year}/${month}/${day} (${weekday})`;
-        }
-        return `${year}. ${month}. ${day}. (${weekday})`;
-    };
+    const formatDate = (dateStr: string) => formatDateWithWeekday(dateStr, i18n.language);
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen pb-20">

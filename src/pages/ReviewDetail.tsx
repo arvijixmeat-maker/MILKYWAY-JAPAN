@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { BottomNav } from '../components/layout/BottomNav';
+import { formatShortDate, formatRelativeTime } from '../utils/formatDate';
 
 export const ReviewDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     const [review, setReview] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -54,7 +55,7 @@ export const ReviewDetail: React.FC = () => {
                     setReview({
                         id: data.id,
                         author: data.user_name,
-                        date: data.created_at ? data.created_at.substring(0, 10) : '',
+                        date: formatShortDate(data.created_at, i18n.language),
                         rating: data.rating,
                         title: data.title,
                         productName: data.product_name,
@@ -333,7 +334,7 @@ export const ReviewDetail: React.FC = () => {
                                         <p className="text-[14px] text-[#333d4b] dark:text-gray-300">{comment.content}</p>
                                     </div>
                                     <div className="flex items-center gap-3 mt-1.5 px-1">
-                                        <span className="text-[11px] text-gray-400">{new Date(comment.date).toLocaleDateString()}</span>
+                                        <span className="text-[11px] text-gray-400">{formatRelativeTime(comment.date, i18n.language)}</span>
                                         <button
                                             onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                                             className="text-[11px] font-bold text-gray-500 hover:text-primary transition-colors"

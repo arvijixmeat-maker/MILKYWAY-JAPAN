@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { api } from '../lib/api';
 import { useUser } from '../contexts/UserContext';
 import { uploadImage } from '../utils/upload';
+
+// Review text constraints — keep in sync with any backend validation.
+const REVIEW_MIN_LENGTH = 10;
+const REVIEW_MAX_LENGTH = 2000;
 
 export const ReviewWrite: React.FC = () => {
     const navigate = useNavigate();
@@ -76,9 +81,25 @@ export const ReviewWrite: React.FC = () => {
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleSubmit = async () => {
-        if (!content.trim() || !selectedReservation) return;
+    const [submitting, setSubmitting] = useState(false);
 
+    const handleSubmit = async () => {
+        if (submitting) return;
+        if (!selectedReservation) return;
+
+        // Strip any HTML/script tags the user might paste; keep plain text only.
+        const sanitized = DOMPurify.sanitize(content, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
+
+        if (sanitized.length < REVIEW_MIN_LENGTH) {
+            alert(`レビューは${REVIEW_MIN_LENGTH}文字以上でお書きください。`);
+            return;
+        }
+        if (sanitized.length > REVIEW_MAX_LENGTH) {
+            alert(`レビューは${REVIEW_MAX_LENGTH}文字以内でお書きください。`);
+            return;
+        }
+
+        setSubmitting(true);
         try {
             const meResponse = await api.auth.me();
             const me = meResponse?.user;
@@ -94,7 +115,7 @@ export const ReviewWrite: React.FC = () => {
                 rating: rating,
                 product_name: selectedReservation.productName,
                 title: `${selectedReservation.productName} レビュー`,
-                content: content,
+                content: sanitized,
                 images: images,
                 user_image: me.avatarUrl
             });
@@ -103,6 +124,8 @@ export const ReviewWrite: React.FC = () => {
         } catch (error: any) {
             console.error('Failed to save review:', error);
             alert('レビューの保存に失敗しました: ' + (error.message || 'Unknown error'));
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -220,13 +243,20 @@ export const ReviewWrite: React.FC = () => {
 
                     {/* Section: Detailed Review */}
                     <div className="px-4 pt-8 pb-10">
-                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">詳細レビュー</h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">詳細レビュー</h3>
+                            <span className={`text-xs font-medium ${content.length > REVIEW_MAX_LENGTH ? 'text-red-500' : content.length >= REVIEW_MIN_LENGTH ? 'text-primary' : 'text-gray-400'}`}>
+                                {content.length} / {REVIEW_MAX_LENGTH}
+                            </span>
+                        </div>
                         <textarea
                             value={content}
-                            onChange={(e) => setContent(e.target.value)}
+                            onChange={(e) => setContent(e.target.value.slice(0, REVIEW_MAX_LENGTH))}
+                            maxLength={REVIEW_MAX_LENGTH}
                             className="w-full min-h-[200px] p-4 rounded-xl bg-white dark:bg-[#1a2e2a] border border-gray-100 dark:border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-base resize-none transition-all placeholder:text-gray-400 text-[#0e1a18] dark:text-white"
                             placeholder="モンゴルでの大切な思い出を共有してください（天気、ガイド、宿泊施設など自由なご意見）"
                         ></textarea>
+                        <p className="text-xs text-gray-400 mt-1.5">{REVIEW_MIN_LENGTH}文字以上、{REVIEW_MAX_LENGTH}文字以内でお書きください。</p>
                     </div>
                 </div>
 
@@ -235,10 +265,10 @@ export const ReviewWrite: React.FC = () => {
                     <div className="max-w-md mx-auto">
                         <button
                             onClick={handleSubmit}
-                            disabled={!content.trim() || !selectedReservationId}
+                            disabled={submitting || content.trim().length < REVIEW_MIN_LENGTH || !selectedReservationId}
                             className="w-full bg-primary hover:bg-[#19a186] disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-lg font-bold py-4 rounded-xl shadow-lg transition-colors active:scale-[0.98]"
                         >
-                            作成完了
+                            {submitting ? '送信中...' : '作成完了'}
                         </button>
                     </div>
                     <div className="h-4"></div> {/* iOS Home Indicator Area */}

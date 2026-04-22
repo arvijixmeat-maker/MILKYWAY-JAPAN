@@ -237,6 +237,20 @@
         "empty_sub": "旅行後の大切な経験を共有してください",
         "write_review": "レビューを作成する"
     },
+    "user_reviews": {
+        "header_title": "ユーザーレビュー",
+        "page_h1": "モンゴル旅行のお客様レビュー",
+        "page_intro": "実際にモンゴルツアーに参加されたお客様の体験談をご紹介。ツアー選びの参考にしてください。",
+        "real_reviews_count": "{{num}}件のリアルなレビュー",
+        "filter_latest": "新着順",
+        "filter_rating": "評価順",
+        "filter_photo": "写真レビューのみ",
+        "section_all": "全てのレビュー",
+        "total_badge": "全 {{count}}件",
+        "empty": "レビューはまだありません。最初のレビューを書いてみましょう！",
+        "empty_photo_filter": "写真付きのレビューはまだありません。",
+        "write_cta": "レビューを書く"
+    },
     "travel_mates": {
         "title": "同行者募集",
         "search_placeholder": "都市や国を検索してみてください",
