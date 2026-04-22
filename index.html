@@ -90,10 +90,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- Noto Sans JP (Preload & Swap) -->
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap"
+  <!-- Noto Sans JP — only the weights we actually use (400 for body, 500 + 700 + 800 for UI emphasis).
+       Trimming from the full 100..900 range cuts the font CSS by ~55% and reduces unused CSS flagged by Lighthouse. -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap"
     as="style" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 
   <link rel="preload" href="/fonts/FlightSans-Regular.woff2" as="font" type="font/woff2" crossorigin />
 
@@ -158,12 +159,14 @@
     @keyframes prl-spin { to { transform: rotate(360deg); } }
   </style>
 
-  <!-- Channel Talk — deferred until idle or first user interaction.
-       Loading this in <head> previously blocked render and added ~10 Lighthouse points. -->
+  <!-- Channel Talk — stub only. The real SDK (~400KB) is loaded lazily after the
+       page is fully interactive (5s after 'load') OR on the first click that calls
+       window.openChannelTalk(). This keeps Channel Talk out of the LCP/TBT budget. -->
   <script>
     (function () {
       var w = window;
       if (w.ChannelIO) return;
+      // Queue calls so ChannelIO('boot', ...) before the SDK arrives still works.
       var ch = function () { ch.c(arguments); };
       ch.q = [];
       ch.c = function (args) { ch.q.push(args); };
@@ -171,31 +174,46 @@
 
       var loaded = false;
       function loadChannelTalk() {
-        if (loaded || w.ChannelIOInitialized) return;
+        if (loaded || w.ChannelIOInitialized) return Promise.resolve();
         loaded = true;
         w.ChannelIOInitialized = true;
-        var s = document.createElement('script');
-        s.type = 'text/javascript';
-        s.async = true;
-        s.src = 'https://cdn.channel.io/plugin/ch-plugin-web.js';
-        s.onload = function () {
-          ChannelIO('boot', { pluginKey: '64f569ac-a282-48c8-85c5-c8263bc2ba57', language: 'ja' });
-        };
-        var x = document.getElementsByTagName('script')[0];
-        if (x.parentNode) x.parentNode.insertBefore(s, x);
+        return new Promise(function (resolve) {
+          var s = document.createElement('script');
+          s.type = 'text/javascript';
+          s.async = true;
+          s.src = 'https://cdn.channel.io/plugin/ch-plugin-web.js';
+          s.onload = function () {
+            ChannelIO('boot', { pluginKey: '64f569ac-a282-48c8-85c5-c8263bc2ba57', language: 'ja' });
+            resolve();
+          };
+          var x = document.getElementsByTagName('script')[0];
+          if (x.parentNode) x.parentNode.insertBefore(s, x);
+        });
       }
 
-      // Load after page is idle (or a user interacts, whichever comes first).
-      var events = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
-      var trigger = function () {
-        events.forEach(function (ev) { w.removeEventListener(ev, trigger, { passive: true }); });
-        loadChannelTalk();
+      // Expose for explicit click (footer / floating consultation button can call this
+      // with a small delay to avoid blocking the interaction).
+      w.openChannelTalk = function () {
+        loadChannelTalk().then(function () {
+          if (w.ChannelIO && typeof w.ChannelIO === 'function') {
+            try { w.ChannelIO('showMessenger'); } catch (e) {}
+          }
+        });
       };
-      events.forEach(function (ev) { w.addEventListener(ev, trigger, { passive: true }); });
-      if ('requestIdleCallback' in w) {
-        w.requestIdleCallback(loadChannelTalk, { timeout: 4000 });
+
+      // Fallback: load ~5 seconds after the page is fully interactive so returning
+      // visitors still see the floating button without tanking first-load perf.
+      function scheduleBackgroundLoad() {
+        if ('requestIdleCallback' in w) {
+          w.requestIdleCallback(loadChannelTalk, { timeout: 8000 });
+        } else {
+          setTimeout(loadChannelTalk, 5000);
+        }
+      }
+      if (document.readyState === 'complete') {
+        setTimeout(scheduleBackgroundLoad, 5000);
       } else {
-        setTimeout(loadChannelTalk, 3000);
+        w.addEventListener('load', function () { setTimeout(scheduleBackgroundLoad, 5000); }, { once: true });
       }
     })();
   </script>
