@@ -9,6 +9,11 @@ import { useTranslation } from 'react-i18next';
 
 import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
 
+// Hide broken product images gracefully instead of showing the browser's default error icon.
+const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+};
+
 export const ProductDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
@@ -145,6 +150,32 @@ export const ProductDetail: React.FC = () => {
             console.error('Wishlist toggle error:', error);
         } finally {
             setWishlistLoading(false);
+        }
+    };
+
+    const handleShare = async () => {
+        const shareUrl = window.location.href;
+        const shareTitle = product?.name ? `${product.name} | Milkyway Japan` : 'Milkyway Japan';
+        const shareText = product?.description || product?.name || '';
+
+        // Prefer native share sheet on mobile; silently ignore AbortError when user cancels.
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+            try {
+                await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+                return;
+            } catch (err: any) {
+                if (err?.name === 'AbortError') return; // user dismissed — nothing to do
+                // Fall through to clipboard fallback on other errors.
+            }
+        }
+
+        // Clipboard fallback
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            alert('URLをコピーしました');
+        } catch {
+            // Last-resort manual prompt
+            window.prompt('URLをコピーしてください:', shareUrl);
         }
     };
 
@@ -294,7 +325,10 @@ export const ProductDetail: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleToggleWishlist}
-                            className="text-[#0e1a18] dark:text-white flex items-center justify-center"
+                            disabled={wishlistLoading}
+                            aria-label={isInWishlist ? 'ウィッシュリストから削除' : 'ウィッシュリストに追加'}
+                            aria-pressed={isInWishlist}
+                            className={`text-[#0e1a18] dark:text-white flex size-10 items-center justify-center transition-opacity ${wishlistLoading ? 'opacity-50 cursor-wait' : 'active:scale-95'}`}
                         >
                             <span
                                 className={`material-symbols-outlined ${isInWishlist ? 'fill-current text-red-500' : ''}`}
@@ -303,7 +337,11 @@ export const ProductDetail: React.FC = () => {
                                 favorite
                             </span>
                         </button>
-                        <button className="text-[#0e1a18] dark:text-white flex items-center justify-center">
+                        <button
+                            onClick={handleShare}
+                            aria-label="このツアーをシェア"
+                            className="text-[#0e1a18] dark:text-white flex size-10 items-center justify-center active:scale-95"
+                        >
                             <span className="material-symbols-outlined">share</span>
                         </button>
                     </div>
@@ -333,7 +371,12 @@ export const ProductDetail: React.FC = () => {
                                 <img
                                     {...getResponsiveImageProps(img, 'banner')}
                                     alt={`${product.name} - ${index + 1}`}
-                                    className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                                    className="w-full h-full object-cover"
+                                    loading={index === 0 ? 'eager' : 'lazy'}
+                                    fetchPriority={index === 0 ? 'high' : 'auto'}
+                                    decoding="async"
+                                    onError={hideBrokenImage}
+                                />
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent pointer-events-none" />
                             </div>
                         ))
@@ -433,6 +476,8 @@ export const ProductDetail: React.FC = () => {
                                         alt="Detailed info"
                                         className="w-full h-auto"
                                         loading="lazy"
+                                        decoding="async"
+                                        onError={hideBrokenImage}
                                     />
                                 );
                             } else if (block.type === 'slide') {
@@ -453,6 +498,8 @@ export const ProductDetail: React.FC = () => {
                                                         alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
+                                                        decoding="async"
+                                                        onError={hideBrokenImage}
                                                     />
                                                     <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
                                                         {imgIdx + 1} / {slide.images.length}
@@ -480,6 +527,10 @@ export const ProductDetail: React.FC = () => {
                                     />
                                 );
                             }
+                            // Unknown block type — log and skip so the page doesn't render blank.
+                            if (import.meta.env.DEV) {
+                                console.warn('[ProductDetail] Unknown detail block type:', block.type, block);
+                            }
                             return null;
                         })}
                     </div>
@@ -495,6 +546,8 @@ export const ProductDetail: React.FC = () => {
                                         alt={`Detail ${index + 1}`}
                                         className="w-full h-auto"
                                         loading="lazy"
+                                        decoding="async"
+                                        onError={hideBrokenImage}
                                     />
                                 ))}
                             </div>
@@ -519,6 +572,8 @@ export const ProductDetail: React.FC = () => {
                                                         alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
+                                                        decoding="async"
+                                                        onError={hideBrokenImage}
                                                     />
                                                     <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
                                                         {imgIdx + 1} / {slide.images.length}
@@ -554,6 +609,8 @@ export const ProductDetail: React.FC = () => {
                                         alt="Itinerary info"
                                         className="w-full h-auto"
                                         loading="lazy"
+                                        decoding="async"
+                                        onError={hideBrokenImage}
                                     />
                                 );
                             } else if (block.type === 'slide') {
@@ -574,6 +631,8 @@ export const ProductDetail: React.FC = () => {
                                                         alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
+                                                        decoding="async"
+                                                        onError={hideBrokenImage}
                                                     />
                                                     <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
                                                         {imgIdx + 1} / {slide.images.length}
@@ -601,6 +660,10 @@ export const ProductDetail: React.FC = () => {
                                     />
                                 );
                             }
+                            // Unknown block type — log and skip so the page doesn't render blank.
+                            if (import.meta.env.DEV) {
+                                console.warn('[ProductDetail] Unknown itinerary block type:', block.type, block);
+                            }
                             return null;
                         })}
                     </div>
@@ -613,6 +676,8 @@ export const ProductDetail: React.FC = () => {
                                 alt={`Itinerary ${index + 1}`}
                                 className="w-full h-auto"
                                 loading="lazy"
+                                decoding="async"
+                                onError={hideBrokenImage}
                             />
                         ))}
                     </div>
@@ -677,7 +742,7 @@ export const ProductDetail: React.FC = () => {
                                                     className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                                                     loading="lazy"
                                                     decoding="async"
-                                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                                    onError={hideBrokenImage}
                                                 />
                                             ))}
                                         </div>
