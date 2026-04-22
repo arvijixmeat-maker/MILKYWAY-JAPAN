@@ -204,7 +204,7 @@ export const ReviewDetail: React.FC = () => {
                 </div>
             </nav>
 
-            <main className="max-w-md mx-auto pb-32">
+            <main className="max-w-md mx-auto pb-44">
                 <section className="p-5">
                     <div className="flex items-start justify-between mb-6 gap-2">
                         <div className="flex items-center gap-3 min-w-0">
@@ -365,30 +365,32 @@ export const ReviewDetail: React.FC = () => {
                 </section>
             </main>
 
-            {/* Comment Input */}
-            <div className="fixed bottom-16 left-0 right-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-t border-gray-100 dark:border-zinc-800 p-3">
-                <div className="max-w-md mx-auto flex gap-3 items-center">
-                    <div className="flex-1 relative">
-                        <input
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                    handleAddComment();
-                                }
-                            }}
-                            className="w-full bg-gray-100 dark:bg-zinc-800 border-none rounded-full px-4 py-2.5 text-sm focus:ring-1 focus:ring-primary text-[#0e1a18] dark:text-white placeholder:text-gray-400"
-                            placeholder={t('review_detail.comment_placeholder')}
-                            type="text"
-                            disabled={submitting}
-                        />
-                    </div>
+            {/* Comment Input — docked directly above BottomNav (h-[84px]) with safe-area support */}
+            <div
+                className="fixed left-1/2 -translate-x-1/2 w-full max-w-[480px] z-40 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800"
+                style={{ bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}
+            >
+                <div className="flex gap-2 items-center px-4 py-2.5">
+                    <input
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                handleAddComment();
+                            }
+                        }}
+                        className="flex-1 min-w-0 bg-gray-100 dark:bg-zinc-800 border border-transparent focus:border-primary focus:bg-white dark:focus:bg-zinc-800 rounded-full px-4 py-2.5 text-sm text-[#0e1a18] dark:text-white placeholder:text-gray-400 outline-none transition-colors"
+                        placeholder={t('review_detail.comment_placeholder')}
+                        type="text"
+                        disabled={submitting}
+                    />
                     <button
                         onClick={handleAddComment}
                         disabled={!newComment.trim() || submitting}
-                        className="text-primary font-bold px-2 whitespace-nowrap disabled:opacity-50"
+                        aria-label={t('review_detail.submit')}
+                        className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white disabled:bg-gray-200 dark:disabled:bg-zinc-700 disabled:text-gray-400 disabled:cursor-not-allowed hover:bg-primary/90 active:scale-95 transition-all"
                     >
-                        {t('review_detail.submit')}
+                        <span className="material-symbols-outlined text-[20px]">send</span>
                     </button>
                 </div>
             </div>
