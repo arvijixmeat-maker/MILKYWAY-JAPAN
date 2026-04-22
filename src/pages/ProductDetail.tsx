@@ -5,6 +5,8 @@ import { SEO } from '../components/seo/SEO';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/cloudflareImage';
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
+import { ProductCard } from '../components/product/ProductCard';
+import { useToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 
 import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
@@ -14,16 +16,33 @@ const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
     (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
 };
 
+// Normalize a raw product row from the API into the minimal shape ProductCard needs.
+const mapProductSummary = (p: any) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    originalPrice: p.originalPrice ?? p.original_price,
+    category: p.category,
+    duration: p.duration,
+    mainImages: p.mainImages ?? p.main_images ?? [],
+    isPopular: p.isPopular ?? p.is_popular === 1,
+    isFeatured: p.isFeatured ?? p.is_featured === 1,
+    bookingCount: p.bookingCount ?? p.booking_count ?? 0,
+});
+
 export const ProductDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { t } = useTranslation();
+    const { showToast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [isInWishlist, setIsInWishlist] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
     const [productReviews, setProductReviews] = useState<any[]>([]);
+    const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+    const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -113,9 +132,50 @@ export const ProductDetail: React.FC = () => {
             }
         };
 
+        const fetchRelatedAndRecentlyViewed = async () => {
+            if (!id) return;
+            try {
+                // Related: fetch all products once, filter same-category and active, exclude current
+                const all = await api.products.list();
+                if (Array.isArray(all)) {
+                    const current = all.find((p: any) => p.id === id);
+                    const sameCategory = all.filter((p: any) =>
+                        p.id !== id &&
+                        p.status === 'active' &&
+                        current && p.category === current.category
+                    );
+                    // Sort by booking_count desc, then by is_popular
+                    sameCategory.sort((a: any, b: any) => {
+                        const popA = a.is_popular === 1 ? 1 : 0;
+                        const popB = b.is_popular === 1 ? 1 : 0;
+                        if (popA !== popB) return popB - popA;
+                        return (b.booking_count || 0) - (a.booking_count || 0);
+                    });
+                    setRelatedProducts(sameCategory.slice(0, 6).map(mapProductSummary));
+                }
+            } catch {
+                // Related is optional
+            }
+
+            try {
+                const viewed = await api.recentlyViewed.list();
+                if (Array.isArray(viewed)) {
+                    // Exclude current product, keep most recent 8
+                    setRecentlyViewed(
+                        viewed
+                            .filter((v: any) => v.product_id !== id && v.type !== 'magazine')
+                            .slice(0, 8)
+                    );
+                }
+            } catch {
+                // Silently fail for non-logged-in users
+            }
+        };
+
         fetchProduct();
         checkWishlistStatus();
         fetchReviews();
+        fetchRelatedAndRecentlyViewed();
     }, [id]);
 
     // ... (handlers) ...
@@ -127,7 +187,7 @@ export const ProductDetail: React.FC = () => {
         try {
             const me = await api.auth.me();
             if (!me) {
-                alert(t('product_detail.login_required'));
+                showToast('warning', t('product_detail.wishlist_login_required'));
                 navigate('/login');
                 return;
             }
@@ -135,6 +195,7 @@ export const ProductDetail: React.FC = () => {
             if (isInWishlist) {
                 await api.wishlist.remove(product.id);
                 setIsInWishlist(false);
+                showToast('info', t('product_detail.wishlist_remove'));
             } else {
                 await api.wishlist.add({
                     product_id: product.id,
@@ -145,9 +206,16 @@ export const ProductDetail: React.FC = () => {
                     type: 'product'
                 });
                 setIsInWishlist(true);
+                showToast('success', t('product_detail.wishlist_add'));
             }
         } catch (error) {
             console.error('Wishlist toggle error:', error);
+            showToast(
+                'error',
+                isInWishlist
+                    ? t('product_detail.wishlist_remove_failed')
+                    : t('product_detail.wishlist_add_failed'),
+            );
         } finally {
             setWishlistLoading(false);
         }
@@ -172,7 +240,7 @@ export const ProductDetail: React.FC = () => {
         // Clipboard fallback
         try {
             await navigator.clipboard.writeText(shareUrl);
-            alert(t('product_detail.share_copied'));
+            showToast('success', t('product_detail.share_copied'));
         } catch {
             // Last-resort manual prompt
             window.prompt(t('product_detail.share_prompt'), shareUrl);
@@ -449,6 +517,28 @@ export const ProductDetail: React.FC = () => {
                                 }`}
                         ></div>
                     ))}
+                </div>
+
+                {/* Urgency Badges — top-left corner of hero */}
+                <div className="absolute top-4 left-4 flex gap-1.5 z-10">
+                    {product.isPopular && (
+                        <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-md flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                            {t('product_detail.badge_popular')}
+                        </span>
+                    )}
+                    {!product.isPopular && product.isFeatured && (
+                        <span className="bg-primary text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-md flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                            {t('product_detail.badge_new')}
+                        </span>
+                    )}
+                    {(product.bookingCount ?? 0) >= 5 && (
+                        <span className="bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-md flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">group</span>
+                            {t('product_detail.badge_booked', { count: product.bookingCount })}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -855,6 +945,71 @@ export const ProductDetail: React.FC = () => {
                         </>
                     )}
                 </div>
+            )}
+
+            {/* Related Products */}
+            {relatedProducts.length > 0 && (
+                <section className="bg-white dark:bg-background-dark mt-2 pt-6 pb-6">
+                    <h3 className="text-lg font-bold mb-4 px-6">{t('product_detail.related_title')}</h3>
+                    <div className="flex overflow-x-auto gap-3 px-6 pb-2 scrollbar-hide snap-x snap-mandatory">
+                        {relatedProducts.map((rel) => (
+                            <div key={rel.id} className="flex-shrink-0 w-[180px] snap-start relative">
+                                {(rel.isPopular || rel.bookingCount >= 5) && (
+                                    <span className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
+                                        {rel.isPopular
+                                            ? t('product_detail.badge_popular')
+                                            : t('product_detail.badge_booked', { count: rel.bookingCount })}
+                                    </span>
+                                )}
+                                <ProductCard product={rel} imageHeight="aspect-[4/3]" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Recently Viewed */}
+            {recentlyViewed.length > 0 && (
+                <section className="bg-white dark:bg-background-dark mt-2 pt-6 pb-6">
+                    <h3 className="text-lg font-bold mb-4 px-6 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">history</span>
+                        {t('product_detail.recently_viewed_title')}
+                    </h3>
+                    <div className="flex overflow-x-auto gap-3 px-6 pb-2 scrollbar-hide snap-x snap-mandatory">
+                        {recentlyViewed.map((item: any) => (
+                            <div
+                                key={item.product_id}
+                                onClick={() => navigate(`/products/${item.product_id}`)}
+                                className="flex-shrink-0 w-[140px] snap-start cursor-pointer active:scale-95 transition-transform"
+                            >
+                                <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2">
+                                    {item.image ? (
+                                        <img
+                                            src={getOptimizedImageUrl(item.image, 'thumbnailSmall')}
+                                            alt={item.title}
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover"
+                                            onError={hideBrokenImage}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                            <span className="material-symbols-outlined text-3xl">image</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-xs font-bold line-clamp-2 text-[#0e1a18] dark:text-white">
+                                    {item.title}
+                                </p>
+                                {item.price && (
+                                    <p className="text-xs font-bold text-primary mt-1">
+                                        ¥{typeof item.price === 'number' ? item.price.toLocaleString() : item.price}〜
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </section>
             )}
 
             {/* Floating Bottom Bar */}

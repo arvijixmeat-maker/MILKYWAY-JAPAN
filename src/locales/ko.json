@@ -127,7 +127,15 @@
         "breadcrumb": {
             "home": "홈",
             "products": "몽골 투어 상품"
-        }
+        },
+        "related_title": "이런 투어는 어떠세요",
+        "recently_viewed_title": "최근 본 상품",
+        "badge_popular": "인기",
+        "badge_new": "신상",
+        "badge_booked": "{{count}}명 예약",
+        "wishlist_login_required": "로그인이 필요한 서비스입니다.",
+        "wishlist_add_failed": "찜 추가에 실패했습니다.",
+        "wishlist_remove_failed": "찜 해제에 실패했습니다."
     },
     "auth": {
         "login_error": "로그인 오류: ",
