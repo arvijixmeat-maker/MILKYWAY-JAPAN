@@ -124,6 +124,7 @@ app.get('/', async (c) => {
     // Category landing page content columns
     const categoryLandingCols = [
         "landing_hero_image TEXT",
+        "landing_hero_images TEXT",        // JSON string array of image URLs (slider)
         "landing_hero_tagline TEXT",
         "landing_hero_title TEXT",
         "landing_hero_subtitle TEXT",

@@ -18,13 +18,18 @@ app.get('/', async (c) => {
         } else {
             result = await db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
         }
-        // Parse JSON landing_highlights if present
+        // Parse JSON landing_highlights / landing_hero_images if present
         const rows = (result.results || []).map((r: any) => ({
             ...r,
             landing_highlights: (() => {
                 if (!r.landing_highlights) return [];
                 if (typeof r.landing_highlights !== 'string') return r.landing_highlights;
                 try { return JSON.parse(r.landing_highlights); } catch { return []; }
+            })(),
+            landing_hero_images: (() => {
+                if (!r.landing_hero_images) return [];
+                if (typeof r.landing_hero_images !== 'string') return r.landing_hero_images;
+                try { return JSON.parse(r.landing_hero_images); } catch { return []; }
             })(),
         }));
         return c.json(rows);
@@ -45,6 +50,11 @@ app.get('/:slug', async (c) => {
             if (typeof row.landing_highlights !== 'string') return row.landing_highlights;
             try { return JSON.parse(row.landing_highlights); } catch { return []; }
         })();
+        row.landing_hero_images = (() => {
+            if (!row.landing_hero_images) return [];
+            if (typeof row.landing_hero_images !== 'string') return row.landing_hero_images;
+            try { return JSON.parse(row.landing_hero_images); } catch { return []; }
+        })();
         return c.json(row);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -60,18 +70,22 @@ app.post('/', async (c) => {
     const highlightsJson = Array.isArray(data.landing_highlights)
         ? JSON.stringify(data.landing_highlights)
         : (typeof data.landing_highlights === 'string' ? data.landing_highlights : null);
+    const heroImagesJson = Array.isArray(data.landing_hero_images)
+        ? JSON.stringify(data.landing_hero_images)
+        : (typeof data.landing_hero_images === 'string' ? data.landing_hero_images : null);
     try {
         await db.prepare(
             `INSERT INTO categories (
                 id, name, description, icon, image, sort_order, is_active, type,
-                landing_hero_image, landing_hero_tagline, landing_hero_title,
+                landing_hero_image, landing_hero_images, landing_hero_tagline, landing_hero_title,
                 landing_hero_subtitle, landing_accent_color, landing_highlights,
                 landing_product_grid_title
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             id, data.name, data.description || '', data.icon || '', data.image || '',
             data.sort_order || 0, data.is_active ?? 1, type,
             data.landing_hero_image || null,
+            heroImagesJson,
             data.landing_hero_tagline || null,
             data.landing_hero_title || null,
             data.landing_hero_subtitle || null,
@@ -93,11 +107,14 @@ app.put('/:id', async (c) => {
     const highlightsJson = Array.isArray(data.landing_highlights)
         ? JSON.stringify(data.landing_highlights)
         : (typeof data.landing_highlights === 'string' ? data.landing_highlights : null);
+    const heroImagesJson = Array.isArray(data.landing_hero_images)
+        ? JSON.stringify(data.landing_hero_images)
+        : (typeof data.landing_hero_images === 'string' ? data.landing_hero_images : null);
     try {
         await db.prepare(
             `UPDATE categories SET
                 name=?, description=?, icon=?, image=?, sort_order=?, is_active=?,
-                landing_hero_image=?, landing_hero_tagline=?, landing_hero_title=?,
+                landing_hero_image=?, landing_hero_images=?, landing_hero_tagline=?, landing_hero_title=?,
                 landing_hero_subtitle=?, landing_accent_color=?, landing_highlights=?,
                 landing_product_grid_title=?
              WHERE id=?`
@@ -105,6 +122,7 @@ app.put('/:id', async (c) => {
             data.name, data.description || '', data.icon || '', data.image || '',
             data.sort_order || 0, data.is_active ?? 1,
             data.landing_hero_image || null,
+            heroImagesJson,
             data.landing_hero_tagline || null,
             data.landing_hero_title || null,
             data.landing_hero_subtitle || null,

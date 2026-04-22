@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProductCard } from '../product/ProductCard';
 import { ProductSkeleton } from '../skeletons/ProductSkeleton';
@@ -21,7 +21,8 @@ export interface HighlightSection {
 }
 
 export interface CategoryLandingContent {
-    heroImage: string;
+    heroImage: string;                  // first/primary image (kept for backward compat)
+    heroImages?: string[];              // slide images; falls back to [heroImage] when empty
     heroTagline?: string;   // small overline, e.g. "今がチャンス！"
     heroTitle: string;      // big title
     heroSubtitle?: string;
@@ -39,34 +40,108 @@ interface Props {
 }
 
 // ─── Hero ─────────────────────────────────────────────────
-const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => (
-    <section className="relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden bg-slate-900">
-        <img
-            src={getOptimizedImageUrl(content.heroImage, 'heroBanner')}
-            alt={content.heroTitle}
-            fetchPriority="high"
-            loading="eager"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/30" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-            {content.heroTagline && (
-                <p className="text-white/90 text-sm font-semibold mb-3 drop-shadow-lg">
-                    {content.heroTagline}
-                </p>
+const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
+    const slides = (content.heroImages && content.heroImages.length > 0)
+        ? content.heroImages
+        : [content.heroImage];
+    const [activeIdx, setActiveIdx] = useState(0);
+    const touchStartX = useRef<number | null>(null);
+    const touchDeltaX = useRef(0);
+
+    // Auto-advance when there is more than one slide
+    useEffect(() => {
+        if (slides.length <= 1) return;
+        const id = window.setInterval(() => {
+            setActiveIdx((i) => (i + 1) % slides.length);
+        }, 5000);
+        return () => window.clearInterval(id);
+    }, [slides.length]);
+
+    const goTo = (idx: number) => {
+        if (slides.length === 0) return;
+        setActiveIdx(((idx % slides.length) + slides.length) % slides.length);
+    };
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchDeltaX.current = 0;
+    };
+    const onTouchMove = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+    };
+    const onTouchEnd = () => {
+        const threshold = 40;
+        if (touchDeltaX.current > threshold) goTo(activeIdx - 1);
+        else if (touchDeltaX.current < -threshold) goTo(activeIdx + 1);
+        touchStartX.current = null;
+        touchDeltaX.current = 0;
+    };
+
+    return (
+        <section
+            className="relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden bg-slate-900 select-none"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+        >
+            {/* Slides */}
+            <div
+                className="absolute inset-0 flex h-full transition-transform duration-500 ease-out"
+                style={{ width: `${slides.length * 100}%`, transform: `translateX(-${activeIdx * (100 / slides.length)}%)` }}
+            >
+                {slides.map((src, i) => (
+                    <div key={i} className="relative h-full" style={{ width: `${100 / slides.length}%` }}>
+                        <img
+                            src={getOptimizedImageUrl(src, 'heroBanner')}
+                            alt={`${content.heroTitle} - ${i + 1}`}
+                            fetchPriority={i === 0 ? 'high' : 'low'}
+                            loading={i === 0 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {/* Gradient overlay — stronger on the left to improve text legibility */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+            {/* Left-aligned text */}
+            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 max-w-[80%]">
+                {content.heroTagline && (
+                    <p className="text-white/90 text-xs sm:text-sm font-semibold mb-2 drop-shadow-lg">
+                        {content.heroTagline}
+                    </p>
+                )}
+                <h1 className="text-white text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight drop-shadow-xl">
+                    {content.heroTitle}
+                </h1>
+                {content.heroSubtitle && (
+                    <p className="text-white/90 text-xs sm:text-sm mt-3 leading-relaxed max-w-sm drop-shadow-lg whitespace-pre-line">
+                        {content.heroSubtitle}
+                    </p>
+                )}
+            </div>
+
+            {/* Pagination dots */}
+            {slides.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-1.5">
+                    {slides.map((_, i) => (
+                        <button
+                            key={i}
+                            type="button"
+                            onClick={() => goTo(i)}
+                            aria-label={`slide ${i + 1}`}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${i === activeIdx ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'}`}
+                        />
+                    ))}
+                </div>
             )}
-            <h1 className="text-white text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight drop-shadow-xl">
-                {content.heroTitle}
-            </h1>
-            {content.heroSubtitle && (
-                <p className="text-white/90 text-sm mt-3 leading-relaxed max-w-sm drop-shadow-lg">
-                    {content.heroSubtitle}
-                </p>
-            )}
-        </div>
-    </section>
-);
+        </section>
+    );
+};
 
 // ─── Highlight Card ───────────────────────────────────────
 const HighlightCardView: React.FC<{ card: HighlightCard; onClick?: () => void }> = ({ card, onClick }) => (

@@ -27,6 +27,7 @@ export const AdminCategoryManage: React.FC = () => {
                     order: c.order ?? c.sort_order ?? 0,
                     type: c.type || 'product',
                     landing_hero_image: c.landing_hero_image,
+                    landing_hero_images: Array.isArray(c.landing_hero_images) ? c.landing_hero_images : [],
                     landing_hero_tagline: c.landing_hero_tagline,
                     landing_hero_title: c.landing_hero_title,
                     landing_hero_subtitle: c.landing_hero_subtitle,
@@ -129,8 +130,14 @@ export const AdminCategoryManage: React.FC = () => {
 
     const handleSaveCategory = async (category: Category) => {
         try {
+            const heroImages = Array.isArray(category.landing_hero_images)
+                ? category.landing_hero_images.filter(Boolean)
+                : [];
+            // Keep legacy landing_hero_image in sync with the first slide for backward compat
+            const primaryHero = heroImages[0] || category.landing_hero_image || null;
             const landingPayload = {
-                landing_hero_image: category.landing_hero_image || null,
+                landing_hero_image: primaryHero,
+                landing_hero_images: heroImages,
                 landing_hero_tagline: category.landing_hero_tagline || null,
                 landing_hero_title: category.landing_hero_title || null,
                 landing_hero_subtitle: category.landing_hero_subtitle || null,
@@ -545,21 +552,20 @@ const LandingPageEditor: React.FC<LandingEditorProps> = ({ formData, setFormData
                     <div className="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-700">
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">히어로 배너</p>
 
-                        <div>
-                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">배경 이미지</label>
-                            {formData.landing_hero_image && (
-                                <img src={formData.landing_hero_image} alt="hero" className="mb-2 w-full aspect-video object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) uploadImageTo(file, (url) => setFormData({ ...formData, landing_hero_image: url }));
-                                }}
-                                className="text-xs"
-                            />
-                        </div>
+                        <HeroImagesEditor
+                            images={(() => {
+                                const imgs = Array.isArray(formData.landing_hero_images) ? formData.landing_hero_images : [];
+                                // Migrate legacy single image into the array if array is empty
+                                if (imgs.length === 0 && formData.landing_hero_image) return [formData.landing_hero_image];
+                                return imgs;
+                            })()}
+                            onChange={(next) => setFormData({
+                                ...formData,
+                                landing_hero_images: next,
+                                landing_hero_image: next[0] || '',
+                            })}
+                            uploadImageTo={uploadImageTo}
+                        />
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -728,6 +734,105 @@ const LandingPageEditor: React.FC<LandingEditorProps> = ({ formData, setFormData
                     </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+// ─── Hero Images (Slider) Editor ───────────────────────────────────
+interface HeroImagesEditorProps {
+    images: string[];
+    onChange: (next: string[]) => void;
+    uploadImageTo: (file: File, cb: (url: string) => void) => void;
+}
+
+const HeroImagesEditor: React.FC<HeroImagesEditorProps> = ({ images, onChange, uploadImageTo }) => {
+    const handleFiles = async (files: File[]) => {
+        // Upload sequentially so we can keep a reliable running list
+        let current = [...images];
+        for (const file of files) {
+            await new Promise<void>((resolve) => {
+                uploadImageTo(file, (url) => {
+                    current = [...current, url];
+                    onChange(current);
+                    resolve();
+                });
+            });
+        }
+    };
+    const removeImage = (idx: number) => onChange(images.filter((_, i) => i !== idx));
+    const moveImage = (idx: number, dir: 'left' | 'right') => {
+        const newIdx = dir === 'left' ? idx - 1 : idx + 1;
+        if (newIdx < 0 || newIdx >= images.length) return;
+        const next = [...images];
+        [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+        onChange(next);
+    };
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    배경 이미지 슬라이드 ({images.length})
+                </label>
+                <span className="text-[10px] text-slate-400">첫 번째 이미지가 대표 이미지로 사용됩니다</span>
+            </div>
+
+            {images.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                    {images.map((url, idx) => (
+                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                            <img src={url} alt={`hero-${idx + 1}`} className="w-full aspect-video object-cover" />
+                            <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-bold">
+                                {idx + 1}
+                            </div>
+                            <div className="absolute top-1 right-1 flex gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => moveImage(idx, 'left')}
+                                    disabled={idx === 0}
+                                    className="p-1 rounded bg-black/60 text-white disabled:opacity-30 hover:bg-black/80"
+                                    aria-label="move left"
+                                >
+                                    <span className="material-symbols-outlined text-xs">chevron_left</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => moveImage(idx, 'right')}
+                                    disabled={idx === images.length - 1}
+                                    className="p-1 rounded bg-black/60 text-white disabled:opacity-30 hover:bg-black/80"
+                                    aria-label="move right"
+                                >
+                                    <span className="material-symbols-outlined text-xs">chevron_right</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => removeImage(idx)}
+                                    className="p-1 rounded bg-red-500/90 text-white hover:bg-red-600"
+                                    aria-label="delete"
+                                >
+                                    <span className="material-symbols-outlined text-xs">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <label className="flex items-center justify-center gap-2 w-full py-3 text-xs font-semibold text-slate-500 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:text-teal-600 hover:border-teal-400 cursor-pointer transition-colors">
+                <span className="material-symbols-outlined text-base">add_photo_alternate</span>
+                이미지 추가
+                <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        handleFiles(files);
+                        e.target.value = '';
+                    }}
+                />
+            </label>
         </div>
     );
 };

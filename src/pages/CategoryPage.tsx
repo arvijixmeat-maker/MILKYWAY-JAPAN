@@ -72,8 +72,17 @@ export const CategoryPage: React.FC = () => {
         );
     }
 
+    const heroImages: string[] = (() => {
+        const arr = Array.isArray(category.landing_hero_images) ? category.landing_hero_images.filter(Boolean) : [];
+        if (arr.length > 0) return arr;
+        const single = category.landing_hero_image || category.image;
+        if (single) return [single];
+        return [FALLBACK_HERO];
+    })();
+
     const content: CategoryLandingContent = {
-        heroImage: category.landing_hero_image || category.image || FALLBACK_HERO,
+        heroImage: heroImages[0],
+        heroImages,
         heroTagline: category.landing_hero_tagline || undefined,
         heroTitle: category.landing_hero_title || category.name,
         heroSubtitle: category.landing_hero_subtitle || category.description || undefined,

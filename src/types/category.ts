@@ -23,7 +23,8 @@ export interface Category {
     type?: 'product' | 'magazine'; // 'product' by default if undefined
 
     // Landing page content (customer-facing /category/:slug)
-    landing_hero_image?: string;
+    landing_hero_image?: string;        // legacy single image (kept in sync with first slide)
+    landing_hero_images?: string[];     // slider images
     landing_hero_tagline?: string;
     landing_hero_title?: string;
     landing_hero_subtitle?: string;
