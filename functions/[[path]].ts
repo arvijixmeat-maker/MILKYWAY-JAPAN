@@ -50,6 +50,10 @@ const STATIC_PAGE_META: Record<string, { title: string; description: string }> =
     '/travel-mates': {
         title: '同行者募集 | Milkyway Japan',
         description: 'モンゴル旅行の同行者を募集・検索。一人旅が不安な方も、旅仲間を見つけてモンゴルツアーを一緒に楽しみましょう。'
+    },
+    '/about': {
+        title: '会社案内 – モンゴル現地の旅行会社 | Milkyway Japan',
+        description: 'モンゴル現地の旅行会社「モンゴリア銀河系（天の川）」。韓国でホテル経営学科を卒業しモンゴルで暮らす代表と副代表が設立した家族経営の旅行会社です。日本人旅行客に合わせた日程とリーズナブルな価格で、どこにもないモンゴル旅行をご提案します。'
     }
 };
 

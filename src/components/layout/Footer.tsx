@@ -58,6 +58,8 @@ export const Footer: React.FC = () => {
 
                 {/* Legal Links */}
                 <div className="flex gap-3 mb-2 font-semibold">
+                    <a href="/about" className="hover:text-slate-800">会社案内</a>
+                    <span className="text-slate-300">|</span>
                     <a href="/terms-of-service" className="hover:text-slate-800">{t('footer.terms_of_service')}</a>
                     <span className="text-slate-300">|</span>
                     <a href="/privacy-policy" className="hover:text-slate-800">{t('footer.privacy_policy')}</a>

@@ -8,6 +8,7 @@ const ProductDetail = lazy(() => import('./pages/ProductDetail').then(module => 
 const DocumentItinerary = lazy(() => import('./pages/DocumentItinerary').then(module => ({ default: module.DocumentItinerary })))
 const DocumentContract = lazy(() => import('./pages/DocumentContract').then(module => ({ default: module.DocumentContract })))
 const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })))
+const About = lazy(() => import('./pages/About').then(module => ({ default: module.About })))
 import { AdminGuard } from './components/auth/AdminGuard'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { SEO } from './components/seo/SEO'
@@ -102,6 +103,7 @@ function App() {
               </Layout>
             } />
             <Route path="/category/:slug" element={<Layout><CategoryPage /></Layout>} />
+            <Route path="/about" element={<Layout><About /></Layout>} />
             <Route path="/products" element={<TourProducts />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/reservation/:id" element={<Reservation />} />
