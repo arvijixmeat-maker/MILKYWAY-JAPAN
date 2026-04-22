@@ -40,7 +40,9 @@ body {
     background-color: #ffffff;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.08); /* Desktop shadow */
     position: relative;
-    overflow-x: hidden;
+    /* `clip` prevents horizontal overflow without creating a scroll container,
+       which keeps position:sticky working relative to the viewport (not the wrapper). */
+    overflow-x: clip;
 }
 
 .dark .mobile-app-wrapper {
