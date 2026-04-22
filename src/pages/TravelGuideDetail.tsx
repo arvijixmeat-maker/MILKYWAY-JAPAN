@@ -15,7 +15,9 @@ interface Magazine {
     category: string;
     image: string;
     tag?: string;
+    author?: string;
     createdAt: string;
+    updatedAt?: string;
 }
 
 export const TravelGuideDetail: React.FC = () => {
@@ -49,7 +51,9 @@ export const TravelGuideDetail: React.FC = () => {
                     category: magData.category,
                     image: magData.thumbnail || magData.image || '',
                     tag: magData.tag,
-                    createdAt: magData.created_at
+                    author: magData.author,
+                    createdAt: magData.created_at,
+                    updatedAt: magData.updated_at,
                 };
                 setMagazine(currentMagazine);
 
@@ -166,6 +170,52 @@ export const TravelGuideDetail: React.FC = () => {
         );
     }
 
+    // ─── SEO: Article JSON-LD (BlogPosting) + BreadcrumbList ───────────
+    const canonicalPath = `/travel-guide/${id}`;
+    const absoluteUrl = `https://mongolryokou.com${canonicalPath}`;
+    const absoluteImage = magazine.image
+        ? (magazine.image.startsWith('http') ? magazine.image : `https://mongolryokou.com${magazine.image}`)
+        : 'https://mongolryokou.com/favicon.png';
+
+    const articleLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: magazine.title,
+        description: magazine.description,
+        image: [absoluteImage],
+        datePublished: magazine.createdAt,
+        dateModified: magazine.updatedAt || magazine.createdAt,
+        author: {
+            '@type': magazine.author ? 'Person' : 'Organization',
+            name: magazine.author || 'Milkyway Japan',
+        },
+        publisher: {
+            '@type': 'Organization',
+            name: 'Milkyway Japan',
+            logo: {
+                '@type': 'ImageObject',
+                url: 'https://mongolryokou.com/favicon.png',
+            },
+        },
+        mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': absoluteUrl,
+        },
+        articleSection: magazine.category || undefined,
+        keywords: [magazine.category, magazine.tag].filter(Boolean).join(', ') || undefined,
+        inLanguage: 'ja',
+    };
+
+    const breadcrumbLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://mongolryokou.com/' },
+            { '@type': 'ListItem', position: 2, name: '旅行ガイド', item: 'https://mongolryokou.com/travel-guide' },
+            { '@type': 'ListItem', position: 3, name: magazine.title, item: absoluteUrl },
+        ],
+    };
+
     return (
         <div className="bg-white dark:bg-slate-900 min-h-screen pb-24 font-display overflow-x-hidden">
             <SEO
@@ -173,6 +223,8 @@ export const TravelGuideDetail: React.FC = () => {
                 description={magazine.description}
                 image={magazine.image}
                 keywords={`${magazine.category}, ${magazine.tag || ''}`}
+                canonical={canonicalPath}
+                structuredData={[articleLd, breadcrumbLd]}
             />
             {/* Header Image */}
             <div className="relative h-[300px] md:h-[400px]">

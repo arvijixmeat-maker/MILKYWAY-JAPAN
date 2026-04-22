@@ -1309,6 +1309,27 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     />
                                 </div>
 
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                            상품 설명 <span className="text-xs font-normal text-slate-500">(검색 결과·공유 미리보기용)</span>
+                                        </label>
+                                        <span className={`text-xs ${(formData.description?.length || 0) > 160 ? 'text-red-500' : 'text-slate-400'}`}>
+                                            {formData.description?.length || 0} / 160
+                                        </span>
+                                    </div>
+                                    <textarea
+                                        value={formData.description || ''}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        rows={3}
+                                        placeholder="例: 満天の星空と夕陽に染まる大草原、遊牧民文化を体験する中央モンゴル3泊4日ツアー。日本語ガイド同行、全日程食事・宿泊込み。"
+                                        className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none resize-none"
+                                    />
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                        Google検索・LINE/カカオ共有時に表示される短い紹介文です。100〜160字が最適です。
+                                    </p>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">

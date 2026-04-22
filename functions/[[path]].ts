@@ -85,6 +85,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const pageUrl = url.href;
     const canonicalUrl = `${SEO_CONSTANTS.SITE_URL}${path === '/' ? '/' : path.replace(/\/$/, '')}`;
 
+    // Server-rendered JSON-LD blocks. These are appended inside <head> so that crawlers
+    // that do NOT execute JavaScript (LINE, Kakao, Facebook, some Rich Results previewers)
+    // can still see structured data. React's react-helmet still injects its own blocks
+    // client-side — schema.org allows multiple valid JSON-LD scripts on one page.
+    const extraJsonLd: string[] = [];
+
     // Check static routes first
     const normalizedPath = path.replace(/\/$/, '') || '/';
     if (STATIC_PAGE_META[normalizedPath]) {
@@ -106,14 +112,62 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 pageDescription = product.description || SEO_CONSTANTS.DESCRIPTION;
 
                 // Parse images if stored as stringified JSON
-                let images = [];
+                let images: string[] = [];
                 try {
-                    images = typeof product.mainImages === 'string' ? JSON.parse(product.mainImages) : product.mainImages;
+                    images = typeof product.mainImages === 'string' ? JSON.parse(product.mainImages) : (product.mainImages || []);
                 } catch (e) { }
+                const absoluteImages = (Array.isArray(images) ? images : [])
+                    .filter((img: string) => img && !img.startsWith('data:'))
+                    .map((img: string) => getAbsoluteImageUrl(img));
 
-                if (images && images.length > 0) {
-                    pageImage = getAbsoluteImageUrl(images[0]);
+                if (absoluteImages.length > 0) {
+                    pageImage = absoluteImages[0];
                 }
+
+                // Build Product + BreadcrumbList JSON-LD on the server so crawlers that
+                // don't run JS still see structured data (LINE, Kakao, FB, some previewers).
+                const priceValidUntil = new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+                    .toISOString().split('T')[0];
+
+                const productLd: any = {
+                    '@context': 'https://schema.org/',
+                    '@type': ['Product', 'TouristTrip'],
+                    name: product.name,
+                    image: absoluteImages.length > 0 ? absoluteImages : undefined,
+                    description: product.description || SEO_CONSTANTS.DESCRIPTION,
+                    brand: { '@type': 'Brand', name: 'Milkyway Japan' },
+                    category: product.category || 'モンゴルツアー',
+                    touristType: product.category || 'モンゴルツアー',
+                    ...(product.duration ? {
+                        additionalProperty: [
+                            { '@type': 'PropertyValue', name: '所要時間', value: product.duration }
+                        ]
+                    } : {}),
+                    offers: {
+                        '@type': 'Offer',
+                        url: pageUrl,
+                        priceCurrency: 'JPY',
+                        price: product.price,
+                        priceValidUntil: priceValidUntil,
+                        itemCondition: 'https://schema.org/NewCondition',
+                        availability: product.status === 'active'
+                            ? 'https://schema.org/InStock'
+                            : 'https://schema.org/OutOfStock',
+                        seller: { '@type': 'Organization', name: 'Milkyway Japan' },
+                    },
+                };
+                extraJsonLd.push(JSON.stringify(productLd));
+
+                const breadcrumbLd = {
+                    '@context': 'https://schema.org',
+                    '@type': 'BreadcrumbList',
+                    itemListElement: [
+                        { '@type': 'ListItem', position: 1, name: 'ホーム', item: `${SEO_CONSTANTS.SITE_URL}/` },
+                        { '@type': 'ListItem', position: 2, name: 'モンゴルツアー商品', item: `${SEO_CONSTANTS.SITE_URL}/products` },
+                        { '@type': 'ListItem', position: 3, name: product.name, item: canonicalUrl },
+                    ],
+                };
+                extraJsonLd.push(JSON.stringify(breadcrumbLd));
             }
         }
         // --- Logic for Travel Guides (Magazines) ---
@@ -129,9 +183,47 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                         pageDescription = (guide.subtitle || guide.description || SEO_CONSTANTS.DESCRIPTION) as string;
 
                         const imageStr = (guide.thumbnail || guide.image) as string;
+                        const absoluteGuideImage = imageStr ? getAbsoluteImageUrl(imageStr) : pageImage;
                         if (imageStr) {
-                            pageImage = getAbsoluteImageUrl(imageStr);
+                            pageImage = absoluteGuideImage;
                         }
+
+                        const articleLd = {
+                            '@context': 'https://schema.org',
+                            '@type': 'BlogPosting',
+                            headline: guide.title,
+                            description: pageDescription,
+                            image: [absoluteGuideImage],
+                            datePublished: guide.created_at,
+                            dateModified: guide.updated_at || guide.created_at,
+                            author: {
+                                '@type': guide.author ? 'Person' : 'Organization',
+                                name: guide.author || 'Milkyway Japan',
+                            },
+                            publisher: {
+                                '@type': 'Organization',
+                                name: 'Milkyway Japan',
+                                logo: {
+                                    '@type': 'ImageObject',
+                                    url: `${SEO_CONSTANTS.SITE_URL}/favicon.png`,
+                                },
+                            },
+                            mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+                            articleSection: guide.category || undefined,
+                            inLanguage: 'ja',
+                        };
+                        extraJsonLd.push(JSON.stringify(articleLd));
+
+                        const breadcrumbLd = {
+                            '@context': 'https://schema.org',
+                            '@type': 'BreadcrumbList',
+                            itemListElement: [
+                                { '@type': 'ListItem', position: 1, name: 'ホーム', item: `${SEO_CONSTANTS.SITE_URL}/` },
+                                { '@type': 'ListItem', position: 2, name: '旅行ガイド', item: `${SEO_CONSTANTS.SITE_URL}/travel-guide` },
+                                { '@type': 'ListItem', position: 3, name: guide.title, item: canonicalUrl },
+                            ],
+                        };
+                        extraJsonLd.push(JSON.stringify(breadcrumbLd));
                     }
                 } catch (e) {
                     console.log("Guide meta fetch skipped/failed:", e);
@@ -181,6 +273,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         })
         .on('meta[name="twitter:image"]', {
             element(el) { el.setAttribute('content', pageImage); }
+        })
+        // Append server-rendered JSON-LD blocks inside <head> so crawlers without JS see them.
+        // Escape `</script>` inside payloads (JSON.stringify leaves forward slashes raw).
+        .on('head', {
+            element(el) {
+                for (const ld of extraJsonLd) {
+                    const safe = ld.replace(/<\/script>/gi, '<\\/script>');
+                    el.append(`<script type="application/ld+json">${safe}</script>`, { html: true });
+                }
+            }
         })
         .transform(response);
 };
