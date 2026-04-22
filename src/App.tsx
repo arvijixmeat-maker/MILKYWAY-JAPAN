@@ -5,10 +5,6 @@ import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 const TourProducts = lazy(() => import('./pages/TourProducts').then(module => ({ default: module.TourProducts })))
 const ProductDetail = lazy(() => import('./pages/ProductDetail').then(module => ({ default: module.ProductDetail })))
-const MongolTravel = lazy(() => import('./pages/MongolTravel').then(module => ({ default: module.MongolTravel })))
-const MongolTour = lazy(() => import('./pages/MongolTour').then(module => ({ default: module.MongolTour })))
-const HorseRidingTour = lazy(() => import('./pages/HorseRidingTour').then(module => ({ default: module.HorseRidingTour })))
-const GobiDesert = lazy(() => import('./pages/GobiDesert').then(module => ({ default: module.GobiDesert })))
 const DocumentItinerary = lazy(() => import('./pages/DocumentItinerary').then(module => ({ default: module.DocumentItinerary })))
 const DocumentContract = lazy(() => import('./pages/DocumentContract').then(module => ({ default: module.DocumentContract })))
 const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })))
@@ -105,10 +101,6 @@ function App() {
                 <Home />
               </Layout>
             } />
-            <Route path="/mongol-travel" element={<Layout><MongolTravel /></Layout>} />
-            <Route path="/mongol-tour" element={<Layout><MongolTour /></Layout>} />
-            <Route path="/horse-riding-tour" element={<Layout><HorseRidingTour /></Layout>} />
-            <Route path="/gobi-desert" element={<Layout><GobiDesert /></Layout>} />
             <Route path="/category/:slug" element={<Layout><CategoryPage /></Layout>} />
             <Route path="/products" element={<TourProducts />} />
             <Route path="/products/:id" element={<ProductDetail />} />

@@ -136,6 +136,11 @@ export const api = {
     },
     reviews: {
         list: async () => request(`${API_BASE}/reviews`),
+        listForProduct: async (productId: string, approvedOnly: boolean = true) => {
+            const params = new URLSearchParams({ product_id: productId });
+            if (approvedOnly) params.set('approved', '1');
+            return request(`${API_BASE}/reviews?${params.toString()}`);
+        },
         get: async (id: string) => request(`${API_BASE}/reviews/${id}`),
         create: async (data: any) => request(`${API_BASE}/reviews`, {
             method: 'POST',

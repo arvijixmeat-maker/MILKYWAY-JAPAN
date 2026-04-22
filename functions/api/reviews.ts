@@ -2,11 +2,18 @@ import { Hono } from 'hono';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /api/reviews
+// GET /api/reviews  — optional filters: ?product_id=... & ?approved=1
 app.get('/', async (c) => {
     const db = c.env.DB;
+    const productId = c.req.query('product_id');
+    const approvedParam = c.req.query('approved');
     try {
-        const result = await db.prepare('SELECT * FROM reviews ORDER BY created_at DESC').all();
+        const where: string[] = [];
+        const binds: any[] = [];
+        if (productId) { where.push('product_id = ?'); binds.push(productId); }
+        if (approvedParam === '1' || approvedParam === 'true') { where.push('is_approved = 1'); }
+        const sql = `SELECT * FROM reviews${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC`;
+        const result = await (binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql)).all();
         return c.json(result.results);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);

@@ -28,10 +28,10 @@ export const Footer: React.FC = () => {
 
             {/* SEO Internal Links */}
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-6 text-xs text-slate-500 font-medium">
-                <a href="/mongol-travel" className="hover:text-slate-800 transition-colors">モンゴル旅行ガイド</a>
-                <a href="/mongol-tour" className="hover:text-slate-800 transition-colors">モンゴルツアー比較</a>
-                <a href="/horse-riding-tour" className="hover:text-slate-800 transition-colors">モンゴル乗馬旅行</a>
-                <a href="/gobi-desert" className="hover:text-slate-800 transition-colors">ゴビ砂漠ツアー</a>
+                <a href="/travel-guide" className="hover:text-slate-800 transition-colors">モンゴル旅行ガイド</a>
+                <a href="/products" className="hover:text-slate-800 transition-colors">モンゴルツアー比較</a>
+                <a href="/category/horse-riding-tour" className="hover:text-slate-800 transition-colors">モンゴル乗馬旅行</a>
+                <a href="/category/gobi-desert" className="hover:text-slate-800 transition-colors">ゴビ砂漠ツアー</a>
                 <a href="/products" className="hover:text-slate-800 transition-colors">モンゴルツアー商品一覧</a>
             </div>
 

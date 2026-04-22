@@ -18,6 +18,7 @@ export const ProductDetail: React.FC = () => {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [isInWishlist, setIsInWishlist] = useState(false);
     const [wishlistLoading, setWishlistLoading] = useState(false);
+    const [productReviews, setProductReviews] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -97,8 +98,19 @@ export const ProductDetail: React.FC = () => {
             }
         };
 
+        const fetchReviews = async () => {
+            if (!id) return;
+            try {
+                const list = await api.reviews.listForProduct(id, true);
+                if (Array.isArray(list)) setProductReviews(list);
+            } catch {
+                // Reviews are optional for rendering — silently ignore.
+            }
+        };
+
         fetchProduct();
         checkWishlistStatus();
+        fetchReviews();
     }, [id]);
 
     // ... (handlers) ...
@@ -176,43 +188,74 @@ export const ProductDetail: React.FC = () => {
         product.price ? `¥${product.price.toLocaleString()}〜` : ''
     ].filter(Boolean).join(' ').substring(0, 160);
 
-    // Create JSON-LD Product Schema (enhanced)
-    const productStructuredData = {
+    // ── Aggregate rating + sample reviews from approved user reviews ──
+    const approvedReviews = productReviews.filter((r: any) => r.is_approved === 1 || r.is_approved === true);
+    const ratingSum = approvedReviews.reduce((sum: number, r: any) => sum + (Number(r.rating) || 0), 0);
+    const avgRating = approvedReviews.length > 0 ? Number((ratingSum / approvedReviews.length).toFixed(1)) : 0;
+    // Google requires a minimum to show rich rating snippets; be conservative.
+    const aggregateRating = approvedReviews.length >= 1 ? {
+        "@type": "AggregateRating",
+        "ratingValue": avgRating,
+        "reviewCount": approvedReviews.length,
+        "bestRating": 5,
+        "worstRating": 1,
+    } : undefined;
+
+    // Up to 5 most recent reviews embedded as Review nodes
+    const reviewLd = approvedReviews.slice(0, 5).map((r: any) => ({
+        "@type": "Review",
+        "author": { "@type": "Person", "name": r.user_name || r.author_name || '匿名' },
+        "datePublished": r.created_at ? String(r.created_at).split(' ')[0] : undefined,
+        "reviewRating": { "@type": "Rating", "ratingValue": Number(r.rating) || 5, "bestRating": 5, "worstRating": 1 },
+        "reviewBody": r.content || r.title || '',
+        "name": r.title || undefined,
+    }));
+
+    // ── Offer: AggregateOffer when multiple pricing options exist ──
+    const pricingOptionPrices = Array.isArray(product.pricingOptions)
+        ? product.pricingOptions.map((p: any) => Number(p.price)).filter((n: number) => Number.isFinite(n) && n > 0)
+        : [];
+    const availability = product.status === 'active' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+    const priceValidUntil = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+
+    const offersLd = pricingOptionPrices.length > 1 ? {
+        "@type": "AggregateOffer",
+        "priceCurrency": "JPY",
+        "lowPrice": Math.min(...pricingOptionPrices),
+        "highPrice": Math.max(...pricingOptionPrices),
+        "offerCount": pricingOptionPrices.length,
+        "availability": availability,
+        "url": window.location.href,
+        "seller": { "@type": "Organization", "name": "Milkyway Japan" },
+    } : {
+        "@type": "Offer",
+        "url": window.location.href,
+        "priceCurrency": "JPY",
+        "price": product.price,
+        "priceValidUntil": priceValidUntil,
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": availability,
+        "seller": { "@type": "Organization", "name": "Milkyway Japan" },
+    };
+
+    // Create JSON-LD Product Schema (enhanced) — dual-typed for travel rich results.
+    const productStructuredData: any = {
         "@context": "https://schema.org/",
-        "@type": "Product",
+        "@type": ["Product", "TouristTrip"],
         "name": product.name,
         "image": validImages.length > 0 ? validImages : undefined,
-        "description": product.description || product.highlights?.[0]?.description || t('product_detail.header_title'),
-        "brand": {
-            "@type": "Brand",
-            "name": "Milkyway Japan"
-        },
+        "description": (product.included && product.included.length > 0)
+            ? `${product.description || ''}。ツアーに含まれるもの: ${product.included.join('、')}`
+            : (product.description || product.highlights?.[0]?.description || t('product_detail.header_title')),
+        "brand": { "@type": "Brand", "name": "Milkyway Japan" },
         "category": product.category || "モンゴルツアー",
+        "touristType": product.category || "モンゴルツアー",
         ...(product.duration ? { "additionalProperty": [
             { "@type": "PropertyValue", "name": "所要時間", "value": product.duration }
         ]} : {}),
-        "offers": {
-            "@type": "Offer",
-            "url": window.location.href,
-            "priceCurrency": "JPY",
-            "price": product.price,
-            "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-            "itemCondition": "https://schema.org/NewCondition",
-            "availability": product.status === 'active' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-            "seller": {
-                "@type": "Organization",
-                "name": "Milkyway Japan"
-            }
-        },
-        // Include highlights as product features
-        ...(product.highlights && product.highlights.length > 0 ? {
-            "additionalType": "https://schema.org/TouristTrip",
-            "touristType": product.category || "モンゴルツアー"
-        } : {}),
-        // Include items as part of the description
-        ...(product.included && product.included.length > 0 ? {
-            "description": `${product.description || ''}。ツアーに含まれるもの: ${product.included.join('、')}`
-        } : {})
+        "offers": offersLd,
+        ...(aggregateRating ? { "aggregateRating": aggregateRating } : {}),
+        ...(reviewLd.length > 0 ? { "review": reviewLd } : {}),
     };
 
     // BreadcrumbList for navigation context
