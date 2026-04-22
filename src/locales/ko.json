@@ -114,7 +114,20 @@
         "inclusions_title": "포함 내역",
         "exclusions_title": "불포함 내역",
         "consult_button": "상담하기",
-        "book_button": "예약하기"
+        "book_button": "예약하기",
+        "reviews_title": "고객 리뷰",
+        "reviews_view_all": "모든 리뷰 보기",
+        "rating_aria": "5점 만점 중 {{rating}}점",
+        "share_label": "이 투어 공유하기",
+        "share_copied": "URL이 복사되었습니다",
+        "share_prompt": "URL을 복사해주세요:",
+        "wishlist_add": "찜 목록에 추가",
+        "wishlist_remove": "찜 목록에서 제거",
+        "login_required": "로그인이 필요한 서비스입니다.",
+        "breadcrumb": {
+            "home": "홈",
+            "products": "몽골 투어 상품"
+        }
     },
     "auth": {
         "login_error": "로그인 오류: ",

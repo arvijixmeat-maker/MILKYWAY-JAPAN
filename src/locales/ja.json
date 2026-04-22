@@ -130,7 +130,20 @@
         "trust_badge": "日本語ガイド同行可能",
         "trust_message": "日本語でのコミュニケーションに不安はありません。ベテランの現地日本人スタッフがサポートします。",
         "consult_button": "相談する",
-        "book_button": "予約する"
+        "book_button": "予約する",
+        "reviews_title": "お客様の口コミ",
+        "reviews_view_all": "すべての口コミを見る",
+        "rating_aria": "{{rating}}点中5点",
+        "share_label": "このツアーをシェア",
+        "share_copied": "URLをコピーしました",
+        "share_prompt": "URLをコピーしてください:",
+        "wishlist_add": "ウィッシュリストに追加",
+        "wishlist_remove": "ウィッシュリストから削除",
+        "login_required": "ログインが必要なサービスです。",
+        "breadcrumb": {
+            "home": "ホーム",
+            "products": "モンゴルツアー商品"
+        }
     },
     "auth": {
         "login_error": "ログインエラー: ",

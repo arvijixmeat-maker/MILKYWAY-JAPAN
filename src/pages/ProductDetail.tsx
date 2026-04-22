@@ -127,7 +127,7 @@ export const ProductDetail: React.FC = () => {
         try {
             const me = await api.auth.me();
             if (!me) {
-                alert('로그인이 필요한 서비스입니다.');
+                alert(t('product_detail.login_required'));
                 navigate('/login');
                 return;
             }
@@ -172,24 +172,62 @@ export const ProductDetail: React.FC = () => {
         // Clipboard fallback
         try {
             await navigator.clipboard.writeText(shareUrl);
-            alert('URLをコピーしました');
+            alert(t('product_detail.share_copied'));
         } catch {
             // Last-resort manual prompt
-            window.prompt('URLをコピーしてください:', shareUrl);
+            window.prompt(t('product_detail.share_prompt'), shareUrl);
         }
     };
 
     const [activeTab, setActiveTab] = useState<'intro' | 'itinerary' | 'guide'>('intro');
+    // `true` while a click-triggered scroll is running — we pause the IntersectionObserver
+    // during that time so the observer doesn't overwrite the user's explicit tab choice
+    // with whichever section the viewport passes over on the way.
+    const isProgrammaticScrollRef = React.useRef(false);
 
     const scrollToSection = (id: 'intro' | 'itinerary' | 'guide') => {
         setActiveTab(id);
         const element = document.getElementById(id);
         if (element) {
+            isProgrammaticScrollRef.current = true;
             const yOffset = -130; // Adjust for sticky header + tab bar
             const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
             window.scrollTo({ top: y, behavior: 'smooth' });
+            // Smooth scroll typically completes within ~600ms; add a safety margin.
+            window.setTimeout(() => {
+                isProgrammaticScrollRef.current = false;
+            }, 800);
         }
     };
+
+    // Sync active tab to the section currently in view.
+    useEffect(() => {
+        if (isLoading || !product) return;
+        const ids = ['intro', 'itinerary', 'guide'] as const;
+        const sections = ids
+            .map((id) => document.getElementById(id))
+            .filter((el): el is HTMLElement => el !== null);
+        if (sections.length === 0) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (isProgrammaticScrollRef.current) return;
+            // Pick the entry closest to the top that is currently intersecting.
+            const visible = entries
+                .filter((e) => e.isIntersecting)
+                .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+            if (visible && ids.includes(visible.target.id as any)) {
+                setActiveTab(visible.target.id as 'intro' | 'itinerary' | 'guide');
+            }
+        }, {
+            // The top of the "active" zone sits just below the sticky header+tab bar (~128px),
+            // and we consider a section "current" until it has scrolled 60% out of the viewport.
+            rootMargin: '-130px 0px -50% 0px',
+            threshold: 0,
+        });
+
+        sections.forEach((s) => observer.observe(s));
+        return () => observer.disconnect();
+    }, [isLoading, product]);
 
     if (isLoading) {
         return <ProductDetailSkeleton />;
@@ -241,6 +279,21 @@ export const ProductDetail: React.FC = () => {
         "reviewBody": r.content || r.title || '',
         "name": r.title || undefined,
     }));
+
+    // ── Section content flags (used to hide empty tabs and sections) ──
+    const hasIntroContent =
+        (product.highlights?.length ?? 0) > 0 ||
+        (product.detailBlocks?.length ?? 0) > 0 ||
+        (product.detailImages?.length ?? 0) > 0 ||
+        (product.detailSlides?.length ?? 0) > 0;
+
+    const hasItineraryContent =
+        (product.itineraryBlocks?.length ?? 0) > 0 ||
+        (product.itineraryImages?.length ?? 0) > 0;
+
+    const hasGuideContent =
+        (product.included?.length ?? 0) > 0 ||
+        (product.excluded?.length ?? 0) > 0;
 
     // ── Offer: AggregateOffer when multiple pricing options exist ──
     const pricingOptionPrices = Array.isArray(product.pricingOptions)
@@ -326,7 +379,7 @@ export const ProductDetail: React.FC = () => {
                         <button
                             onClick={handleToggleWishlist}
                             disabled={wishlistLoading}
-                            aria-label={isInWishlist ? 'ウィッシュリストから削除' : 'ウィッシュリストに追加'}
+                            aria-label={isInWishlist ? t('product_detail.wishlist_remove') : t('product_detail.wishlist_add')}
                             aria-pressed={isInWishlist}
                             className={`text-[#0e1a18] dark:text-white flex size-10 items-center justify-center transition-opacity ${wishlistLoading ? 'opacity-50 cursor-wait' : 'active:scale-95'}`}
                         >
@@ -339,7 +392,7 @@ export const ProductDetail: React.FC = () => {
                         </button>
                         <button
                             onClick={handleShare}
-                            aria-label="このツアーをシェア"
+                            aria-label={t('product_detail.share_label')}
                             className="text-[#0e1a18] dark:text-white flex size-10 items-center justify-center active:scale-95"
                         >
                             <span className="material-symbols-outlined">share</span>
@@ -417,52 +470,63 @@ export const ProductDetail: React.FC = () => {
                 </div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-background-dark sticky top-[72px] z-40">
-                <button
-                    onClick={() => scrollToSection('intro')}
-                    className={`flex-1 py-4 text-center border-b-2 font-medium transition-colors ${activeTab === 'intro'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600'
-                        }`}
-                >
-                    {t('product_detail.tab_intro')}
-                </button>
-                <button
-                    onClick={() => scrollToSection('itinerary')}
-                    className={`flex-1 py-4 text-center border-b-2 font-medium transition-colors ${activeTab === 'itinerary'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600'
-                        }`}
-                >
-                    {t('product_detail.tab_itinerary')}
-                </button>
-                <button
-                    onClick={() => scrollToSection('guide')}
-                    className={`flex-1 py-4 text-center border-b-2 font-medium transition-colors ${activeTab === 'guide'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600'
-                        }`}
-                >
-                    {t('product_detail.tab_guide')}
-                </button>
-            </div>
+            {/* Tab Navigation — only show tabs whose target section has content */}
+            {(hasIntroContent || hasItineraryContent || hasGuideContent) && (
+                <div className="flex border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-background-dark sticky top-[72px] z-40">
+                    {hasIntroContent && (
+                        <button
+                            onClick={() => scrollToSection('intro')}
+                            className={`flex-1 py-4 text-center border-b-2 font-medium transition-colors ${activeTab === 'intro'
+                                ? 'border-primary text-primary font-bold'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
+                                }`}
+                        >
+                            {t('product_detail.tab_intro')}
+                        </button>
+                    )}
+                    {hasItineraryContent && (
+                        <button
+                            onClick={() => scrollToSection('itinerary')}
+                            className={`flex-1 py-4 text-center border-b-2 font-medium transition-colors ${activeTab === 'itinerary'
+                                ? 'border-primary text-primary font-bold'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
+                                }`}
+                        >
+                            {t('product_detail.tab_itinerary')}
+                        </button>
+                    )}
+                    {hasGuideContent && (
+                        <button
+                            onClick={() => scrollToSection('guide')}
+                            className={`flex-1 py-4 text-center border-b-2 font-medium transition-colors ${activeTab === 'guide'
+                                ? 'border-primary text-primary font-bold'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
+                                }`}
+                        >
+                            {t('product_detail.tab_guide')}
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Travel Highlights & Details */}
+            {hasIntroContent && (
             <div className="bg-white dark:bg-background-dark mt-2" id="intro">
-                <div className="p-6 pb-0">
-                    <h3 className="text-lg font-bold mb-4">{t('product_detail.highlights_title')}</h3>
-                    <div className="grid grid-cols-1 gap-4 mb-4">
-                        {product.highlights.map((highlight, index) => (
-                            <div key={index} className="flex items-start gap-4 p-4 rounded-xl bg-background-light dark:bg-white/5">
-                                <div>
-                                    <p className="font-bold text-sm">{highlight.title}</p>
-                                    <p className="text-xs text-gray-500 mt-1">{highlight.description}</p>
+                {product.highlights && product.highlights.length > 0 && (
+                    <div className="p-6 pb-0">
+                        <h3 className="text-lg font-bold mb-4">{t('product_detail.highlights_title')}</h3>
+                        <div className="grid grid-cols-1 gap-4 mb-4">
+                            {product.highlights.map((highlight, index) => (
+                                <div key={index} className="flex items-start gap-4 p-4 rounded-xl bg-background-light dark:bg-white/5">
+                                    <div>
+                                        <p className="font-bold text-sm">{highlight.title}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{highlight.description}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Unified Detail Content (Blocks) */}
                 {product.detailBlocks && product.detailBlocks.length > 0 ? (
@@ -593,8 +657,10 @@ export const ProductDetail: React.FC = () => {
                     </>
                 )}
             </div>
+            )}
 
             {/* Itinerary Section */}
+            {hasItineraryContent && (
             <div className="bg-white dark:bg-background-dark mt-2" id="itinerary">
                 <h3 className="text-lg font-bold mb-6 px-6 pt-6">{t('product_detail.itinerary_title')}</h3>
 
@@ -667,9 +733,9 @@ export const ProductDetail: React.FC = () => {
                             return null;
                         })}
                     </div>
-                ) : product.itineraryImages && product.itineraryImages.length > 0 ? (
+                ) : (
                     <div className="space-y-0">
-                        {product.itineraryImages.map((img, index) => (
+                        {product.itineraryImages!.map((img, index) => (
                             <img
                                 key={index}
                                 src={getOptimizedImageUrl(img, 'productItinerary')}
@@ -681,19 +747,16 @@ export const ProductDetail: React.FC = () => {
                             />
                         ))}
                     </div>
-                ) : (
-                    <div className="text-center py-10 text-gray-400 text-sm px-6">
-                        {t('product_detail.no_itinerary_images')}
-                    </div>
                 )}
             </div>
+            )}
 
             {/* Customer Reviews Section */}
             {approvedReviews.length > 0 && (
                 <div className="p-6 bg-white dark:bg-background-dark mt-2" id="reviews">
                     <div className="flex items-center justify-between mb-5">
                         <h3 className="text-lg font-bold flex items-center gap-2">
-                            お客様の口コミ
+                            {t('product_detail.reviews_title')}
                             <span className="text-sm font-normal text-gray-400">({approvedReviews.length})</span>
                         </h3>
                         {avgRating > 0 && (
@@ -725,7 +788,7 @@ export const ProductDetail: React.FC = () => {
                                             {initial}
                                         </div>
                                         <span className="text-sm font-semibold truncate min-w-0">{displayName} 様</span>
-                                        <span className="text-yellow-500 text-xs shrink-0" aria-label={`${review.rating || 5}点中5点`}>
+                                        <span className="text-yellow-500 text-xs shrink-0" aria-label={t('product_detail.rating_aria', { rating: review.rating || 5 })}>
                                             {'★'.repeat(Math.max(0, Math.min(5, Number(review.rating) || 5)))}
                                         </span>
                                     </div>
@@ -756,33 +819,43 @@ export const ProductDetail: React.FC = () => {
                         onClick={() => navigate('/reviews')}
                         className="w-full mt-5 py-3 text-center text-sm font-semibold text-primary border border-primary/30 rounded-xl hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
                     >
-                        すべての口コミを見る
+                        {t('product_detail.reviews_view_all')}
                         <span className="material-symbols-outlined text-base">chevron_right</span>
                     </button>
                 </div>
             )}
 
             {/* Inclusions / Exclusions */}
-            <div className="p-6 bg-white dark:bg-background-dark mt-2" id="guide">
-                <h3 className="text-lg font-bold mb-4">{t('product_detail.inclusions_title')}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {product.included.map((item, index) => (
-                        <div key={index} className="flex items-start gap-3">
-                            <span className="material-symbols-outlined text-primary text-lg shrink-0 mt-[2px]">check_circle</span>
-                            <span className="text-sm">{item}</span>
-                        </div>
-                    ))}
+            {hasGuideContent && (
+                <div className="p-6 bg-white dark:bg-background-dark mt-2" id="guide">
+                    {product.included && product.included.length > 0 && (
+                        <>
+                            <h3 className="text-lg font-bold mb-4">{t('product_detail.inclusions_title')}</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {product.included.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-3">
+                                        <span className="material-symbols-outlined text-primary text-lg shrink-0 mt-[2px]">check_circle</span>
+                                        <span className="text-sm">{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                    {product.excluded && product.excluded.length > 0 && (
+                        <>
+                            <h3 className={`text-lg font-bold mb-4 ${product.included && product.included.length > 0 ? 'mt-8' : ''}`}>{t('product_detail.exclusions_title')}</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {product.excluded.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-3">
+                                        <span className="material-symbols-outlined text-gray-400 text-lg shrink-0 mt-[2px]">remove_circle_outline</span>
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">{item}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
-                <h3 className="text-lg font-bold mb-4 mt-8">{t('product_detail.exclusions_title')}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {product.excluded.map((item, index) => (
-                        <div key={index} className="flex items-start gap-3">
-                            <span className="material-symbols-outlined text-gray-400 text-lg shrink-0 mt-[2px]">remove_circle_outline</span>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">{item}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            )}
 
             {/* Floating Bottom Bar */}
             <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 p-4 flex gap-3 z-50">
