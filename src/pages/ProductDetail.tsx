@@ -370,6 +370,28 @@ export const ProductDetail: React.FC = () => {
     const availability = product.status === 'active' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
     const priceValidUntil = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
 
+    // Tour bookings are digital: no shipping, so declare free/instant. Satisfies Google's
+    // Merchant Listing "shippingDetails missing" warning.
+    const shippingDetails = {
+        "@type": "OfferShippingDetails",
+        "shippingRate": { "@type": "MonetaryAmount", "value": 0, "currency": "JPY" },
+        "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "JP" },
+        "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" },
+            "transitTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" },
+        },
+    };
+    // 14-day cancellation window — baseline tour policy. Satisfies "hasMerchantReturnPolicy missing".
+    const merchantReturnPolicy = {
+        "@type": "MerchantReturnPolicy",
+        "applicableCountry": "JP",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays": 14,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/FreeReturn",
+    };
+
     const offersLd = pricingOptionPrices.length > 1 ? {
         "@type": "AggregateOffer",
         "priceCurrency": "JPY",
@@ -379,6 +401,8 @@ export const ProductDetail: React.FC = () => {
         "availability": availability,
         "url": window.location.href,
         "seller": { "@type": "Organization", "name": "Milkyway Japan" },
+        "shippingDetails": shippingDetails,
+        "hasMerchantReturnPolicy": merchantReturnPolicy,
     } : {
         "@type": "Offer",
         "url": window.location.href,
@@ -388,6 +412,8 @@ export const ProductDetail: React.FC = () => {
         "itemCondition": "https://schema.org/NewCondition",
         "availability": availability,
         "seller": { "@type": "Organization", "name": "Milkyway Japan" },
+        "shippingDetails": shippingDetails,
+        "hasMerchantReturnPolicy": merchantReturnPolicy,
     };
 
     // Create JSON-LD Product Schema (enhanced) — dual-typed for travel rich results.
