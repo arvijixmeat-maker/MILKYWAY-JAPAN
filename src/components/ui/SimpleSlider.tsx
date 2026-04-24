@@ -7,7 +7,16 @@ interface SimpleSliderProps {
 
 export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
+    const [ratios, setRatios] = useState<Record<number, number>>({});
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const handleImgLoad =
+        (index: number) => (e: React.SyntheticEvent<HTMLImageElement>) => {
+            const img = e.currentTarget;
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            setRatios((prev) => (prev[index] === ratio ? prev : { ...prev, [index]: ratio }));
+        };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const el = e.currentTarget;
@@ -31,41 +40,32 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
 
     if (!images || images.length === 0) return null;
 
-    // Card height stays uniform across slides; the inner image box adapts per orientation
-    // so portraits don't get clipped and landscapes don't waste vertical space.
-    const cardAspect = 'aspect-[4/3]';
-
     return (
         <div className="relative w-full my-5 select-none">
             <div
                 ref={scrollRef}
-                className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3"
+                className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3 items-start"
                 onScroll={handleScroll}
             >
                 {images.map((src, index) => {
                     const optimizedUrl = getOptimizedImageUrl(src, 'contentImage');
+                    const ratio = ratios[index];
                     return (
                         <div
                             key={index}
                             data-slide
-                            className={`flex-shrink-0 w-[88%] ${cardAspect} snap-center`}
+                            className="flex-shrink-0 w-[88%] snap-center"
+                            style={{
+                                aspectRatio: ratio ? String(ratio) : '4 / 3',
+                                maxHeight: '75vh',
+                            }}
                         >
                             <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
-                                {/* Blurred backdrop fills letterbox space without harshness */}
-                                <img
-                                    src={optimizedUrl}
-                                    alt=""
-                                    aria-hidden="true"
-                                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
-                                    loading="lazy"
-                                    decoding="async"
-                                />
-                                <div className="absolute inset-0 bg-white/30 dark:bg-black/30" />
-                                {/* Main image — contained so nothing is clipped */}
                                 <img
                                     src={optimizedUrl}
                                     alt={`Slide ${index + 1}`}
-                                    className="relative z-10 w-full h-full object-contain"
+                                    onLoad={handleImgLoad(index)}
+                                    className="w-full h-full object-cover"
                                     loading="lazy"
                                     decoding="async"
                                 />
@@ -75,7 +75,7 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                 })}
             </div>
 
-            {/* Counter Badge — placed inside active card area */}
+            {/* Counter Badge */}
             <div className="absolute top-3 right-[8%] bg-black/55 backdrop-blur-md text-white text-[11px] font-semibold px-2 py-0.5 rounded-full z-10 pointer-events-none">
                 {activeIndex + 1} / {images.length}
             </div>
