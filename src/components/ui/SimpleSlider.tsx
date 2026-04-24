@@ -32,7 +32,7 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
     if (!images || images.length === 0) return null;
 
     return (
-        <div className="relative w-full mb-5 select-none">
+        <div className="relative w-full mt-[-1.25em] mb-5 select-none">
             <div
                 ref={scrollRef}
                 className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3"
