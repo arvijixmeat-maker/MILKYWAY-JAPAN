@@ -7,16 +7,7 @@ interface SimpleSliderProps {
 
 export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
-    const [ratios, setRatios] = useState<Record<number, number>>({});
     const scrollRef = useRef<HTMLDivElement>(null);
-
-    const handleImgLoad =
-        (index: number) => (e: React.SyntheticEvent<HTMLImageElement>) => {
-            const img = e.currentTarget;
-            if (!img.naturalWidth || !img.naturalHeight) return;
-            const ratio = img.naturalWidth / img.naturalHeight;
-            setRatios((prev) => (prev[index] === ratio ? prev : { ...prev, [index]: ratio }));
-        };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const el = e.currentTarget;
@@ -44,28 +35,22 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
         <div className="relative w-full my-5 select-none">
             <div
                 ref={scrollRef}
-                className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3 items-start"
+                className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3"
                 onScroll={handleScroll}
             >
                 {images.map((src, index) => {
                     const optimizedUrl = getOptimizedImageUrl(src, 'contentImage');
-                    const ratio = ratios[index];
                     return (
                         <div
                             key={index}
                             data-slide
-                            className="flex-shrink-0 w-[88%] snap-center"
-                            style={{
-                                aspectRatio: ratio ? String(ratio) : '4 / 3',
-                                maxHeight: '75vh',
-                            }}
+                            className="flex-shrink-0 w-[88%] aspect-[4/3] snap-center"
                         >
-                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
                                 <img
                                     src={optimizedUrl}
                                     alt={`Slide ${index + 1}`}
-                                    onLoad={handleImgLoad(index)}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                     loading="lazy"
                                     decoding="async"
                                 />
