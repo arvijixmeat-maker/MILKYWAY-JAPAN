@@ -43,12 +43,12 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
             </div>
 
             {/* Standard Horizontal Snap Scroll */}
-            <div className="flex overflow-x-auto gap-4 px-5 pb-8 snap-x snap-mandatory scrollbar-hide">
+            <div className="flex overflow-x-auto gap-3 sm:gap-4 px-5 pb-8 snap-x snap-mandatory scrollbar-hide">
                 {magazines.map((item) => (
                     <div
                         key={item.id}
                         onClick={() => navigate(`/travel-guide/${item.id}`)}
-                        className="relative min-w-[280px] w-[280px] h-[400px] snap-center rounded-[20px] overflow-hidden shadow-lg cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 bg-gray-100 dark:bg-zinc-800"
+                        className="relative min-w-[220px] w-[220px] h-[320px] sm:min-w-[280px] sm:w-[280px] sm:h-[400px] snap-center rounded-[20px] overflow-hidden shadow-lg cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 bg-gray-100 dark:bg-zinc-800"
                     >
                         {/* Image Layer */}
                         <div className="absolute inset-0">
@@ -66,31 +66,33 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
                                     <span className="material-symbols-outlined text-4xl text-gray-400">image</span>
                                 </div>
                             )}
-                            {/* Gradient Overlay for Text Readability */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
+                            {/* Mint Brand Gradient at Bottom */}
+                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0f766e]/95 via-[#0f766e]/45 to-transparent" />
+                            {/* Subtle dark base for text contrast */}
+                            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent" />
                         </div>
 
-                        {/* Top Right Blue Airplane Icon */}
-                        <div className="absolute top-5 right-5 z-10">
-                            <div className="w-9 h-9 rounded-full bg-[#0ea5e9]/90 backdrop-blur-md flex items-center justify-center text-white shadow-md">
-                                <span className="material-symbols-outlined text-[18px]">flight_takeoff</span>
+                        {/* Top Right Brand Icon */}
+                        <div className="absolute top-4 right-4 z-10">
+                            <div className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-primary shadow-md">
+                                <span className="material-symbols-outlined text-[16px]">flight_takeoff</span>
                             </div>
                         </div>
 
                         {/* Bottom Text Content */}
-                        <div className="absolute bottom-0 left-0 w-full p-6 text-left z-10">
+                        <div className="absolute bottom-0 left-0 w-full p-4 sm:p-5 text-left z-10 flex flex-col gap-2">
                             {/* Category Tag */}
-                            <span className="inline-block px-2.5 py-1 bg-white/30 backdrop-blur-sm rounded-md text-[11px] font-bold text-white mb-3">
+                            <span className="inline-block self-start px-2 py-0.5 bg-white text-primary rounded-md text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                                 {item.category || t('home.magazine.default_category', { defaultValue: '準備' })}
                             </span>
-                            
-                            {/* Title with Flag Emoji */}
-                            <h4 className="text-[19px] font-extrabold text-white leading-snug mb-2.5 line-clamp-2 drop-shadow-md">
-                                🚩 {item.title}
+
+                            {/* Title */}
+                            <h4 className="text-[16px] sm:text-[18px] font-extrabold text-white leading-snug line-clamp-2 drop-shadow-md">
+                                {item.title}
                             </h4>
-                            
+
                             {/* Description */}
-                            <p className="text-white/80 text-[13px] leading-relaxed line-clamp-2 font-medium">
+                            <p className="text-white/85 text-[12px] sm:text-[13px] leading-relaxed line-clamp-2 font-medium">
                                 {item.description}
                             </p>
                         </div>

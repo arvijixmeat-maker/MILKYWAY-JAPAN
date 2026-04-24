@@ -227,7 +227,7 @@ export const TravelGuideDetail: React.FC = () => {
                 structuredData={[articleLd, breadcrumbLd]}
             />
             {/* Header Image */}
-            <div className="relative h-[300px] md:h-[400px]">
+            <div className="relative h-[240px] md:h-[360px]">
                 {magazine.image ? (
                     <img
                         src={magazine.image}
@@ -247,30 +247,32 @@ export const TravelGuideDetail: React.FC = () => {
                     <span className="material-symbols-outlined">arrow_back</span>
                 </button>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                {/* Mint Brand Gradient at Bottom */}
+                <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#0f766e]/90 via-[#0f766e]/35 to-transparent"></div>
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent"></div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="bg-primary px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm">
+                <div className="absolute bottom-0 left-0 right-0 p-5 md:p-8 text-white">
+                    <div className="flex items-center gap-2 mb-2.5">
+                        <span className="bg-white text-primary px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
                             {magazine.category}
                         </span>
                         {magazine.tag && (
-                            <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold text-white border border-white/30">
+                            <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[11px] font-bold text-white border border-white/30">
                                 {magazine.tag}
                             </span>
                         )}
                     </div>
-                    <h1 className="text-xl md:text-2xl font-bold leading-tight mb-2 drop-shadow-sm">
+                    <h1 className="text-[19px] md:text-2xl font-bold leading-tight mb-1.5 drop-shadow-sm line-clamp-3">
                         {magazine.title}
                     </h1>
-                    <div className="text-white/80 text-sm font-medium flex items-center gap-2">
+                    <div className="text-white/80 text-[12px] md:text-sm font-medium flex items-center gap-2">
                         <span>{new Date(magazine.createdAt).toLocaleDateString()}</span>
                     </div>
                 </div>
             </div>
 
             {/* Content Body */}
-            <div className="max-w-3xl mx-auto px-5 py-8">
+            <div className="max-w-3xl mx-auto px-5 py-6 md:py-8">
                 {/* Intro/Description */}
                 {/* Intro/Description - Removed to prevent duplicate title display as per feedback */}
                 {/* {magazine.description && (
@@ -282,7 +284,7 @@ export const TravelGuideDetail: React.FC = () => {
                 )} */}
 
                 {/* Main Content */}
-                <div className="prose prose-lg dark:prose-invert max-w-none">
+                <div className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-img:rounded-2xl">
                     {renderContent(magazine.content || '')}
                 </div>
 

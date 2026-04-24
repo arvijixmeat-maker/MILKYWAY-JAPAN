@@ -159,9 +159,9 @@ export const TravelGuide: React.FC = () => {
                             <div
                                 key={item.id}
                                 onClick={() => navigate(`/travel-guide/${item.id}`)}
-                                className="relative shrink-0 w-[280px] snap-center group cursor-pointer"
+                                className="relative shrink-0 w-[240px] sm:w-[280px] snap-center group cursor-pointer"
                             >
-                                <div className="relative h-[180px] w-full rounded-2xl overflow-hidden shadow-sm bg-slate-100 dark:bg-slate-800">
+                                <div className="relative h-[150px] sm:h-[180px] w-full rounded-2xl overflow-hidden shadow-sm bg-slate-100 dark:bg-slate-800">
                                     {item.image ? (
                                         <img
                                             alt={item.title}
@@ -172,16 +172,17 @@ export const TravelGuide: React.FC = () => {
                                             <span className="material-symbols-outlined text-4xl">image</span>
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                                    <div className="absolute top-3 left-3 bg-primary/90 text-white text-xs font-bold px-2.5 py-1 rounded-lg backdrop-blur-md">
+                                    {/* Mint Brand Gradient at Bottom */}
+                                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0f766e]/85 via-[#0f766e]/25 to-transparent"></div>
+                                    <div className="absolute top-3 left-3 bg-white text-primary text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm">
                                         {t('travel_guide.popular')}
                                     </div>
                                 </div>
                                 <div className="mt-3">
-                                    <h3 className="text-lg font-bold text-text-primary dark:text-white leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-1">
+                                    <h3 className="text-[15px] sm:text-base font-bold text-text-primary dark:text-white leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-1">
                                         {item.title}
                                     </h3>
-                                    <p className="text-sm text-text-secondary line-clamp-1">
+                                    <p className="text-[12px] sm:text-sm text-text-secondary line-clamp-1">
                                         {item.description}
                                     </p>
                                 </div>
@@ -202,28 +203,30 @@ export const TravelGuide: React.FC = () => {
                             <div
                                 key={item.id}
                                 onClick={() => navigate(`/travel-guide/${item.id}`)}
-                                className="group flex bg-white dark:bg-white/5 p-4 rounded-2xl shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer active:scale-[0.98]"
+                                className="group flex bg-white dark:bg-white/5 p-3 sm:p-4 rounded-2xl shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer active:scale-[0.98]"
                             >
-                                <div className="flex-1 pr-4">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="bg-gray-100 dark:bg-white/10 text-text-secondary text-[11px] font-bold px-2 py-0.5 rounded-md">
+                                <div className="flex-1 pr-3 sm:pr-4 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <span className="bg-primary/10 text-primary dark:bg-primary/20 text-[11px] font-bold px-2 py-0.5 rounded-md">
                                             {item.category}
                                         </span>
                                     </div>
-                                    <h3 className="text-[17px] font-bold text-text-primary dark:text-white leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                                    <h3 className="text-[15px] sm:text-[16px] font-bold text-text-primary dark:text-white leading-tight mb-1.5 group-hover:text-primary transition-colors line-clamp-2">
                                         {item.title}
                                     </h3>
-                                    <p className="text-sm text-text-secondary line-clamp-2 leading-relaxed">
+                                    <p className="text-[12px] sm:text-[13px] text-text-secondary line-clamp-2 leading-relaxed">
                                         {item.description}
                                     </p>
                                 </div>
-                                <div className="w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800">
+                                <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800">
                                     {item.image && (
                                         <img
                                             alt={item.title}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             src={item.image} loading="lazy" decoding="async" />
                                     )}
+                                    {/* Mint accent at bottom of thumbnail */}
+                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0f766e]/55 to-transparent pointer-events-none"></div>
                                 </div>
                             </div>
                         ))

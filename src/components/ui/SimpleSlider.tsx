@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 
 interface SimpleSliderProps {
@@ -7,73 +7,100 @@ interface SimpleSliderProps {
 
 export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const scrollLeft = e.currentTarget.scrollLeft;
-        const width = e.currentTarget.offsetWidth;
-        // Approximate index based on scroll position - using smaller width multiplier for cards that peek
-        const index = Math.round(scrollLeft / (width * 0.9)); 
-        setActiveIndex(Math.min(index, images.length - 1));
+        const el = e.currentTarget;
+        const firstCard = el.querySelector<HTMLDivElement>('[data-slide]');
+        if (!firstCard) return;
+        const cardWidth = firstCard.offsetWidth;
+        const gap = 12;
+        const index = Math.round(el.scrollLeft / (cardWidth + gap));
+        setActiveIndex(Math.min(Math.max(index, 0), images.length - 1));
+    };
+
+    const scrollToIndex = (index: number) => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const firstCard = el.querySelector<HTMLDivElement>('[data-slide]');
+        if (!firstCard) return;
+        const cardWidth = firstCard.offsetWidth;
+        const gap = 12;
+        el.scrollTo({ left: index * (cardWidth + gap), behavior: 'smooth' });
     };
 
     if (!images || images.length === 0) return null;
 
     return (
-        <div className="relative w-full my-6 select-none">
-            {/* Scroll Container with Peek Effect - Aligned with Text */}
+        <div className="relative w-full my-5 select-none">
             <div
-                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide pt-2 pb-4 px-2 -mx-2"
+                ref={scrollRef}
+                className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3"
                 onScroll={handleScroll}
-                style={{ scrollBehavior: 'smooth' }}
             >
                 {images.map((src, index) => {
                     const optimizedUrl = getOptimizedImageUrl(src, 'contentImage');
                     return (
                         <div
                             key={index}
-                            className={`flex-shrink-0 w-[90%] aspect-[3/2] snap-center ${index !== images.length - 1 ? 'mr-3' : 'mr-4'}`}
+                            data-slide
+                            className="flex-shrink-0 w-[88%] aspect-[4/3] snap-center first:ml-0 last:mr-0"
                         >
-                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 group">
-                                {/* Blurred Background Layer (For filling empty space on inconsistent aspect ratios) */}
-                                <div className="absolute inset-0 z-0">
-                                    <img
-                                        src={optimizedUrl}
-                                        alt=""
-                                        className="w-full h-full object-cover blur-2xl opacity-40 scale-110"
-                                        aria-hidden="true" loading="lazy" decoding="async" />
-                                    <div className="absolute inset-0 bg-white/10 dark:bg-black/20" />
-                                </div>
-
-                                {/* Main Image Layer (Actual Photo - Contained to prevent cropping) */}
-                                <div className="relative w-full h-full z-10 flex items-center justify-center p-1">
-                                    <img
-                                        src={optimizedUrl}
-                                        alt={`Slide ${index + 1}`}
-                                        className="max-w-full max-h-full object-contain drop-shadow-md"
-                                        loading="lazy"
-                                    />
-                                </div>
+                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                                <img
+                                    src={optimizedUrl}
+                                    alt={`Slide ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Counter Badge */}
-            <div className="absolute top-4 right-8 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-full z-10 pointer-events-none">
+            {/* Counter Badge — placed inside active card area */}
+            <div className="absolute top-3 right-[8%] bg-black/55 backdrop-blur-md text-white text-[11px] font-semibold px-2 py-0.5 rounded-full z-10 pointer-events-none">
                 {activeIndex + 1} / {images.length}
             </div>
+
+            {/* Dot Indicators */}
+            {images.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-1">
+                    {images.map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => scrollToIndex(i)}
+                            aria-label={`Go to slide ${i + 1}`}
+                            className={`h-1.5 rounded-full transition-all ${
+                                i === activeIndex
+                                    ? 'w-5 bg-primary'
+                                    : 'w-1.5 bg-slate-300 dark:bg-slate-600'
+                            }`}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Navigation Arrows for Desktop */}
             <div className="hidden md:flex absolute top-1/2 -translate-y-1/2 left-2 right-2 justify-between pointer-events-none">
                 {activeIndex > 0 && (
-                    <button className="w-8 h-8 rounded-full bg-white/80 shadow-md flex items-center justify-center pointer-events-auto hover:bg-white text-slate-800">
-                        <span className="material-symbols-outlined text-sm">chevron_left</span>
+                    <button
+                        onClick={() => scrollToIndex(activeIndex - 1)}
+                        className="w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center pointer-events-auto hover:bg-white text-slate-800"
+                        aria-label="Previous slide"
+                    >
+                        <span className="material-symbols-outlined text-base">chevron_left</span>
                     </button>
                 )}
                 {activeIndex < images.length - 1 && (
-                    <button className="w-8 h-8 rounded-full bg-white/80 shadow-md flex items-center justify-center pointer-events-auto hover:bg-white text-slate-800 ml-auto">
-                        <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    <button
+                        onClick={() => scrollToIndex(activeIndex + 1)}
+                        className="w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center pointer-events-auto hover:bg-white text-slate-800 ml-auto"
+                        aria-label="Next slide"
+                    >
+                        <span className="material-symbols-outlined text-base">chevron_right</span>
                     </button>
                 )}
             </div>
