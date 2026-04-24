@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import logoHorizontal from '../../assets/logo_horizontal.webp';
 
@@ -8,7 +8,6 @@ const ADDRESS_QUERY = 'Mongolia Milky Way, DACO Center, Bayanzurkh, Ulaanbaatar'
 
 export const Footer: React.FC = () => {
     const { t } = useTranslation();
-    const [showInfo, setShowInfo] = useState(false);
 
     return (
         <footer className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-t border-slate-200 dark:border-slate-800 pt-8 pb-10 px-6">
@@ -77,61 +76,42 @@ export const Footer: React.FC = () => {
                 </div>
             </div>
 
-            {/* Collapsible Company Info */}
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-8 pb-2">
-                <button
-                    onClick={() => setShowInfo(!showInfo)}
-                    className="mx-auto flex items-center justify-center gap-1.5 py-3 px-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[13px] font-bold text-slate-600 dark:text-slate-300 hover:border-primary/40 hover:text-primary active:scale-[0.98] transition-all"
-                    aria-expanded={showInfo}
-                >
-                    <span className="leading-none">
-                        {showInfo ? t('footer.hide_info') : t('footer.show_info')}
-                    </span>
-                    <span
-                        className={`material-symbols-outlined text-[18px] leading-none transition-transform duration-200 ${showInfo ? 'rotate-180' : ''}`}
-                    >
-                        expand_more
-                    </span>
-                </button>
+            {/* Company Info */}
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-6 space-y-5 text-[12px] leading-relaxed text-slate-600 dark:text-slate-400">
 
-                {showInfo && (
-                    <div className="mt-5 space-y-5 text-[12px] leading-relaxed text-slate-600 dark:text-slate-400">
+                {/* Legal Links */}
+                <div className="flex items-center justify-center divide-x divide-slate-300 dark:divide-slate-700 text-[12px] font-semibold">
+                    <a href="/about" className="px-3 hover:text-primary transition-colors">会社案内</a>
+                    <a href="/terms-of-service" className="px-3 hover:text-primary transition-colors">{t('footer.terms_of_service')}</a>
+                    <a href="/privacy-policy" className="px-3 hover:text-primary transition-colors">{t('footer.privacy_policy')}</a>
+                </div>
 
-                        {/* Legal Links */}
-                        <div className="flex items-center justify-center divide-x divide-slate-300 dark:divide-slate-700 text-[12px] font-semibold">
-                            <a href="/about" className="px-3 hover:text-primary transition-colors">会社案内</a>
-                            <a href="/terms-of-service" className="px-3 hover:text-primary transition-colors">{t('footer.terms_of_service')}</a>
-                            <a href="/privacy-policy" className="px-3 hover:text-primary transition-colors">{t('footer.privacy_policy')}</a>
-                        </div>
+                {/* Office Info */}
+                <OfficeBlock
+                    title={t('footer.mongolia_office')}
+                    lines={[
+                        t('footer.mongolia_office_info_1'),
+                        t('footer.mongolia_office_info_2'),
+                        t('footer.mongolia_office_info_3'),
+                        t('footer.mongolia_office_info_4'),
+                    ]}
+                />
+                <OfficeBlock
+                    title={t('footer.korea_office')}
+                    lines={[
+                        t('footer.korea_office_info_1'),
+                        t('footer.korea_office_info_2'),
+                        t('footer.korea_office_info_3'),
+                        t('footer.korea_office_info_4'),
+                    ]}
+                />
 
-                        {/* Office Info */}
-                        <OfficeBlock
-                            title={t('footer.mongolia_office')}
-                            lines={[
-                                t('footer.mongolia_office_info_1'),
-                                t('footer.mongolia_office_info_2'),
-                                t('footer.mongolia_office_info_3'),
-                                t('footer.mongolia_office_info_4'),
-                            ]}
-                        />
-                        <OfficeBlock
-                            title={t('footer.korea_office')}
-                            lines={[
-                                t('footer.korea_office_info_1'),
-                                t('footer.korea_office_info_2'),
-                                t('footer.korea_office_info_3'),
-                                t('footer.korea_office_info_4'),
-                            ]}
-                        />
-
-                        {/* Disclaimer */}
-                        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500 leading-[1.6] space-y-1.5">
-                            <p>{t('footer.disclaimer_1')}</p>
-                            <p>{t('footer.disclaimer_2')}</p>
-                            <p>{t('footer.disclaimer_3')}</p>
-                        </div>
-                    </div>
-                )}
+                {/* Disclaimer */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500 leading-[1.6] space-y-1.5">
+                    <p>{t('footer.disclaimer_1')}</p>
+                    <p>{t('footer.disclaimer_2')}</p>
+                    <p>{t('footer.disclaimer_3')}</p>
+                </div>
             </div>
 
             {/* Copyright */}
