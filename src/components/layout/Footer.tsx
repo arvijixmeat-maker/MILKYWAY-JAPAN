@@ -101,12 +101,14 @@ export const Footer: React.FC = () => {
             <div className="border-t border-slate-200 dark:border-slate-800 pt-5">
                 <button
                     onClick={() => setShowInfo(!showInfo)}
-                    className="w-full flex items-center justify-center gap-1 text-[12px] font-bold text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[13px] font-bold text-slate-600 dark:text-slate-300 hover:border-primary/40 hover:text-primary active:scale-[0.98] transition-all"
                     aria-expanded={showInfo}
                 >
-                    {showInfo ? t('footer.hide_info') : t('footer.show_info')}
+                    <span className="leading-none">
+                        {showInfo ? t('footer.hide_info') : t('footer.show_info')}
+                    </span>
                     <span
-                        className={`material-symbols-outlined text-[18px] transition-transform ${showInfo ? 'rotate-180' : ''}`}
+                        className={`material-symbols-outlined text-[18px] leading-none transition-transform duration-200 ${showInfo ? 'rotate-180' : ''}`}
                     >
                         expand_more
                     </span>
