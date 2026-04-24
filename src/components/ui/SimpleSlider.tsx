@@ -31,6 +31,10 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
 
     if (!images || images.length === 0) return null;
 
+    // Card height stays uniform across slides; the inner image box adapts per orientation
+    // so portraits don't get clipped and landscapes don't waste vertical space.
+    const cardAspect = 'aspect-[4/3]';
+
     return (
         <div className="relative w-full my-5 select-none">
             <div
@@ -44,13 +48,24 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                         <div
                             key={index}
                             data-slide
-                            className="flex-shrink-0 w-[88%] aspect-[4/3] snap-center first:ml-0 last:mr-0"
+                            className={`flex-shrink-0 w-[88%] ${cardAspect} snap-center`}
                         >
                             <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                                {/* Blurred backdrop fills letterbox space without harshness */}
+                                <img
+                                    src={optimizedUrl}
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                                <div className="absolute inset-0 bg-white/30 dark:bg-black/30" />
+                                {/* Main image — contained so nothing is clipped */}
                                 <img
                                     src={optimizedUrl}
                                     alt={`Slide ${index + 1}`}
-                                    className="w-full h-full object-cover"
+                                    className="relative z-10 w-full h-full object-contain"
                                     loading="lazy"
                                     decoding="async"
                                 />
