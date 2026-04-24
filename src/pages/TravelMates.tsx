@@ -307,7 +307,7 @@ export const TravelMates: React.FC = () => {
                 </div>
 
                 {/* Posts Feed */}
-                <div className="flex flex-col bg-white dark:bg-card-dark min-h-[50vh]">
+                <div className="flex flex-col flex-1 bg-white dark:bg-card-dark">
                     {loading ? (
                         <div className="flex flex-col">
                             {[0, 1, 2].map((i) => (
