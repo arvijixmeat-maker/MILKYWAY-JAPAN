@@ -78,10 +78,10 @@ export const Footer: React.FC = () => {
             </div>
 
             {/* Collapsible Company Info */}
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-5">
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-8 pb-2">
                 <button
                     onClick={() => setShowInfo(!showInfo)}
-                    className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[13px] font-bold text-slate-600 dark:text-slate-300 hover:border-primary/40 hover:text-primary active:scale-[0.98] transition-all"
+                    className="mx-auto flex items-center justify-center gap-1.5 py-3 px-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[13px] font-bold text-slate-600 dark:text-slate-300 hover:border-primary/40 hover:text-primary active:scale-[0.98] transition-all"
                     aria-expanded={showInfo}
                 >
                     <span className="leading-none">
