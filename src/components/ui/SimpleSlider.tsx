@@ -46,7 +46,7 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                             data-slide
                             className="flex-shrink-0 w-[88%] aspect-[4/3] snap-center"
                         >
-                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm bg-slate-100 dark:bg-slate-800">
+                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm">
                                 <img
                                     src={optimizedUrl}
                                     alt={`Slide ${index + 1}`}
