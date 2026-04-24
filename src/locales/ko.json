@@ -294,7 +294,12 @@
             "recruit_completed": "모집완료",
             "person_count": "1명 / {{count}}명",
             "write_button": "글쓰기",
-            "first_post_button": "첫 번째 게시물 작성하기"
+            "first_post_button": "첫 번째 게시물 작성하기",
+            "new_badge": "신규",
+            "starting_soon": "출발 임박",
+            "days_until_start": "{{days}}일 후 출발",
+            "recruiting": "모집중",
+            "spots_left": "남은 {{n}}자리"
         },
         "empty": {
             "title": "조건에 맞는 동행 게시물이 없습니다.",

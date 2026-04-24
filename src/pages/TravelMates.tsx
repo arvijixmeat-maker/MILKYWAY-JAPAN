@@ -2,11 +2,56 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { keysToCamel } from '../utils/mapKeys';
-import { useUser } from '../contexts/UserContext';
 import { BottomNav } from '../components/layout/BottomNav';
 import { optimizeImage } from '../utils/imageOptimizer';
 import notificationBell from '../assets/notification_bell.png';
 import { useTranslation } from 'react-i18next';
+
+const TAB_EMOJI: Record<string, string> = {
+    all: '🌏',
+    central_mongolia: '🏞️',
+    gobi_desert: '🏜️',
+    khuvsgul: '🏔️',
+    trekking: '🥾',
+    golf: '⛳',
+};
+
+// Parse "MM.DD" string to Date in given year. Returns null if invalid.
+const parseMMDD = (s: string | undefined, year: number): Date | null => {
+    if (!s || typeof s !== 'string') return null;
+    const m = s.match(/^(\d{1,2})\.(\d{1,2})$/);
+    if (!m) return null;
+    const mm = Number(m[1]);
+    const dd = Number(m[2]);
+    if (!Number.isFinite(mm) || !Number.isFinite(dd)) return null;
+    return new Date(year, mm - 1, dd);
+};
+
+// Compute days from today to the start date (MM.DD format).
+// If start date is in the past (e.g., December and now is March),
+// treat it as next year. Returns null if can't parse.
+const daysUntilStart = (startDate: string | undefined): number | null => {
+    if (!startDate) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const year = now.getFullYear();
+    let d = parseMMDD(startDate, year);
+    if (!d) return null;
+    if (d.getTime() < now.getTime() - 14 * 86400000) {
+        // Likely next year's date if it's more than 2 weeks in the past.
+        d = parseMMDD(startDate, year + 1);
+        if (!d) return null;
+    }
+    return Math.round((d.getTime() - now.getTime()) / 86400000);
+};
+
+const isNewPost = (createdAt: string | undefined): boolean => {
+    if (!createdAt) return false;
+    try {
+        const t = new Date(createdAt).getTime();
+        return Number.isFinite(t) && Date.now() - t < 3 * 86400000; // within 3 days
+    } catch { return false; }
+};
 
 export const TravelMates: React.FC = () => {
     const navigate = useNavigate();
@@ -17,7 +62,7 @@ export const TravelMates: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     // Filter States
-    const [activeFilter, setActiveFilter] = useState<string | null>(null); // 'date', 'gender', 'age', 'style' or null
+    const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [filters, setFilters] = useState({
         date: '' as string,
         gender: '' as string,
@@ -46,7 +91,7 @@ export const TravelMates: React.FC = () => {
                         if (durationMatch) {
                             duration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '박' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '일' })}`;
                         } else if (duration === '1 Day') {
-                            duration = t('travel_mates.detail.one_day', { defaultValue: '당일치기' });
+                            duration = t('travel_mates.detail.one_day', { defaultValue: '当日' });
                         }
 
                         return {
@@ -70,101 +115,92 @@ export const TravelMates: React.FC = () => {
 
     // Filter posts based on active tab and search query
     const filteredPosts = posts.filter(post => {
-        // 1. Tab & Search Filter
-        // Note: post.region might be in Korean or need mapping. Ideally backend returns code or we map.
-        // For now, let's assume 'all' matches everything, and specific tabs match region string including translated ones.
-        // Current tabs: 'all', 'central_mongolia', 'gobi_desert', 'khuvsgul', 'trekking', 'golf'
+        const region: string = post.region || '';
+
+        // 1. Tab match
         let regionMatch = true;
-
         if (activeTab !== 'all') {
-            // Map activeTab key to potential region strings found in DB 
-            // (This is a bit tricky if DB has mixed lang, but let's try to match by key concept or translated string)
-            // Simple approach: Check if post.region includes the translated string of the active key
-            const tabLabel = t(`travel_mates.tabs.${activeTab}`);
-            regionMatch = post.region && post.region.includes(tabLabel) || post.region.includes(activeTab);
-
-            // Fallback for kr/ja database
-            if (activeTab === 'central_mongolia' && (post.region.includes('中央モンゴル') || post.region.includes('중앙몽골'))) regionMatch = true;
-            if (activeTab === 'gobi_desert' && (post.region.includes('ゴビ砂漠') || post.region.includes('고비사막'))) regionMatch = true;
-            if (activeTab === 'khuvsgul' && (post.region.includes('フブスグル') || post.region.includes('홉스괨'))) regionMatch = true;
-            if (activeTab === 'trekking' && (post.region.includes('トレッキング') || post.region.includes('트레킹'))) regionMatch = true;
-            if (activeTab === 'golf' && (post.region.includes('ゴルフ') || post.region.includes('골프'))) regionMatch = true;
+            const tabLabel = t(`travel_mates.tabs.${activeTab}`) || '';
+            const keywordMap: Record<string, string[]> = {
+                central_mongolia: ['中央モンゴル', '중앙몽골'],
+                gobi_desert: ['ゴビ砂漠', '고비사막'],
+                khuvsgul: ['フブスグル', '홉스골'],
+                trekking: ['トレッキング', '트레킹'],
+                golf: ['ゴルフ', '골프'],
+            };
+            const keywords = [tabLabel, activeTab, ...(keywordMap[activeTab] || [])].filter(Boolean);
+            regionMatch = keywords.some((kw) => region.includes(kw));
         }
 
-        const matchesTab = regionMatch;
+        // 2. Search match (null-safe)
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = q === '' ||
+            (post.title || '').toLowerCase().includes(q) ||
+            (post.description || '').toLowerCase().includes(q) ||
+            region.toLowerCase().includes(q);
 
-        const matchesSearch = searchQuery === '' ||
-            post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            post.region?.toLowerCase().includes(searchQuery.toLowerCase());
-
-        // 2. Advanced Filters
+        // 3. Advanced filters
         let matchesFilters = true;
 
-        // Date Filter
+        // Date Filter — compare against post's start/end (MM.DD format)
         if (filters.date) {
             const selected = new Date(filters.date);
-            const currentYear = new Date().getFullYear();
-            const [startM, startD] = post.startDate.split('.').map(Number);
-            const postStart = new Date(currentYear, startM - 1, startD);
-
-            let postEnd = postStart;
-            if (post.endDate) {
-                const [endM, endD] = post.endDate.split('.').map(Number);
-                postEnd = new Date(currentYear, endM - 1, endD);
-            }
-
-            selected.setHours(0, 0, 0, 0);
-            postStart.setHours(0, 0, 0, 0);
-            postEnd.setHours(0, 0, 0, 0);
-
-            if (selected < postStart || selected > postEnd) {
-                matchesFilters = false;
+            if (Number.isFinite(selected.getTime())) {
+                const year = selected.getFullYear();
+                const postStart = parseMMDD(post.startDate, year);
+                const postEnd = post.endDate ? parseMMDD(post.endDate, year) : postStart;
+                if (postStart && postEnd) {
+                    selected.setHours(0, 0, 0, 0);
+                    postStart.setHours(0, 0, 0, 0);
+                    postEnd.setHours(0, 0, 0, 0);
+                    if (selected < postStart || selected > postEnd) matchesFilters = false;
+                } else {
+                    matchesFilters = false;
+                }
             }
         }
 
         // Gender Filter
         if (matchesFilters && filters.gender) {
-            // gender filter logic: 
-            // DB has '男性'/'남성', '女性'/'여성', '不問'/'무관'. 
-            // We need to map filter selection to these.
-            // filter.gender values: 'male', 'female', ''
-
+            const maleSet = new Set(['男性', '남성', 'male']);
+            const femaleSet = new Set(['女性', '여성', 'female']);
+            const anySet = new Set(['不問', '무관', 'any']);
+            const g = post.gender || '';
             if (filters.gender === 'male') {
-                if (post.gender !== '男性' && post.gender !== '不問' && post.gender !== '남성' && post.gender !== '무관' && post.gender !== 'male' && post.gender !== 'any') matchesFilters = false;
+                if (!maleSet.has(g) && !anySet.has(g)) matchesFilters = false;
             } else if (filters.gender === 'female') {
-                if (post.gender !== '女性' && post.gender !== '不問' && post.gender !== '여성' && post.gender !== '무관' && post.gender !== 'female' && post.gender !== 'any') matchesFilters = false;
+                if (!femaleSet.has(g) && !anySet.has(g)) matchesFilters = false;
             }
         }
 
         // Age Filter
         if (matchesFilters && filters.age) {
-            // filters.age is like '20s', '30s'. 
-            // DB ageGroups is likely ['20대', '30대'] or ['20s', '30s'].
-            // Need mapping if DB is Korean.
-            const ageMap: Record<string, string[]> = { '20s': ['20代', '20대'], '30s': ['30代', '30대'], '40s': ['40代', '40대'], '50s_plus': ['50代+', '50대+'] };
-            const targetAges = ageMap[filters.age] || [filters.age];
-
-            if (!post.ageGroups.some((g: string) => targetAges.includes(g) || g === filters.age)) matchesFilters = false;
+            const ageMap: Record<string, string[]> = {
+                '20s': ['20代', '20대', '20s'],
+                '30s': ['30代', '30대', '30s'],
+                '40s': ['40代', '40대', '40s'],
+                '50s_plus': ['50代+', '50대+', '50s+', '50s_plus'],
+            };
+            const targets = ageMap[filters.age] || [filters.age];
+            const ags: string[] = Array.isArray(post.ageGroups) ? post.ageGroups : [];
+            if (!ags.some((g) => targets.includes(g))) matchesFilters = false;
         }
 
         // Style Filter
         if (matchesFilters && filters.style) {
-            // filters.style is 'healing', 'photo', etc.
-            // DB styles is ['🏞️ ヒーリング', ...] or ['🏞️ 힐링', ...]
             const styleMap: Record<string, string[]> = {
                 'healing': ['🏞️ ヒーリング', '🏞️ 힐링'],
-                'photo': ['📸 ベストショット', '📸 인생샷'],
+                'photo': ['📸 ベストショット', '📸 인생샷', '📸 人生ショット'],
                 'activity': ['💪 アクティビティ', '💪 액티비티'],
-                'food': ['🍽️ グルメ巡り', '🍽️ 맛집 탐방'],
-                'camping': ['⛺ キャンプ/車中泊', '⛺ 캠핑/차박']
+                'food': ['🍽️ グルメ巡り', '🍽️ 맛집 탐방', '🍽️ グルメ'],
+                'camping': ['⛺ キャンプ/車中泊', '⛺ 캠핑/차박', '⛺ キャンプ'],
             };
-            const targetStyles = styleMap[filters.style] || [filters.style];
-
-            if (!post.styles.some((s: string) => targetStyles.includes(s) || s === filters.style)) matchesFilters = false;
+            const targets = styleMap[filters.style] || [filters.style];
+            const sts: string[] = Array.isArray(post.styles) ? post.styles : [];
+            if (!sts.some((s) => targets.includes(s))) matchesFilters = false;
         }
 
-        return matchesTab && matchesSearch && matchesFilters;
+        return regionMatch && matchesSearch && matchesFilters;
     });
 
     const handleFilterReset = () => {
@@ -173,6 +209,8 @@ export const TravelMates: React.FC = () => {
     };
 
     const tabs = ['all', 'central_mongolia', 'gobi_desert', 'khuvsgul', 'trekking', 'golf'];
+
+    const hasActiveFilter = Boolean(filters.date || filters.gender || filters.age || filters.style);
 
     return (
         <div className="bg-[#f9fafc] dark:bg-background-dark text-text-main-light dark:text-text-main-dark font-display antialiased overflow-x-hidden min-h-screen">
@@ -183,7 +221,11 @@ export const TravelMates: React.FC = () => {
                         <button onClick={() => navigate('/')} className="text-2xl font-bold tracking-tight text-text-main-light dark:text-text-main-dark">
                             {t('travel_mates.title')}
                         </button>
-                        <button className="relative p-2 -mr-2 rounded-full hover:scale-105 transition-transform">
+                        <button
+                            onClick={() => navigate('/mypage')}
+                            aria-label={t('header.notification')}
+                            className="relative p-2 -mr-2 rounded-full hover:scale-105 transition-transform"
+                        >
                             <img src={notificationBell} alt={t('header.notification')} className="w-7 h-7 object-contain" loading="lazy" decoding="async" />
                             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 border-2 border-white dark:border-card-dark"></span>
                         </button>
@@ -192,7 +234,7 @@ export const TravelMates: React.FC = () => {
                     {/* Search Bar */}
                     <div className="px-5 pb-3">
                         <div className="relative flex w-full items-center rounded-xl bg-[#f2f4f6] dark:bg-gray-800 h-12 transition-all focus-within:ring-2 focus-within:ring-primary/50">
-                            <div className="flex items-center justify-center pl-4 text-text-sub-light dark:text-text-sub-dark pointer-events-none">
+                            <div className="flex items-center justify-center pl-4 text-primary pointer-events-none">
                                 <span className="material-symbols-outlined text-[22px]">search</span>
                             </div>
                             <input
@@ -201,21 +243,31 @@ export const TravelMates: React.FC = () => {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="pr-3 text-text-sub-light hover:text-text-main-light"
+                                    aria-label="clear search"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">cancel</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 
                     {/* Category Tabs */}
                     <div className="border-b border-gray-100 dark:border-gray-800">
-                        <div className="flex overflow-x-auto no-scrollbar px-5 gap-6">
+                        <div className="flex overflow-x-auto no-scrollbar px-5 gap-5">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`shrink-0 pb-3 border-b-[3px] font-medium text-[15px] transition-colors ${activeTab === tab
+                                    className={`shrink-0 pb-3 border-b-[3px] font-medium text-[15px] transition-colors inline-flex items-center gap-1.5 ${activeTab === tab
                                         ? 'border-primary text-text-main-light dark:text-white font-bold'
                                         : 'border-transparent text-text-sub-light dark:text-text-sub-dark hover:text-text-main-light dark:hover:text-text-main-dark'
                                         } `}
                                 >
+                                    <span className="text-base leading-none" aria-hidden>{TAB_EMOJI[tab] || ''}</span>
                                     {t(`travel_mates.tabs.${tab}`)}
                                 </button>
                             ))}
@@ -242,11 +294,12 @@ export const TravelMates: React.FC = () => {
                                 <span className="material-symbols-outlined text-[16px]">expand_more</span>
                             </button>
                         ))}
-                        {(filters.date || filters.gender || filters.age || filters.style) && (
+                        {hasActiveFilter && (
                             <button
                                 onClick={handleFilterReset}
-                                className="flex shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-500"
+                                className="flex shrink-0 items-center justify-center gap-0.5 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-500"
                             >
+                                <span className="material-symbols-outlined text-[14px]">refresh</span>
                                 {t('travel_mates.reset')}
                             </button>
                         )}
@@ -255,72 +308,30 @@ export const TravelMates: React.FC = () => {
 
                 {/* Posts Feed */}
                 <div className="flex flex-col bg-white dark:bg-card-dark min-h-[50vh]">
-                    {filteredPosts.length === 0 ? (
-                        <div className="text-center py-20">
-                            <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600">group_off</span>
-                            <p className="mt-4 text-gray-500 dark:text-gray-400">{t('travel_mates.empty.title')}</p>
-                            {(searchQuery || filters.date || filters.gender || filters.age || filters.style) ? (
-                                <button
-                                    onClick={() => {
-                                        setSearchQuery('');
-                                        handleFilterReset();
-                                    }}
-                                    className="mt-4 text-primary font-bold text-sm"
-                                >
-                                    {t('travel_mates.search_reset')}
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => navigate('/travel-mates/write')}
-                                    className="mt-4 bg-primary text-white px-6 py-2 rounded-full font-bold text-sm"
-                                >
-                                    {t('travel_mates.post.first_post_button')}
-                                </button>
-                            )}
+                    {loading ? (
+                        <div className="flex flex-col">
+                            {[0, 1, 2].map((i) => (
+                                <PostSkeleton key={i} />
+                            ))}
                         </div>
+                    ) : filteredPosts.length === 0 ? (
+                        <EmptyState
+                            hasQuery={Boolean(searchQuery || hasActiveFilter)}
+                            onReset={() => {
+                                setSearchQuery('');
+                                handleFilterReset();
+                            }}
+                            onWrite={() => navigate('/travel-mates/write')}
+                            t={t}
+                        />
                     ) : (
-                        filteredPosts.map((post, index) => (
-                            <div
+                        filteredPosts.map((post) => (
+                            <PostCard
                                 key={post.id}
+                                post={post}
                                 onClick={() => navigate(`/travel-mates/${post.id}`)}
-                                className={`bg-white dark:bg-card-dark p-4 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex gap-4 ${post.status === 'closed' ? 'opacity-70' : ''}`}
-                            >
-                                {/* Left Content */}
-                                <div className="flex-1 flex flex-col justify-between min-w-0">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            {post.status === 'closed' && (
-                                                <span className="text-[10px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-500 px-1.5 py-0.5 rounded">{t('travel_mates.post.recruit_completed')}</span>
-                                            )}
-                                        </div>
-                                        <h3 className={`text-[16px] font-bold leading-snug mb-2 line-clamp-2 ${post.status === 'closed' ? 'text-gray-500 line-through decoration-gray-400' : 'text-text-main-light dark:text-text-main-dark'}`}>
-                                            {post.title}
-                                        </h3>
-                                        <div className="space-y-1">
-                                            <div className="text-[13px] text-gray-500 dark:text-gray-400 font-medium">
-                                                {post.region}
-                                            </div>
-                                            <div className="text-[13px] text-gray-500 dark:text-gray-400">
-                                                {post.startDate} ~ {post.endDate}
-                                                {post.duration && <span className="text-gray-400 ml-1">({post.duration})</span>}
-                                            </div>
-                                            <div className="text-[13px] text-primary font-bold">
-                                                {t('travel_mates.post.person_count', { count: post.recruitCount })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right Image */}
-                                <div className="relative w-[100px] h-[100px] flex-shrink-0">
-                                    <img
-                                        src={post.image ? optimizeImage(post.image, { width: 200, height: 200 }) : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800'}
-                                        alt={post.title}
-                                        className={`w-full h-full rounded-xl object-cover border border-gray-100 dark:border-gray-700 bg-gray-100 ${post.status === 'closed' ? 'grayscale opacity-80' : ''}`}
-                                        loading="lazy"
-                                    />
-                                </div>
-                            </div>
+                                t={t}
+                            />
                         ))
                     )}
                 </div>
@@ -455,3 +466,159 @@ export const TravelMates: React.FC = () => {
         </div>
     );
 };
+
+// ─── Inner components ──────────────────────────────────────────
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800';
+
+const PostCard: React.FC<{ post: any; onClick: () => void; t: any }> = ({ post, onClick, t }) => {
+    const isClosed = post.status === 'closed';
+    const daysLeft = daysUntilStart(post.startDate);
+    const isSoon = !isClosed && daysLeft != null && daysLeft >= 0 && daysLeft <= 7;
+    const isNew = !isClosed && isNewPost(post.createdAt);
+
+    const styles: string[] = Array.isArray(post.styles) ? post.styles.slice(0, 3) : [];
+    const recruitCount = Number(post.recruitCount) || 0;
+
+    return (
+        <div
+            onClick={onClick}
+            className={`bg-white dark:bg-card-dark px-4 py-4 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex gap-3.5 ${isClosed ? 'opacity-70' : ''}`}
+        >
+            {/* Left: Image */}
+            <div className="relative w-[118px] h-[118px] flex-shrink-0">
+                <img
+                    src={post.image ? optimizeImage(post.image, { width: 240, height: 240 }) : FALLBACK_IMAGE}
+                    alt={post.title || ''}
+                    className={`w-full h-full rounded-xl object-cover bg-gray-100 dark:bg-gray-700 ${isClosed ? 'grayscale opacity-80' : ''}`}
+                    loading="lazy"
+                    decoding="async"
+                />
+                {isClosed && (
+                    <div className="absolute inset-0 rounded-xl bg-black/30 flex items-center justify-center">
+                        <span className="text-[11px] font-bold text-white bg-gray-800/80 px-2.5 py-1 rounded-full">
+                            {t('travel_mates.post.recruit_completed')}
+                        </span>
+                    </div>
+                )}
+                {!isClosed && isSoon && (
+                    <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm">
+                        🔥 {daysLeft === 0
+                            ? t('travel_mates.post.starting_soon')
+                            : t('travel_mates.post.days_until_start', { days: daysLeft })}
+                    </div>
+                )}
+                {!isClosed && !isSoon && isNew && (
+                    <div className="absolute top-1.5 left-1.5 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm">
+                        ✨ {t('travel_mates.post.new_badge')}
+                    </div>
+                )}
+            </div>
+
+            {/* Right: Content */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Region row */}
+                {post.region && (
+                    <div className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary mb-1">
+                        <span className="material-symbols-outlined text-[13px] leading-none">location_on</span>
+                        <span className="truncate">{post.region}</span>
+                    </div>
+                )}
+
+                {/* Title */}
+                <h3 className={`text-[15.5px] font-bold leading-snug mb-1.5 line-clamp-2 ${isClosed ? 'text-gray-500 line-through decoration-gray-400' : 'text-text-main-light dark:text-text-main-dark'}`}>
+                    {post.title}
+                </h3>
+
+                {/* Date + duration */}
+                <div className="text-[12px] text-gray-500 dark:text-gray-400 tabular-nums mb-1.5">
+                    {post.startDate}{post.endDate ? ` ~ ${post.endDate}` : ''}
+                    {post.duration && <span className="text-gray-400 ml-1">· {post.duration}</span>}
+                </div>
+
+                {/* Style chips */}
+                {styles.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                        {styles.map((s, i) => (
+                            <span
+                                key={i}
+                                className="inline-block text-[10.5px] font-medium px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            >
+                                {s}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Recruit progress (bottom) */}
+                {!isClosed && recruitCount > 0 && (
+                    <div className="mt-auto flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px] text-primary">group</span>
+                        <span className="text-[12px] font-bold text-primary tabular-nums">
+                            {t('travel_mates.post.person_count', { count: recruitCount })}
+                        </span>
+                        {recruitCount > 1 && (
+                            <span className="text-[11px] text-gray-400">
+                                · {t('travel_mates.post.spots_left', { n: recruitCount - 1 })}
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const PostSkeleton: React.FC = () => (
+    <div className="bg-white dark:bg-card-dark px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex gap-3.5 animate-pulse">
+        <div className="w-[118px] h-[118px] flex-shrink-0 rounded-xl bg-gray-200 dark:bg-gray-700" />
+        <div className="flex-1 flex flex-col gap-2 py-1">
+            <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="flex gap-1 mt-1">
+                <div className="h-4 w-12 rounded bg-gray-200 dark:bg-gray-700" />
+                <div className="h-4 w-14 rounded bg-gray-200 dark:bg-gray-700" />
+            </div>
+            <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-700 mt-auto" />
+        </div>
+    </div>
+);
+
+const EmptyState: React.FC<{
+    hasQuery: boolean;
+    onReset: () => void;
+    onWrite: () => void;
+    t: any;
+}> = ({ hasQuery, onReset, onWrite, t }) => (
+    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-4xl text-primary">
+                {hasQuery ? 'filter_list_off' : 'travel_explore'}
+            </span>
+        </div>
+        <p className="text-[15px] font-bold text-text-main-light dark:text-white">
+            {t('travel_mates.empty.title')}
+        </p>
+        <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1.5">
+            {t('travel_mates.empty.sub', { defaultValue: '新しい同行者を募集してみてください' })}
+        </p>
+        {hasQuery ? (
+            <button
+                onClick={onReset}
+                className="mt-5 inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-text-main-light dark:text-white font-bold text-sm px-5 py-2.5 rounded-full"
+            >
+                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                {t('travel_mates.search_reset')}
+            </button>
+        ) : (
+            <button
+                onClick={onWrite}
+                className="mt-5 inline-flex items-center gap-1 bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full shadow-md shadow-primary/30"
+            >
+                <span className="material-symbols-outlined text-[18px]">edit_square</span>
+                {t('travel_mates.post.first_post_button')}
+            </button>
+        )}
+    </div>
+);

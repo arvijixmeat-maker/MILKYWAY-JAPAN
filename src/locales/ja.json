@@ -310,7 +310,12 @@
             "recruit_completed": "募集完了",
             "person_count": "1名 / {{count}}名",
             "write_button": "書き込み",
-            "first_post_button": "最初の投稿を作成する"
+            "first_post_button": "最初の投稿を作成する",
+            "new_badge": "新着",
+            "starting_soon": "出発間近",
+            "days_until_start": "{{days}}日後出発",
+            "recruiting": "募集中",
+            "spots_left": "残り{{n}}席"
         },
         "empty": {
             "title": "条件に合う同行者募集がありません。",
