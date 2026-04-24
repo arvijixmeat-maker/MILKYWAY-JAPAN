@@ -59,6 +59,21 @@ body {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
+/* Magazine slider in prose content: eliminate gap with preceding paragraph.
+   Prose p gets margin-bottom (1.14em~1.33em depending on size). Kill it when
+   the next sibling is our slider — and reset the slider's own top margin. */
+.prose > *:has(+ .magazine-slider-container) {
+    margin-bottom: 0 !important;
+}
+
+.prose > *:has(+ .magazine-slider-container) > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+.prose > .magazine-slider-container {
+    margin-top: 0 !important;
+}
+
 .text-shadow-sm {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
