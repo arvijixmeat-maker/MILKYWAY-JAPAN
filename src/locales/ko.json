@@ -15,6 +15,13 @@
     "footer": {
         "kakao_inquiry": "카카오톡 1:1 문의",
         "partnership_inquiry": "제휴문의 bolor1@hanmail.net",
+        "partnership_label": "제휴문의",
+        "tagline": "몽골 여행・몽골 투어 전문",
+        "services_heading": "서비스",
+        "sns_heading": "SNS 팔로우",
+        "contact_heading": "문의하기",
+        "show_info": "회사 정보 보기",
+        "hide_info": "접기",
         "terms_of_service": "이용약관",
         "privacy_policy": "개인정보처리방침",
         "mongolia_office": "[몽골본사]",
