@@ -46,11 +46,11 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                             data-slide
                             className="flex-shrink-0 w-[88%] aspect-[4/3] snap-center"
                         >
-                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
                                 <img
                                     src={optimizedUrl}
                                     alt={`Slide ${index + 1}`}
-                                    className="max-w-full max-h-full w-auto h-auto object-contain"
+                                    className="w-full h-full object-cover object-top"
                                     loading="lazy"
                                     decoding="async"
                                 />
