@@ -27,26 +27,6 @@ export const Footer: React.FC = () => {
                 </p>
             </div>
 
-            {/* Primary CTAs */}
-            <div className="flex flex-col gap-2.5 mb-7">
-                <a
-                    href="https://jzz1k.channel.io/home"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl bg-[#06C755] text-white font-bold text-[14px] shadow-sm hover:bg-[#05b04b] active:scale-[0.98] transition-all"
-                >
-                    <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
-                    {t('footer.kakao_inquiry')}
-                </a>
-                <a
-                    href={`mailto:${EMAIL}`}
-                    className="w-full flex flex-col items-center justify-center py-2.5 px-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-primary/50 active:scale-[0.98] transition-all"
-                >
-                    <span className="text-[13px] font-bold">{t('footer.partnership_label')}</span>
-                    <span className="text-[12px] text-primary font-medium mt-0.5 tabular-nums">{EMAIL}</span>
-                </a>
-            </div>
-
             {/* Quick Contact Icons */}
             <div className="mb-7">
                 <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase text-center mb-2.5">
