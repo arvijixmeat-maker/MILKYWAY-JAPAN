@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '../../contexts/NotificationContext';
 import { api } from '../../lib/api';
-import logoSquare from '../../assets/logo_square.webp';
+import logoSquare from '../../assets/new_logo_2026.png';
 
 interface TourSubItem {
     path: string;
