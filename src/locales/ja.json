@@ -418,12 +418,16 @@
     },
     "magazine": {
         "location": {
-            "title": "場所",
+            "title": "位置",
+            "address": "住所",
+            "phone": "電話",
+            "website": "ホーム",
             "directions": "経路を見る",
             "copy_address": "住所をコピー",
             "copied": "コピー済み",
-            "hours_title": "営業時間",
-            "today": "本日"
+            "hours_title": "営業時間 · 休業日",
+            "today": "本日",
+            "open_in_maps": "Google マップで開く"
         }
     },
     "reservation": {

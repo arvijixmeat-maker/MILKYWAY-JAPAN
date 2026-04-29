@@ -19,14 +19,6 @@ interface Magazine {
     order: number;
     createdAt?: string;
     updatedAt?: string;
-    // Location / map (optional)
-    locationName?: string;
-    locationAddress?: string;
-    locationPhone?: string;
-    locationWebsite?: string;
-    locationHours?: string; // JSON string: { mon: "09:00-17:00", ... }
-    mapEmbedUrl?: string;
-    mapQuery?: string;
 }
 
 interface MagazineCategory {
@@ -278,13 +270,6 @@ export const AdminMagazineManage: React.FC = () => {
         isFeatured: false,
         isActive: true,
         order: 0,
-        locationName: '',
-        locationAddress: '',
-        locationPhone: '',
-        locationWebsite: '',
-        locationHours: '',
-        mapEmbedUrl: '',
-        mapQuery: '',
     });
 
     // Editor Handlers
@@ -456,13 +441,6 @@ export const AdminMagazineManage: React.FC = () => {
                     order: m.order,
                     createdAt: m.created_at,
                     updatedAt: m.updated_at,
-                    locationName: m.location_name || '',
-                    locationAddress: m.location_address || '',
-                    locationPhone: m.location_phone || '',
-                    locationWebsite: m.location_website || '',
-                    locationHours: m.location_hours || '',
-                    mapEmbedUrl: m.map_embed_url || '',
-                    mapQuery: m.map_query || '',
                 })));
             }
         } catch (error) {
@@ -606,13 +584,6 @@ export const AdminMagazineManage: React.FC = () => {
                 is_featured: formData.isFeatured || false,
                 is_active: formData.isActive ?? true,
                 order: editingMagazine ? formData.order! : maxOrder + 1,
-                location_name: formData.locationName || null,
-                location_address: formData.locationAddress || null,
-                location_phone: formData.locationPhone || null,
-                location_website: formData.locationWebsite || null,
-                location_hours: formData.locationHours || null,
-                map_embed_url: formData.mapEmbedUrl || null,
-                map_query: formData.mapQuery || null,
                 updated_at: new Date().toISOString()
             };
 
@@ -971,98 +942,6 @@ export const AdminMagazineManage: React.FC = () => {
                                                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">인기 게시물</span>
                                                         <input type="checkbox" checked={formData.isFeatured} onChange={(e) => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))} className="w-4 h-4" />
                                                     </label>
-                                                </div>
-
-                                                {/* Location (optional) */}
-                                                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="material-symbols-outlined text-teal-500 text-[20px]">location_on</span>
-                                                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">위치 정보 <span className="text-xs font-normal text-slate-400">(선택)</span></h4>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">장소 이름</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.locationName || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, locationName: e.target.value }))}
-                                                            placeholder="예: チンギスハーン博物館"
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">주소</label>
-                                                        <textarea
-                                                            value={formData.locationAddress || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, locationAddress: e.target.value }))}
-                                                            placeholder="Sambuu St, Ulaanbaatar 15141, Mongolia"
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none h-16"
-                                                        />
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">전화</label>
-                                                            <input
-                                                                type="tel"
-                                                                value={formData.locationPhone || ''}
-                                                                onChange={(e) => setFormData(prev => ({ ...prev, locationPhone: e.target.value }))}
-                                                                placeholder="+976 xxxx xxxx"
-                                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">홈페이지</label>
-                                                            <input
-                                                                type="url"
-                                                                value={formData.locationWebsite || ''}
-                                                                onChange={(e) => setFormData(prev => ({ ...prev, locationWebsite: e.target.value }))}
-                                                                placeholder="https://..."
-                                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                                            Google 지도 임베드
-                                                            <span className="text-[10px] text-slate-400 ml-1">— iframe 코드 또는 src URL 붙여넣기</span>
-                                                        </label>
-                                                        <textarea
-                                                            value={formData.mapEmbedUrl || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, mapEmbedUrl: e.target.value }))}
-                                                            placeholder='Google 지도 → "공유" → "지도 임베드" → HTML 복사 → 여기에 붙여넣기'
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none resize-none h-16"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                                            길찾기 검색어
-                                                            <span className="text-[10px] text-slate-400 ml-1">— 좌표(47.91,106.92) 또는 주소</span>
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.mapQuery || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, mapQuery: e.target.value }))}
-                                                            placeholder="47.918,106.917 or place name"
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                                            운영시간
-                                                            <span className="text-[10px] text-slate-400 ml-1">— 요일별 자유 입력 (1줄씩)</span>
-                                                        </label>
-                                                        <textarea
-                                                            value={formData.locationHours || ''}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, locationHours: e.target.value }))}
-                                                            placeholder={'月: 09:00 - 17:00\n火: 09:00 - 17:00\n水: 09:00 - 17:00\n木: 09:00 - 17:00\n金: 09:00 - 17:00\n土: 10:00 - 16:00\n日: 休業'}
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none resize-none h-32"
-                                                        />
-                                                    </div>
                                                 </div>
                                             </div>
 

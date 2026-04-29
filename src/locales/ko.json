@@ -515,11 +515,15 @@
     "magazine": {
         "location": {
             "title": "위치",
+            "address": "주소",
+            "phone": "전화",
+            "website": "홈페이지",
             "directions": "길찾기",
             "copy_address": "주소 복사",
             "copied": "복사됨",
-            "hours_title": "운영시간",
-            "today": "오늘"
+            "hours_title": "이용가능시간 · 휴무일",
+            "today": "오늘",
+            "open_in_maps": "Google 지도에서 보기"
         }
     }
 }

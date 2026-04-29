@@ -20,6 +20,12 @@ interface LocationCardProps {
 const buildDirectionsUrl = (loc: LocationInfo): string => {
     const q = (loc.mapQuery || loc.address || loc.name || '').trim();
     if (!q) return 'https://www.google.com/maps';
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`;
+};
+
+const buildPlaceViewUrl = (loc: LocationInfo): string => {
+    const q = (loc.mapQuery || loc.address || loc.name || '').trim();
+    if (!q) return 'https://www.google.com/maps';
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 };
 
@@ -35,7 +41,6 @@ const resolveEmbedSrc = (raw?: string): string | null => {
 };
 
 // Parse multi-line "label: hours" text into structured rows.
-// Accepts any prefix the admin writes (月, Mon, 월, 월요일 etc).
 const parseHours = (raw?: string): Array<{ label: string; value: string }> => {
     if (!raw) return [];
     return raw
@@ -49,12 +54,9 @@ const parseHours = (raw?: string): Array<{ label: string; value: string }> => {
         });
 };
 
-// Try to find today's row in parsed hours using a permissive label match.
-// Returns the index in the parsed array, or -1.
 const findTodayRow = (rows: Array<{ label: string; value: string }>): number => {
     if (rows.length === 0) return -1;
-    const day = new Date().getDay(); // 0=Sun..6=Sat
-    // Map a day index to all common single-character/abbrev labels we might see.
+    const day = new Date().getDay();
     const labels: Record<number, string[]> = {
         0: ['日', 'Sun', '일'],
         1: ['月', 'Mon', '월'],
@@ -76,13 +78,15 @@ const findTodayRow = (rows: Array<{ label: string; value: string }>): number => 
 export const LocationCard: React.FC<LocationCardProps> = ({ location }) => {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
+    const [hoursOpen, setHoursOpen] = useState(false);
 
     const embedSrc = useMemo(() => resolveEmbedSrc(location.mapEmbedUrl), [location.mapEmbedUrl]);
     const directionsUrl = useMemo(() => buildDirectionsUrl(location), [location]);
+    const placeViewUrl = useMemo(() => buildPlaceViewUrl(location), [location]);
     const hoursRows = useMemo(() => parseHours(location.hours), [location.hours]);
     const todayIdx = useMemo(() => findTodayRow(hoursRows), [hoursRows]);
+    const todayRow = todayIdx >= 0 ? hoursRows[todayIdx] : null;
 
-    // Don't render anything if there's no meaningful data
     const hasAny = !!(
         location.name ||
         location.address ||
@@ -101,108 +105,155 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location }) => {
             setCopied(true);
             setTimeout(() => setCopied(false), 1800);
         } catch {
-            // Silently fail; clipboard may be unavailable
+            // Silently fail
         }
     };
 
     return (
-        <section className="not-prose mt-8 mb-6">
-            <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-                {/* Map */}
-                {embedSrc && (
-                    <div className="relative w-full" style={{ aspectRatio: '16 / 10' }}>
-                        <iframe
-                            src={embedSrc}
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            allowFullScreen
-                            className="absolute inset-0 w-full h-full border-0"
-                            title={location.name || 'map'}
-                        />
-                    </div>
-                )}
+        <section className="not-prose my-7">
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                    <span
+                        className="material-symbols-outlined text-primary text-[20px]"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                        place
+                    </span>
+                    <h3 className="text-[18px] font-bold text-slate-900 dark:text-white tracking-tight">
+                        {location.name || t('magazine.location.title', { defaultValue: '位置' })}
+                    </h3>
+                </div>
+            </div>
 
-                {/* Info */}
-                <div className="p-5 space-y-3">
-                    {location.name && (
-                        <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                place
+            {/* Map */}
+            {embedSrc && (
+                <div
+                    className="relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm"
+                    style={{ aspectRatio: '16 / 11' }}
+                >
+                    <iframe
+                        src={embedSrc}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full border-0"
+                        title={location.name || 'map'}
+                    />
+                </div>
+            )}
+
+            {/* Info card (gray bg, label/value rows) */}
+            {(location.address || location.phone || location.website) && (
+                <div className="mt-4 rounded-2xl bg-slate-100 dark:bg-slate-800/60 p-4 space-y-3">
+                    {location.address && (
+                        <div className="grid grid-cols-[44px_1fr] items-start gap-2">
+                            <span className="text-[12.5px] font-bold text-slate-500 dark:text-slate-400 pt-0.5">
+                                {t('magazine.location.address', { defaultValue: '住所' })}
                             </span>
-                            <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                                {location.name}
-                            </h3>
+                            <span className="text-[13.5px] text-slate-800 dark:text-slate-200 leading-relaxed break-words">
+                                {location.address}
+                            </span>
                         </div>
                     )}
-
-                    <div className="space-y-2 text-[13px] text-slate-700 dark:text-slate-300">
-                        {location.address && (
-                            <div className="flex items-start gap-2.5">
-                                <span className="material-symbols-outlined text-slate-400 text-[18px] mt-0.5 shrink-0">map</span>
-                                <span className="leading-relaxed flex-1 min-w-0">{location.address}</span>
-                            </div>
-                        )}
-                        {location.phone && (
+                    {location.phone && (
+                        <div className="grid grid-cols-[44px_1fr] items-center gap-2">
+                            <span className="text-[12.5px] font-bold text-slate-500 dark:text-slate-400">
+                                {t('magazine.location.phone', { defaultValue: '電話' })}
+                            </span>
                             <a
                                 href={`tel:${location.phone.replace(/\s/g, '')}`}
-                                className="flex items-center gap-2.5 hover:text-primary transition-colors"
+                                className="text-[13.5px] font-medium text-slate-800 dark:text-slate-200 hover:text-primary tabular-nums break-all"
                             >
-                                <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">call</span>
-                                <span className="tabular-nums">{location.phone}</span>
+                                {location.phone}
                             </a>
-                        )}
-                        {location.website && (
+                        </div>
+                    )}
+                    {location.website && (
+                        <div className="grid grid-cols-[44px_1fr] items-center gap-2">
+                            <span className="text-[12.5px] font-bold text-slate-500 dark:text-slate-400">
+                                {t('magazine.location.website', { defaultValue: 'ホーム' })}
+                            </span>
                             <a
                                 href={location.website}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2.5 hover:text-primary transition-colors break-all"
+                                className="text-[13.5px] font-medium text-primary hover:underline truncate"
                             >
-                                <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">language</span>
-                                <span className="truncate">{location.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                                {location.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                             </a>
-                        )}
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                        <button
-                            type="button"
-                            onClick={handleCopyAddress}
-                            disabled={!location.address && !location.name}
-                            className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[13px] hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-[0.98] transition-all disabled:opacity-50"
-                        >
-                            <span className="material-symbols-outlined text-[16px]">
-                                {copied ? 'check' : 'content_copy'}
-                            </span>
-                            {copied
-                                ? t('magazine.location.copied', { defaultValue: 'コピー済み' })
-                                : t('magazine.location.copy_address', { defaultValue: '住所をコピー' })}
-                        </button>
-                        <a
-                            href={directionsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary text-white font-bold text-[13px] shadow-sm shadow-primary/20 hover:bg-primary-dark active:scale-[0.98] transition-all"
-                        >
-                            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                directions
-                            </span>
-                            {t('magazine.location.directions', { defaultValue: '経路を見る' })}
-                        </a>
-                    </div>
-                </div>
-
-                {/* Hours */}
-                {hoursRows.length > 0 && (
-                    <div className="border-t border-slate-100 dark:border-slate-700 px-5 py-4 bg-slate-50/50 dark:bg-slate-900/40">
-                        <div className="flex items-center gap-2 mb-2.5">
-                            <span className="material-symbols-outlined text-slate-400 text-[18px]">schedule</span>
-                            <h4 className="text-[13px] font-bold text-slate-700 dark:text-slate-200">
-                                {t('magazine.location.hours_title', { defaultValue: '営業時間' })}
-                            </h4>
                         </div>
-                        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+                    )}
+                </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                    type="button"
+                    onClick={handleCopyAddress}
+                    disabled={!location.address && !location.name}
+                    className="inline-flex items-center justify-center gap-1.5 h-12 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold text-[14px] hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                    <span className="material-symbols-outlined text-[18px]">
+                        {copied ? 'check' : 'content_copy'}
+                    </span>
+                    {copied
+                        ? t('magazine.location.copied', { defaultValue: 'コピー済み' })
+                        : t('magazine.location.copy_address', { defaultValue: '住所をコピー' })}
+                </button>
+                <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 h-12 rounded-xl bg-primary text-white font-bold text-[14px] shadow-md shadow-primary/25 hover:bg-primary-dark active:scale-[0.98] transition-all"
+                >
+                    <span
+                        className="material-symbols-outlined text-[18px]"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                        directions
+                    </span>
+                    {t('magazine.location.directions', { defaultValue: '経路を見る' })}
+                </a>
+            </div>
+
+            {/* Hours (collapsible, today's hours always visible as preview) */}
+            {hoursRows.length > 0 && (
+                <div className="mt-5 border-t border-slate-200 dark:border-slate-700 pt-4">
+                    <button
+                        type="button"
+                        onClick={() => setHoursOpen(!hoursOpen)}
+                        className="w-full flex items-center justify-between text-left"
+                        aria-expanded={hoursOpen}
+                    >
+                        <h4 className="text-[15px] font-bold text-slate-900 dark:text-white">
+                            {t('magazine.location.hours_title', { defaultValue: '営業時間 · 休業日' })}
+                        </h4>
+                        <span
+                            className={`material-symbols-outlined text-[22px] text-slate-500 transition-transform duration-200 ${
+                                hoursOpen ? 'rotate-180' : ''
+                            }`}
+                        >
+                            expand_more
+                        </span>
+                    </button>
+
+                    {/* Today's hours preview (always visible) */}
+                    {todayRow && (
+                        <div className="mt-2.5 flex items-center gap-2 text-[14px]">
+                            <span className="text-primary font-bold">
+                                {t('magazine.location.today', { defaultValue: '本日' })}
+                            </span>
+                            <span className="text-slate-700 dark:text-slate-300 tabular-nums font-medium">
+                                {todayRow.value}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Full week list when expanded */}
+                    {hoursOpen && (
+                        <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[13.5px]">
                             {hoursRows.map((row, i) => {
                                 const isToday = i === todayIdx;
                                 return (
@@ -215,17 +266,12 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location }) => {
                                             }`}
                                         >
                                             {row.label}
-                                            {isToday && (
-                                                <span className="ml-1 text-[10px] font-bold uppercase tracking-wide">
-                                                    · {t('magazine.location.today', { defaultValue: '本日' })}
-                                                </span>
-                                            )}
                                         </div>
                                         <div
-                                            className={`tabular-nums text-right ${
+                                            className={`tabular-nums ${
                                                 isToday
                                                     ? 'text-slate-900 dark:text-white font-bold'
-                                                    : 'text-slate-600 dark:text-slate-300'
+                                                    : 'text-slate-700 dark:text-slate-300'
                                             }`}
                                         >
                                             {row.value}
@@ -234,9 +280,22 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location }) => {
                                 );
                             })}
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
+
+            {/* Optional: open in Maps app */}
+            {!embedSrc && (location.address || location.name) && (
+                <a
+                    href={placeViewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-primary hover:underline"
+                >
+                    {t('magazine.location.open_in_maps', { defaultValue: 'Google マップで開く' })}
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                </a>
+            )}
         </section>
     );
 };
