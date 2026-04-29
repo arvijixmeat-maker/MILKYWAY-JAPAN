@@ -174,7 +174,7 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
 const HighlightCardView: React.FC<{ card: HighlightCard; onClick?: () => void }> = ({ card, onClick }) => (
     <button
         onClick={onClick}
-        className="relative flex-shrink-0 w-[78vw] max-w-[360px] aspect-[4/5] rounded-3xl overflow-hidden shadow-lg snap-center text-left active:scale-[0.98] transition-transform"
+        className="relative flex-shrink-0 w-[68vw] max-w-[260px] sm:max-w-[240px] md:max-w-[260px] lg:max-w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-md snap-center text-left active:scale-[0.98] transition-transform"
     >
         <img
             src={getOptimizedImageUrl(card.image, 'productDetail')}
@@ -187,11 +187,11 @@ const HighlightCardView: React.FC<{ card: HighlightCard; onClick?: () => void }>
 
         {/* Tags (top) */}
         {card.tags && card.tags.length > 0 && (
-            <div className="absolute top-4 left-4 right-4 flex flex-wrap gap-1.5">
+            <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1">
                 {card.tags.map((tag, i) => (
                     <span
                         key={i}
-                        className="px-2.5 py-1 bg-white/25 backdrop-blur-md text-white text-[11px] font-semibold rounded-full ring-1 ring-white/30"
+                        className="px-2 py-0.5 bg-white/25 backdrop-blur-md text-white text-[10px] font-semibold rounded-full ring-1 ring-white/30"
                     >
                         {tag}
                     </span>
@@ -200,10 +200,10 @@ const HighlightCardView: React.FC<{ card: HighlightCard; onClick?: () => void }>
         )}
 
         {/* Text (bottom) */}
-        <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-            <h3 className="text-lg font-bold leading-tight drop-shadow mb-1.5">{card.title}</h3>
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+            <h3 className="text-[15px] font-bold leading-tight drop-shadow mb-1 line-clamp-2">{card.title}</h3>
             {card.description && (
-                <p className="text-[13px] leading-relaxed text-white/90 whitespace-pre-line drop-shadow">
+                <p className="text-[12px] leading-relaxed text-white/90 whitespace-pre-line drop-shadow line-clamp-3">
                     {card.description}
                 </p>
             )}
@@ -215,19 +215,19 @@ const HighlightCardView: React.FC<{ card: HighlightCard; onClick?: () => void }>
 const HighlightSectionView: React.FC<{ section: HighlightSection; accent?: string }> = ({ section, accent = '#0f766e' }) => {
     const navigate = useNavigate();
     return (
-        <section className="py-8">
-            <div className="text-center mb-6 px-5">
+        <section className="py-6 sm:py-8">
+            <div className="text-center mb-5 px-5">
                 <span
-                    className="inline-block px-3.5 py-1.5 rounded-full text-white text-[11px] font-bold tracking-wider mb-4"
+                    className="inline-block px-3 py-1 rounded-full text-white text-[10.5px] font-bold tracking-wider mb-3"
                     style={{ background: accent }}
                 >
                     {section.label}
                 </span>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight">
+                <h2 className="text-[18px] sm:text-[20px] md:text-[22px] font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight">
                     {section.title}
                 </h2>
                 {section.subtitle && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                    <p className="text-[12.5px] sm:text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
                         {section.subtitle}
                     </p>
                 )}
