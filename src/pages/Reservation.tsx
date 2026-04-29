@@ -17,6 +17,7 @@ export const Reservation: React.FC = () => {
     const [selectedAccomId, setSelectedAccomId] = useState<string>('');
     const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
     const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+    const [priceWhyOpen, setPriceWhyOpen] = useState(false);
 
     // Calendar state
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -494,72 +495,197 @@ export const Reservation: React.FC = () => {
                 </div>
 
                 {/* Price Detail Modal */}
-                {isPriceModalOpen && (
-                    <>
-                        <div
-                            onClick={() => setIsPriceModalOpen(false)}
-                            className="fixed inset-0 bg-black/40 z-[100] transition-opacity duration-300"
-                        ></div>
-                        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white dark:bg-zinc-900 rounded-t-[32px] z-[101] shadow-2xl transition-transform duration-300 flex flex-col max-h-[90vh]">
-                            <div className="flex justify-center pt-3 pb-1">
-                                <div className="w-10 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full"></div>
-                            </div>
-                            <div className="flex items-center justify-between px-6 py-4">
-                                <h3 className="text-lg font-bold text-[#0e1a18] dark:text-white">{t('reservation.price_info.modal_title')}</h3>
-                                <button
-                                    onClick={() => setIsPriceModalOpen(false)}
-                                    className="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 rounded-full cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-[20px] text-gray-500">close</span>
-                                </button>
-                            </div>
-                            <div className="px-6 pb-6 overflow-y-auto">
-                                <div className="bg-gray-50 dark:bg-zinc-800/30 rounded-2xl overflow-hidden border border-gray-100 dark:border-zinc-800 mb-6">
-                                    <div className="grid grid-cols-2 border-b border-gray-200 dark:border-zinc-800">
-                                        <div className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50/80 dark:bg-zinc-800/50">{t('reservation.price_info.modal_guests')}</div>
-                                        <div className="px-4 py-3 text-xs font-bold text-gray-400 bg-gray-50/80 dark:bg-zinc-800/50">{t('reservation.price_info.modal_price')}</div>
-                                    </div>
+                {isPriceModalOpen && (() => {
+                    const sortedOpts = [...(product.pricingOptions || [])].sort((a, b) => a.people - b.people);
+                    const maxPerPerson = sortedOpts.length > 0 ? Math.max(...sortedOpts.map(p => p.pricePerPerson)) : 0;
+                    const minPerPerson = sortedOpts.length > 0 ? Math.min(...sortedOpts.map(p => p.pricePerPerson)) : 0;
+                    const currentOpt = sortedOpts.find(p => p.people === totalPeople);
+                    const currency = t('reservation.price_info.currency');
 
-                                    {/* Dynamic Price List */}
-                                    {product.pricingOptions?.sort((a, b) => a.people - b.people).map((opt, idx) => (
-                                        <div key={idx} className={`grid grid-cols-2 ${totalPeople === opt.people ? 'bg-primary text-white font-bold' : 'border-b border-gray-100 dark:border-zinc-800'}`}>
-                                            <div className={`px-4 py-4 text-[15px] ${totalPeople === opt.people ? '' : 'text-[#0e1a18] dark:text-white'}`}>{opt.people}{t('reservation.guest_selection.unit')}</div>
-                                            <div className={`px-4 py-4 text-right ${totalPeople === opt.people ? '' : 'text-[#0e1a18] dark:text-white'}`}>
-                                                <div className="text-[15px] font-medium">{formatPrice(opt.pricePerPerson)}{t('reservation.price_info.currency')}</div>
-                                                {(opt.depositPerPerson > 0 || opt.localPaymentPerPerson > 0) && (
-                                                    <div className={`text-[10px] mt-0.5 ${totalPeople === opt.people ? 'text-white/80' : 'text-gray-400'}`}>
-                                                        {t('reservation.price_info.modal_deposit_local', {
-                                                            deposit: formatPrice(opt.depositPerPerson || 0) + t('reservation.price_info.currency'),
-                                                            local: formatPrice(opt.localPaymentPerPerson || 0) + t('reservation.price_info.currency')
-                                                        })}
-                                                    </div>
-                                                )}
+                    return (
+                        <>
+                            <div
+                                onClick={() => setIsPriceModalOpen(false)}
+                                className="fixed inset-0 bg-black/50 z-[100] transition-opacity duration-300"
+                            ></div>
+                            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white dark:bg-zinc-900 rounded-t-[32px] z-[101] shadow-2xl transition-transform duration-300 flex flex-col max-h-[92vh]">
+                                <div className="flex justify-center pt-3 pb-1">
+                                    <div className="w-10 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full"></div>
+                                </div>
+                                <div className="flex items-center justify-between px-6 py-4">
+                                    <h3 className="text-lg font-bold text-[#0e1a18] dark:text-white">{t('reservation.price_info.modal_title')}</h3>
+                                    <button
+                                        onClick={() => setIsPriceModalOpen(false)}
+                                        className="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 rounded-full cursor-pointer"
+                                        aria-label="Close"
+                                    >
+                                        <span className="material-symbols-outlined text-[20px] text-gray-500">close</span>
+                                    </button>
+                                </div>
+
+                                <div className="px-6 pb-6 overflow-y-auto">
+                                    {/* Current selection callout */}
+                                    {currentOpt && (
+                                        <div className="mb-5 rounded-2xl border-2 border-primary bg-primary/5 dark:bg-primary/10 p-4 flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="text-[11px] font-bold text-primary tracking-widest uppercase">
+                                                    {t('reservation.price_info.current_selection')}
+                                                </div>
+                                                <div className="mt-1 text-[18px] font-extrabold text-[#0e1a18] dark:text-white tabular-nums">
+                                                    {currentOpt.people}{t('reservation.guest_selection.unit')} · {formatPrice(currentOpt.pricePerPerson)}{currency}
+                                                    <span className="text-[12px] font-medium text-gray-400 ml-1">/ {t('reservation.guest_selection.unit')}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                                                    {t('reservation.price_info.modal_total')}
+                                                </div>
+                                                <div className="text-[16px] font-extrabold text-primary tabular-nums">
+                                                    {formatPrice(currentOpt.pricePerPerson * currentOpt.people)}{currency}
+                                                </div>
                                             </div>
                                         </div>
-                                    ))}
-
-                                    {(!product.pricingOptions || product.pricingOptions.length === 0) && (
-                                        <div className="p-4 text-center text-gray-500">{t('reservation.price_info.no_price_info')}</div>
                                     )}
-                                </div>
 
-                                <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-zinc-800/30 rounded-xl mb-8">
-                                    <span className="material-symbols-outlined text-primary text-lg">lightbulb</span>
-                                    <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-300">
-                                        {t('reservation.price_info.description')}
-                                    </p>
+                                    {/* Comparison table */}
+                                    <div className="rounded-2xl overflow-hidden border border-gray-100 dark:border-zinc-800 mb-5">
+                                        <div className="grid grid-cols-[1fr_1.2fr_1.2fr] bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
+                                            <div className="px-3 py-2.5 text-[11px] font-bold text-gray-400 tracking-wide">{t('reservation.price_info.modal_guests')}</div>
+                                            <div className="px-3 py-2.5 text-[11px] font-bold text-gray-400 tracking-wide text-right">{t('reservation.price_info.modal_price')}</div>
+                                            <div className="px-3 py-2.5 text-[11px] font-bold text-gray-400 tracking-wide text-right">{t('reservation.price_info.modal_total')}</div>
+                                        </div>
+
+                                        {sortedOpts.length === 0 ? (
+                                            <div className="p-4 text-center text-gray-500">{t('reservation.price_info.no_price_info')}</div>
+                                        ) : (
+                                            sortedOpts.map((opt, idx) => {
+                                                const isCurrent = totalPeople === opt.people;
+                                                const isBest = opt.pricePerPerson === minPerPerson && sortedOpts.length > 1;
+                                                const savings = maxPerPerson - opt.pricePerPerson;
+                                                const totalForGroup = opt.pricePerPerson * opt.people;
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setTotalPeople(opt.people);
+                                                            setIsPriceModalOpen(false);
+                                                        }}
+                                                        className={`w-full text-left grid grid-cols-[1fr_1.2fr_1.2fr] items-center transition-colors active:scale-[0.99] ${
+                                                            isCurrent
+                                                                ? 'bg-primary/10 dark:bg-primary/15'
+                                                                : 'hover:bg-gray-50 dark:hover:bg-zinc-800/40'
+                                                        } ${idx < sortedOpts.length - 1 ? 'border-b border-gray-100 dark:border-zinc-800' : ''}`}
+                                                    >
+                                                        {/* Guests col */}
+                                                        <div className="px-3 py-3.5 flex items-center gap-1.5">
+                                                            <span className={`text-[15px] tabular-nums ${isCurrent ? 'font-extrabold text-primary' : 'font-bold text-[#0e1a18] dark:text-white'}`}>
+                                                                {opt.people}{t('reservation.guest_selection.unit')}
+                                                            </span>
+                                                            {isCurrent && (
+                                                                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-primary text-white">
+                                                                    {t('reservation.price_info.current_pill')}
+                                                                </span>
+                                                            )}
+                                                            {isBest && !isCurrent && (
+                                                                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">
+                                                                    🔥 {t('reservation.price_info.best_deal')}
+                                                                </span>
+                                                            )}
+                                                            {isBest && isCurrent && (
+                                                                <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-orange-500 text-white">
+                                                                    🔥
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Per person col */}
+                                                        <div className="px-3 py-3.5 text-right">
+                                                            <div className={`text-[14px] tabular-nums ${isCurrent ? 'font-bold text-primary' : 'font-medium text-[#0e1a18] dark:text-white'}`}>
+                                                                {formatPrice(opt.pricePerPerson)}{currency}
+                                                            </div>
+                                                            {savings > 0 ? (
+                                                                <div className="mt-0.5 text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                                                    {t('reservation.price_info.savings_per_person', {
+                                                                        amount: formatPrice(savings),
+                                                                        currency,
+                                                                    })}
+                                                                </div>
+                                                            ) : sortedOpts.length > 1 ? (
+                                                                <div className="mt-0.5 text-[10.5px] text-gray-400">
+                                                                    {t('reservation.price_info.no_savings')}
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+
+                                                        {/* Total col */}
+                                                        <div className="px-3 py-3.5 text-right">
+                                                            <div className={`text-[14px] tabular-nums ${isCurrent ? 'font-extrabold text-primary' : 'font-bold text-[#0e1a18] dark:text-white'}`}>
+                                                                {formatPrice(totalForGroup)}{currency}
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+
+                                    {/* Why prices differ — accordion */}
+                                    <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden mb-6">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPriceWhyOpen(!priceWhyOpen)}
+                                            aria-expanded={priceWhyOpen}
+                                            className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-zinc-800/30 hover:bg-gray-100 dark:hover:bg-zinc-800/50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[18px] text-primary">help</span>
+                                                <span className="text-[13px] font-bold text-[#0e1a18] dark:text-white">
+                                                    {t('reservation.price_info.why_title')}
+                                                </span>
+                                            </div>
+                                            <span className={`material-symbols-outlined text-[20px] text-gray-500 transition-transform duration-200 ${priceWhyOpen ? 'rotate-180' : ''}`}>
+                                                expand_more
+                                            </span>
+                                        </button>
+                                        {priceWhyOpen && (
+                                            <div className="px-4 pt-3 pb-4 bg-white dark:bg-zinc-900 text-[12.5px] leading-relaxed text-gray-600 dark:text-gray-300 space-y-3">
+                                                <p>{t('reservation.price_info.why_explanation')}</p>
+                                                <div>
+                                                    <p className="font-bold text-[#0e1a18] dark:text-white text-[12px] mb-1.5">
+                                                        {t('reservation.price_info.why_includes')}
+                                                    </p>
+                                                    <ul className="space-y-1 text-[12.5px]">
+                                                        <li className="flex items-start gap-1.5">
+                                                            <span className="text-primary mt-0.5">•</span>
+                                                            <span>{t('reservation.price_info.why_item_guide')}</span>
+                                                        </li>
+                                                        <li className="flex items-start gap-1.5">
+                                                            <span className="text-primary mt-0.5">•</span>
+                                                            <span>{t('reservation.price_info.why_item_vehicle')}</span>
+                                                        </li>
+                                                        <li className="flex items-start gap-1.5">
+                                                            <span className="text-primary mt-0.5">•</span>
+                                                            <span>{t('reservation.price_info.why_item_lodging')}</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={() => setIsPriceModalOpen(false)}
+                                        className="w-full bg-primary text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] shadow-md shadow-primary/20"
+                                    >
+                                        {t('reservation.price_info.apply_selection')}
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setIsPriceModalOpen(false)}
-                                    className="w-full bg-[#1e2a27] dark:bg-primary text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98]"
-                                >
-                                    {t('reservation.buttons.confirm')}
-                                </button>
+                                <div className="h-6"></div>
                             </div>
-                            <div className="h-8"></div>
-                        </div>
-                    </>
-                )}
+                        </>
+                    );
+                })()}
             </div>
         </div>
     );

@@ -410,9 +410,22 @@
             "modal_title": "인원별 1인 단가 안내",
             "modal_guests": "인원수",
             "modal_price": "1인당 단가",
+            "modal_total": "합계",
             "modal_deposit_local": "(예약금: {{deposit}} / 현지: {{local}})",
             "no_price_info": "가격 정보가 없습니다.",
-            "description": "가이드 및 차량 등 공동 이용 비용이 포함되어 인원이 많을수록 저렴해집니다."
+            "description": "가이드 및 차량 등 공동 이용 비용이 포함되어 인원이 많을수록 저렴해집니다.",
+            "current_selection": "현재 선택",
+            "current_pill": "현재",
+            "best_deal": "최저가",
+            "savings_per_person": "1인 {{amount}}{{currency}} OFF",
+            "no_savings": "—",
+            "why_title": "왜 인원에 따라 가격이 다른가요?",
+            "why_explanation": "전용 가이드·운전기사·차량비를 인원이 나눠 부담하므로, 인원이 많을수록 1인당 요금이 저렴해집니다.",
+            "why_includes": "포함되는 고정 비용:",
+            "why_item_guide": "전용 가이드 (1명 / 그룹)",
+            "why_item_vehicle": "전용 차량 + 운전기사",
+            "why_item_lodging": "숙박 코디네이션",
+            "apply_selection": "이 인원으로 예약"
         },
         "options": {
             "accommodation_title": "숙소 옵션",

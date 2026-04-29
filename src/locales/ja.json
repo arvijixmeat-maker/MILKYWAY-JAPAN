@@ -443,9 +443,22 @@
             "modal_title": "人数別のお1人様単価のご案内",
             "modal_guests": "人数",
             "modal_price": "お1人様単価",
+            "modal_total": "合計",
             "modal_deposit_local": "(予約金: {{deposit}} / 現地: {{local}})",
             "no_price_info": "価格情報がありません。",
-            "description": "ガイドおよび車両等の共同利用費用が含まれており、人数が多いほどお得になります。"
+            "description": "ガイドおよび車両等の共同利用費用が含まれており、人数が多いほどお得になります。",
+            "current_selection": "現在のご選択",
+            "current_pill": "現在",
+            "best_deal": "最安",
+            "savings_per_person": "お1人様 {{amount}}{{currency}} OFF",
+            "no_savings": "—",
+            "why_title": "なぜ人数によって料金が違うの？",
+            "why_explanation": "専用ガイド・運転手・車両費を人数で分担するため、人数が多いほどお1人様あたりの料金がお得になります。",
+            "why_includes": "含まれる固定費用：",
+            "why_item_guide": "専用ガイド (1名 / グループ)",
+            "why_item_vehicle": "専用車両 + 運転手",
+            "why_item_lodging": "宿泊コーディネート",
+            "apply_selection": "この人数で予約する"
         },
         "options": {
             "accommodation_title": "宿泊オプション",
