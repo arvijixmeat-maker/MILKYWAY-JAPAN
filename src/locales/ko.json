@@ -525,5 +525,9 @@
             "today": "오늘",
             "open_in_maps": "Google 지도에서 보기"
         }
+    },
+    "category_landing": {
+        "view_products": "여행 상품 보기",
+        "inquiry": "여행 문의하기"
     }
 }

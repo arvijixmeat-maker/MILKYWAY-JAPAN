@@ -430,6 +430,10 @@
             "open_in_maps": "Google マップで開く"
         }
     },
+    "category_landing": {
+        "view_products": "ツアー商品を見る",
+        "inquiry": "お問い合わせ"
+    },
     "reservation": {
         "title": "予約日およびオプションの選択",
         "date_selection": {

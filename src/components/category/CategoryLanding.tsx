@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ProductCard } from '../product/ProductCard';
 import { ProductSkeleton } from '../skeletons/ProductSkeleton';
 import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
@@ -41,6 +42,8 @@ interface Props {
 
 // ─── Hero ─────────────────────────────────────────────────
 const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const slides = (content.heroImages && content.heroImages.length > 0)
         ? content.heroImages
         : [content.heroImage];
@@ -78,6 +81,11 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
         touchDeltaX.current = 0;
     };
 
+    const scrollToProducts = () => {
+        const el = document.getElementById('category-products');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
     return (
         <section
             className="relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden bg-slate-900 select-none"
@@ -104,27 +112,44 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
                 ))}
             </div>
 
-            {/* Gradient overlay — stronger on the left to improve text legibility */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/10 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+            {/* Gradient overlays — stronger to ensure text legibility on bright photos */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
 
-            {/* Left-aligned text.
-                break-keep prevents Japanese/Korean words from breaking mid-character (e.g. ゴビ砂/漠の旅).
-                Column widths are generous at larger breakpoints so short CJK titles stay on one line. */}
-            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] xl:max-w-[50%] break-keep">
+            {/* Text + CTA block — vertically centered, left-aligned */}
+            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-16 max-w-[88%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] xl:max-w-[50%] break-keep">
                 {content.heroTagline && (
-                    <p className="text-white/90 text-xs sm:text-sm font-semibold mb-2 drop-shadow-lg break-keep">
+                    <p className="text-white/85 text-[11px] sm:text-[12px] font-semibold tracking-[0.18em] uppercase mb-3 drop-shadow break-keep">
                         {content.heroTagline}
                     </p>
                 )}
-                <h1 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight drop-shadow-xl break-keep">
+                <h1 className="text-white text-[28px] sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.15] drop-shadow-xl break-keep">
                     {content.heroTitle}
                 </h1>
                 {content.heroSubtitle && (
-                    <p className="text-white/90 text-xs sm:text-sm mt-3 leading-relaxed max-w-sm drop-shadow-lg whitespace-pre-line break-keep">
+                    <p className="text-white/90 text-[13px] sm:text-[14px] mt-3 sm:mt-4 leading-relaxed max-w-sm drop-shadow whitespace-pre-line break-keep">
                         {content.heroSubtitle}
                     </p>
                 )}
+
+                {/* CTA buttons */}
+                <div className="mt-5 sm:mt-6 flex flex-wrap gap-2.5">
+                    <button
+                        type="button"
+                        onClick={scrollToProducts}
+                        className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-primary text-white text-[13px] sm:text-[14px] font-bold shadow-lg shadow-primary/40 hover:bg-primary-dark active:scale-[0.97] transition-all"
+                    >
+                        {t('category_landing.view_products', { defaultValue: 'ツアー商品を見る' })}
+                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/custom-estimate')}
+                        className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/40 text-white text-[13px] sm:text-[14px] font-bold hover:bg-white/20 active:scale-[0.97] transition-all"
+                    >
+                        {t('category_landing.inquiry', { defaultValue: 'お問い合わせ' })}
+                    </button>
+                </div>
             </div>
 
             {/* Pagination dots */}
@@ -260,7 +285,7 @@ export const CategoryLanding: React.FC<Props> = ({
                 ))}
 
                 {/* Products grid */}
-                <section className="px-5 pt-2 pb-8">
+                <section id="category-products" className="px-5 pt-2 pb-8 scroll-mt-20">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
                         <span className="material-symbols-outlined text-base" style={{ color: accent }}>explore</span>
                         {content.productGridTitle || 'ツアー商品'}
