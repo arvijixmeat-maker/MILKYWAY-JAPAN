@@ -88,7 +88,7 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
 
     return (
         <section
-            className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-h-[60vh] sm:max-h-[480px] lg:max-h-[540px] overflow-hidden bg-slate-900 select-none"
+            className="relative w-full aspect-[4/3] overflow-hidden bg-slate-900 select-none"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -116,28 +116,31 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
             <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20 pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
 
-            {/* Text + CTA block — vertically centered, left-aligned */}
-            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 md:px-14 lg:px-20 max-w-[90%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[55%] xl:max-w-[48%] break-keep">
+            {/* Text + CTA block — vertically centered, left-aligned.
+                The whole site sits inside a 480px mobile wrapper on PC, so we use a
+                single set of sizes (no breakpoint scaling) — that way the hero
+                renders identically regardless of viewport. */}
+            <div className="absolute inset-0 flex flex-col justify-center px-6 max-w-[88%] break-keep">
                 {content.heroTagline && (
-                    <p className="text-white/85 text-[11px] sm:text-[12px] font-semibold tracking-[0.18em] uppercase mb-2.5 sm:mb-3 drop-shadow break-keep">
+                    <p className="text-white/85 text-[11px] font-semibold tracking-[0.18em] uppercase mb-2.5 drop-shadow break-keep">
                         {content.heroTagline}
                     </p>
                 )}
-                <h1 className="text-white text-[26px] sm:text-[32px] md:text-[38px] lg:text-[42px] font-extrabold tracking-tight leading-[1.15] drop-shadow-xl break-keep">
+                <h1 className="text-white text-[26px] font-extrabold tracking-tight leading-[1.15] drop-shadow-xl break-keep">
                     {content.heroTitle}
                 </h1>
                 {content.heroSubtitle && (
-                    <p className="text-white/90 text-[12.5px] sm:text-[13.5px] md:text-[14px] mt-2.5 sm:mt-3 leading-relaxed max-w-sm drop-shadow whitespace-pre-line break-keep">
+                    <p className="text-white/90 text-[12.5px] mt-2.5 leading-relaxed max-w-[260px] drop-shadow whitespace-pre-line break-keep">
                         {content.heroSubtitle}
                     </p>
                 )}
 
                 {/* CTA buttons */}
-                <div className="mt-4 sm:mt-5 flex flex-wrap gap-2 sm:gap-2.5">
+                <div className="mt-4 flex flex-wrap gap-2">
                     <button
                         type="button"
                         onClick={scrollToProducts}
-                        className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-primary text-white text-[12.5px] sm:text-[13.5px] font-bold shadow-lg shadow-primary/40 hover:bg-primary-dark active:scale-[0.97] transition-all"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-white text-[12.5px] font-bold shadow-lg shadow-primary/40 hover:bg-primary-dark active:scale-[0.97] transition-all"
                     >
                         {t('category_landing.view_products', { defaultValue: 'ツアー商品を見る' })}
                         <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -145,7 +148,7 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
                     <button
                         type="button"
                         onClick={() => navigate('/custom-estimate')}
-                        className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/40 text-white text-[12.5px] sm:text-[13.5px] font-bold hover:bg-white/20 active:scale-[0.97] transition-all"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/40 text-white text-[12.5px] font-bold hover:bg-white/20 active:scale-[0.97] transition-all"
                     >
                         {t('category_landing.inquiry', { defaultValue: 'お問い合わせ' })}
                     </button>
