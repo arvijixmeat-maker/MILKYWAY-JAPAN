@@ -125,15 +125,104 @@ SliderBlot.tagName = 'div';
 // @ts-ignore
 SliderBlot.className = 'magazine-slider';
 
+// LocationBlot — inline place card embedded in magazine content.
+// Stores a JSON payload (URL-encoded) so newlines / special chars in
+// `hours` survive HTML attribute serialization round-trips.
+class LocationBlot extends BlockEmbed {
+    static create(value: string) {
+        const node = super.create();
+        node.setAttribute('class', 'magazine-location');
+        node.setAttribute('data-payload', value);
+
+        let parsed: any = {};
+        try { parsed = JSON.parse(decodeURIComponent(value)); } catch { /* ignore */ }
+
+        // Container
+        const container = document.createElement('div');
+        container.style.cssText = 'padding: 1rem 1.25rem; border: 2px dashed #14b8a6; border-radius: 0.75rem; background-color: #f0fdfa; margin: 1rem 0; position: relative;';
+
+        // Remove button
+        const removeBtn = document.createElement('div');
+        const removeIcon = document.createElement('span');
+        removeIcon.className = 'material-symbols-outlined';
+        removeIcon.style.fontSize = '16px';
+        removeIcon.textContent = 'close';
+        removeBtn.appendChild(removeIcon);
+        removeBtn.style.cssText = 'position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; background-color: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            node.remove();
+        });
+
+        // Header row: pin icon + place name
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;';
+        const pin = document.createElement('span');
+        pin.className = 'material-symbols-outlined';
+        pin.style.cssText = 'font-size: 20px; color: #0f766e;';
+        pin.textContent = 'place';
+        const titleEl = document.createElement('div');
+        titleEl.style.cssText = 'font-weight: bold; color: #0f766e; font-size: 14px;';
+        titleEl.textContent = parsed.name || '(이름 없음)';
+        header.appendChild(pin);
+        header.appendChild(titleEl);
+
+        // Body: address + extras
+        const body = document.createElement('div');
+        body.style.cssText = 'font-size: 12px; color: #475569; line-height: 1.5;';
+        if (parsed.address) {
+            const addrLine = document.createElement('div');
+            addrLine.textContent = `📍 ${parsed.address}`;
+            body.appendChild(addrLine);
+        }
+        if (parsed.phone) {
+            const phoneLine = document.createElement('div');
+            phoneLine.textContent = `📞 ${parsed.phone}`;
+            body.appendChild(phoneLine);
+        }
+        const extras: string[] = [];
+        if (parsed.mapEmbedUrl) extras.push('🗺️ 지도');
+        if (parsed.hours) extras.push('🕐 운영시간');
+        if (parsed.website) extras.push('🌐 홈페이지');
+        if (extras.length > 0) {
+            const extraLine = document.createElement('div');
+            extraLine.style.cssText = 'margin-top: 4px; color: #64748b; font-size: 11px;';
+            extraLine.textContent = extras.join('  ·  ');
+            body.appendChild(extraLine);
+        }
+
+        container.appendChild(removeBtn);
+        container.appendChild(header);
+        container.appendChild(body);
+        node.appendChild(container);
+
+        node.contentEditable = 'false';
+        return node;
+    }
+
+    static value(node: HTMLElement) {
+        return node.getAttribute('data-payload');
+    }
+}
+// @ts-ignore
+LocationBlot.blotName = 'location';
+// @ts-ignore
+LocationBlot.tagName = 'div';
+// @ts-ignore
+LocationBlot.className = 'magazine-location';
+
 // @ts-ignore
 ReactQuill.Quill.register(DividerBlot);
 // @ts-ignore
 ReactQuill.Quill.register(SliderBlot);
+// @ts-ignore
+ReactQuill.Quill.register(LocationBlot);
 
 // Custom Toolbar Icons
 const icons = ReactQuill.Quill.import('ui/icons') as any;
 icons['divider'] = '<svg viewBox="0 0 18 18"> <line class="ql-stroke" x1="3" x2="15" y1="9" y2="9"></line> </svg>';
 icons['slider'] = '<svg viewBox="0 0 18 18"> <rect class="ql-stroke" height="10" width="12" x="3" y="4"></rect> <circle class="ql-fill" cx="6" cy="7" r="1"></circle> <polyline class="ql-even ql-fill" points="5 12 5 11 7 9 8 10 9.4 8 13.4 12 5 12"></polyline> </svg>';
+icons['location'] = '<svg viewBox="0 0 18 18"> <path class="ql-stroke" d="M9,1 C5.5,1 3,3.5 3,7 C3,11 9,17 9,17 C9,17 15,11 15,7 C15,3.5 12.5,1 9,1 Z" fill="none"></path> <circle class="ql-fill" cx="9" cy="7" r="2"></circle> </svg>';
 
 
 export const AdminMagazineManage: React.FC = () => {
@@ -145,6 +234,18 @@ export const AdminMagazineManage: React.FC = () => {
     const quillRef = useRef<ReactQuill>(null);
     const sliderInputRef = useRef<HTMLInputElement>(null);
     const savedRange = useRef<ReactQuill.Range | null>(null);
+
+    // Inline location modal state (for embedded LocationBlot)
+    const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+    const [locationModalForm, setLocationModalForm] = useState({
+        name: '',
+        address: '',
+        phone: '',
+        website: '',
+        mapEmbedUrl: '',
+        mapQuery: '',
+        hours: '',
+    });
 
     // View Mode: 'list' | 'edit'
     const [viewMode, setViewMode] = useState<'list' | 'edit'>('list');
@@ -275,6 +376,45 @@ export const AdminMagazineManage: React.FC = () => {
         if (sliderInputRef.current) sliderInputRef.current.value = '';
     };
 
+    // Open location modal — saves cursor position so we can insert at the right spot
+    const handleLocation = () => {
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+            savedRange.current = quill.getSelection();
+        }
+        setLocationModalForm({
+            name: '',
+            address: '',
+            phone: '',
+            website: '',
+            mapEmbedUrl: '',
+            mapQuery: '',
+            hours: '',
+        });
+        setIsLocationModalOpen(true);
+    };
+
+    const insertLocationBlot = () => {
+        if (!locationModalForm.name && !locationModalForm.address && !locationModalForm.mapEmbedUrl) {
+            alert('장소 이름 / 주소 / 지도 임베드 중 하나는 입력해주세요.');
+            return;
+        }
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        const range = savedRange.current || { index: quill.getLength(), length: 0 };
+        const payload = encodeURIComponent(JSON.stringify(locationModalForm));
+        const index = range.index;
+
+        quill.insertEmbed(index, 'location', payload);
+        // Insert two newlines so the cursor lands on a fresh paragraph below the block
+        quill.insertText(index + 1, '\n\n');
+        quill.focus();
+        quill.setSelection(index + 2, 0);
+
+        setIsLocationModalOpen(false);
+    };
+
     // Custom Toolbar Options with registered blot names
     const modules = useMemo(() => ({
         toolbar: {
@@ -285,13 +425,14 @@ export const AdminMagazineManage: React.FC = () => {
                 [{ color: [] }, { background: [] }],
                 [{ align: [] }],
                 ['link', 'image', 'video'],
-                ['divider', 'slider'], // Custom buttons
+                ['divider', 'slider', 'location'], // Custom buttons
                 ['clean']
             ],
             handlers: {
                 image: handleImageHandler,
                 divider: handleDivider,
-                slider: handleSlider
+                slider: handleSlider,
+                location: handleLocation
             }
         }
     }), [handleImageHandler]);
@@ -957,6 +1098,118 @@ export const AdminMagazineManage: React.FC = () => {
                                     </div>
                                 )}
                             </>
+                        )}
+                        {/* Inline Location Block Modal */}
+                        {isLocationModalOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                <div className="absolute inset-0 bg-black/50" onClick={() => setIsLocationModalOpen(false)}></div>
+                                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+                                    <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-teal-500">add_location</span>
+                                        <h2 className="text-lg font-bold dark:text-white">위치 카드 삽입</h2>
+                                        <button
+                                            onClick={() => setIsLocationModalOpen(false)}
+                                            className="ml-auto w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"
+                                        >
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">장소 이름</label>
+                                            <input
+                                                type="text"
+                                                value={locationModalForm.name}
+                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, name: e.target.value }))}
+                                                placeholder="예: チンギスハーン博物館"
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">주소</label>
+                                            <textarea
+                                                value={locationModalForm.address}
+                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, address: e.target.value }))}
+                                                placeholder="Sambuu St, Ulaanbaatar 15141, Mongolia"
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none h-16"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">전화</label>
+                                                <input
+                                                    type="tel"
+                                                    value={locationModalForm.phone}
+                                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, phone: e.target.value }))}
+                                                    placeholder="+976 xxxx xxxx"
+                                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">홈페이지</label>
+                                                <input
+                                                    type="url"
+                                                    value={locationModalForm.website}
+                                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, website: e.target.value }))}
+                                                    placeholder="https://..."
+                                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                                                Google 지도 임베드
+                                                <span className="text-[10px] text-slate-400 ml-1">— iframe 코드 또는 src URL</span>
+                                            </label>
+                                            <textarea
+                                                value={locationModalForm.mapEmbedUrl}
+                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, mapEmbedUrl: e.target.value }))}
+                                                placeholder='Google 지도 → "공유" → "지도 임베드" → HTML 복사'
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none resize-none h-16"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                                                길찾기 검색어
+                                                <span className="text-[10px] text-slate-400 ml-1">— 좌표 또는 주소</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={locationModalForm.mapQuery}
+                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, mapQuery: e.target.value }))}
+                                                placeholder="47.918,106.917 or place name"
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                                                운영시간
+                                                <span className="text-[10px] text-slate-400 ml-1">— 요일별 1줄씩</span>
+                                            </label>
+                                            <textarea
+                                                value={locationModalForm.hours}
+                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, hours: e.target.value }))}
+                                                placeholder={'月: 09:00 - 17:00\n火: 09:00 - 17:00\n日: 休業'}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none resize-none h-28"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+                                        <button
+                                            onClick={() => setIsLocationModalOpen(false)}
+                                            className="flex-1 px-4 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={insertLocationBlot}
+                                            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-md shadow-teal-500/30 active:scale-95 transition-all"
+                                        >
+                                            본문에 삽입
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                         {isCategoryModalOpen && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

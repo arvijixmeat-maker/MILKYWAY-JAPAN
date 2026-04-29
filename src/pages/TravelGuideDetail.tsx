@@ -113,19 +113,44 @@ export const TravelGuideDetail: React.FC = () => {
         const result: React.ReactNode[] = [];
         let htmlBuffer = '';
 
+        const flushBuffer = (key: string) => {
+            if (htmlBuffer) {
+                result.push(<div key={key} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlBuffer) }} />);
+                htmlBuffer = '';
+            }
+        };
+
         childNodes.forEach((node, index) => {
             if (node.nodeType === Node.ELEMENT_NODE && (node as Element).classList.contains('magazine-slider')) {
-                // Flush buffer if exists
-                if (htmlBuffer) {
-                    result.push(<div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlBuffer) }} />);
-                    htmlBuffer = '';
-                }
+                flushBuffer(`html-${index}`);
 
                 // Render Slider
                 const imagesStr = (node as Element).getAttribute('data-images');
                 if (imagesStr) {
                     const images = imagesStr.split(',');
                     result.push(<SimpleSlider key={`slider-${index}`} images={images} />);
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE && (node as Element).classList.contains('magazine-location')) {
+                flushBuffer(`html-${index}`);
+
+                // Render inline LocationCard
+                const payload = (node as Element).getAttribute('data-payload');
+                if (payload) {
+                    try {
+                        const data = JSON.parse(decodeURIComponent(payload));
+                        const loc: LocationInfo = {
+                            name: data.name || undefined,
+                            address: data.address || undefined,
+                            phone: data.phone || undefined,
+                            website: data.website || undefined,
+                            hours: data.hours || undefined,
+                            mapEmbedUrl: data.mapEmbedUrl || undefined,
+                            mapQuery: data.mapQuery || undefined,
+                        };
+                        result.push(<LocationCard key={`location-${index}`} location={loc} />);
+                    } catch {
+                        // Malformed payload — skip silently
+                    }
                 }
             } else {
                 // Aggressive Zombie Cleanup:
