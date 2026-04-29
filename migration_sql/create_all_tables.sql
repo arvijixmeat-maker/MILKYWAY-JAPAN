@@ -203,6 +203,13 @@ CREATE TABLE IF NOT EXISTS magazines (
     author TEXT,
     is_published INTEGER DEFAULT 1,
     view_count INTEGER DEFAULT 0,
+    location_name TEXT,
+    location_address TEXT,
+    location_phone TEXT,
+    location_website TEXT,
+    location_hours TEXT,
+    map_embed_url TEXT,
+    map_query TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );

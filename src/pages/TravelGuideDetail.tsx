@@ -5,6 +5,8 @@ import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
+import { LocationCard } from '../components/magazine/LocationCard';
+import type { LocationInfo } from '../components/magazine/LocationCard';
 import { useTranslation } from 'react-i18next';
 
 interface Magazine {
@@ -18,6 +20,7 @@ interface Magazine {
     author?: string;
     createdAt: string;
     updatedAt?: string;
+    location?: LocationInfo;
 }
 
 export const TravelGuideDetail: React.FC = () => {
@@ -43,7 +46,7 @@ export const TravelGuideDetail: React.FC = () => {
                     return;
                 }
 
-                const currentMagazine = {
+                const currentMagazine: Magazine = {
                     id: magData.id,
                     title: magData.title,
                     description: magData.subtitle || magData.description || '',
@@ -54,6 +57,15 @@ export const TravelGuideDetail: React.FC = () => {
                     author: magData.author,
                     createdAt: magData.created_at,
                     updatedAt: magData.updated_at,
+                    location: {
+                        name: magData.location_name || undefined,
+                        address: magData.location_address || undefined,
+                        phone: magData.location_phone || undefined,
+                        website: magData.location_website || undefined,
+                        hours: magData.location_hours || undefined,
+                        mapEmbedUrl: magData.map_embed_url || undefined,
+                        mapQuery: magData.map_query || undefined,
+                    },
                 };
                 setMagazine(currentMagazine);
 
@@ -287,6 +299,9 @@ export const TravelGuideDetail: React.FC = () => {
                 <div className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-img:rounded-2xl">
                     {renderContent(magazine.content || '')}
                 </div>
+
+                {/* Location card (only renders if any location data exists) */}
+                {magazine.location && <LocationCard location={magazine.location} />}
 
                 {/* Related Magazines */}
                 {relatedMagazines && relatedMagazines.length > 0 && (

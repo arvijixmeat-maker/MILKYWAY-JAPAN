@@ -299,6 +299,25 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped itinerary_templates table: ${e.message}`);
     }
 
+    // Magazines: location/map columns for embedding Google Maps in posts
+    const magazineLocationColumns = [
+        "location_name TEXT",
+        "location_address TEXT",
+        "location_phone TEXT",
+        "location_website TEXT",
+        "location_hours TEXT",          // JSON: { mon: '09:00-17:00', ... }
+        "map_embed_url TEXT",           // Google Maps embed iframe src
+        "map_query TEXT",               // Address or "lat,lng" for directions URL
+    ];
+    for (const colDef of magazineLocationColumns) {
+        try {
+            await c.env.DB.prepare(`ALTER TABLE magazines ADD COLUMN ${colDef}`).run();
+            migrationResults.push(`Added magazines.${colDef}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped magazines.${colDef}: ${e.message}`);
+        }
+    }
+
     return c.json({
         success: true,
         message: "Migrations executed",

@@ -511,5 +511,15 @@
         "login_required": "로그인이 필요한 서비스입니다.",
         "add_comment_failed": "댓글 등록 중 오류가 발생했습니다.",
         "add_reply_failed": "답글 등록 중 오류가 발생했습니다."
+    },
+    "magazine": {
+        "location": {
+            "title": "위치",
+            "directions": "길찾기",
+            "copy_address": "주소 복사",
+            "copied": "복사됨",
+            "hours_title": "운영시간",
+            "today": "오늘"
+        }
     }
 }

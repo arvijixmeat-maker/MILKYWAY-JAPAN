@@ -416,6 +416,16 @@
             "recommended_guides": "このガイドはいかがですか？ 👀"
         }
     },
+    "magazine": {
+        "location": {
+            "title": "場所",
+            "directions": "経路を見る",
+            "copy_address": "住所をコピー",
+            "copied": "コピー済み",
+            "hours_title": "営業時間",
+            "today": "本日"
+        }
+    },
     "reservation": {
         "title": "予約日およびオプションの選択",
         "date_selection": {
