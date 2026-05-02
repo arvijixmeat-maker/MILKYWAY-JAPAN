@@ -203,6 +203,38 @@ export const TourProducts: React.FC = () => {
         }
     };
 
+    // ─── Structured Data (JSON-LD) — list page collection schema ───
+    const breadcrumbLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://mongolryokou.com/' },
+            { '@type': 'ListItem', position: 2, name: 'モンゴルツアー商品', item: 'https://mongolryokou.com/products' },
+        ],
+    };
+
+    const itemListLd = {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'モンゴルツアー商品一覧',
+        itemListElement: products.slice(0, 30).map((p, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `https://mongolryokou.com/products/${p.id}`,
+            name: p.name,
+        })),
+    };
+
+    const collectionLd = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'モンゴルツアー商品一覧 | Milkyway Japan',
+        description: t('products.seo_description'),
+        url: 'https://mongolryokou.com/products',
+        inLanguage: 'ja',
+        isPartOf: { '@type': 'WebSite', name: 'Milkyway Japan', url: 'https://mongolryokou.com' },
+    };
+
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white transition-colors duration-300 min-h-screen pb-24">
             <SEO
@@ -210,6 +242,7 @@ export const TourProducts: React.FC = () => {
                 description={t('products.seo_description')}
                 keywords={t('products.seo_keywords')}
                 canonical="/products"
+                structuredData={[collectionLd, breadcrumbLd, itemListLd]}
             />
             {/* Top App Bar & Search */}
             <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
