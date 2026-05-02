@@ -24,9 +24,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         const today = new Date().toISOString().split('T')[0];
         const baseUrl = SEO_CONSTANTS.SITE_URL;
 
-        // Base static URLs
+        // Base static URLs (homepage uses trailing slash to match <link rel="canonical">)
         const urls = [
-            { loc: `${baseUrl}`, lastmod: today, changefreq: 'daily', priority: '1.0' },
+            { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
             { loc: `${baseUrl}/products`, lastmod: today, changefreq: 'daily', priority: '0.9' },
             { loc: `${baseUrl}/travel-guide`, lastmod: today, changefreq: 'daily', priority: '0.9' },
             { loc: `${baseUrl}/travel-mates`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
@@ -34,6 +34,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             { loc: `${baseUrl}/custom-estimate`, lastmod: today, changefreq: 'monthly', priority: '0.7' },
             { loc: `${baseUrl}/about`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
             { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/privacy-policy`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
+            { loc: `${baseUrl}/terms-of-service`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
         ];
 
         // Add dynamic product URLs
@@ -48,16 +50,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         });
 
         // Add dynamic category landing page URLs (/category/:slug)
+        // NOTE: categories table has no updated_at/created_at columns, so we use today's date.
         try {
             const categoriesResult = await context.env.DB.prepare(
-                "SELECT id, COALESCE(updated_at, created_at) AS updated_at FROM categories WHERE (type = 'product' OR type IS NULL) AND is_active = 1 AND id != 'all'"
+                "SELECT id FROM categories WHERE (type = 'product' OR type IS NULL) AND is_active = 1 AND id != 'all'"
             ).all();
             if (categoriesResult && categoriesResult.results) {
                 categoriesResult.results.forEach((cat: any) => {
-                    const lastModFormat = cat.updated_at ? String(cat.updated_at).split(' ')[0] : today;
                     urls.push({
                         loc: `${baseUrl}/category/${cat.id}`,
-                        lastmod: lastModFormat,
+                        lastmod: today,
                         changefreq: 'weekly',
                         priority: '0.8'
                     });
