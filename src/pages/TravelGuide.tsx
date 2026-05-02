@@ -81,13 +81,48 @@ export const TravelGuide: React.FC = () => {
 
     const featuredMagazines = magazines.filter(m => m.isFeatured).slice(0, 5);
 
+    // ─── Structured Data (JSON-LD) — guide list collection schema ───
+    const guideDescription = "モンゴル旅行の必須情報！モンゴルの基本情報、旅行のヒント、地域別ガイド、文化やグルメ情報をチェックしましょう。";
+
+    const breadcrumbLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://mongolryokou.com/' },
+            { '@type': 'ListItem', position: 2, name: '旅行ガイド', item: 'https://mongolryokou.com/travel-guide' },
+        ],
+    };
+
+    const itemListLd = {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'モンゴル旅行ガイド記事一覧',
+        itemListElement: magazines.slice(0, 30).map((m, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `https://mongolryokou.com/travel-guide/${m.id}`,
+            name: m.title,
+        })),
+    };
+
+    const collectionLd = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'モンゴル旅行ガイド | Milkyway Japan',
+        description: guideDescription,
+        url: 'https://mongolryokou.com/travel-guide',
+        inLanguage: 'ja',
+        isPartOf: { '@type': 'WebSite', name: 'Milkyway Japan', url: 'https://mongolryokou.com' },
+    };
+
     return (
         <div className="bg-[#f8f7f8] dark:bg-background-dark text-text-primary dark:text-white pb-24 min-h-screen font-display">
             <SEO
                 title={`${t('travel_guide.title')} | Milkyway Japan`}
-                description="モンゴル旅行の必須情報！モンゴルの基本情報、旅行のヒント、地域別ガイド、文化やグルメ情報をチェックしましょう。"
+                description={guideDescription}
                 keywords="モンゴル旅行ガイド, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備"
                 canonical="/travel-guide"
+                structuredData={[collectionLd, breadcrumbLd, itemListLd]}
             />
             {/* Sticky Header Container */}
             <div className="sticky top-0 z-50 bg-[#f8f7f8]/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200">

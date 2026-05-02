@@ -8,15 +8,38 @@ interface Env {
     DB: D1Database;
 }
 
+interface SitemapUrl {
+    loc: string;
+    lastmod: string;
+    changefreq: string;
+    priority: string;
+    images?: string[];
+}
+
+// Escape XML reserved chars in URLs (& is the realistic one in image query strings).
+const xmlEscape = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+// Convert any image path/URL into an absolute URL fit for the sitemap, or null if unusable.
+const toAbsoluteImageUrl = (raw: unknown, baseUrl: string): string | null => {
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith('data:')) return null;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    if (trimmed.startsWith('//')) return `https:${trimmed}`;
+    return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+};
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
     try {
         const db = drizzle(context.env.DB);
 
-        // Fetch all active products
+        // Fetch all active products (now also pulling main_images for the image sitemap)
         const activeProducts = await db
             .select({
                 id: products.id,
-                updatedAt: products.updatedAt
+                updatedAt: products.updatedAt,
+                mainImages: products.mainImages,
             })
             .from(products)
             .where(eq(products.status, 'active'));
@@ -25,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         const baseUrl = SEO_CONSTANTS.SITE_URL;
 
         // Base static URLs (homepage uses trailing slash to match <link rel="canonical">)
-        const urls = [
+        const urls: SitemapUrl[] = [
             { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
             { loc: `${baseUrl}/products`, lastmod: today, changefreq: 'daily', priority: '0.9' },
             { loc: `${baseUrl}/travel-guide`, lastmod: today, changefreq: 'daily', priority: '0.9' },
@@ -38,14 +61,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             { loc: `${baseUrl}/terms-of-service`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
         ];
 
-        // Add dynamic product URLs
+        // Add dynamic product URLs (with up to 5 images each for Google Image Search)
         activeProducts.forEach(product => {
             const lastModFormat = product.updatedAt ? product.updatedAt.split(' ')[0] : today;
+            const images: string[] = [];
+            try {
+                const parsed = JSON.parse(product.mainImages || '[]');
+                if (Array.isArray(parsed)) {
+                    for (const raw of parsed) {
+                        const abs = toAbsoluteImageUrl(raw, baseUrl);
+                        if (abs) images.push(abs);
+                        if (images.length >= 5) break;
+                    }
+                }
+            } catch {
+                // mainImages may be malformed JSON for legacy rows — skip images, keep the URL
+            }
             urls.push({
                 loc: `${baseUrl}/products/${product.id}`,
                 lastmod: lastModFormat,
                 changefreq: 'weekly',
-                priority: '0.8'
+                priority: '0.8',
+                images,
             });
         });
 
@@ -69,16 +106,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             console.error('Failed to fetch categories for sitemap:', e);
         }
 
-        // Add dynamic travel guide (magazine) URLs using raw D1 query
+        // Add dynamic travel guide (magazine) URLs using raw D1 query (with thumbnail image)
         let magazinesResult;
         try {
             magazinesResult = await context.env.DB.prepare(
-                "SELECT id, updated_at FROM magazines WHERE is_published = 1 OR is_active = 1"
+                "SELECT id, updated_at, thumbnail FROM magazines WHERE is_published = 1 OR is_active = 1"
             ).all();
         } catch (e) {
             // column 'is_published' or 'is_active' may differ depending on migrations, fallback to all:
             try {
-                magazinesResult = await context.env.DB.prepare("SELECT id, updated_at FROM magazines").all();
+                magazinesResult = await context.env.DB.prepare("SELECT id, updated_at, thumbnail FROM magazines").all();
             } catch (err) {
                 console.error("Failed to fetch magazines for sitemap:", err);
             }
@@ -86,24 +123,38 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
         if (magazinesResult && magazinesResult.results) {
             magazinesResult.results.forEach((mag: any) => {
-                const lastModFormat = mag.updated_at ? mag.updated_at.split(' ')[0] : today;
+                const lastModFormat = mag.updated_at ? String(mag.updated_at).split(' ')[0] : today;
+                const images: string[] = [];
+                const abs = toAbsoluteImageUrl(mag.thumbnail, baseUrl);
+                if (abs) images.push(abs);
                 urls.push({
                     loc: `${baseUrl}/travel-guide/${mag.id}`,
                     lastmod: lastModFormat,
                     changefreq: 'monthly',
-                    priority: '0.7'
+                    priority: '0.7',
+                    images,
                 });
             });
         }
 
-        const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(url => `  <url>
-    <loc>${url.loc}</loc>
+        const renderUrl = (url: SitemapUrl) => {
+            const imageBlock = (url.images && url.images.length > 0)
+                ? '\n' + url.images.map(img =>
+                    `    <image:image><image:loc>${xmlEscape(img)}</image:loc></image:image>`
+                ).join('\n')
+                : '';
+            return `  <url>
+    <loc>${xmlEscape(url.loc)}</loc>
     <lastmod>${url.lastmod}</lastmod>
     <changefreq>${url.changefreq}</changefreq>
-    <priority>${url.priority}</priority>
-  </url>`).join('\n')}
+    <priority>${url.priority}</priority>${imageBlock}
+  </url>`;
+        };
+
+        const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${urls.map(renderUrl).join('\n')}
 </urlset>`;
 
         return new Response(sitemapXml, {
