@@ -138,15 +138,14 @@ img {
     -webkit-user-select: none;
 }
 
-/* Move Channel Talk Widget above the Bottom Navigation Bar.
+/* Move Channel Talk floating launcher above the Bottom Navigation Bar.
    BottomNav is h-[84px] + iPhone home indicator safe-area (~34px) → need ~100px clearance.
-   Channel Talk's DOM root varies by version (#ch-plugin, #ch-plugin-entry, [id^="ch-plugin"])
-   so we target all known variants to be robust against their updates. */
+   IMPORTANT: target ONLY the launcher button. A wildcard like [id^="ch-plugin"] also
+   matches the messenger window container, which pushes the chat panel up by 100px on
+   open and clips the header (close button) off-screen on mobile. */
 @media (max-width: 768px) {
-    #ch-plugin,
     #ch-plugin-entry,
-    #ch-plugin-launcher,
-    [id^="ch-plugin"] {
+    #ch-plugin-launcher {
         bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
