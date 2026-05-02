@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { formatShortDate } from '../utils/formatDate';
+import { ReviewStars, shouldShowTitle } from '../components/review/ReviewStars';
 
 // Define Review type locally or import if available, matching Cloudflare + Frontend needs
 interface Review {
@@ -290,32 +291,7 @@ export const UserReviews: React.FC = () => {
     );
 };
 
-// Star row — yellow #facc15 (design system token --star). Used for both summary + per-card.
-const ReviewStars: React.FC<{ rating: number; size?: number; className?: string }> = ({ rating, size = 16, className = '' }) => {
-    const filled = Math.round(rating);
-    return (
-        <div className={`flex gap-0.5 ${className}`}>
-            {[...Array(5)].map((_, i) => {
-                const on = i < filled;
-                return (
-                    <span
-                        key={i}
-                        className={`material-symbols-outlined ${on ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`}
-                        style={{
-                            fontSize: `${size}px`,
-                            fontVariationSettings: on ? "'FILL' 1" : "'FILL' 0",
-                        }}
-                    >
-                        star
-                    </span>
-                );
-            })}
-        </div>
-    );
-};
-
-// Body block — handles title/content duplication (admin-pasted reviews where title === content prefix)
-// and hides the body row entirely when both are empty so the card stays compact.
+// Card body — compact when content is empty, dedupes title/content for admin-pasted reviews.
 const ReviewBody: React.FC<{
     title?: string;
     content?: string;
@@ -323,11 +299,8 @@ const ReviewBody: React.FC<{
     productId?: string;
     onProductClick?: (e: React.MouseEvent, productId?: string) => void;
 }> = ({ title, content, productName, productId, onProductClick }) => {
-    const t = (title ?? '').trim();
-    const c = (content ?? '').trim();
-    // If title is a prefix of (or identical to) content, it's redundant — show content only.
-    const showTitle = t.length > 0 && (c.length === 0 || !c.startsWith(t));
-    const showContent = c.length > 0;
+    const showTitle = shouldShowTitle(title, content);
+    const showContent = (content ?? '').trim().length > 0;
     const hasAnyText = showTitle || showContent;
 
     if (!productName && !hasAnyText) return null;
