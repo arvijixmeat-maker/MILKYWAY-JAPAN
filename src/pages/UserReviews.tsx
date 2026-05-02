@@ -158,11 +158,7 @@ export const UserReviews: React.FC = () => {
                     <div className="flex flex-col md:flex-row gap-8">
                         <div className="flex flex-col gap-1 items-center md:items-start">
                             <p className="text-5xl font-extrabold tracking-tighter text-[#0e1a18] dark:text-white">{averageRating}</p>
-                            <div className="flex gap-0.5 my-1">
-                                {[...Array(5)].map((_, i) => (
-                                    <span key={i} className={`material-symbols-outlined text-primary text-xl ${i < Math.round(Number(averageRating)) ? 'fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < Math.round(Number(averageRating)) ? "'FILL' 1" : "'FILL' 0" }}>star</span>
-                                ))}
-                            </div>
+                            <ReviewStars rating={Number(averageRating)} size={20} className="my-1" />
                             <p className="text-gray-500 text-sm font-medium">{t('user_reviews.real_reviews_count', { num: totalReviews.toLocaleString() })}</p>
                         </div>
                         <div className="flex-1 space-y-2 mt-2">
@@ -239,39 +235,23 @@ export const UserReviews: React.FC = () => {
                                                 <p className="text-sm font-bold text-[#0e1a18] dark:text-white truncate max-w-[160px]">{review.author}</p>
                                                 <span className="text-sm font-medium text-[#0e1a18] dark:text-white shrink-0">様</span>
                                             </div>
-                                            <div className="flex gap-0.5 mt-0.5">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <span key={i} className={`material-symbols-outlined text-[16px] ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`} style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
-                                                ))}
-                                            </div>
+                                            <ReviewStars rating={review.rating} size={16} className="mt-0.5" />
                                         </div>
                                     </div>
                                     <div className="shrink-0 text-right">
                                         <p className="text-[11px] text-gray-400">{review.date}</p>
                                     </div>
                                 </div>
-                                <div className="mb-3">
-                                    {review.productName && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (review.productId) {
-                                                    navigate(`/products/${review.productId}`);
-                                                }
-                                            }}
-                                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full mb-2 transition-all duration-200 border border-primary/20 hover:bg-primary/20 active:scale-95"
-                                        >
-                                            {review.productName}
-                                            <span className="material-symbols-outlined text-[12px] font-bold">chevron_right</span>
-                                        </button>
-                                    )}
-                                    {review.title && (
-                                        <h4 className="text-base font-bold text-[#0e1a18] dark:text-white mb-1">{review.title}</h4>
-                                    )}
-                                    <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-                                        {review.content}
-                                    </p>
-                                </div>
+                                <ReviewBody
+                                    title={review.title}
+                                    content={review.content}
+                                    productName={review.productName}
+                                    productId={review.productId}
+                                    onProductClick={(e, pid) => {
+                                        e.stopPropagation();
+                                        if (pid) navigate(`/products/${pid}`);
+                                    }}
+                                />
                                 {review.images && review.images.length > 0 && (
                                     <div className={`grid gap-2 mt-4 ${review.images.length === 1 ? 'grid-cols-1' : review.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                                         {review.images.slice(0, 3).map((img: string, idx: number) => (
@@ -306,6 +286,69 @@ export const UserReviews: React.FC = () => {
             </main>
 
             <BottomNav />
+        </div>
+    );
+};
+
+// Star row — yellow #facc15 (design system token --star). Used for both summary + per-card.
+const ReviewStars: React.FC<{ rating: number; size?: number; className?: string }> = ({ rating, size = 16, className = '' }) => {
+    const filled = Math.round(rating);
+    return (
+        <div className={`flex gap-0.5 ${className}`}>
+            {[...Array(5)].map((_, i) => {
+                const on = i < filled;
+                return (
+                    <span
+                        key={i}
+                        className={`material-symbols-outlined ${on ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`}
+                        style={{
+                            fontSize: `${size}px`,
+                            fontVariationSettings: on ? "'FILL' 1" : "'FILL' 0",
+                        }}
+                    >
+                        star
+                    </span>
+                );
+            })}
+        </div>
+    );
+};
+
+// Body block — handles title/content duplication (admin-pasted reviews where title === content prefix)
+// and hides the body row entirely when both are empty so the card stays compact.
+const ReviewBody: React.FC<{
+    title?: string;
+    content?: string;
+    productName?: string;
+    productId?: string;
+    onProductClick?: (e: React.MouseEvent, productId?: string) => void;
+}> = ({ title, content, productName, productId, onProductClick }) => {
+    const t = (title ?? '').trim();
+    const c = (content ?? '').trim();
+    // If title is a prefix of (or identical to) content, it's redundant — show content only.
+    const showTitle = t.length > 0 && (c.length === 0 || !c.startsWith(t));
+    const showContent = c.length > 0;
+    const hasAnyText = showTitle || showContent;
+
+    if (!productName && !hasAnyText) return null;
+
+    return (
+        <div className="mb-3">
+            {productName && (
+                <button
+                    onClick={(e) => onProductClick?.(e, productId)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full mb-2 transition-all duration-200 border border-primary/20 hover:bg-primary/20 active:scale-95"
+                >
+                    {productName}
+                    <span className="material-symbols-outlined text-[12px] font-bold">chevron_right</span>
+                </button>
+            )}
+            {showTitle && (
+                <h4 className="text-base font-bold text-[#0e1a18] dark:text-white mb-1">{title}</h4>
+            )}
+            {showContent && (
+                <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{content}</p>
+            )}
         </div>
     );
 };
