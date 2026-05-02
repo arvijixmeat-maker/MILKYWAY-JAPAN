@@ -23,7 +23,24 @@ interface RawProduct {
     tags?: unknown;
     mainImages?: unknown;
     main_images?: unknown;
+    is_popular?: number | boolean;
+    is_featured?: number | boolean;
+    isPopular?: number | boolean;
+    isFeatured?: number | boolean;
+    sort_order?: number;
+    sortOrder?: number;
+    created_at?: string;
+    createdAt?: string;
 }
+
+const truthy = (v: unknown) => v === 1 || v === true;
+
+const fallbackRank = (p: RawProduct): number => {
+    const popular = truthy(p.is_popular) || truthy(p.isPopular) ? 1000 : 0;
+    const featured = truthy(p.is_featured) || truthy(p.isFeatured) ? 500 : 0;
+    const sort = -1 * (p.sort_order ?? p.sortOrder ?? 0);
+    return popular + featured + sort;
+};
 
 const norm = (v: unknown) => String(v ?? '').toLowerCase().trim();
 
@@ -69,18 +86,28 @@ export const RelatedTours: React.FC<RelatedToursProps> = ({ category, tag, limit
     const matches = useMemo(() => {
         const magCategory = norm(category);
         const magTag = norm(tag);
-        if (!magCategory && !magTag) return [];
 
-        return products
-            .filter((p) => {
-                const imgs = toImageArray(p.mainImages ?? p.main_images);
-                return p.status === 'active' && imgs.length > 0;
-            })
+        const eligible = products.filter((p) => {
+            const imgs = toImageArray(p.mainImages ?? p.main_images);
+            return p.status === 'active' && imgs.length > 0;
+        });
+
+        const scored = eligible
             .map((p) => ({ product: p, score: scoreProduct(p, magCategory, magTag) }))
             .filter((r) => r.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, limit)
-            .map((r) => r.product);
+            .sort((a, b) => b.score - a.score);
+
+        const picked = scored.slice(0, limit).map((r) => r.product);
+
+        if (picked.length >= limit) return picked;
+
+        const pickedIds = new Set(picked.map((p) => p.id));
+        const fallback = eligible
+            .filter((p) => !pickedIds.has(p.id))
+            .sort((a, b) => fallbackRank(b) - fallbackRank(a))
+            .slice(0, limit - picked.length);
+
+        return [...picked, ...fallback];
     }, [products, category, tag, limit]);
 
     if (matches.length === 0) return null;
