@@ -7,6 +7,7 @@ import { SEO } from '../components/seo/SEO';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
 import { LocationCard } from '../components/magazine/LocationCard';
 import type { LocationInfo } from '../components/magazine/LocationCard';
+import { RelatedTours } from '../components/magazine/RelatedTours';
 import { useTranslation } from 'react-i18next';
 
 interface Magazine {
@@ -314,6 +315,9 @@ export const TravelGuideDetail: React.FC = () => {
                 <div className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-img:rounded-2xl">
                     {renderContent(magazine.content || '')}
                 </div>
+
+                {/* Related Tours (auto-matched by magazine category/tag) */}
+                <RelatedTours category={magazine.category} tag={magazine.tag} />
 
                 {/* Related Magazines */}
                 {relatedMagazines && relatedMagazines.length > 0 && (
