@@ -155,6 +155,25 @@ sitemap.xml.ts의 try/catch가 에러를 조용히 삼켜서 카테고리 URL이
 - ❌ `main` 직접 푸시 금지
 - ❌ 운영 데이터/스키마 변경은 마이그레이션 통해서만 (`functions/api/migrate-db.ts`)
 
+## 9.5. 디자인 시스템 — UI 작업 시 필독
+
+UI 컴포넌트를 새로 만들거나 디자인을 변경하기 전에 다음 두 파일을 **반드시 먼저 읽을 것**:
+
+- [`docs/design-system/SKILL.md`](docs/design-system/SKILL.md) — 핵심 원칙 요약 (1분)
+- [`docs/design-system/README.md`](docs/design-system/README.md) — 색상/타입/간격/카드/카피 톤 풀 가이드
+- [`docs/design-system/colors_and_type.css`](docs/design-system/colors_and_type.css) — 디자인 토큰 (Tailwind 설정과 일치)
+
+핵심 원칙 (반드시 외워둘 것):
+- **단일 primary 컬러: teal `#0f766e`.** 보조 색상 없음. 나머지는 슬레이트 뉴트럴.
+- **모바일 우선, max-width 480px.** 데스크톱은 480px 컬럼 + soft shadow 프레임.
+- **실사 사진** 위주. 그라데이션/일러스트 X.
+- **Material Symbols Outlined** 일반 UI 아이콘 + **3D plasticine 아이콘**(assets/icons/) 숏컷 행 전용. 절대 직접 SVG 그리지 말 것.
+- **카드**: `rounded-xl` (12px) + `1px slate-100 border` + `shadow-toss`.
+- **Hero 배너**: `rounded-3xl` (24px) + 실사 사진 + 하단 보호 그라데이션.
+- **이모지는 필터 칩 라벨에만.** 헤딩/CTA/상품명 X.
+- **카피는 일본어 정중체** (`〜ください` / `ご〜します`). 1인칭 브랜드 호칭(`私たち`) X.
+- 가격 표기: `¥NNN,NNN〜` (일본 엔, 콤마, 〜).
+
 ## 10. 다른 환경에서 작업 이어가는 법
 
 1. 저장소 클론: `git clone https://github.com/arvijixmeat-maker/MILKYWAY-JAPAN.git`
@@ -165,4 +184,4 @@ sitemap.xml.ts의 try/catch가 에러를 조용히 삼켜서 카테고리 URL이
 
 ---
 
-마지막 업데이트: 2026-05-02
+마지막 업데이트: 2026-05-02 (디자인 시스템 추가)
