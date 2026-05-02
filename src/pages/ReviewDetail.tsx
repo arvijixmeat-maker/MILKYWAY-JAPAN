@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { BottomNav } from '../components/layout/BottomNav';
 import { formatShortDate, formatRelativeTime } from '../utils/formatDate';
+import { ReviewStars, shouldShowTitle } from '../components/review/ReviewStars';
 
 export const ReviewDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -220,17 +221,7 @@ export const ReviewDetail: React.FC = () => {
                                     <p className="text-[16px] font-bold text-[#0e1a18] dark:text-white truncate">{review.author}</p>
                                     <span className="text-[14px] font-medium text-[#0e1a18] dark:text-white">様</span>
                                 </div>
-                                <div className="flex gap-0.5 mt-0.5">
-                                    {[...Array(5)].map((_, i) => (
-                                        <span
-                                            key={i}
-                                            className={`material-symbols-outlined ${i < review.rating ? 'text-primary fill-current' : 'text-gray-200'}`}
-                                            style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "'FILL' 0" }}
-                                        >
-                                            star
-                                        </span>
-                                    ))}
-                                </div>
+                                <ReviewStars rating={review.rating} size={20} className="mt-0.5" />
                             </div>
                         </div>
                         <div className="shrink-0 text-right mt-1">
@@ -256,15 +247,19 @@ export const ReviewDetail: React.FC = () => {
                         </button>
                     )}
 
-                    {/* Content */}
-                    <div className="mb-8">
-                        {review.title && (
-                            <h3 className="text-lg font-bold text-[#0e1a18] dark:text-white mb-2">{review.title}</h3>
-                        )}
-                        <p className="text-[16px] leading-relaxed text-[#333d4b] dark:text-gray-200">
-                            {review.content}
-                        </p>
-                    </div>
+                    {/* Content — title hidden when it's a redundant prefix of content (common admin-paste pattern) */}
+                    {(shouldShowTitle(review.title, review.content) || (review.content ?? '').trim().length > 0) && (
+                        <div className="mb-8">
+                            {shouldShowTitle(review.title, review.content) && (
+                                <h3 className="text-lg font-bold text-[#0e1a18] dark:text-white mb-2">{review.title}</h3>
+                            )}
+                            {(review.content ?? '').trim().length > 0 && (
+                                <p className="text-[16px] leading-relaxed text-[#333d4b] dark:text-gray-200">
+                                    {review.content}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Image Grid */}
                     {review.images && review.images.length > 0 && (
