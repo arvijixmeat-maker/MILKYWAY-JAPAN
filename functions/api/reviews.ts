@@ -37,30 +37,53 @@ app.get('/:id', async (c) => {
     }
 });
 
-// POST /api/reviews — login required. Identity (user_id / user_name / user_avatar)
-// is taken from the validated session, NOT from the request body, to prevent
-// spoofing or unauthenticated/scripted submissions.
+// POST /api/reviews — login required.
+//
+// Identity rules:
+// - Regular users: user_id / user_name / user_avatar are forced from the validated
+//   session to prevent spoofing or scripted submissions.
+// - Admins: may post on behalf of off-platform customers (Instagram DMs, custom-quote
+//   travelers, etc.) via the admin review-manage page, so the client-supplied
+//   user_name / user_avatar are honored. user_id is still tagged with the admin's id
+//   for audit purposes.
+//
+// Approval policy:
+// - Reviews from authenticated users (regular or admin) publish immediately
+//   (is_approved = 1). Spam/abuse risk is mitigated by the requireAuth gate
+//   (Google login required) and the admin's ability to soft-hide or delete bad
+//   reviews from /admin/reviews after the fact.
+// - An admin may explicitly post a pending review by sending { is_approved: 0 }
+//   when they want to vet content before publishing.
 app.post('/', requireAuth, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const sessionUser = c.get('user');
+    const isAdmin = sessionUser.role === 'admin';
     const id = data.id || crypto.randomUUID();
+
+    const userName = isAdmin
+        ? (data.user_name || data.author_name || sessionUser.name || '')
+        : (sessionUser.name || sessionUser.email?.split('@')[0] || '');
+    const userAvatar = isAdmin
+        ? (data.user_avatar || sessionUser.avatarUrl || '')
+        : (sessionUser.avatarUrl || '');
+    const isApproved = isAdmin ? (data.is_approved ?? 1) : 1;
+
     try {
         await db.prepare(
             "INSERT INTO reviews (id, user_id, user_name, user_avatar, product_id, product_name, rating, title, content, images, is_approved, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ).bind(
             id,
-            sessionUser.id,
-            sessionUser.name || sessionUser.email?.split('@')[0] || '',
-            sessionUser.avatarUrl || '',
+            sessionUser.id, // always the actor's id (= admin id for proxy posts) for audit
+            userName,
+            userAvatar,
             data.product_id || '',
             data.product_name || '',
             data.rating || 5,
             data.title || '',
             data.content || '',
             JSON.stringify(data.images || []),
-            // Never trust client-side is_approved — only admin should be able to flip this.
-            0,
+            isApproved ? 1 : 0,
             data.created_at || new Date().toISOString()
         ).run();
         return c.json({ id });

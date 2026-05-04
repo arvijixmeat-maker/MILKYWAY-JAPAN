@@ -331,7 +331,7 @@ export const ReviewWrite: React.FC = () => {
                                 </div>
                                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                                     <span className="material-symbols-outlined text-primary text-[14px] align-middle mr-1">info</span>
-                                    投稿いただいたレビューは、管理者の確認後にサイトへ掲載されます。
+                                    ご投稿後すぐにサイトへ掲載されます。
                                 </div>
                             </div>
                         )}
@@ -448,10 +448,10 @@ export const ReviewWrite: React.FC = () => {
                                     </span>
                                 </div>
                                 <h3 className="text-[#0e1a18] dark:text-white tracking-tight text-xl font-bold leading-tight text-center px-2">
-                                    レビューを<br />受付しました
+                                    レビューが<br />掲載されました
                                 </h3>
                                 <p className="text-zinc-500 dark:text-zinc-400 text-sm font-normal leading-relaxed pt-3 px-4 text-center">
-                                    管理者の確認後にサイトへ掲載されます。<br />ご投稿ありがとうございます。
+                                    ご投稿ありがとうございます。<br />実際の旅行者の声は他のお客様の大きな助けになります。
                                 </p>
                             </div>
                             <div className="flex pt-2">
