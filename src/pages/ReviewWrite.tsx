@@ -10,6 +10,37 @@ const REVIEW_MAX_LENGTH = 2000;
 
 type Mode = 'reservation' | 'free';
 
+// Draft autosave key — survives login redirects and accidental navigations.
+const DRAFT_KEY = 'review-write-draft';
+
+interface ReviewDraft {
+    mode: Mode;
+    selectedReservationId: string;
+    selectedProductId: string;
+    visitMonth: string;
+    rating: number;
+    content: string;
+    images: string[];
+}
+
+const loadDraft = (): ReviewDraft | null => {
+    try {
+        const raw = sessionStorage.getItem(DRAFT_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        // Minimal shape check — bail out if anything looks off so we never crash
+        // because of a malformed draft from an older app version.
+        if (typeof parsed !== 'object' || parsed === null) return null;
+        return parsed as ReviewDraft;
+    } catch {
+        return null;
+    }
+};
+
+const clearDraft = () => {
+    try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+};
+
 interface ReservationLite {
     id: string;
     productId?: string;
@@ -43,15 +74,38 @@ const buildVisitMonthOptions = (): { value: string; label: string }[] => {
 export const ReviewWrite: React.FC = () => {
     const navigate = useNavigate();
 
-    const [mode, setMode] = useState<Mode>('reservation');
-    const [selectedReservationId, setSelectedReservationId] = useState<string>('');
-    const [selectedProductId, setSelectedProductId] = useState<string>('');
-    const [visitMonth, setVisitMonth] = useState<string>('');
-    const [rating, setRating] = useState<number>(4);
-    const [content, setContent] = useState('');
-    const [images, setImages] = useState<string[]>([]);
+    // Initialize from any persisted draft so users who got bounced through the
+    // login flow (or accidentally navigated away) don't lose what they typed.
+    const initialDraft = loadDraft();
+
+    const [mode, setMode] = useState<Mode>(initialDraft?.mode ?? 'reservation');
+    const [selectedReservationId, setSelectedReservationId] = useState<string>(initialDraft?.selectedReservationId ?? '');
+    const [selectedProductId, setSelectedProductId] = useState<string>(initialDraft?.selectedProductId ?? '');
+    const [visitMonth, setVisitMonth] = useState<string>(initialDraft?.visitMonth ?? '');
+    const [rating, setRating] = useState<number>(initialDraft?.rating ?? 4);
+    const [content, setContent] = useState(initialDraft?.content ?? '');
+    const [images, setImages] = useState<string[]>(initialDraft?.images ?? []);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    // Autosave the draft on every change. Cheap (small JSON, sessionStorage)
+    // and avoids the user losing input across login redirects.
+    useEffect(() => {
+        const draft: ReviewDraft = {
+            mode,
+            selectedReservationId,
+            selectedProductId,
+            visitMonth,
+            rating,
+            content,
+            images,
+        };
+        try {
+            sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch {
+            // sessionStorage might be unavailable (private mode); silently skip.
+        }
+    }, [mode, selectedReservationId, selectedProductId, visitMonth, rating, content, images]);
 
     const [completedReservations, setCompletedReservations] = useState<ReservationLite[]>([]);
     const [allProducts, setAllProducts] = useState<ProductLite[]>([]);
@@ -200,6 +254,9 @@ export const ReviewWrite: React.FC = () => {
                 visit_date: visitDateLabel,
             });
 
+            // Submission succeeded — discard the persisted draft so the form is
+            // empty next time the user lands here.
+            clearDraft();
             setIsSuccessModalOpen(true);
         } catch (error: any) {
             console.error('Failed to save review:', error);
