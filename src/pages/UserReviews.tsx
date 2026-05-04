@@ -6,6 +6,7 @@ import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { formatShortDate } from '../utils/formatDate';
 import { ReviewStars, shouldShowTitle } from '../components/review/ReviewStars';
+import { ReviewAvatar } from '../components/review/ReviewAvatar';
 
 // Define Review type locally or import if available, matching Cloudflare + Frontend needs
 interface Review {
@@ -327,25 +328,3 @@ const ReviewBody: React.FC<{
     );
 };
 
-// Avatar with automatic fallback to initial when src is missing / fails to load
-const ReviewAvatar: React.FC<{ src?: string; name?: string }> = ({ src, name }) => {
-    const [failed, setFailed] = React.useState(false);
-    const showImage = !!src && !failed;
-    const initial = (name || '?').trim().charAt(0);
-    return (
-        <div className="w-10 h-10 shrink-0 rounded-full bg-primary/10 dark:bg-primary/20 overflow-hidden flex items-center justify-center">
-            {showImage ? (
-                <img
-                    src={src}
-                    alt={name || 'reviewer avatar'}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    onError={() => setFailed(true)}
-                />
-            ) : (
-                <span className="text-sm font-bold text-primary">{initial}</span>
-            )}
-        </div>
-    );
-};
