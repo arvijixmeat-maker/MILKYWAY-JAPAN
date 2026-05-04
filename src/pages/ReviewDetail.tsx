@@ -31,7 +31,8 @@ export const ReviewDetail: React.FC = () => {
                     setCurrentUser({
                         id: me.id,
                         name: me.user_metadata?.full_name || me.name || me.email?.split('@')[0] || '여행자',
-                        image: me.user_metadata?.avatar_url || me.avatar_url
+                        image: me.user_metadata?.avatar_url || me.avatar_url,
+                        role: me.role,
                     });
                 }
             } catch (e) { /* ignore */ }
@@ -57,6 +58,7 @@ export const ReviewDetail: React.FC = () => {
                     setReview({
                         id: data.id,
                         author: data.user_name,
+                        userId: data.user_id,
                         date: formatShortDate(data.created_at, i18n.language),
                         rating: data.rating,
                         title: data.title,
@@ -142,6 +144,24 @@ export const ReviewDetail: React.FC = () => {
         }
     };
 
+    const handleDelete = async () => {
+        if (!id || !review) return;
+        const ok = window.confirm('このレビューを削除しますか？\nこの操作は取り消せません。');
+        if (!ok) return;
+        try {
+            await api.reviews.delete(id);
+            navigate('/reviews');
+        } catch (error: any) {
+            console.error('Failed to delete review:', error);
+            alert('削除に失敗しました: ' + (error?.message || ''));
+        }
+    };
+
+    // Delete is allowed for the review's own author or for admins.
+    const canDelete = !!(currentUser && review && (
+        review.userId === currentUser.id || currentUser.role === 'admin'
+    ));
+
     const handleToggleHelpful = async () => {
         if (!currentUser) {
             alert(t('review_detail.login_required'));
@@ -203,7 +223,18 @@ export const ReviewDetail: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </button>
-                    <h2 className="text-[17px] font-bold leading-tight tracking-tight flex-1 text-center pr-10 text-[#0e1a18] dark:text-white">{t('review_detail.title')}</h2>
+                    <h2 className={`text-[17px] font-bold leading-tight tracking-tight flex-1 text-center text-[#0e1a18] dark:text-white ${canDelete ? '' : 'pr-10'}`}>
+                        {t('review_detail.title')}
+                    </h2>
+                    {canDelete && (
+                        <button
+                            onClick={handleDelete}
+                            aria-label="削除"
+                            className="flex size-10 items-center justify-end cursor-pointer text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                            <span className="material-symbols-outlined">delete</span>
+                        </button>
+                    )}
                 </div>
             </nav>
 
