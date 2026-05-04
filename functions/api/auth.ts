@@ -97,6 +97,20 @@ app.get('/login/google', async (c) => {
         sameSite: "Lax"
     });
 
+    // Persist the post-login destination across the Google OAuth bounce so the
+    // callback can land the user back on the page they were originally trying
+    // to reach. Only same-origin absolute paths are accepted (no //external).
+    const requestedRedirect = c.req.query('redirect');
+    if (requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//')) {
+        setCookie(c, "post_login_redirect", requestedRedirect, {
+            path: "/",
+            secure: c.env.ENVIRONMENT === "production",
+            httpOnly: true,
+            maxAge: 60 * 10,
+            sameSite: "Lax"
+        });
+    }
+
     return c.redirect(url.toString());
 });
 
@@ -152,7 +166,15 @@ app.get('/login/google/callback', async (c) => {
 
         c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
 
-        return c.redirect("/"); // Redirect to home on success
+        // Land the user back where they came from when AuthGuard redirected them
+        // here. Validate it's a same-origin path before honoring it (defense
+        // against open-redirect via crafted cookie). Default to home.
+        const stashed = getCookie(c, "post_login_redirect");
+        const safeTarget = stashed && stashed.startsWith('/') && !stashed.startsWith('//') ? stashed : '/';
+        // Clear the one-shot redirect cookie regardless of whether it was used.
+        setCookie(c, "post_login_redirect", "", { path: "/", maxAge: 0 });
+
+        return c.redirect(safeTarget);
     } catch (e: any) {
         console.error('Google OAuth callback error:', e);
         return c.json({ error: "Authentication failed", detail: e?.message || String(e) }, 500);
