@@ -128,8 +128,38 @@ app.get('/login/google/callback', async (c) => {
         const lucia = initializeLucia(c.env.DB);
         const db = drizzle(c.env.DB);
 
-        // Check if user exists
-        const existingUser = await db.select().from(users).where(eq(users.googleId, googleUser.sub)).get();
+        // Check if user already exists for this Google account.
+        let existingUser = await db.select().from(users).where(eq(users.googleId, googleUser.sub)).get();
+
+        // Fallback: if no Google-linked record was found, match by email and
+        // auto-link this Google identity to the existing record. This handles:
+        //   - users created by an admin (no googleId set yet)
+        //   - users that signed up before the current OAuth flow
+        //   - schema migrations that changed/cleared googleId values
+        // Without this, the INSERT below would fail the email UNIQUE constraint
+        // and the user would be permanently locked out.
+        if (!existingUser && googleUser.email) {
+            const byEmail = await db.select().from(users).where(eq(users.email, googleUser.email)).get();
+            if (byEmail) {
+                if (byEmail.googleId && byEmail.googleId !== googleUser.sub) {
+                    // The email is already bound to a different Google identity.
+                    // Refuse to silently re-link to avoid account takeover.
+                    return c.json({
+                        error: 'Authentication failed',
+                        detail: 'このメールアドレスは別のGoogleアカウントに既に登録されています。'
+                    }, 409);
+                }
+                await db.update(users)
+                    .set({
+                        googleId: googleUser.sub,
+                        name: byEmail.name || googleUser.name,
+                        avatarUrl: byEmail.avatarUrl || googleUser.picture,
+                    })
+                    .where(eq(users.id, byEmail.id))
+                    .run();
+                existingUser = { ...byEmail, googleId: googleUser.sub };
+            }
+        }
 
         let userId = "";
 
