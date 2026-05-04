@@ -329,10 +329,6 @@ export const ReviewWrite: React.FC = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    <span className="material-symbols-outlined text-primary text-[14px] align-middle mr-1">info</span>
-                                    ご投稿後すぐにサイトへ掲載されます。
-                                </div>
                             </div>
                         )}
                     </div>
