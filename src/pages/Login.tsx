@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import loginBg2 from '../assets/login_bg_2.jpg';
@@ -39,11 +39,21 @@ const ScrollingColumn: React.FC<{ images: string[]; direction: 'up' | 'down'; du
 
 export const Login: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useTranslation();
 
     const handleGoogleLogin = () => {
-        // Redirect to API endpoint for Google OAuth
-        window.location.href = '/api/auth/login/google';
+        // Forward the original page (set by AuthGuard via location.state.from) to the
+        // OAuth start endpoint so the callback can redirect the user back after login.
+        // Only same-origin paths are accepted; other inputs fall back to "/".
+        const from = (location.state as { from?: string } | null)?.from;
+        const safeRedirect = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') && from !== '/login'
+            ? from
+            : null;
+        const url = safeRedirect
+            ? `/api/auth/login/google?redirect=${encodeURIComponent(safeRedirect)}`
+            : '/api/auth/login/google';
+        window.location.href = url;
     };
 
     return (

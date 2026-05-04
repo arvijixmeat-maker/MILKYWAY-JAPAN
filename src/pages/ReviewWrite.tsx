@@ -113,11 +113,12 @@ export const ReviewWrite: React.FC = () => {
     const visitMonthOptions = useMemo(buildVisitMonthOptions, []);
 
     useEffect(() => {
-        // Fetch user's completed reservations
+        // Fetch user's completed reservations.
+        // api.auth.me() already unwraps the { user } envelope and returns the
+        // user object directly (or null), so we don't read `.user` on the result.
         const fetchReservations = async () => {
             try {
-                const meResponse = await api.auth.me();
-                const me = meResponse?.user;
+                const me = await api.auth.me();
                 if (!me) return;
 
                 const data = await api.reservations.list();
@@ -235,8 +236,8 @@ export const ReviewWrite: React.FC = () => {
 
         setSubmitting(true);
         try {
-            const meResponse = await api.auth.me();
-            const me = meResponse?.user;
+            // api.auth.me() returns the user object directly (or null).
+            const me = await api.auth.me();
             if (!me) {
                 // Session expired mid-write — bounce to login. AuthGuard catches the
                 // page-entry case; this branch only triggers on a stale session.
