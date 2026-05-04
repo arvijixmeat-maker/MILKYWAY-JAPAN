@@ -1,27 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { api } from '../lib/api';
-import { useUser } from '../contexts/UserContext';
 import { uploadImage } from '../utils/upload';
 
 // Review text constraints — keep in sync with any backend validation.
 const REVIEW_MIN_LENGTH = 10;
 const REVIEW_MAX_LENGTH = 2000;
 
+type Mode = 'reservation' | 'free';
+
+interface ReservationLite {
+    id: string;
+    productId?: string;
+    productName: string;
+    startDate: string;
+    endDate: string;
+}
+
+interface ProductLite {
+    id: string;
+    name: string;
+    thumbnail?: string;
+}
+
+const STAR_FILL = '#facc15';
+const STAR_EMPTY = '#e5e7eb';
+
+// Build YYYY-MM options for the last 24 months (most-recent first) for the visit-month picker.
+const buildVisitMonthOptions = (): { value: string; label: string }[] => {
+    const out: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const label = `${d.getFullYear()}年 ${d.getMonth() + 1}月`;
+        out.push({ value, label });
+    }
+    return out;
+};
+
 export const ReviewWrite: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useUser();
+
+    const [mode, setMode] = useState<Mode>('reservation');
     const [selectedReservationId, setSelectedReservationId] = useState<string>('');
+    const [selectedProductId, setSelectedProductId] = useState<string>('');
+    const [visitMonth, setVisitMonth] = useState<string>('');
     const [rating, setRating] = useState<number>(4);
     const [content, setContent] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    // Fetch completed reservations from database
-    const [completedReservations, setCompletedReservations] = useState<any[]>([]);
+    const [completedReservations, setCompletedReservations] = useState<ReservationLite[]>([]);
+    const [allProducts, setAllProducts] = useState<ProductLite[]>([]);
+
+    const visitMonthOptions = useMemo(buildVisitMonthOptions, []);
 
     useEffect(() => {
+        // Fetch user's completed reservations
         const fetchReservations = async () => {
             try {
                 const meResponse = await api.auth.me();
@@ -29,31 +67,62 @@ export const ReviewWrite: React.FC = () => {
                 if (!me) return;
 
                 const data = await api.reservations.list();
+                if (!Array.isArray(data)) return;
 
-                if (data) {
-                    // Filter for user's completed reservations
-                    const myCompleted = data.filter((r: any) => r.user_id === me.id && r.status === 'completed');
+                const myCompleted = data.filter((r: any) => r.user_id === me.id && r.status === 'completed');
+                myCompleted.sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
 
-                    // Sort by start_date desc
-                    myCompleted.sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+                const mapped: ReservationLite[] = myCompleted.map((r: any) => ({
+                    id: r.id,
+                    productId: r.product_id,
+                    productName: r.product_name,
+                    startDate: r.start_date,
+                    endDate: r.end_date,
+                }));
+                setCompletedReservations(mapped);
 
-                    // Map to frontend format
-                    const mapped = myCompleted.map((r: any) => ({
-                        id: r.id,
-                        productName: r.product_name,
-                        startDate: r.start_date,
-                        endDate: r.end_date,
-                    }));
-                    setCompletedReservations(mapped);
+                // If the user has no completed reservations, default to "free" mode so they
+                // can still write a review (off-platform / Instagram / custom-quote travelers).
+                if (mapped.length === 0) {
+                    setMode('free');
                 }
             } catch (error) {
                 console.error('Failed to fetch reservations:', error);
             }
         };
+
+        // Fetch active products (used by free-mode product picker)
+        const fetchProducts = async () => {
+            try {
+                const data = await api.products.list();
+                if (!Array.isArray(data)) return;
+                const mapped: ProductLite[] = data
+                    .filter((p: any) => p.status === 'active')
+                    .map((p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        thumbnail: p.thumbnail || (Array.isArray(p.mainImages) && p.mainImages[0]) || (Array.isArray(p.main_images) && p.main_images[0]),
+                    }));
+                setAllProducts(mapped);
+            } catch (error) {
+                console.error('Failed to fetch products:', error);
+            }
+        };
+
         fetchReservations();
+        fetchProducts();
     }, []);
 
-    const selectedReservation = completedReservations?.find(r => r.id === selectedReservationId);
+    const selectedReservation = completedReservations.find(r => r.id === selectedReservationId);
+    const selectedProduct = allProducts.find(p => p.id === selectedProductId);
+
+    const canSubmit = useMemo(() => {
+        if (submitting) return false;
+        if (content.trim().length < REVIEW_MIN_LENGTH) return false;
+        if (mode === 'reservation') return !!selectedReservationId;
+        if (mode === 'free') return !!selectedProductId && !!visitMonth;
+        return false;
+    }, [submitting, content, mode, selectedReservationId, selectedProductId, visitMonth]);
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -64,16 +133,13 @@ export const ReviewWrite: React.FC = () => {
         const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
         try {
-            // Upload images in parallel
             const uploadPromises = filesToProcess.map(file => uploadImage(file, 'reviews'));
             const uploadedUrls = await Promise.all(uploadPromises);
-
             setImages(prev => [...prev, ...uploadedUrls]);
         } catch (error) {
             alert('画像のアップロードに失敗しました。');
         }
 
-        // Reset input
         event.target.value = '';
     };
 
@@ -81,11 +147,8 @@ export const ReviewWrite: React.FC = () => {
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
-    const [submitting, setSubmitting] = useState(false);
-
     const handleSubmit = async () => {
-        if (submitting) return;
-        if (!selectedReservation) return;
+        if (!canSubmit) return;
 
         // Strip any HTML/script tags the user might paste; keep plain text only.
         const sanitized = DOMPurify.sanitize(content, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
@@ -99,6 +162,23 @@ export const ReviewWrite: React.FC = () => {
             return;
         }
 
+        // Resolve which tour the review is about based on the active mode.
+        let productId = '';
+        let productName = '';
+        let visitDateLabel = '';
+
+        if (mode === 'reservation' && selectedReservation) {
+            productId = selectedReservation.productId || '';
+            productName = selectedReservation.productName;
+            visitDateLabel = selectedReservation.startDate.slice(0, 7) + ' 訪問';
+        } else if (mode === 'free' && selectedProduct) {
+            productId = selectedProduct.id;
+            productName = selectedProduct.name;
+            visitDateLabel = visitMonth + ' 訪問';
+        } else {
+            return;
+        }
+
         setSubmitting(true);
         try {
             const meResponse = await api.auth.me();
@@ -109,15 +189,13 @@ export const ReviewWrite: React.FC = () => {
             }
 
             await api.reviews.create({
-                user_id: me.id,
-                author_name: me.name || me.email?.split('@')[0] || '匿名',
-                visit_date: selectedReservation.startDate.slice(0, 7) + ' 訪問',
-                rating: rating,
-                product_name: selectedReservation.productName,
-                title: `${selectedReservation.productName} レビュー`,
+                product_id: productId,
+                product_name: productName,
+                rating,
+                title: `${productName} レビュー`,
                 content: sanitized,
-                images: images,
-                user_image: me.avatarUrl
+                images,
+                visit_date: visitDateLabel,
             });
 
             setIsSuccessModalOpen(true);
@@ -128,6 +206,8 @@ export const ReviewWrite: React.FC = () => {
             setSubmitting(false);
         }
     };
+
+    const hasReservations = completedReservations.length > 0;
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen">
@@ -144,44 +224,113 @@ export const ReviewWrite: React.FC = () => {
                 </div>
 
                 <div className="flex-1 pb-32">
-                    {/* Section: Tour Selection */}
+                    {/* Mode toggle: pick how to identify the tour the review is about */}
                     <div className="px-4 pt-6">
-                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">最近参加したツアー</h3>
-                        <div className="flex flex-col gap-3">
-                            {completedReservations && completedReservations.length > 0 ? (
-                                completedReservations.map((reservation) => (
-                                    <div
-                                        key={reservation.id}
-                                        onClick={() => setSelectedReservationId(reservation.id)}
-                                        className={`flex items-center gap-4 bg-white dark:bg-[#1a2e2a] p-4 rounded-xl border-2 shadow-sm cursor-pointer transition-all ${selectedReservationId === reservation.id ? 'border-primary' : 'border-transparent opacity-60'
-                                            }`}
-                                    >
-                                        <div
-                                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16"
-                                            style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB-DYbuMu07bWM9LbfmmvyK57Y0TT-DDDkHh2gXCG8IjX5qd7Mit2vDFBCbFv4vNj3JSWYIxdrQtwRi-QMsZUfBhVLtAU-xgkI0U2Y_JtmhtnkawJBuKFJBQ_SNFPgUJTzPtyrYh3v36I5tqPfphS0n9tzhjzH20wHgIlvmcRuT8XJwENkhG1q2tNsz-XzQEf7hrA78c-EGazQKwgvSBeKEwUYha5TpzwwhPIAGPAxIg7zSoD2crHfGT_K86-TjgBEH3k49Y9FH8Q")' }}
-                                        ></div>
-                                        <div className="flex flex-col justify-center flex-1">
-                                            <p className="text-[#0e1a18] dark:text-white text-base font-bold leading-normal line-clamp-1">
-                                                {reservation.productName}
-                                            </p>
-                                            <p className={`text-sm font-medium leading-normal ${selectedReservationId === reservation.id ? 'text-primary' : 'text-gray-500'}`}>
-                                                {reservation.startDate} {reservation.endDate !== reservation.startDate && `- ${reservation.endDate.slice(5)}`}
-                                            </p>
-                                        </div>
-                                        {selectedReservationId === reservation.id && (
-                                            <div className="shrink-0">
-                                                <span className="material-symbols-outlined text-primary fill-current" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-8 text-gray-400">
-                                    <p>完了したツアーはありません。</p>
-                                    <p className="text-xs pt-2">予約確定・旅行完了後に作成できます。</p>
-                                </div>
-                            )}
+                        <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">
+                            参加されたツアー
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2 mb-4 bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => hasReservations && setMode('reservation')}
+                                disabled={!hasReservations}
+                                className={`py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'reservation'
+                                    ? 'bg-white dark:bg-zinc-700 text-primary shadow-sm'
+                                    : 'text-gray-500 disabled:opacity-50'
+                                    }`}
+                            >
+                                ご予約から選ぶ{hasReservations ? `（${completedReservations.length}件）` : ''}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMode('free')}
+                                className={`py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'free'
+                                    ? 'bg-white dark:bg-zinc-700 text-primary shadow-sm'
+                                    : 'text-gray-500'
+                                    }`}
+                            >
+                                直接ツアーを選ぶ
+                            </button>
                         </div>
+
+                        {/* Reservation mode list */}
+                        {mode === 'reservation' && (
+                            <div className="flex flex-col gap-3">
+                                {hasReservations ? (
+                                    completedReservations.map((reservation) => (
+                                        <div
+                                            key={reservation.id}
+                                            onClick={() => setSelectedReservationId(reservation.id)}
+                                            className={`flex items-center gap-4 bg-white dark:bg-[#1a2e2a] p-4 rounded-xl border-2 shadow-sm cursor-pointer transition-all ${selectedReservationId === reservation.id ? 'border-primary' : 'border-transparent opacity-60'
+                                                }`}
+                                        >
+                                            <div className="bg-primary/10 flex items-center justify-center aspect-square rounded-lg size-16 shrink-0">
+                                                <span className="material-symbols-outlined text-primary">tour</span>
+                                            </div>
+                                            <div className="flex flex-col justify-center flex-1 min-w-0">
+                                                <p className="text-[#0e1a18] dark:text-white text-base font-bold leading-normal line-clamp-1">
+                                                    {reservation.productName}
+                                                </p>
+                                                <p className={`text-sm font-medium leading-normal ${selectedReservationId === reservation.id ? 'text-primary' : 'text-gray-500'}`}>
+                                                    {reservation.startDate} {reservation.endDate !== reservation.startDate && `- ${reservation.endDate.slice(5)}`}
+                                                </p>
+                                            </div>
+                                            {selectedReservationId === reservation.id && (
+                                                <div className="shrink-0">
+                                                    <span
+                                                        className="material-symbols-outlined text-primary"
+                                                        style={{ fontVariationSettings: "'FILL' 1" }}
+                                                    >
+                                                        check_circle
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8 text-gray-400">
+                                        <p>完了したご予約はありません。</p>
+                                        <p className="text-xs pt-2">「直接ツアーを選ぶ」からもご投稿いただけます。</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Free mode: product picker + visit month */}
+                        {mode === 'free' && (
+                            <div className="flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-[#0e1a18] dark:text-white mb-2">
+                                        ツアーを選択
+                                    </label>
+                                    <select
+                                        value={selectedProductId}
+                                        onChange={(e) => setSelectedProductId(e.target.value)}
+                                        className="w-full p-3 rounded-xl bg-white dark:bg-[#1a2e2a] border border-gray-200 dark:border-zinc-700 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-base text-[#0e1a18] dark:text-white"
+                                    >
+                                        <option value="">— ツアーを選択してください —</option>
+                                        {allProducts.map((p) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-[#0e1a18] dark:text-white mb-2">
+                                        ご旅行の時期
+                                    </label>
+                                    <select
+                                        value={visitMonth}
+                                        onChange={(e) => setVisitMonth(e.target.value)}
+                                        className="w-full p-3 rounded-xl bg-white dark:bg-[#1a2e2a] border border-gray-200 dark:border-zinc-700 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-base text-[#0e1a18] dark:text-white"
+                                    >
+                                        <option value="">— 旅行された月をお選びください —</option>
+                                        {visitMonthOptions.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Section: Rating */}
@@ -189,16 +338,23 @@ export const ReviewWrite: React.FC = () => {
                         <h3 className="text-[#0e1a18] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-2">今回の旅行はいかがでしたか？</h3>
                         <p className="text-gray-500 text-sm mb-6">星の数を選択してください。</p>
                         <div className="flex justify-center gap-2 py-4">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <span
-                                    key={star}
-                                    onClick={() => setRating(star)}
-                                    className={`material-symbols-outlined text-4xl cursor-pointer ${star <= rating ? 'text-primary fill-current' : 'text-gray-200 dark:text-zinc-700'}`}
-                                    style={{ fontVariationSettings: star <= rating ? "'FILL' 1" : "'FILL' 0" }}
-                                >
-                                    star
-                                </span>
-                            ))}
+                            {[1, 2, 3, 4, 5].map((star) => {
+                                const on = star <= rating;
+                                return (
+                                    <span
+                                        key={star}
+                                        onClick={() => setRating(star)}
+                                        className="material-symbols-outlined cursor-pointer"
+                                        style={{
+                                            fontSize: '36px',
+                                            color: on ? STAR_FILL : STAR_EMPTY,
+                                            fontVariationSettings: on ? "'FILL' 1" : "'FILL' 0",
+                                        }}
+                                    >
+                                        star
+                                    </span>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -265,7 +421,7 @@ export const ReviewWrite: React.FC = () => {
                     <div className="max-w-md mx-auto">
                         <button
                             onClick={handleSubmit}
-                            disabled={submitting || content.trim().length < REVIEW_MIN_LENGTH || !selectedReservationId}
+                            disabled={!canSubmit}
                             className="w-full bg-primary hover:bg-[#19a186] disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-lg font-bold py-4 rounded-xl shadow-lg transition-colors active:scale-[0.98]"
                         >
                             {submitting ? '送信中...' : '作成完了'}
@@ -280,13 +436,18 @@ export const ReviewWrite: React.FC = () => {
                         <div className="mx-6 w-full max-w-[320px] transform overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 p-6 shadow-2xl transition-all animate-in fade-in zoom-in duration-200">
                             <div className="flex flex-col items-center justify-center pt-4 pb-6">
                                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
-                                    <span className="material-symbols-outlined text-primary text-4xl fill-current" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                    <span
+                                        className="material-symbols-outlined text-primary text-4xl"
+                                        style={{ fontVariationSettings: "'FILL' 1" }}
+                                    >
+                                        check_circle
+                                    </span>
                                 </div>
                                 <h3 className="text-[#0e1a18] dark:text-white tracking-tight text-xl font-bold leading-tight text-center px-2">
-                                    レビューが<br />登録されました
+                                    レビューが<br />掲載されました
                                 </h3>
                                 <p className="text-zinc-500 dark:text-zinc-400 text-sm font-normal leading-relaxed pt-3 px-4 text-center">
-                                    大切なレビューは他の旅行者にとって<br />大きな助けになります。
+                                    ご投稿ありがとうございます。<br />実際の旅行者の声は他のお客様の大きな助けになります。
                                 </p>
                             </div>
                             <div className="flex pt-2">

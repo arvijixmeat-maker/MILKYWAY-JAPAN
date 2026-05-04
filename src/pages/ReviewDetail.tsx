@@ -6,6 +6,7 @@ import { optimizeImage } from '../utils/imageOptimizer';
 import { BottomNav } from '../components/layout/BottomNav';
 import { formatShortDate, formatRelativeTime } from '../utils/formatDate';
 import { ReviewStars, shouldShowTitle } from '../components/review/ReviewStars';
+import { ReviewAvatar } from '../components/review/ReviewAvatar';
 
 export const ReviewDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -210,12 +211,11 @@ export const ReviewDetail: React.FC = () => {
                 <section className="p-5">
                     <div className="flex items-start justify-between mb-6 gap-2">
                         <div className="flex items-center gap-3 min-w-0">
-                            <div
-                                className="w-12 h-12 shrink-0 rounded-full bg-gray-100 border border-gray-50 bg-cover bg-center"
-                                style={{ backgroundImage: review.userImage ? `url('${optimizeImage(review.userImage, { width: 48, height: 48 })}')` : undefined }}
-                            >
-                                {!review.userImage && <span className="material-symbols-outlined text-gray-400 w-full h-full flex items-center justify-center">person</span>}
-                            </div>
+                            <ReviewAvatar
+                                src={review.userImage ? optimizeImage(review.userImage, { width: 48, height: 48 }) : undefined}
+                                name={review.author}
+                                size={48}
+                            />
                             <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                     <p className="text-[16px] font-bold text-[#0e1a18] dark:text-white truncate">{review.author}</p>
