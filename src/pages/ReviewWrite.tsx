@@ -184,7 +184,9 @@ export const ReviewWrite: React.FC = () => {
             const meResponse = await api.auth.me();
             const me = meResponse?.user;
             if (!me) {
-                alert('ログインが必要です。');
+                // Session expired mid-write — bounce to login. AuthGuard catches the
+                // page-entry case; this branch only triggers on a stale session.
+                navigate('/login');
                 return;
             }
 
