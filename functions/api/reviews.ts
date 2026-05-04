@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { requireAuth } from '../lib/userAuth';
-import { requireAdmin } from '../lib/adminAuth';
 
 type Variables = { user: { id: string; name?: string; email?: string; avatarUrl?: string; role?: string } };
 
@@ -152,11 +151,23 @@ app.put('/:id', requireAuth, async (c) => {
     }
 });
 
-// DELETE /api/reviews/:id — admin only.
-app.delete('/:id', requireAdmin, async (c) => {
+// DELETE /api/reviews/:id — review author OR admin.
+//
+// The review's owner can remove their own post; admins can remove any review
+// (used for moderation from /admin/reviews). All other callers get 403.
+app.delete('/:id', requireAuth, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
+    const sessionUser = c.get('user');
+    const isAdmin = sessionUser.role === 'admin';
     try {
+        const existing = await db.prepare('SELECT user_id FROM reviews WHERE id=?').bind(id).first<{ user_id: string }>();
+        if (!existing) {
+            return c.json({ error: 'Not found' }, 404);
+        }
+        if (!isAdmin && existing.user_id !== sessionUser.id) {
+            return c.json({ error: 'Forbidden' }, 403);
+        }
         await db.prepare('DELETE FROM reviews WHERE id=?').bind(id).run();
         return c.json({ success: true });
     } catch (e: any) {
