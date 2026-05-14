@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, ProductFAQ } from '../../types/product';
+import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, ProductFAQ, TourPricingOption } from '../../types/product';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
 import { DestinationsMap } from '../desktop-primitives/DestinationsMap';
@@ -79,13 +79,16 @@ export function ProductDetailDesktop({
     contentWidth = 1280,
 }: ProductDetailDesktopProps) {
     const navigate = useNavigate();
-    const [people, setPeople] = useState(2);
-    const today = useMemo(() => {
-        const d = new Date();
-        d.setDate(d.getDate() + 21);
-        return d.toISOString().slice(0, 10);
-    }, []);
-    const [date, setDate] = useState(today);
+    const sortedPricingOptions = useMemo<TourPricingOption[]>(
+        () => (product.pricingOptions ?? []).slice().sort((a, b) => a.people - b.people),
+        [product.pricingOptions]
+    );
+    const initialPeople = sortedPricingOptions[0]?.people ?? 2;
+    const [people, setPeople] = useState(initialPeople);
+    // Re-sync when switching to a different product (e.g. on related-tour click).
+    useEffect(() => {
+        setPeople(sortedPricingOptions[0]?.people ?? 2);
+    }, [product.id, sortedPricingOptions]);
     const [fav, setFav] = useState(false);
     const [activeSec, setActiveSec] = useState<SectionId>('overview');
     const [showStickyBar, setShowStickyBar] = useState(false);
@@ -148,7 +151,21 @@ export function ProductDetailDesktop({
         return Array.from(new Set(all)).slice(0, 5);
     }, [product.mainImages, product.galleryImages]);
 
-    const total = (product.price || 0) * people;
+    // Match the people count to the closest pricing tier (mirrors mobile
+    // Reservation page logic). Falls back to flat product.price when admin
+    // hasn't configured any pricing tiers.
+    const baseOption = useMemo<TourPricingOption | null>(() => {
+        if (sortedPricingOptions.length === 0) return null;
+        const exact = sortedPricingOptions.find((p) => p.people === people);
+        if (exact) return exact;
+        if (people < sortedPricingOptions[0].people) return sortedPricingOptions[0];
+        if (people > sortedPricingOptions[sortedPricingOptions.length - 1].people) {
+            return sortedPricingOptions[sortedPricingOptions.length - 1];
+        }
+        return sortedPricingOptions.filter((p) => p.people <= people).pop() ?? sortedPricingOptions[0];
+    }, [sortedPricingOptions, people]);
+    const pricePerPerson = baseOption?.pricePerPerson ?? product.price ?? 0;
+    const total = pricePerPerson * people;
     const firstTag = product.tags?.[0];
     const hasOriginal = !!product.originalPrice && product.originalPrice > product.price;
     const ratingValue = 4.9; // default if no aggregate available
@@ -464,12 +481,18 @@ export function ProductDetailDesktop({
                             </div>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 18 }}>
                                 <span style={{ fontSize: 32, fontWeight: 700, color: '#0f766e', letterSpacing: '-0.02em' }}>
-                                    ¥{product.price.toLocaleString()}
+                                    ¥{pricePerPerson.toLocaleString()}
                                 </span>
                                 <span style={{ fontSize: 16, color: '#0f766e', fontWeight: 700 }}>〜</span>
                             </div>
 
-                            <DepartureCalendar value={date} onChange={setDate} basePrice={product.price} />
+                            {sortedPricingOptions.length > 0 ? (
+                                <PricingTierSelector
+                                    options={sortedPricingOptions}
+                                    selectedPeople={people}
+                                    onSelect={setPeople}
+                                />
+                            ) : null}
 
                             <div style={{ marginTop: 14 }}>
                                 <label style={{ fontSize: 12, color: 'var(--fg-5)', marginBottom: 8, display: 'block', fontWeight: 600 }}>
@@ -487,10 +510,28 @@ export function ProductDetailDesktop({
                                 >
                                     <span style={{ fontSize: 14, color: 'var(--fg-1)' }}>大人 {people} 名</span>
                                     <div style={{ display: 'flex', gap: 4 }}>
-                                        <button type="button" onClick={() => setPeople(Math.max(1, people - 1))} style={stepBtn} aria-label="decrease">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPeople(Math.max(sortedPricingOptions[0]?.people ?? 1, people - 1))}
+                                            disabled={people <= (sortedPricingOptions[0]?.people ?? 1)}
+                                            style={stepBtn}
+                                            aria-label="decrease"
+                                        >
                                             <MatIcon name="remove" size={16} color="var(--fg-2)" />
                                         </button>
-                                        <button type="button" onClick={() => setPeople(people + 1)} style={stepBtn} aria-label="increase">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const max = sortedPricingOptions[sortedPricingOptions.length - 1]?.people;
+                                                setPeople(max ? Math.min(max, people + 1) : people + 1);
+                                            }}
+                                            disabled={
+                                                sortedPricingOptions.length > 0 &&
+                                                people >= sortedPricingOptions[sortedPricingOptions.length - 1].people
+                                            }
+                                            style={stepBtn}
+                                            aria-label="increase"
+                                        >
                                             <MatIcon name="add" size={16} color="var(--fg-2)" />
                                         </button>
                                     </div>
@@ -499,7 +540,7 @@ export function ProductDetailDesktop({
 
                             <div style={{ marginTop: 18, padding: '14px 0', borderTop: '1px solid var(--border-subtle)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'var(--fg-4)' }}>
-                                    <span>¥{product.price.toLocaleString()} × {people}名</span>
+                                    <span>¥{pricePerPerson.toLocaleString()} × {people}名</span>
                                     <span>¥{total.toLocaleString()}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'var(--fg-4)' }}>
@@ -1978,44 +2019,36 @@ function FAQBlock({ product }: { product: TourProduct }) {
     );
 }
 
-function DepartureCalendar({ value, onChange, basePrice }: { value: string; onChange: (v: string) => void; basePrice: number }) {
-    // Generate 4 upcoming Wednesdays starting ~3 weeks out
-    const departures = useMemo(() => {
-        const out: { d: string; label: string; price: number; tag?: '残り3席' | '人気' | null }[] = [];
-        const start = new Date();
-        start.setDate(start.getDate() + 21);
-        // Move to next Wednesday
-        while (start.getDay() !== 3) start.setDate(start.getDate() + 1);
-        for (let i = 0; i < 4; i++) {
-            const d = new Date(start);
-            d.setDate(d.getDate() + i * 7);
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const day = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
-            out.push({
-                d: `${yyyy}-${mm}-${dd}`,
-                label: `${d.getMonth() + 1}/${d.getDate()} (${day})`,
-                price: basePrice + (i >= 2 ? 8000 : 0),
-                tag: i === 0 ? '残り3席' : i === 2 ? '人気' : null,
-            });
-        }
-        return out;
-    }, [basePrice]);
+function PricingTierSelector({
+    options,
+    selectedPeople,
+    onSelect,
+}: {
+    options: TourPricingOption[];
+    selectedPeople: number;
+    onSelect: (people: number) => void;
+}) {
+    // The cheapest per-person tier is usually the "most popular" choice (larger
+    // group = bigger discount). Flag it so users see the best value at a glance.
+    const cheapest = options.reduce<TourPricingOption | null>(
+        (best, cur) => (!best || cur.pricePerPerson < best.pricePerPerson ? cur : best),
+        null
+    );
 
     return (
         <div>
             <label style={{ fontSize: 12, color: 'var(--fg-5)', marginBottom: 10, display: 'block', fontWeight: 600 }}>
-                出発日を選ぶ
+                人数別プラン
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {departures.map((d) => {
-                    const on = value === d.d;
+                {options.map((opt) => {
+                    const on = selectedPeople === opt.people;
+                    const isPopular = cheapest && cheapest.people === opt.people && options.length > 1;
                     return (
                         <button
-                            key={d.d}
+                            key={opt.people}
                             type="button"
-                            onClick={() => onChange(d.d)}
+                            onClick={() => onSelect(opt.people)}
                             style={{
                                 padding: '10px 12px',
                                 border: on ? '2px solid #0f766e' : '1px solid var(--border)',
@@ -2027,7 +2060,7 @@ function DepartureCalendar({ value, onChange, basePrice }: { value: string; onCh
                                 position: 'relative',
                             }}
                         >
-                            {d.tag && (
+                            {isPopular && (
                                 <span
                                     style={{
                                         position: 'absolute',
@@ -2036,16 +2069,16 @@ function DepartureCalendar({ value, onChange, basePrice }: { value: string; onCh
                                         fontSize: 9,
                                         fontWeight: 700,
                                         padding: '2px 6px',
-                                        background: d.tag === '人気' ? '#dc2626' : 'var(--fg-1)',
+                                        background: '#dc2626',
                                         color: '#fff',
                                         borderRadius: 4,
                                         letterSpacing: '0.04em',
                                     }}
                                 >
-                                    {d.tag}
+                                    お得
                                 </span>
                             )}
-                            <div style={{ fontSize: 12, color: 'var(--fg-2)', fontWeight: 600 }}>{d.label}</div>
+                            <div style={{ fontSize: 12, color: 'var(--fg-2)', fontWeight: 600 }}>{opt.people}名</div>
                             <div
                                 style={{
                                     fontSize: 13,
@@ -2054,7 +2087,7 @@ function DepartureCalendar({ value, onChange, basePrice }: { value: string; onCh
                                     marginTop: 3,
                                 }}
                             >
-                                ¥{(d.price / 1000).toFixed(0)}k〜
+                                ¥{opt.pricePerPerson.toLocaleString()}〜/人
                             </div>
                         </button>
                     );
