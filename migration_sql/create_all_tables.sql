@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS quotes (
 CREATE TABLE IF NOT EXISTS banners (
     id TEXT PRIMARY KEY,
     image TEXT,
+    pc_image TEXT,
     tag TEXT,
     title TEXT,
     subtitle TEXT,

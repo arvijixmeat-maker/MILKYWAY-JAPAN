@@ -308,6 +308,15 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped products.faqs: ${e.message}`);
     }
 
+    // Banners: PC-specific hero image (wider aspect ratio than mobile).
+    // Falls back to `image` when not set.
+    try {
+        await c.env.DB.prepare("ALTER TABLE banners ADD COLUMN pc_image TEXT").run();
+        migrationResults.push('Added banners.pc_image');
+    } catch (e: any) {
+        migrationResults.push(`Skipped banners.pc_image: ${e.message}`);
+    }
+
     // Magazines: location/map columns for embedding Google Maps in posts
     const magazineLocationColumns = [
         "location_name TEXT",

@@ -6,6 +6,7 @@ import { uploadImage } from '../utils/upload';
 interface Banner {
     id: string;
     image: string;
+    pcImage?: string;   // PC-only wide-aspect image. Falls back to `image` when empty.
     tag: string;
     title: string;
     subtitle: string;
@@ -126,6 +127,7 @@ export const AdminBannerManage: React.FC = () => {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const bannerFileInputRef = useRef<HTMLInputElement>(null);
+    const pcBannerFileInputRef = useRef<HTMLInputElement>(null);
     const iconFileInputRef = useRef<HTMLInputElement>(null);
     const eventFileInputRef = useRef<HTMLInputElement>(null);
     const categoryFileInputRef = useRef<HTMLInputElement>(null);
@@ -138,7 +140,8 @@ export const AdminBannerManage: React.FC = () => {
                 const data = await api.banners.get();
                 if (data.banners && data.banners.length > 0) {
                     setBanners(data.banners.map((b: any) => ({
-                        id: b.id, image: b.image, tag: b.tag || 'Premium Trip',
+                        id: b.id, image: b.image, pcImage: b.pc_image || b.pcImage || '',
+                        tag: b.tag || 'Premium Trip',
                         title: b.title, subtitle: b.subtitle, link: b.link
                     })));
                 }
@@ -174,7 +177,7 @@ export const AdminBannerManage: React.FC = () => {
     const addBanner = () => {
         const newId = `banner-${Date.now()}`;
         setBanners([...banners, {
-            id: newId, image: "",
+            id: newId, image: "", pcImage: "",
             tag: "", title: "", subtitle: "", link: ""
         }]);
         markUnsaved();
@@ -258,13 +261,14 @@ export const AdminBannerManage: React.FC = () => {
 
 
     // Images
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'banner' | 'icon' | 'event' | 'category') => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'banner' | 'pcBanner' | 'icon' | 'event' | 'category') => {
         const file = e.target.files?.[0];
         if (file && selectedId) {
             try {
                 // Upload to Cloudflare R2
                 // Use different folders for organization
                 let folder = 'banners';
+                if (type === 'pcBanner') folder = 'banners';
                 if (type === 'icon') folder = 'icons';
                 if (type === 'event') folder = 'events';
                 if (type === 'category') folder = 'categories';
@@ -272,15 +276,23 @@ export const AdminBannerManage: React.FC = () => {
                 const publicUrl = await uploadImage(file, folder);
 
                 if (type === 'banner') setBanners(banners.map(b => b.id === selectedId ? { ...b, image: publicUrl } : b));
+                if (type === 'pcBanner') setBanners(banners.map(b => b.id === selectedId ? { ...b, pcImage: publicUrl } : b));
                 if (type === 'icon') setLinks(links.map(l => l.id === selectedId ? { ...l, image: publicUrl } : l));
                 if (type === 'event') setEventBanners(eventBanners.map(ev => ev.id === selectedId ? { ...ev, image: publicUrl } : ev));
                 if (type === 'category') setCategoryTabs(categoryTabs.map(c => c.id === selectedId ? { ...c, bannerImage: publicUrl } : c));
+                // Reset input so picking the same file twice still triggers onChange.
+                e.target.value = '';
                 markUnsaved();
             } catch (error) {
                 console.error('Image upload failed:', error);
                 alert('이미지 업로드 중 오류가 발생했습니다.');
             }
         }
+    };
+
+    const clearPcImage = (id: string) => {
+        setBanners(banners.map(b => b.id === id ? { ...b, pcImage: '' } : b));
+        markUnsaved();
     };
 
     // Save Action via API
@@ -345,6 +357,7 @@ export const AdminBannerManage: React.FC = () => {
                         </div>
 
                         <input type="file" ref={bannerFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'banner')} />
+                        <input type="file" ref={pcBannerFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'pcBanner')} />
 
                         <div className="space-y-6">
                             {banners.map((banner, index) => (
@@ -358,13 +371,56 @@ export const AdminBannerManage: React.FC = () => {
                                         <span className="material-symbols-outlined">delete</span>
                                     </button>
 
-                                    <div
-                                        className="w-48 aspect-[16/10] bg-slate-200 rounded-lg bg-cover bg-center shrink-0 relative group/img cursor-pointer border border-slate-200 text-slate-800"
-                                        style={{ backgroundImage: `url('${banner.image}')` }}
-                                        onClick={() => { setSelectedId(banner.id); bannerFileInputRef.current?.click(); }}
-                                    >
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg">
-                                            <span className="material-symbols-outlined text-white">edit</span>
+                                    <div className="flex flex-col gap-2 shrink-0">
+                                        <div>
+                                            <div className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-xs">smartphone</span>
+                                                모바일 (세로/정사각)
+                                            </div>
+                                            <div
+                                                className="w-48 aspect-[16/10] bg-slate-200 rounded-lg bg-cover bg-center relative group/img cursor-pointer border border-slate-200 text-slate-800"
+                                                style={{ backgroundImage: banner.image ? `url('${banner.image}')` : undefined }}
+                                                onClick={() => { setSelectedId(banner.id); bannerFileInputRef.current?.click(); }}
+                                            >
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg">
+                                                    <span className="material-symbols-outlined text-white">edit</span>
+                                                </div>
+                                                {!banner.image && (
+                                                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
+                                                        클릭하여 업로드
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div className="text-[10px] font-bold text-teal-700 mb-1 flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-xs">desktop_windows</span>
+                                                PC 전용 (와이드, 선택)
+                                            </div>
+                                            <div
+                                                className="w-48 aspect-[21/9] bg-slate-100 rounded-lg bg-cover bg-center relative group/pcimg cursor-pointer border border-dashed border-teal-300 text-slate-800"
+                                                style={{ backgroundImage: banner.pcImage ? `url('${banner.pcImage}')` : undefined }}
+                                                onClick={() => { setSelectedId(banner.id); pcBannerFileInputRef.current?.click(); }}
+                                            >
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/pcimg:opacity-100 transition-opacity rounded-lg">
+                                                    <span className="material-symbols-outlined text-white">edit</span>
+                                                </div>
+                                                {!banner.pcImage && (
+                                                    <div className="absolute inset-0 flex items-center justify-center text-teal-500 text-[10px] text-center px-2">
+                                                        PC 와이드 이미지 업로드<br />(미설정 시 모바일 이미지 사용)
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {banner.pcImage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => clearPcImage(banner.id)}
+                                                    className="mt-1 text-[10px] text-slate-500 hover:text-red-500"
+                                                >
+                                                    PC 이미지 제거
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
