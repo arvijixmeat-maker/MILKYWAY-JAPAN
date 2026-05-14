@@ -49,6 +49,28 @@ function tagTone(tag?: string): TagTone {
     return 'premium';
 }
 
+// A day card (dayInfo / timeline) is "meaningful" only if the admin actually
+// typed something into it. Cards left at their default empty template are
+// treated as stale data and skipped, both for section-visibility checks and
+// when rendering Timeline. image / slide / divider blocks always count.
+function isMeaningfulItineraryBlock(b: { type: string; content: unknown }): boolean {
+    if (b.type === 'image' || b.type === 'slide' || b.type === 'divider') return true;
+    if (b.type === 'dayInfo') {
+        const c = (b.content ?? {}) as Partial<DayInfoContent>;
+        return Boolean(
+            (c.title && c.title.trim()) ||
+            (c.description && c.description.trim()) ||
+            (c.accommodation && c.accommodation.trim()) ||
+            c.meals?.breakfast || c.meals?.lunch || c.meals?.dinner
+        );
+    }
+    if (b.type === 'timeline') {
+        const c = (b.content ?? {}) as Partial<TimelineContent>;
+        return Boolean((c.title && c.title.trim()) || (c.description && c.description.trim()));
+    }
+    return false;
+}
+
 export function ProductDetailDesktop({
     product,
     reviews = [],
@@ -82,7 +104,7 @@ export function ProductDetailDesktop({
         (product.detailSlides && product.detailSlides.length > 0) ||
         (product.detailImages && product.detailImages.length > 0);
     const hasItineraryContent =
-        (product.itineraryBlocks && product.itineraryBlocks.length > 0) ||
+        (product.itineraryBlocks && product.itineraryBlocks.some(isMeaningfulItineraryBlock)) ||
         (product.itineraryImages && product.itineraryImages.length > 0);
     const hasOptionsContent =
         (product.pricingOptions && product.pricingOptions.length > 0) ||
@@ -987,9 +1009,9 @@ function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: s
                 }}
             />
         );
-    } else if (n <= 3) {
+    } else if (n === 2) {
         body = (
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`, gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                 {slide.images.map((img, i) => (
                     <img
                         key={i}
@@ -997,49 +1019,33 @@ function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: s
                         alt={`${slide.title || productName} - ${i + 1}`}
                         loading="lazy"
                         decoding="async"
-                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12, display: 'block' }}
+                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 14, display: 'block' }}
                     />
                 ))}
             </div>
         );
     } else {
-        // 4+ images — horizontal carousel
+        // 3+ images — 2-column responsive grid. Big, readable cards on PC.
         body = (
-            <div
-                className="scrollbar-hide"
-                style={{
-                    display: 'flex',
-                    gap: 12,
-                    overflowX: 'auto',
-                    scrollSnapType: 'x mandatory',
-                    paddingBottom: 4,
-                }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                 {slide.images.map((img, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            flex: '0 0 calc((100% - 24px) / 3)',
-                            scrollSnapAlign: 'start',
-                            position: 'relative',
-                        }}
-                    >
+                    <div key={i} style={{ position: 'relative' }}>
                         <img
                             src={img}
                             alt={`${slide.title || productName} - ${i + 1}`}
                             loading="lazy"
                             decoding="async"
-                            style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12, display: 'block' }}
+                            style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 14, display: 'block' }}
                         />
                         <div
                             style={{
                                 position: 'absolute',
-                                bottom: 8,
-                                right: 8,
-                                padding: '2px 8px',
+                                bottom: 10,
+                                right: 10,
+                                padding: '3px 10px',
                                 background: 'rgba(0,0,0,0.55)',
                                 color: '#fff',
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: 700,
                                 borderRadius: 999,
                                 backdropFilter: 'blur(4px)',
@@ -1267,7 +1273,10 @@ function HighlightsBlock({ product }: { product: TourProduct }) {
 }
 
 function Timeline({ product }: { product: TourProduct }) {
-    const blocks = product.itineraryBlocks ?? [];
+    // Drop empty dayInfo/timeline blocks left over from old admin sessions —
+    // they would otherwise render as phantom "D1, D2, ..." cards even though
+    // the admin never typed anything into them.
+    const blocks = (product.itineraryBlocks ?? []).filter(isMeaningfulItineraryBlock);
     const legacyImages = product.itineraryImages ?? [];
 
     // No data at all → empty placeholder
