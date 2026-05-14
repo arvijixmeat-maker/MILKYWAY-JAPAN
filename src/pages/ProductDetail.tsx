@@ -19,6 +19,53 @@ const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
     (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
 };
 
+// Common Q&A shown on every product detail page (mobile). Mirrors the PC
+// ProductDetailDesktop FAQBlock so users see consistent info across devices.
+// TODO(phase 3): make these admin-editable via a `product_faqs` settings key.
+const MOBILE_FAQ_ITEMS: { q: string; a: string }[] = [
+    { q: '出発前に何を準備したらいいですか？', a: '国際線航空券・パスポート (有効期限6ヶ月以上)・モンゴルビザが必要です。ビザ申請は弊社でもサポートいたします。気温差が大きいため、季節を問わず羽織りものは必須です。' },
+    { q: 'キャンセル規定を教えてください。', a: '出発日の31日前まで: 全額返金。30〜15日前: ツアー代金の30%。14〜8日前: 50%。7日前以降: 100%。詳しくは利用規約をご確認ください。' },
+    { q: 'ゲル宿泊は寝具がありますか？', a: '全てのゲルキャンプにベッド・マットレス・毛布・タオルを完備しています。冬季には電気毛布もご用意します。' },
+    { q: '1人旅でも参加できますか？', a: 'もちろん可能です。一人参加追加料金 ¥18,000 を頂戴しております (個室追加料金分)。同行者募集の掲示板もご利用ください。' },
+    { q: '食事のアレルギー対応はありますか？', a: '事前にお知らせいただければ、食物アレルギーや宗教上の食事制限に個別対応いたします。ベジタリアン・ヴィーガン対応も可能です。' },
+    { q: '現地での通信手段は？', a: 'ウランバートル市内は4G完備。ゴビ・テレルジでは電波が弱い場所もあります。ガイドが衛星電話を所持しているため緊急連絡は可能です。' },
+];
+
+const MobileFAQ: React.FC = () => {
+    const [openIdx, setOpenIdx] = React.useState<number>(0);
+    return (
+        <div className="p-6 bg-white dark:bg-background-dark mt-2">
+            <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-2">FAQ & Notice</div>
+            <h3 className="text-lg font-bold mb-4">ご注意・よくある質問</h3>
+            <div className="flex flex-col gap-2">
+                {MOBILE_FAQ_ITEMS.map((item, i) => {
+                    const on = openIdx === i;
+                    return (
+                        <div key={i} className="border border-gray-100 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-900 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setOpenIdx(on ? -1 : i)}
+                                className="w-full px-4 py-4 flex items-center justify-between gap-3 text-left"
+                            >
+                                <span className="text-[14px] font-semibold text-[#0e1a18] dark:text-white leading-snug">
+                                    <span className="text-primary font-mono font-bold mr-2">Q{i + 1}.</span>
+                                    {item.q}
+                                </span>
+                                <span className="material-symbols-outlined text-gray-400 shrink-0">{on ? 'remove' : 'add'}</span>
+                            </button>
+                            {on && (
+                                <div className="px-4 pb-4 text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                                    {item.a}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 // Normalize a raw product row from the API into the minimal shape ProductCard needs.
 const mapProductSummary = (p: any) => ({
     id: p.id,
@@ -656,17 +703,47 @@ export const ProductDetail: React.FC = () => {
             {hasIntroContent && (
             <div className="bg-white dark:bg-background-dark mt-2" id="intro">
                 {product.highlights && product.highlights.length > 0 && (
-                    <div className="p-6 pb-0">
+                    <div className="p-6 pb-2">
                         <h3 className="text-lg font-bold mb-4">{t('product_detail.highlights_title')}</h3>
-                        <div className="grid grid-cols-1 gap-4 mb-4">
+                        <div className="grid grid-cols-2 gap-3 mb-4">
                             {product.highlights.map((highlight, index) => (
-                                <div key={index} className="flex items-start gap-4 p-4 rounded-xl bg-background-light dark:bg-white/5">
-                                    <div>
-                                        <p className="font-bold text-sm">{highlight.title}</p>
-                                        <p className="text-xs text-gray-500 mt-1">{highlight.description}</p>
+                                <div
+                                    key={index}
+                                    className="flex flex-col gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+                                        <span className="material-symbols-outlined text-primary text-xl">
+                                            {highlight.icon || 'auto_awesome'}
+                                        </span>
                                     </div>
+                                    <p className="font-bold text-[14px] leading-snug text-[#0e1a18] dark:text-white">{highlight.title}</p>
+                                    <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">{highlight.description}</p>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Guide intro card — generic N1-certified message, shown for every product.
+                            TODO(phase 3): make admin-editable via /api/settings key 'guide_intro'. */}
+                        <div className="mt-6 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+                            <div className="flex items-start gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shrink-0 shadow-md">
+                                    <span className="material-symbols-outlined text-2xl">translate</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] font-bold text-primary tracking-widest uppercase mb-1">Your Guide</div>
+                                    <div className="text-[15px] font-bold text-[#0e1a18] dark:text-white">日本語ガイド同行</div>
+                                </div>
+                            </div>
+                            <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-3">
+                                全ガイドが日本語能力試験N1取得済み。モンゴルの自然と文化を深く知り、お客様の目線で丁寧にご案内します。
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {['N1 取得済み', '経験10年以上', '現地ガイド'].map(chip => (
+                                    <span key={chip} className="text-[10px] font-semibold px-2 py-1 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+                                        {chip}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -999,6 +1076,10 @@ export const ProductDetail: React.FC = () => {
                     )}
                 </div>
             )}
+
+            {/* FAQ — common Q&A shown on every product. Same 6 items as PC ProductDetailDesktop. */}
+            <MobileFAQ />
+
 
             {/* Related Products */}
             {relatedProducts.length > 0 && (
