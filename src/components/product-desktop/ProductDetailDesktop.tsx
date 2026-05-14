@@ -962,20 +962,34 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
 
 function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: string }) {
     if (!slide.images || slide.images.length === 0) return null;
-    return (
-        <div>
-            {slide.title && (
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 12px', letterSpacing: '-0.01em' }}>
-                    {slide.title}
-                </h3>
-            )}
-            <div
+    const n = slide.images.length;
+
+    // Adaptive layout based on image count so images never get squashed into
+    // tiny grid cells on a wide PC viewport.
+    // - 1 image  → full-width 16:9 hero
+    // - 2 images → 2 columns
+    // - 3 images → 3 columns
+    // - 4+ images → horizontal-scroll gallery (matches mobile carousel feel)
+    let body: React.ReactNode;
+    if (n === 1) {
+        body = (
+            <img
+                src={slide.images[0]}
+                alt={`${slide.title || productName} - 1`}
+                loading="lazy"
+                decoding="async"
                 style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${Math.min(slide.images.length, 3)}, 1fr)`,
-                    gap: 12,
+                    width: '100%',
+                    aspectRatio: '16/9',
+                    objectFit: 'cover',
+                    borderRadius: 14,
+                    display: 'block',
                 }}
-            >
+            />
+        );
+    } else if (n <= 3) {
+        body = (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${n}, 1fr)`, gap: 12 }}>
                 {slide.images.map((img, i) => (
                     <img
                         key={i}
@@ -983,10 +997,70 @@ function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: s
                         alt={`${slide.title || productName} - ${i + 1}`}
                         loading="lazy"
                         decoding="async"
-                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12 }}
+                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12, display: 'block' }}
                     />
                 ))}
             </div>
+        );
+    } else {
+        // 4+ images — horizontal carousel
+        body = (
+            <div
+                className="scrollbar-hide"
+                style={{
+                    display: 'flex',
+                    gap: 12,
+                    overflowX: 'auto',
+                    scrollSnapType: 'x mandatory',
+                    paddingBottom: 4,
+                }}
+            >
+                {slide.images.map((img, i) => (
+                    <div
+                        key={i}
+                        style={{
+                            flex: '0 0 calc((100% - 24px) / 3)',
+                            scrollSnapAlign: 'start',
+                            position: 'relative',
+                        }}
+                    >
+                        <img
+                            src={img}
+                            alt={`${slide.title || productName} - ${i + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12, display: 'block' }}
+                        />
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: 8,
+                                right: 8,
+                                padding: '2px 8px',
+                                background: 'rgba(0,0,0,0.55)',
+                                color: '#fff',
+                                fontSize: 10,
+                                fontWeight: 700,
+                                borderRadius: 999,
+                                backdropFilter: 'blur(4px)',
+                            }}
+                        >
+                            {i + 1} / {n}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            {slide.title && (
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 12px', letterSpacing: '-0.01em' }}>
+                    {slide.title}
+                </h3>
+            )}
+            {body}
             {slide.description && (
                 <p style={{ fontSize: 14, color: 'var(--fg-4)', lineHeight: 1.75, marginTop: 14 }}>
                     {slide.description}
@@ -1193,55 +1267,11 @@ function HighlightsBlock({ product }: { product: TourProduct }) {
 }
 
 function Timeline({ product }: { product: TourProduct }) {
-    interface Row {
-        key: string;
-        day: string;
-        title?: string;
-        description?: string;
-        meals?: string;
-        accommodation?: string;
-        image?: string;
-    }
+    const blocks = product.itineraryBlocks ?? [];
+    const legacyImages = product.itineraryImages ?? [];
 
-    const rows: Row[] = useMemo(() => {
-        const blocks = product.itineraryBlocks ?? [];
-        const out: Row[] = [];
-        blocks.forEach((b, i) => {
-            if (b.type === 'dayInfo') {
-                const c = b.content as DayInfoContent;
-                const mealsArr: string[] = [];
-                if (c.meals?.breakfast) mealsArr.push('朝');
-                if (c.meals?.lunch) mealsArr.push('昼');
-                if (c.meals?.dinner) mealsArr.push('夕');
-                out.push({
-                    key: b.id || String(i),
-                    day: c.dayLabel || `DAY ${i + 1}`,
-                    title: c.title,
-                    description: c.description,
-                    meals: mealsArr.length > 0 ? mealsArr.join('・') : undefined,
-                    accommodation: c.accommodation,
-                });
-            } else if (b.type === 'timeline') {
-                const c = b.content as TimelineContent;
-                out.push({
-                    key: b.id || String(i),
-                    day: c.time || `#${i + 1}`,
-                    title: c.title,
-                    description: c.description,
-                });
-            }
-        });
-        // Fill images by alternating product.mainImages
-        const imgs = product.mainImages ?? [];
-        if (imgs.length > 0) {
-            out.forEach((r, i) => {
-                r.image = imgs[i % imgs.length];
-            });
-        }
-        return out;
-    }, [product.itineraryBlocks, product.mainImages]);
-
-    if (rows.length === 0) {
+    // No data at all → empty placeholder
+    if (blocks.length === 0 && legacyImages.length === 0) {
         return (
             <div
                 style={{
@@ -1257,93 +1287,182 @@ function Timeline({ product }: { product: TourProduct }) {
         );
     }
 
+    // No structured blocks but admin has legacy itineraryImages → render as a
+    // simple image stack (matches mobile fallback).
+    if (blocks.length === 0 && legacyImages.length > 0) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {legacyImages.map((src, i) => (
+                    <img
+                        key={i}
+                        src={src}
+                        alt={`${product.name} - itinerary ${i + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: '100%', height: 'auto', borderRadius: 16 }}
+                    />
+                ))}
+            </div>
+        );
+    }
+
+    // Precompute day numbers in a pure pass so the render below stays pure.
+    // dayInfo / timeline blocks get a sequential D1, D2, ... number; image /
+    // slide / divider blocks don't.
+    const dayNumbers: (number | null)[] = [];
+    let seenDays = 0;
+    for (const b of blocks) {
+        if (b.type === 'dayInfo' || b.type === 'timeline') {
+            seenDays += 1;
+            dayNumbers.push(seenDays);
+        } else {
+            dayNumbers.push(null);
+        }
+    }
+
     return (
-        <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {blocks.map((b, i) => {
+                if (b.type === 'dayInfo') {
+                    const dayNum = dayNumbers[i] ?? 1;
+                    const c = b.content as DayInfoContent;
+                    const mealsArr: string[] = [];
+                    if (c.meals?.breakfast) mealsArr.push('朝');
+                    if (c.meals?.lunch) mealsArr.push('昼');
+                    if (c.meals?.dinner) mealsArr.push('夕');
+                    return (
+                        <DayCard
+                            key={b.id || String(i)}
+                            dayLabel={c.dayLabel || `DAY ${dayNum}`}
+                            dayNumber={dayNum}
+                            title={c.title}
+                            description={c.description}
+                            meals={mealsArr.length > 0 ? mealsArr.join('・') : undefined}
+                            accommodation={c.accommodation}
+                        />
+                    );
+                }
+                if (b.type === 'timeline') {
+                    const dayNum = dayNumbers[i] ?? 1;
+                    const c = b.content as TimelineContent;
+                    return (
+                        <DayCard
+                            key={b.id || String(i)}
+                            dayLabel={c.time || `#${dayNum}`}
+                            dayNumber={dayNum}
+                            title={c.title}
+                            description={c.description}
+                        />
+                    );
+                }
+                if (b.type === 'image') {
+                    const url = typeof b.content === 'string' ? b.content : '';
+                    if (!url) return null;
+                    return (
+                        <img
+                            key={b.id || String(i)}
+                            src={url}
+                            alt={`${product.name} - ${i + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            style={{ width: '100%', height: 'auto', borderRadius: 16 }}
+                        />
+                    );
+                }
+                if (b.type === 'slide') {
+                    const slide = b.content as DetailSlide;
+                    return <SlideBlock key={b.id || String(i)} slide={slide} productName={product.name} />;
+                }
+                if (b.type === 'divider') {
+                    const div = b.content as DividerContent;
+                    return (
+                        <div
+                            key={b.id || String(i)}
+                            style={{
+                                height: div.height,
+                                borderBottom: div.style === 'line' ? '1px solid var(--border-subtle)' : 'none',
+                            }}
+                        />
+                    );
+                }
+                return null;
+            })}
+        </div>
+    );
+}
+
+function DayCard({
+    dayLabel,
+    dayNumber,
+    title,
+    description,
+    meals,
+    accommodation,
+}: {
+    dayLabel: string;
+    dayNumber: number;
+    title?: string;
+    description?: string;
+    meals?: string;
+    accommodation?: string;
+}) {
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 24, alignItems: 'flex-start' }}>
             <div
                 style={{
-                    position: 'absolute',
-                    left: 19,
-                    top: 12,
-                    bottom: 24,
-                    width: 2,
-                    background: 'linear-gradient(to bottom, #0f766e 0%, var(--primary-tint) 100%)',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 999,
+                    background: '#0f766e',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    boxShadow: '0 0 0 4px #fff, 0 0 0 5px var(--primary-tint)',
+                    letterSpacing: '-0.02em',
                 }}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {rows.map((it, i) => (
-                    <div key={it.key} style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 24, alignItems: 'flex-start' }}>
-                        <div
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 999,
-                                background: '#0f766e',
-                                color: '#fff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 13,
-                                fontWeight: 700,
-                                fontFamily: 'ui-monospace, Menlo, monospace',
-                                boxShadow: '0 0 0 4px #fff, 0 0 0 5px var(--primary-tint)',
-                                zIndex: 1,
-                                letterSpacing: '-0.02em',
-                            }}
-                        >
-                            D{i + 1}
-                        </div>
-                        <div
-                            style={{
-                                background: '#fff',
-                                border: '1px solid var(--border-subtle)',
-                                borderRadius: 16,
-                                padding: 0,
-                                display: 'grid',
-                                gridTemplateColumns: it.image ? '180px 1fr' : '1fr',
-                                overflow: 'hidden',
-                                boxShadow: 'var(--shadow-toss)',
-                            }}
-                        >
-                            {it.image && (
-                                <div
-                                    style={{
-                                        backgroundImage: `url(${it.image})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        minHeight: 140,
-                                    }}
-                                />
-                            )}
-                            <div style={{ padding: '18px 22px' }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#0f766e', letterSpacing: '0.08em', marginBottom: 4 }}>
-                                    {it.day}
-                                </div>
-                                {it.title && (
-                                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 8, letterSpacing: '-0.01em' }}>
-                                        {it.title}
-                                    </div>
-                                )}
-                                {it.description && (
-                                    <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.7, marginBottom: 12 }}>{it.description}</div>
-                                )}
-                                {(it.meals || it.accommodation) && (
-                                    <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--fg-5)', flexWrap: 'wrap' }}>
-                                        {it.meals && (
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                                <MatIcon name="restaurant" size={14} color="var(--fg-5)" /> 食事: {it.meals}
-                                            </span>
-                                        )}
-                                        {it.accommodation && (
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                                <MatIcon name="hotel" size={14} color="var(--fg-5)" /> 宿泊: {it.accommodation}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+            >
+                D{dayNumber}
+            </div>
+            <div
+                style={{
+                    background: '#fff',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 16,
+                    padding: '18px 22px',
+                    boxShadow: 'var(--shadow-toss)',
+                }}
+            >
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#0f766e', letterSpacing: '0.08em', marginBottom: 4 }}>
+                    {dayLabel}
+                </div>
+                {title && (
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 8, letterSpacing: '-0.01em' }}>
+                        {title}
                     </div>
-                ))}
+                )}
+                {description && (
+                    <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.7, marginBottom: 12, whiteSpace: 'pre-wrap' }}>
+                        {description}
+                    </div>
+                )}
+                {(meals || accommodation) && (
+                    <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--fg-5)', flexWrap: 'wrap' }}>
+                        {meals && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <MatIcon name="restaurant" size={14} color="var(--fg-5)" /> 食事: {meals}
+                            </span>
+                        )}
+                        {accommodation && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <MatIcon name="hotel" size={14} color="var(--fg-5)" /> 宿泊: {accommodation}
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
