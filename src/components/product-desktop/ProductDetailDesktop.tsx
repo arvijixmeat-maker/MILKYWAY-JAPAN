@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { TourProduct, DayInfoContent, TimelineContent } from '../../types/product';
+import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent } from '../../types/product';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
 
@@ -23,12 +23,14 @@ interface ProductDetailDesktopProps {
     contentWidth?: number;
 }
 
-type SectionId = 'overview' | 'highlights' | 'itinerary' | 'guide' | 'location' | 'included' | 'reviews' | 'faq';
+type SectionId = 'overview' | 'highlights' | 'details' | 'itinerary' | 'options' | 'guide' | 'location' | 'included' | 'reviews' | 'faq';
 
-const PRODUCT_SECTIONS: { id: SectionId; label: string }[] = [
+const ALL_SECTIONS: { id: SectionId; label: string }[] = [
     { id: 'overview', label: '概要' },
     { id: 'highlights', label: 'ハイライト' },
+    { id: 'details', label: '詳細情報' },
     { id: 'itinerary', label: '詳細日程' },
+    { id: 'options', label: 'プラン・オプション' },
     { id: 'guide', label: 'ガイド紹介' },
     { id: 'location', label: '目的地' },
     { id: 'included', label: '含まれるもの' },
@@ -70,13 +72,37 @@ export function ProductDetailDesktop({
         window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     }, [product?.id]);
 
+    // Only show tabs/sections that have meaningful content for THIS product.
+    // Sections without admin data are silently hidden so we never leak "lorem-ipsum".
+    const hasDetailContent =
+        (product.detailBlocks && product.detailBlocks.length > 0) ||
+        (product.detailSlides && product.detailSlides.length > 0) ||
+        (product.detailImages && product.detailImages.length > 0);
+    const hasItineraryContent =
+        (product.itineraryBlocks && product.itineraryBlocks.length > 0) ||
+        (product.itineraryImages && product.itineraryImages.length > 0);
+    const hasOptionsContent =
+        (product.pricingOptions && product.pricingOptions.length > 0) ||
+        (product.accommodationOptions && product.accommodationOptions.length > 0) ||
+        (product.vehicleOptions && product.vehicleOptions.length > 0);
+
+    const visibleSections = useMemo(
+        () => ALL_SECTIONS.filter((s) => {
+            if (s.id === 'details') return hasDetailContent;
+            if (s.id === 'itinerary') return hasItineraryContent;
+            if (s.id === 'options') return hasOptionsContent;
+            return true;
+        }),
+        [hasDetailContent, hasItineraryContent, hasOptionsContent]
+    );
+
     // Scroll observers (sticky bar + active section)
     useEffect(() => {
         const onScroll = () => {
             const rect = bookingRef.current?.getBoundingClientRect();
             if (rect) setShowStickyBar(rect.bottom < 0);
             let cur: SectionId = 'overview';
-            for (const s of PRODUCT_SECTIONS) {
+            for (const s of visibleSections) {
                 const el = document.getElementById('sec-' + s.id);
                 if (!el) continue;
                 if (el.getBoundingClientRect().top - 220 < 0) cur = s.id;
@@ -86,12 +112,15 @@ export function ProductDetailDesktop({
         window.addEventListener('scroll', onScroll, { passive: true });
         onScroll();
         return () => window.removeEventListener('scroll', onScroll);
-    }, []);
+    }, [visibleSections]);
 
-    // Gallery — combine mainImages + galleryImages, top 5
+    // Gallery — combine mainImages + galleryImages (unique, no duplicates).
+    // When admin uploaded < 5 photos, we render only what they actually have so
+    // we don't repeat the same image 5 times in the Airbnb-style grid.
     const gallery: string[] = useMemo(() => {
-        const all = [...(product.mainImages ?? []), ...(product.galleryImages ?? [])].filter(Boolean);
-        return all.length >= 5 ? all.slice(0, 5) : [...all, ...Array(5 - all.length).fill(all[0] || '/og-image.jpg')];
+        const all = [...(product.mainImages ?? []), ...(product.galleryImages ?? [])]
+            .filter((x): x is string => typeof x === 'string' && x.length > 0);
+        return Array.from(new Set(all)).slice(0, 5);
     }, [product.mainImages, product.galleryImages]);
 
     const total = (product.price || 0) * people;
@@ -221,43 +250,8 @@ export function ProductDetailDesktop({
                     </div>
                 </div>
 
-                {/* Airbnb-style 5-image gallery */}
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1.6fr 1fr 1fr',
-                        gridTemplateRows: '200px 200px',
-                        gap: 8,
-                        borderRadius: 24,
-                        overflow: 'hidden',
-                        position: 'relative',
-                        marginBottom: 28,
-                    }}
-                >
-                    <button type="button" aria-label="open gallery" onClick={() => setGalleryOpen(true)} style={{ ...galleryTile(gallery[0]), gridRow: 'span 2' }} />
-                    <button type="button" aria-label="open gallery" onClick={() => setGalleryOpen(true)} style={galleryTile(gallery[1])} />
-                    <button type="button" aria-label="open gallery" onClick={() => setGalleryOpen(true)} style={galleryTile(gallery[2])} />
-                    <button type="button" aria-label="open gallery" onClick={() => setGalleryOpen(true)} style={galleryTile(gallery[3])} />
-                    <button type="button" aria-label="open gallery" onClick={() => setGalleryOpen(true)} style={{ ...galleryTile(gallery[4]), position: 'relative' }}>
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                background: 'rgba(0,0,0,0.35)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#fff',
-                                fontSize: 14,
-                                fontWeight: 700,
-                                gap: 6,
-                            }}
-                        >
-                            <MatIcon name="photo_library" size={20} color="#fff" />
-                            全ての写真 ({gallery.length})
-                        </div>
-                    </button>
-                </div>
+                {/* Gallery — adaptive layout based on how many photos admin uploaded */}
+                <GallerySection gallery={gallery} onOpen={() => setGalleryOpen(true)} />
 
                 {/* Highlights strip */}
                 <div
@@ -316,7 +310,7 @@ export function ProductDetailDesktop({
                     }}
                 >
                     <div className="scrollbar-hide" style={{ display: 'flex', gap: 4, overflowX: 'auto' }}>
-                        {PRODUCT_SECTIONS.map((s) => {
+                        {visibleSections.map((s) => {
                             const on = activeSec === s.id;
                             return (
                                 <button
@@ -385,9 +379,23 @@ export function ProductDetailDesktop({
                             <HighlightsBlock product={product} />
                         </Section>
 
-                        <Section id="itinerary" title="詳細日程" eyebrow="Day-by-Day Itinerary">
-                            <Timeline product={product} />
-                        </Section>
+                        {hasDetailContent && (
+                            <Section id="details" title="詳細情報" eyebrow="Tour Details">
+                                <DetailBlocksRenderer product={product} />
+                            </Section>
+                        )}
+
+                        {hasItineraryContent && (
+                            <Section id="itinerary" title="詳細日程" eyebrow="Day-by-Day Itinerary">
+                                <Timeline product={product} />
+                            </Section>
+                        )}
+
+                        {hasOptionsContent && (
+                            <Section id="options" title="プラン・オプション" eyebrow="Pricing & Options">
+                                <OptionsBlock product={product} />
+                            </Section>
+                        )}
 
                         <Section id="guide" title="ガイド紹介" eyebrow="Meet Your Guide">
                             <GuideCard />
@@ -752,6 +760,393 @@ function Section({ id, title, eyebrow, children }: { id: string; title: string; 
             {children}
         </section>
     );
+}
+
+function GallerySection({ gallery, onOpen }: { gallery: string[]; onOpen: () => void }) {
+    // Soft brand-color gradient — used when admin hasn't uploaded any photos yet so
+    // we never render a broken-image black box.
+    const fallbackGradient = 'linear-gradient(135deg, #134e4a 0%, #115e59 50%, #0f766e 100%)';
+    const tile = (img: string | undefined, extra: CSSProperties = {}): CSSProperties => ({
+        backgroundImage: img ? `url(${img})` : fallbackGradient,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        transition: 'filter 200ms',
+        ...extra,
+    });
+
+    const n = gallery.length;
+
+    // 0 photos — gradient placeholder banner (rare; only when product has no images at all).
+    if (n === 0) {
+        return (
+            <div
+                style={{
+                    aspectRatio: '16/7',
+                    borderRadius: 24,
+                    background: fallbackGradient,
+                    marginBottom: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    opacity: 0.85,
+                }}
+            >
+                写真は準備中です
+            </div>
+        );
+    }
+
+    // 1 photo — single full-width hero.
+    if (n === 1) {
+        return (
+            <button
+                type="button"
+                aria-label="open gallery"
+                onClick={onOpen}
+                style={tile(gallery[0], { width: '100%', aspectRatio: '16/7', borderRadius: 24, marginBottom: 28 })}
+            />
+        );
+    }
+
+    // 2 photos — equal split.
+    if (n === 2) {
+        return (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, borderRadius: 24, overflow: 'hidden', marginBottom: 28 }}>
+                <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[0], { aspectRatio: '4/3' })} />
+                <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[1], { aspectRatio: '4/3' })} />
+            </div>
+        );
+    }
+
+    // 3 photos — big + 2 stacked.
+    if (n === 3) {
+        return (
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.6fr 1fr',
+                    gridTemplateRows: '200px 200px',
+                    gap: 8,
+                    borderRadius: 24,
+                    overflow: 'hidden',
+                    marginBottom: 28,
+                }}
+            >
+                <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[0], { gridRow: 'span 2' })} />
+                <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[1])} />
+                <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[2])} />
+            </div>
+        );
+    }
+
+    // 4-5 photos — Airbnb-style big + 4 tiles. Last tile gets "全ての写真" overlay
+    // only when there are MORE photos than visible (5+ means there might be more
+    // hidden in the lightbox; here we just label the count we have).
+    return (
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '1.6fr 1fr 1fr',
+                gridTemplateRows: '200px 200px',
+                gap: 8,
+                borderRadius: 24,
+                overflow: 'hidden',
+                marginBottom: 28,
+            }}
+        >
+            <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[0], { gridRow: 'span 2' })} />
+            <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[1])} />
+            <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[2])} />
+            <button type="button" aria-label="open gallery" onClick={onOpen} style={tile(gallery[3])} />
+            {n >= 5 ? (
+                <button type="button" aria-label="open gallery" onClick={onOpen} style={{ ...tile(gallery[4]), position: 'relative' }}>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: 14,
+                            fontWeight: 700,
+                            gap: 6,
+                        }}
+                    >
+                        <MatIcon name="photo_library" size={20} color="#fff" />
+                        全ての写真 ({n})
+                    </div>
+                </button>
+            ) : (
+                <div style={{ background: 'var(--bg-muted)' }} />
+            )}
+        </div>
+    );
+}
+
+function DetailBlocksRenderer({ product }: { product: TourProduct }) {
+    const blocks = product.detailBlocks ?? [];
+    const slides = product.detailSlides ?? [];
+    const detailImages = product.detailImages ?? [];
+
+    // Mobile prefers `detailBlocks` when present; otherwise it falls back to
+    // detailImages + detailSlides. Mirror that priority on desktop.
+    if (blocks.length > 0) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                {blocks.map((b, i) => {
+                    if (b.type === 'image') {
+                        const url = typeof b.content === 'string' ? b.content : '';
+                        if (!url) return null;
+                        return (
+                            <img
+                                key={b.id || i}
+                                src={url}
+                                alt={`${product.name} - ${i + 1}`}
+                                loading="lazy"
+                                decoding="async"
+                                style={{ width: '100%', height: 'auto', borderRadius: 16 }}
+                            />
+                        );
+                    }
+                    if (b.type === 'slide') {
+                        const slide = b.content as DetailSlide;
+                        return <SlideBlock key={b.id || i} slide={slide} productName={product.name} />;
+                    }
+                    if (b.type === 'divider') {
+                        const div = b.content as DividerContent;
+                        return (
+                            <div
+                                key={b.id || i}
+                                style={{
+                                    height: div.height,
+                                    borderBottom: div.style === 'line' ? '1px solid var(--border-subtle)' : 'none',
+                                }}
+                            />
+                        );
+                    }
+                    return null;
+                })}
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            {detailImages.map((img, i) => (
+                <img
+                    key={i}
+                    src={img}
+                    alt={`${product.name} - ${i + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ width: '100%', height: 'auto', borderRadius: 16 }}
+                />
+            ))}
+            {slides.map((s) => (
+                <SlideBlock key={s.id} slide={s} productName={product.name} />
+            ))}
+        </div>
+    );
+}
+
+function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: string }) {
+    if (!slide.images || slide.images.length === 0) return null;
+    return (
+        <div>
+            {slide.title && (
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 12px', letterSpacing: '-0.01em' }}>
+                    {slide.title}
+                </h3>
+            )}
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${Math.min(slide.images.length, 3)}, 1fr)`,
+                    gap: 12,
+                }}
+            >
+                {slide.images.map((img, i) => (
+                    <img
+                        key={i}
+                        src={img}
+                        alt={`${slide.title || productName} - ${i + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12 }}
+                    />
+                ))}
+            </div>
+            {slide.description && (
+                <p style={{ fontSize: 14, color: 'var(--fg-4)', lineHeight: 1.75, marginTop: 14 }}>
+                    {slide.description}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function OptionsBlock({ product }: { product: TourProduct }) {
+    const pricing = product.pricingOptions ?? [];
+    const accommodations = product.accommodationOptions ?? [];
+    const vehicles = product.vehicleOptions ?? [];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            {pricing.length > 0 && (
+                <div>
+                    <h3 style={subSectionHeading}>
+                        <MatIcon name="payments" size={20} color="#0f766e" /> 人数別料金
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(pricing.length, 4)}, 1fr)`, gap: 12 }}>
+                        {pricing.map((p, i) => (
+                            <div key={i} style={pricingCardStyle}>
+                                <div style={{ fontSize: 12, color: 'var(--fg-5)', marginBottom: 4 }}>{p.people} 名様</div>
+                                <div style={{ fontSize: 22, fontWeight: 700, color: '#0f766e', letterSpacing: '-0.01em' }}>
+                                    ¥{p.pricePerPerson.toLocaleString()}
+                                    <span style={{ fontSize: 12, color: 'var(--fg-5)', fontWeight: 500, marginLeft: 4 }}>/ 名</span>
+                                </div>
+                                {p.depositPerPerson > 0 && (
+                                    <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--border-subtle)' }}>
+                                        予約金 ¥{p.depositPerPerson.toLocaleString()}
+                                    </div>
+                                )}
+                                {p.localPaymentPerPerson > 0 && (
+                                    <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 2 }}>
+                                        現地払 ¥{p.localPaymentPerPerson.toLocaleString()}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {accommodations.length > 0 && (
+                <div>
+                    <h3 style={subSectionHeading}>
+                        <MatIcon name="hotel" size={20} color="#0f766e" /> 宿泊オプション
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                        {accommodations.map((a) => (
+                            <div key={a.id} style={optionCardStyle}>
+                                {a.imageUrl && (
+                                    <div
+                                        style={{
+                                            width: 80,
+                                            height: 80,
+                                            borderRadius: 12,
+                                            backgroundImage: `url(${a.imageUrl})`,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center',
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)' }}>{a.name}</span>
+                                        {a.isDefault && <span style={defaultBadgeStyle}>標準</span>}
+                                    </div>
+                                    {a.description && (
+                                        <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.6 }}>{a.description}</div>
+                                    )}
+                                    {a.priceModifier !== 0 && (
+                                        <div style={priceModifierStyle(a.priceModifier)}>
+                                            {a.priceModifier > 0 ? '+' : ''}¥{a.priceModifier.toLocaleString()}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {vehicles.length > 0 && (
+                <div>
+                    <h3 style={subSectionHeading}>
+                        <MatIcon name="directions_car" size={20} color="#0f766e" /> 車両オプション
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                        {vehicles.map((v) => (
+                            <div key={v.id} style={optionCardStyle}>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)' }}>{v.name}</span>
+                                        {v.isDefault && <span style={defaultBadgeStyle}>標準</span>}
+                                    </div>
+                                    {v.description && (
+                                        <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.6 }}>{v.description}</div>
+                                    )}
+                                    {v.priceModifier !== 0 && (
+                                        <div style={priceModifierStyle(v.priceModifier)}>
+                                            {v.priceModifier > 0 ? '+' : ''}¥{v.priceModifier.toLocaleString()}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+const subSectionHeading: CSSProperties = {
+    fontSize: 17,
+    fontWeight: 700,
+    color: 'var(--fg-1)',
+    margin: '0 0 14px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    letterSpacing: '-0.01em',
+};
+
+const pricingCardStyle: CSSProperties = {
+    padding: '20px 22px',
+    background: 'var(--bg-muted)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 16,
+    textAlign: 'left',
+};
+
+const optionCardStyle: CSSProperties = {
+    display: 'flex',
+    gap: 14,
+    padding: '16px 18px',
+    background: '#fff',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 14,
+    boxShadow: 'var(--shadow-toss)',
+};
+
+const defaultBadgeStyle: CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    padding: '2px 8px',
+    background: 'var(--primary-tint)',
+    color: 'var(--primary-dark)',
+    borderRadius: 4,
+    letterSpacing: '0.04em',
+};
+
+function priceModifierStyle(modifier: number): CSSProperties {
+    return {
+        marginTop: 8,
+        fontSize: 13,
+        fontWeight: 700,
+        color: modifier > 0 ? '#0f766e' : '#16a34a',
+    };
 }
 
 function HighlightsBlock({ product }: { product: TourProduct }) {
@@ -1830,18 +2225,6 @@ function lbNav(side: 'left' | 'right'): CSSProperties {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-    };
-}
-
-function galleryTile(img: string): CSSProperties {
-    return {
-        backgroundImage: `url(${img})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-        transition: 'filter 200ms',
     };
 }
 
