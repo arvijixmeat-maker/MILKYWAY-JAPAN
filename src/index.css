@@ -34,6 +34,31 @@
     font-display: swap;
 }
 
+/* ============================================================
+   Desktop design tokens (from milky-way-pc handoff)
+   Used by *.desktop.tsx components only — mobile components
+   continue to use existing Tailwind classes.
+   ============================================================ */
+:root {
+    --primary-dark: #115e59;
+    --primary-soft: #ccfbf1;
+    --primary-tint: rgba(15, 118, 110, 0.06);
+    --primary-ring: rgba(15, 118, 110, 0.20);
+    --bg-muted: #f8fafc;
+    --fg-1: #0e1a18;
+    --fg-2: #191f28;
+    --fg-3: #334155;
+    --fg-4: #64748b;
+    --fg-5: #8b95a1;
+    --fg-6: #9ca3af;
+    --border-subtle: #f1f5f9;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --shadow-toss: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+    --shadow-review: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
@@ -50,25 +75,35 @@ body {
     padding: 0;
 }
 
-/* 
-  Mobile App Layout styling 
-  This is applied to the root wrapper in App.tsx for non-admin routes
+/*
+  App Layout styling
+  Applied to the root wrapper in App.tsx for non-admin routes.
+  Below 1024px → 480px "phone frame" with shadow (existing mobile experience).
+  At 1024px+ → full-width desktop canvas (PC handoff design).
 */
 .mobile-app-wrapper {
     width: 100%;
-    max-width: 480px;
     min-height: 100dvh;
     margin: 0 auto;
-    background-color: #ffffff;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.08); /* Desktop shadow */
     position: relative;
-    /* `clip` prevents horizontal overflow without creating a scroll container,
-       which keeps position:sticky working relative to the viewport (not the wrapper). */
     overflow-x: clip;
 }
 
-.dark .mobile-app-wrapper {
-    background-color: #0f172a;
+@media (max-width: 1023px) {
+    .mobile-app-wrapper {
+        max-width: 480px;
+        background-color: #ffffff;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
+    }
+    .dark .mobile-app-wrapper {
+        background-color: #0f172a;
+    }
+}
+
+@media (min-width: 1024px) {
+    .mobile-app-wrapper {
+        background-color: #ffffff;
+    }
 }
 
 .admin-app-wrapper {

@@ -7,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 import notificationBell from '../assets/notification_bell.png';
 import wishlistHeart from '../assets/wishlist_heart.png';
 import companionIcon from '../assets/companion_search.png';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 
 import wishlistIcon from '../assets/wishlist_icon.png';
@@ -41,6 +44,18 @@ interface Reservation {
 }
 
 export const MyPage: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop />
+            </DesktopLayout>
+        );
+    }
+    return <MyPageMobile />;
+};
+
+const MyPageMobile: React.FC = () => {
     const navigate = useNavigate();
     const { user, setUser, logout } = useUser();
     const { t } = useTranslation();

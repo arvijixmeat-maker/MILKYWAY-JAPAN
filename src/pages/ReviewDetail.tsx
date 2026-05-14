@@ -7,8 +7,105 @@ import { BottomNav } from '../components/layout/BottomNav';
 import { formatShortDate, formatRelativeTime } from '../utils/formatDate';
 import { ReviewStars, shouldShowTitle } from '../components/review/ReviewStars';
 import { ReviewAvatar } from '../components/review/ReviewAvatar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { ReviewDetailDesktop } from '../components/reviews-desktop/ReviewDetailDesktop';
 
 export const ReviewDetail: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) return <ReviewDetailDesktopContainer />;
+    return <ReviewDetailMobile />;
+};
+
+const ReviewDetailDesktopContainer: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+    const [review, setReview] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [helpful, setHelpful] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!id) return;
+        (async () => {
+            try {
+                const [r, me] = await Promise.all([
+                    api.reviews.get(id),
+                    api.auth.me().catch(() => null),
+                ]);
+                if (cancelled) return;
+                setReview(r);
+                setCurrentUser(me);
+                if (me && r) {
+                    let helpfulUsers: string[] = [];
+                    try {
+                        helpfulUsers = typeof r.helpful_users === 'string' ? JSON.parse(r.helpful_users) : r.helpful_users || [];
+                    } catch { helpfulUsers = []; }
+                    if (helpfulUsers.includes(me.id)) setHelpful(true);
+                }
+            } catch (e) {
+                console.error('Review detail fetch error:', e);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [id]);
+
+    if (loading) {
+        return (
+            <DesktopLayout>
+                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>読み込み中...</div>
+            </DesktopLayout>
+        );
+    }
+    if (!review) {
+        return (
+            <DesktopLayout>
+                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>レビューが見つかりません</div>
+            </DesktopLayout>
+        );
+    }
+
+    const toggleHelpful = async () => {
+        if (!id || !currentUser) return;
+        let users: string[] = [];
+        try { users = typeof review.helpful_users === 'string' ? JSON.parse(review.helpful_users) : review.helpful_users || []; }
+        catch { users = []; }
+        const next = users.includes(currentUser.id) ? users.filter((u) => u !== currentUser.id) : [...users, currentUser.id];
+        try {
+            await api.reviews.update(id, { helpful_users: JSON.stringify(next), helpful_count: next.length });
+            setHelpful(next.includes(currentUser.id));
+        } catch (e) { console.error(e); }
+    };
+
+    const addComment = async (content: string) => {
+        if (!id || !currentUser) return;
+        let comments: any[] = [];
+        try { comments = typeof review.comments === 'string' ? JSON.parse(review.comments) : review.comments || []; }
+        catch { comments = []; }
+        const newComment = {
+            id: Date.now().toString(),
+            user_id: currentUser.id,
+            user_name: currentUser.name || currentUser.email || '匿名',
+            content,
+            created_at: new Date().toISOString(),
+        };
+        const next = [...comments, newComment];
+        try {
+            await api.reviews.update(id, { comments: JSON.stringify(next) });
+            setReview({ ...review, comments: JSON.stringify(next) });
+        } catch (e) { console.error(e); }
+    };
+
+    return (
+        <DesktopLayout>
+            <ReviewDetailDesktop review={review} helpful={helpful} onHelpful={toggleHelpful} onAddComment={addComment} />
+        </DesktopLayout>
+    );
+};
+
+const ReviewDetailMobile: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { t, i18n } = useTranslation();

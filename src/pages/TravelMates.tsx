@@ -6,6 +6,9 @@ import { BottomNav } from '../components/layout/BottomNav';
 import { optimizeImage } from '../utils/imageOptimizer';
 import notificationBell from '../assets/notification_bell.png';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { TravelMatesDesktop } from '../components/mates-desktop/TravelMatesDesktop';
 
 const TAB_EMOJI: Record<string, string> = {
     all: '🌏',
@@ -54,6 +57,18 @@ const isNewPost = (createdAt: string | undefined): boolean => {
 };
 
 export const TravelMates: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <TravelMatesDesktop />
+            </DesktopLayout>
+        );
+    }
+    return <TravelMatesMobile />;
+};
+
+const TravelMatesMobile: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('all');

@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { Footer } from './Footer';
+import { DesktopLayout } from '../layout-desktop/DesktopLayout';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -10,14 +12,21 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const location = useLocation();
-    
+    const isDesktop = useIsDesktop();
+
+    // Desktop: render PC shell (DesktopHeader + content + DesktopFooter).
+    // Below 1024px: existing mobile shell unchanged.
+    if (isDesktop) {
+        return <DesktopLayout>{children}</DesktopLayout>;
+    }
+
     // Hide BottomNav on product detail and reservation pages
     const hideBottomNavPages = [
         '/products/',
         '/reservation/',
         '/order/'
     ];
-    
+
     const shouldHideBottomNav = hideBottomNavPages.some(path => location.pathname.includes(path));
 
     return (

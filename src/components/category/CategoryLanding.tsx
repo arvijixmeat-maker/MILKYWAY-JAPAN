@@ -102,7 +102,7 @@ const Hero: React.FC<{ content: CategoryLandingContent }> = ({ content }) => {
                     <div key={i} className="relative h-full" style={{ width: `${100 / slides.length}%` }}>
                         <img
                             src={getOptimizedImageUrl(src, 'heroBanner')}
-                            alt={`${content.heroTitle} - ${i + 1}`}
+                            alt={`${content.heroTitle}｜モンゴルツアー写真 ${i + 1}`}
                             fetchPriority={i === 0 ? 'high' : 'low'}
                             loading={i === 0 ? 'eager' : 'lazy'}
                             decoding="async"
@@ -181,7 +181,7 @@ const HighlightCardView: React.FC<{ card: HighlightCard; onClick?: () => void }>
     >
         <img
             src={getOptimizedImageUrl(card.image, 'productDetail')}
-            alt={card.title}
+            alt={`${card.title}｜モンゴル旅行ハイライト`}
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover"

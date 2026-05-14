@@ -8,6 +8,9 @@ import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkel
 import { ProductCard } from '../components/product/ProductCard';
 import { useToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { ProductDetailDesktop } from '../components/product-desktop/ProductDetailDesktop';
 
 import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
 
@@ -35,6 +38,7 @@ export const ProductDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const { t } = useTranslation();
     const { showToast } = useToast();
+    const isDesktop = useIsDesktop();
     const [isLoading, setIsLoading] = useState(true);
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -446,6 +450,29 @@ export const ProductDetail: React.FC = () => {
             { "@type": "ListItem", "position": 3, "name": product.name, "item": `https://mongolryokou.com/products/${id}` }
         ]
     };
+
+    // ====== DESKTOP RENDER ======
+    if (isDesktop) {
+        return (
+            <>
+                <SEO
+                    title={product.name}
+                    description={productMetaDescription}
+                    image={product.mainImages?.find(img => !img.startsWith('data:'))}
+                    keywords={`${product.category}, ${product.tags.join(', ')}, モンゴルツアー, モンゴル旅行`}
+                    canonical={`/products/${id}`}
+                    structuredData={[productStructuredData, breadcrumbData]}
+                />
+                <DesktopLayout>
+                    <ProductDetailDesktop
+                        product={product}
+                        reviews={productReviews}
+                        onBook={() => navigate(`/reservation/${product.id}`)}
+                    />
+                </DesktopLayout>
+            </>
+        );
+    }
 
     return (
         <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen pb-24 font-display">

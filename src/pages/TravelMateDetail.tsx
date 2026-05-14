@@ -4,8 +4,110 @@ import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
 import { useTranslation } from 'react-i18next';
 import { optimizeImage } from '../utils/imageOptimizer';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { TravelMateDetailDesktop } from '../components/mates-desktop/TravelMateDetailDesktop';
 
 export const TravelMateDetail: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) return <TravelMateDetailDesktopContainer />;
+    return <TravelMateDetailMobile />;
+};
+
+const TravelMateDetailDesktopContainer: React.FC = () => {
+    const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
+    const [post, setPost] = useState<any>(null);
+    const [comments, setComments] = useState<any[]>([]);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!id) return;
+        (async () => {
+            try {
+                const [postData, me] = await Promise.all([
+                    api.travelMates.get(id),
+                    api.auth.me().catch(() => null),
+                ]);
+                if (cancelled) return;
+                setPost(postData);
+                setCurrentUser(me);
+                try {
+                    const res = await fetch(`/api/travel-mates/${id}/comments`);
+                    if (res.ok) {
+                        const c = await res.json();
+                        if (!cancelled) setComments(Array.isArray(c) ? c : []);
+                    }
+                } catch { /* comments are optional */ }
+            } catch (e) {
+                console.error('Travel mate detail fetch error:', e);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [id]);
+
+    if (loading) {
+        return (
+            <DesktopLayout>
+                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>読み込み中...</div>
+            </DesktopLayout>
+        );
+    }
+    if (!post) {
+        return (
+            <DesktopLayout>
+                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>投稿が見つかりません</div>
+            </DesktopLayout>
+        );
+    }
+
+    const isOwner = !!(currentUser && (currentUser.id === post.userId || currentUser.id === post.user_id));
+
+    const postComment = async (content: string) => {
+        if (!id) return;
+        try {
+            await fetch(`/api/travel-mates/${id}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content }),
+            });
+            const res = await fetch(`/api/travel-mates/${id}/comments`);
+            if (res.ok) {
+                const c = await res.json();
+                setComments(Array.isArray(c) ? c : []);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const onEdit = () => navigate(`/travel-mates/write?edit=${id}`);
+    const onDelete = async () => {
+        if (!id) return;
+        if (!confirm('この投稿を削除しますか？')) return;
+        await api.travelMates.delete(id);
+        navigate('/travel-mates');
+    };
+
+    return (
+        <DesktopLayout>
+            <TravelMateDetailDesktop
+                post={post}
+                comments={comments}
+                isOwner={isOwner}
+                onPostComment={postComment}
+                onEdit={onEdit}
+                onDelete={onDelete}
+            />
+        </DesktopLayout>
+    );
+};
+
+const TravelMateDetailMobile: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();

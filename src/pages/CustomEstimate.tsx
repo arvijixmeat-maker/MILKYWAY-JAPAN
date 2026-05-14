@@ -6,8 +6,23 @@ import { BottomNav } from '../components/layout/BottomNav';
 
 import { SEO } from '../components/seo/SEO';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { CustomEstimateDesktop } from '../components/estimate-desktop/CustomEstimateDesktop';
 
 export const CustomEstimate: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <CustomEstimateDesktop />
+            </DesktopLayout>
+        );
+    }
+    return <CustomEstimateMobile />;
+};
+
+const CustomEstimateMobile: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [priceRange, setPriceRange] = useState(150);

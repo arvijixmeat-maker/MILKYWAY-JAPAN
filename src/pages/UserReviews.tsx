@@ -7,6 +7,9 @@ import { SEO } from '../components/seo/SEO';
 import { formatShortDate } from '../utils/formatDate';
 import { ReviewStars, shouldShowTitle } from '../components/review/ReviewStars';
 import { ReviewAvatar } from '../components/review/ReviewAvatar';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { UserReviewsDesktop } from '../components/reviews-desktop/UserReviewsDesktop';
 
 // Define Review type locally or import if available, matching Cloudflare + Frontend needs
 interface Review {
@@ -23,6 +26,18 @@ interface Review {
 }
 
 export const UserReviews: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <UserReviewsDesktop />
+            </DesktopLayout>
+        );
+    }
+    return <UserReviewsMobile />;
+};
+
+const UserReviewsMobile: React.FC = () => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const [filter, setFilter] = React.useState<'latest' | 'rating' | 'photo'>('latest');

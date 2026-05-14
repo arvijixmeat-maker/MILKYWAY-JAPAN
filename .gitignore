@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Claude Code local state (plans, launch.json, settings.local.json)
+.claude/
+
 # Environment variables
 .env
 .env*.local

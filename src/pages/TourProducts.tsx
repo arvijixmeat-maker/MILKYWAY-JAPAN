@@ -11,6 +11,9 @@ import { BottomNav } from '../components/layout/BottomNav';
 import type { TourProduct } from '../types/product';
 import { DEFAULT_CATEGORIES, type Category } from '../types/category';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { TourProductsDesktop } from '../components/tours-desktop/TourProductsDesktop';
 
 interface EventBanner {
     id: string;
@@ -27,6 +30,24 @@ export const TourProducts: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { t } = useTranslation();
+    const isDesktop = useIsDesktop();
+
+    // ====== DESKTOP RENDER ======
+    if (isDesktop) {
+        return (
+            <>
+                <SEO
+                    title={t('products.seo_title')}
+                    description={t('products.seo_description')}
+                    keywords={t('products.seo_keywords')}
+                    canonical="/products"
+                />
+                <DesktopLayout>
+                    <TourProductsDesktop />
+                </DesktopLayout>
+            </>
+        );
+    }
 
     const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
     const [searchQuery, setSearchQuery] = useState('');
