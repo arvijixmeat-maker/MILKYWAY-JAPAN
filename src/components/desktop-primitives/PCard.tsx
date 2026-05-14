@@ -33,7 +33,13 @@ function tagTone(tag?: string): TagTone {
 
 export function PCard({ p, onClick, layout = 'flex' }: PCardProps) {
     const [fav, setFav] = useState(false);
-    const img = p.mainImages?.[0] || '/og-image.jpg';
+    const firstImg = p.mainImages?.[0];
+    // Use a brand-color gradient when no image is set (e.g., admin hasn't uploaded
+    // photos yet) rather than rendering a broken `/og-image.jpg` URL.
+    const hasImage = !!firstImg && (firstImg.startsWith('http') || firstImg.startsWith('/')) && firstImg !== '/og-image.jpg';
+    const imageBackground = hasImage
+        ? `url(${firstImg})`
+        : 'linear-gradient(135deg, #134e4a 0%, #115e59 50%, #0f766e 100%)';
     const firstTag = p.tags?.[0];
     const hasOriginal = !!p.originalPrice && p.originalPrice > p.price;
 
@@ -77,7 +83,7 @@ export function PCard({ p, onClick, layout = 'flex' }: PCardProps) {
             <div
                 style={{
                     aspectRatio: '4/3',
-                    backgroundImage: `url(${img})`,
+                    backgroundImage: imageBackground,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     position: 'relative',

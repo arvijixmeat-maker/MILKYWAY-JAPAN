@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import type { HomeData } from '../../hooks/useHomeData';
+import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
 
 interface HeroSectionDesktopProps {
-    tabs: HomeData['tabs'];
+    /** Kept for backward compatibility; banners are fetched directly. */
+    tabs?: HomeData['tabs'];
     contentWidth?: number;
 }
 
@@ -33,21 +36,60 @@ const FALLBACK_SLIDES: HeroSlide[] = [
     },
 ];
 
-export function HeroSectionDesktop({ tabs, contentWidth = 1280 }: HeroSectionDesktopProps) {
+// Strings the admin tooling inserts as placeholders that we should never display.
+const DEFAULT_TEXTS = new Set([
+    'New Tag', 'new tag', '새로운 배너 타이틀', '배너 설명을 입력하세요', 'Premium Trip',
+]);
+const clean = (v: string | undefined): string => {
+    const s = (v || '').trim();
+    return s && !DEFAULT_TEXTS.has(s) ? s : '';
+};
+
+interface ApiBanner {
+    id: string;
+    image?: string;
+    image_url?: string;
+    tag?: string;
+    title?: string;
+    subtitle?: string;
+    link?: string;
+}
+
+export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopProps) {
     const navigate = useNavigate();
 
-    const slides: HeroSlide[] = tabs && tabs.length > 0
-        ? tabs.slice(0, 5).map((t, i) => ({
-            img: t.bannerImage || FALLBACK_SLIDES[0].img,
-            tag: (t.name || 'TOUR').toUpperCase().slice(0, 18),
-            tone: (['premium', 'hot', 'new'] as TagTone[])[i % 3],
-            eyebrow: t.name || '',
-            title: t.title?.split('\n')[0] || t.name || '',
-            title2: t.title?.split('\n')[1] || t.subtitle || '',
-            body: t.subtitle || '',
-            cta: t.id ? `/category/${t.id}` : '/products',
-        }))
-        : FALLBACK_SLIDES;
+    // Fetch banners directly — mirrors src/components/home/HeroSection.tsx.
+    // /api/banners returns { banners, quickLinks, eventBanners, categoryTabs }.
+    const { data: slides = FALLBACK_SLIDES } = useQuery<HeroSlide[]>({
+        queryKey: ['heroBannersDesktop'],
+        queryFn: async () => {
+            try {
+                const data = await api.banners.get();
+                const raw: ApiBanner[] = Array.isArray(data?.banners) ? data.banners : [];
+                if (raw.length === 0) return FALLBACK_SLIDES;
+                return raw.slice(0, 5).map((b, i): HeroSlide => {
+                    const title = clean(b.title);
+                    const subtitle = clean(b.subtitle);
+                    const tag = clean(b.tag);
+                    const lines = title.split('\n');
+                    return {
+                        img: b.image || b.image_url || FALLBACK_SLIDES[0].img,
+                        tag: (tag || 'PREMIUM TRIP').toUpperCase().slice(0, 24),
+                        tone: (['premium', 'hot', 'new'] as TagTone[])[i % 3],
+                        eyebrow: tag || '2026 SEASON',
+                        title: lines[0] || FALLBACK_SLIDES[0].title,
+                        title2: lines[1] || subtitle || FALLBACK_SLIDES[0].title2,
+                        body: subtitle || FALLBACK_SLIDES[0].body,
+                        cta: b.link || '/products',
+                    };
+                });
+            } catch (e) {
+                console.error('Hero banners fetch error:', e);
+                return FALLBACK_SLIDES;
+            }
+        },
+        staleTime: 1000 * 60 * 5,
+    });
 
     const [idx, setIdx] = useState(0);
     useEffect(() => {
@@ -56,7 +98,15 @@ export function HeroSectionDesktop({ tabs, contentWidth = 1280 }: HeroSectionDes
         return () => clearInterval(tm);
     }, [slides.length]);
 
-    const cur = slides[idx];
+    const safeIdx = Math.min(idx, Math.max(0, slides.length - 1));
+    const cur = slides[safeIdx] || FALLBACK_SLIDES[0];
+
+    // Soft brand-color gradient — used when the slide has no usable image (e.g.,
+    // admin hasn't uploaded a banner yet) so we never render a broken-image black box.
+    const fallbackGradient =
+        'linear-gradient(135deg, #134e4a 0%, #115e59 35%, #0f766e 65%, #0a4a45 100%)';
+    const hasUsableImage = (img: string) =>
+        !!img && img !== '/og-image.jpg' && (img.startsWith('http') || img.startsWith('/'));
 
     return (
         <section style={{ position: 'relative', height: 640, overflow: 'hidden', background: '#0b0b0b' }}>
@@ -66,7 +116,7 @@ export function HeroSectionDesktop({ tabs, contentWidth = 1280 }: HeroSectionDes
                     style={{
                         position: 'absolute',
                         inset: 0,
-                        backgroundImage: `url(${sl.img})`,
+                        backgroundImage: hasUsableImage(sl.img) ? `url(${sl.img})` : fallbackGradient,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         opacity: i === idx ? 1 : 0,

@@ -78,7 +78,7 @@ export const Home: React.FC = () => {
         return (
             <>
                 {seo}
-                <HeroSectionDesktop tabs={data.tabs} />
+                <HeroSectionDesktop />
                 <QuickLinksRowDesktop />
                 {data.categories.length > 0 && <ThemeTabsBarDesktop categories={data.categories} />}
 

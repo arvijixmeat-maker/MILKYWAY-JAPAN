@@ -15,14 +15,40 @@ interface ApiProduct {
     original_price?: number;
     originalPrice?: number;
     duration?: string;
-    main_images?: string[];
-    mainImages?: string[];
-    tags?: string[];
+    main_images?: string | string[];
+    mainImages?: string | string[];
+    tags?: string | string[];
     is_popular?: 0 | 1 | boolean;
     isPopular?: boolean;
     booking_count?: number;
     bookingCount?: number;
     status?: string;
+}
+
+/**
+ * The products API may return arrays as parsed JS arrays (the API handler does
+ * safeParse) OR — depending on which endpoint is hit — as a raw JSON string.
+ * Coerce defensively so the UI never sees a non-array.
+ */
+function toStringArray(val: unknown): string[] {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter((x): x is string => typeof x === 'string' && x.length > 0);
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (!trimmed) return [];
+        // Looks like JSON
+        if (trimmed.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string' && x.length > 0) : [];
+            } catch {
+                return [];
+            }
+        }
+        // Treat as single URL
+        return trimmed.startsWith('/') || trimmed.startsWith('http') ? [trimmed] : [];
+    }
+    return [];
 }
 
 interface ProductRow extends PCardData {
@@ -115,8 +141,11 @@ export function TourProductsDesktop({ contentWidth = 1280 }: Props) {
                         price: p.price,
                         originalPrice: p.original_price ?? p.originalPrice,
                         duration: p.duration,
-                        mainImages: p.main_images ?? p.mainImages ?? [],
-                        tags: p.tags ?? [],
+                        // API handler returns parsed `mainImages` (array), but legacy or
+                        // alternate endpoints may return `main_images` as a JSON string.
+                        // Try parsed array first, then fall back to raw JSON string.
+                        mainImages: toStringArray(p.mainImages ?? p.main_images),
+                        tags: toStringArray(p.tags),
                         isPopular: !!(p.is_popular === 1 || p.is_popular === true || p.isPopular),
                         bookingCount: p.booking_count ?? p.bookingCount ?? 0,
                     }));
