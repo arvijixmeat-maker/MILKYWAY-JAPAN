@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent } from '../../types/product';
+import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, ProductFAQ } from '../../types/product';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
+import { DestinationsMap } from '../desktop-primitives/DestinationsMap';
+import { extractPlacesFromItinerary } from '../../constants/mongoliaPlaces';
+import { useGuideIntro } from '../../hooks/useGuideIntro';
 
 interface ReviewLike {
     id?: string | number;
@@ -402,7 +405,7 @@ export function ProductDetailDesktop({
                         </Section>
 
                         <Section id="location" title="目的地" eyebrow="Destinations on This Tour">
-                            <LocationBlock />
+                            <LocationBlock product={product} />
                         </Section>
 
                         <Section id="included" title="含まれるもの・含まれないもの" eyebrow="What's Included">
@@ -414,7 +417,7 @@ export function ProductDetailDesktop({
                         </Section>
 
                         <Section id="faq" title="ご注意・よくある質問" eyebrow="FAQ & Notice">
-                            <FAQBlock />
+                            <FAQBlock product={product} />
                         </Section>
                     </div>
 
@@ -1347,11 +1350,14 @@ function Timeline({ product }: { product: TourProduct }) {
 }
 
 function GuideCard() {
+    // Site-wide generic guide intro from /api/settings (key: guide_intro).
+    // Falls back to a default N1-certified message if not configured.
+    const intro = useGuideIntro();
     return (
         <div
             style={{
                 display: 'grid',
-                gridTemplateColumns: '160px 1fr auto',
+                gridTemplateColumns: '120px 1fr',
                 gap: 24,
                 alignItems: 'center',
                 padding: 26,
@@ -1362,34 +1368,29 @@ function GuideCard() {
         >
             <div
                 style={{
-                    width: 140,
-                    height: 140,
+                    width: 120,
+                    height: 120,
                     borderRadius: 999,
                     background: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)',
                     color: '#fff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 48,
-                    fontWeight: 700,
-                    letterSpacing: '-0.04em',
                     boxShadow: '0 10px 30px -10px rgba(15,118,110,0.4)',
                 }}
             >
-                B
+                <MatIcon name="translate" size={56} color="#fff" />
             </div>
             <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0f766e', letterSpacing: '0.08em', marginBottom: 6 }}>YOUR GUIDE</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-1)', letterSpacing: '-0.01em', marginBottom: 4 }}>
-                    Bilguun (ビルグーン)
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-1)', letterSpacing: '-0.01em', marginBottom: 10 }}>
+                    {intro.title}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--fg-5)', marginBottom: 12 }}>日本語ガイド ・ 経験12年 ・ 案内ツアー数 400+</div>
-                <div style={{ fontSize: 14, color: 'var(--fg-3)', lineHeight: 1.7, maxWidth: 480 }}>
-                    東京の大学で日本語を学び、卒業後ガイドへ。モンゴルの自然と文化を、日本のお客様の目線で丁寧にご案内します。
-                    「ガイドのおかげで全てがスムーズに進みました」と高い評価をいただいています。
+                <div style={{ fontSize: 14, color: 'var(--fg-3)', lineHeight: 1.75, maxWidth: 640 }}>
+                    {intro.body}
                 </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 14 }}>
-                    {['日本語 (N1)', '英語', 'モンゴル語'].map((s) => (
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                    {intro.chips.map((s) => (
                         <span
                             key={s}
                             style={{
@@ -1407,101 +1408,43 @@ function GuideCard() {
                     ))}
                 </div>
             </div>
-            <div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '20px 22px',
-                    background: '#fff',
-                    borderRadius: 16,
-                    boxShadow: 'var(--shadow-toss)',
-                    minWidth: 100,
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <MatIcon name="star" size={18} filled color="#facc15" />
-                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>5.0</span>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--fg-5)' }}>328 件の評価</div>
-            </div>
         </div>
     );
 }
 
-function LocationBlock() {
-    const stops = [
-        { n: '1', t: 'ウランバートル', d: '首都・出発地' },
-        { n: '2', t: 'ヨル渓谷', d: '氷河の絶景' },
-        { n: '3', t: 'ホンゴル砂丘', d: '180kmの大砂丘' },
-        { n: '4', t: 'バヤンザグ', d: '恐竜化石の聖地' },
-    ];
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
+function LocationBlock({ product }: { product: TourProduct }) {
+    // Auto-extract destinations from the itinerary blocks admin filled in.
+    // Falls back to (UB + a couple of well-known spots) when itinerary is empty
+    // so the section never looks broken.
+    const places = useMemo(
+        () => extractPlacesFromItinerary(product.itineraryBlocks as { type: string; content: unknown }[] | undefined),
+        [product.itineraryBlocks]
+    );
+
+    if (places.length === 0) {
+        return (
             <div
                 style={{
-                    position: 'relative',
-                    borderRadius: 20,
-                    overflow: 'hidden',
-                    background: 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 50%, #80cbc4 100%)',
-                    border: '1px solid var(--border-subtle)',
-                    minHeight: 340,
+                    padding: '40px 24px',
+                    background: 'var(--bg-muted)',
+                    borderRadius: 16,
+                    color: 'var(--fg-5)',
+                    textAlign: 'center',
+                    fontSize: 14,
                 }}
             >
-                <svg viewBox="0 0 400 320" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="none">
-                    <defs>
-                        <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <circle cx="2" cy="2" r="1" fill="rgba(15,118,110,0.08)" />
-                        </pattern>
-                    </defs>
-                    <rect width="400" height="320" fill="url(#dots)" />
-                    <path d="M0,180 Q80,140 140,160 T280,150 T400,140 L400,320 L0,320 Z" fill="rgba(15,118,110,0.07)" />
-                    <path d="M0,220 Q60,200 130,210 T260,200 T400,205 L400,320 L0,320 Z" fill="rgba(15,118,110,0.1)" />
-                    <path d="M70,80 Q140,180 230,140 Q310,100 340,240" stroke="#115e59" strokeWidth="2.5" strokeDasharray="6,4" fill="none" />
-                    {[
-                        { x: 70, y: 80, l: '1', name: 'UB' },
-                        { x: 175, y: 180, l: '2', name: 'Yol' },
-                        { x: 260, y: 130, l: '3', name: 'Khongor' },
-                        { x: 340, y: 240, l: '4', name: 'Bayanzag' },
-                    ].map((p) => (
-                        <g key={p.l}>
-                            <circle cx={p.x} cy={p.y} r="14" fill="white" stroke="#0f766e" strokeWidth="2" />
-                            <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#0f766e">
-                                {p.l}
-                            </text>
-                            <text x={p.x} y={p.y - 22} textAnchor="middle" fontSize="11" fontWeight="600" fill="#0e1a18">
-                                {p.name}
-                            </text>
-                        </g>
-                    ))}
-                </svg>
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 16,
-                        left: 16,
-                        padding: '6px 12px',
-                        background: 'rgba(255,255,255,0.92)',
-                        backdropFilter: 'blur(6px)',
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: 'var(--fg-2)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                    }}
-                >
-                    <MatIcon name="map" size={14} color="#0f766e" />
-                    モンゴル
-                </div>
+                目的地情報は近日公開予定です。
             </div>
+        );
+    }
 
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
+            <DestinationsMap places={places} height={340} borderRadius={20} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {stops.map((s) => (
+                {places.map((p, i) => (
                     <div
-                        key={s.n}
+                        key={p.name}
                         style={{
                             display: 'flex',
                             gap: 14,
@@ -1527,11 +1470,13 @@ function LocationBlock() {
                                 flexShrink: 0,
                             }}
                         >
-                            {s.n}
+                            {i + 1}
                         </div>
                         <div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>{s.t}</div>
-                            <div style={{ fontSize: 12, color: 'var(--fg-4)', marginTop: 2 }}>{s.d}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>{p.name}</div>
+                            {p.short && p.short !== p.name && (
+                                <div style={{ fontSize: 12, color: 'var(--fg-4)', marginTop: 2 }}>{p.short}</div>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -1838,15 +1783,21 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
     );
 }
 
-function FAQBlock() {
-    const items = [
-        { q: '出発前に何を準備したらいいですか？', a: '国際線航空券・パスポート (有効期限6ヶ月以上)・モンゴルビザが必要です。ビザ申請は弊社でもサポートいたします。気温差が大きいため、季節を問わず羽織りものは必須です。' },
-        { q: 'キャンセル規定を教えてください。', a: '出発日の31日前まで: 全額返金。30〜15日前: ツアー代金の30%。14〜8日前: 50%。7日前以降: 100%。詳しくは利用規約をご確認ください。' },
-        { q: 'ゲル宿泊は寝具がありますか？', a: '全てのゲルキャンプにベッド・マットレス・毛布・タオルを完備しています。冬季には電気毛布もご用意します。' },
-        { q: '1人旅でも参加できますか？', a: 'もちろん可能です。一人参加追加料金 ¥18,000 を頂戴しております (個室追加料金分)。同行者募集の掲示板もご利用ください。' },
-        { q: '食事のアレルギー対応はありますか？', a: '事前にお知らせいただければ、食物アレルギーや宗教上の食事制限に個別対応いたします。ベジタリアン・ヴィーガン対応も可能です。' },
-        { q: '現地での通信手段は？', a: 'ウランバートル市内は4G完備。ゴビ・テレルジでは電波が弱い場所もあります。ガイドが衛星電話を所持しているため緊急連絡は可能です。' },
-    ];
+const DEFAULT_PRODUCT_FAQS: ProductFAQ[] = [
+    { q: '出発前に何を準備したらいいですか？', a: '国際線航空券・パスポート (有効期限6ヶ月以上)・モンゴルビザが必要です。ビザ申請は弊社でもサポートいたします。気温差が大きいため、季節を問わず羽織りものは必須です。' },
+    { q: 'キャンセル規定を教えてください。', a: '出発日の31日前まで: 全額返金。30〜15日前: ツアー代金の30%。14〜8日前: 50%。7日前以降: 100%。詳しくは利用規約をご確認ください。' },
+    { q: 'ゲル宿泊は寝具がありますか？', a: '全てのゲルキャンプにベッド・マットレス・毛布・タオルを完備しています。冬季には電気毛布もご用意します。' },
+    { q: '1人旅でも参加できますか？', a: 'もちろん可能です。一人参加追加料金 ¥18,000 を頂戴しております (個室追加料金分)。同行者募集の掲示板もご利用ください。' },
+    { q: '食事のアレルギー対応はありますか？', a: '事前にお知らせいただければ、食物アレルギーや宗教上の食事制限に個別対応いたします。ベジタリアン・ヴィーガン対応も可能です。' },
+    { q: '現地での通信手段は？', a: 'ウランバートル市内は4G完備。ゴビ・テレルジでは電波が弱い場所もあります。ガイドが衛星電話を所持しているため緊急連絡は可能です。' },
+];
+
+function FAQBlock({ product }: { product: TourProduct }) {
+    // Use product-specific FAQs when admin set them; otherwise fall back to the
+    // site-wide common Q&A so the section is never empty.
+    const items: ProductFAQ[] = (product.faqs && product.faqs.length > 0)
+        ? product.faqs
+        : DEFAULT_PRODUCT_FAQS;
     const [open, setOpen] = useState<number>(0);
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

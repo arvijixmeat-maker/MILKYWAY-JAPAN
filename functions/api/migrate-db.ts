@@ -299,6 +299,15 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped itinerary_templates table: ${e.message}`);
     }
 
+    // Products: per-product FAQ list (JSON array of { q, a }).
+    // When empty, the frontend falls back to a site-wide common FAQ.
+    try {
+        await c.env.DB.prepare("ALTER TABLE products ADD COLUMN faqs TEXT DEFAULT '[]'").run();
+        migrationResults.push('Added products.faqs');
+    } catch (e: any) {
+        migrationResults.push(`Skipped products.faqs: ${e.message}`);
+    }
+
     // Magazines: location/map columns for embedding Google Maps in posts
     const magazineLocationColumns = [
         "location_name TEXT",

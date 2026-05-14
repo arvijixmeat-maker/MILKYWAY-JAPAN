@@ -54,6 +54,7 @@ app.get('/', async (c) => {
             tags: safeParse(p.tags),
             included: safeParse(p.included),
             excluded: safeParse(p.excluded),
+            faqs: safeParse(p.faqs),
             images: safeParse(p.images),
             originalPrice: p.original_price,
             isFeatured: p.is_featured === 1 || p.featured === 1,
@@ -90,6 +91,7 @@ app.get('/:id', async (c) => {
             tags: safeParse(result.tags),
             included: safeParse(result.included),
             excluded: safeParse(result.excluded),
+            faqs: safeParse(result.faqs),
             images: safeParse(result.images),
             originalPrice: result.original_price,
             isFeatured: result.is_featured === 1 || result.featured === 1,
@@ -120,11 +122,11 @@ app.post('/', requireAdmin, async (c) => {
                     main_images, gallery_images, detail_images, itinerary_images,
                     images, thumbnail, status,
                     is_featured, is_popular, featured, popular,
-                    tags, included, excluded,
+                    tags, included, excluded, faqs,
                     detail_slides, detail_blocks, itinerary_blocks,
                     highlights, pricing_options, accommodation_options, vehicle_options,
                     view_count, booking_count, sort_order
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
                 id,
                 data.name || '',
@@ -147,6 +149,7 @@ app.post('/', requireAdmin, async (c) => {
                 toJson(data.tags || []),
                 toJson(data.included || []),
                 toJson(data.excluded || []),
+                toJson(data.faqs || []),
                 toJson(g(data, 'detail_slides', 'detailSlides', [])),
                 toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
                 toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
@@ -166,11 +169,11 @@ app.post('/', requireAdmin, async (c) => {
                     main_images, gallery_images, detail_images, itinerary_images,
                     images, thumbnail, status,
                     is_featured, is_popular, featured, popular,
-                    tags, included, excluded,
+                    tags, included, excluded, faqs,
                     detail_slides, detail_blocks, itinerary_blocks,
                     highlights, pricing_options, accommodation_options, vehicle_options,
                     view_count, booking_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
                 id,
                 data.name || '',
@@ -193,6 +196,7 @@ app.post('/', requireAdmin, async (c) => {
                 toJson(data.tags || []),
                 toJson(data.included || []),
                 toJson(data.excluded || []),
+                toJson(data.faqs || []),
                 toJson(g(data, 'detail_slides', 'detailSlides', [])),
                 toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
                 toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
@@ -279,6 +283,7 @@ app.put('/:id', requireAdmin, async (c) => {
             tags: { col: 'tags', format: toJson },
             included: { col: 'included', format: toJson },
             excluded: { col: 'excluded', format: toJson },
+            faqs: { col: 'faqs', format: toJson },
             
             detail_slides: { col: 'detail_slides', format: toJson },
             detailSlides: { col: 'detail_slides', format: toJson },

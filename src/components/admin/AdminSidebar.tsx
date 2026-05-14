@@ -20,6 +20,7 @@ const primaryItems = [
 const settingItems = [
     { id: 'banners', icon: 'ad_units', label: '홈 화면 관리', href: '/admin/banners' },
     { id: 'categories', icon: 'category', label: '카테고리 관리', href: '/admin/categories' },
+    { id: 'guide-intro', icon: 'translate', label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, isDarkMode, toggleTheme }) => {

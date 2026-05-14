@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS products (
     featured INTEGER DEFAULT 0,
     popular INTEGER DEFAULT 0,
     tags TEXT DEFAULT '[]',
+    faqs TEXT DEFAULT '[]',                    -- per-product Q&A: [{q, a}]
     sort_order INTEGER DEFAULT 0,
     view_count INTEGER DEFAULT 0,
     reservation_count INTEGER DEFAULT 0,

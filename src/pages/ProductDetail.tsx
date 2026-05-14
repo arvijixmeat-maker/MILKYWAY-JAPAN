@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
 import { ProductDetailDesktop } from '../components/product-desktop/ProductDetailDesktop';
+import { useGuideIntro } from '../hooks/useGuideIntro';
+import { DestinationsMap } from '../components/desktop-primitives/DestinationsMap';
+import { extractPlacesFromItinerary } from '../constants/mongoliaPlaces';
 
 import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
 
@@ -19,10 +22,10 @@ const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
     (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
 };
 
-// Common Q&A shown on every product detail page (mobile). Mirrors the PC
-// ProductDetailDesktop FAQBlock so users see consistent info across devices.
-// TODO(phase 3): make these admin-editable via a `product_faqs` settings key.
-const MOBILE_FAQ_ITEMS: { q: string; a: string }[] = [
+// Common Q&A shown when admin hasn't set product-specific FAQs.
+// Mirrors PC ProductDetailDesktop DEFAULT_PRODUCT_FAQS so mobile + PC stay
+// consistent.
+const DEFAULT_MOBILE_FAQ_ITEMS: { q: string; a: string }[] = [
     { q: '出発前に何を準備したらいいですか？', a: '国際線航空券・パスポート (有効期限6ヶ月以上)・モンゴルビザが必要です。ビザ申請は弊社でもサポートいたします。気温差が大きいため、季節を問わず羽織りものは必須です。' },
     { q: 'キャンセル規定を教えてください。', a: '出発日の31日前まで: 全額返金。30〜15日前: ツアー代金の30%。14〜8日前: 50%。7日前以降: 100%。詳しくは利用規約をご確認ください。' },
     { q: 'ゲル宿泊は寝具がありますか？', a: '全てのゲルキャンプにベッド・マットレス・毛布・タオルを完備しています。冬季には電気毛布もご用意します。' },
@@ -31,14 +34,17 @@ const MOBILE_FAQ_ITEMS: { q: string; a: string }[] = [
     { q: '現地での通信手段は？', a: 'ウランバートル市内は4G完備。ゴビ・テレルジでは電波が弱い場所もあります。ガイドが衛星電話を所持しているため緊急連絡は可能です。' },
 ];
 
-const MobileFAQ: React.FC = () => {
+const MobileFAQ: React.FC<{ product?: TourProduct | null }> = ({ product }) => {
+    const items = (product?.faqs && product.faqs.length > 0)
+        ? product.faqs
+        : DEFAULT_MOBILE_FAQ_ITEMS;
     const [openIdx, setOpenIdx] = React.useState<number>(0);
     return (
         <div className="p-6 bg-white dark:bg-background-dark mt-2">
             <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-2">FAQ & Notice</div>
             <h3 className="text-lg font-bold mb-4">ご注意・よくある質問</h3>
             <div className="flex flex-col gap-2">
-                {MOBILE_FAQ_ITEMS.map((item, i) => {
+                {items.map((item, i) => {
                     const on = openIdx === i;
                     return (
                         <div key={i} className="border border-gray-100 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-900 overflow-hidden">
@@ -61,6 +67,67 @@ const MobileFAQ: React.FC = () => {
                         </div>
                     );
                 })}
+            </div>
+        </div>
+    );
+};
+
+// Guide intro card on mobile — same content as PC, fetched from settings.
+const MobileGuideCard: React.FC = () => {
+    const intro = useGuideIntro();
+    return (
+        <div className="mt-6 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+            <div className="flex items-start gap-3 mb-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shrink-0 shadow-md">
+                    <span className="material-symbols-outlined text-2xl">translate</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-bold text-primary tracking-widest uppercase mb-1">Your Guide</div>
+                    <div className="text-[15px] font-bold text-[#0e1a18] dark:text-white">{intro.title}</div>
+                </div>
+            </div>
+            <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-3">{intro.body}</p>
+            <div className="flex flex-wrap gap-1.5">
+                {intro.chips.map(chip => (
+                    <span key={chip} className="text-[10px] font-semibold px-2 py-1 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+                        {chip}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// Destinations map on mobile — automatically extracted from itineraryBlocks
+// titles via the place dictionary. Hidden when no matches found.
+const MobileDestinationsMap: React.FC<{ product: TourProduct }> = ({ product }) => {
+    const places = React.useMemo(
+        () => extractPlacesFromItinerary(product.itineraryBlocks as { type: string; content: unknown }[] | undefined),
+        [product.itineraryBlocks]
+    );
+    if (places.length === 0) return null;
+    return (
+        <div className="mt-6">
+            <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-2">Destinations</div>
+            <h3 className="text-base font-bold mb-3">目的地</h3>
+            <DestinationsMap places={places} height={220} borderRadius={16} />
+            <div className="flex flex-col gap-2 mt-3">
+                {places.map((p, i) => (
+                    <div
+                        key={p.name}
+                        className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-white/5 rounded-xl"
+                    >
+                        <div className="w-7 h-7 rounded-full bg-white dark:bg-gray-800 border border-primary text-primary text-[12px] font-bold flex items-center justify-center shrink-0">
+                            {i + 1}
+                        </div>
+                        <div>
+                            <div className="text-[13px] font-bold text-[#0e1a18] dark:text-white">{p.name}</div>
+                            {p.short && p.short !== p.name && (
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400">{p.short}</div>
+                            )}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -722,29 +789,12 @@ export const ProductDetail: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Guide intro card — generic N1-certified message, shown for every product.
-                            TODO(phase 3): make admin-editable via /api/settings key 'guide_intro'. */}
-                        <div className="mt-6 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
-                            <div className="flex items-start gap-3 mb-3">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shrink-0 shadow-md">
-                                    <span className="material-symbols-outlined text-2xl">translate</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[11px] font-bold text-primary tracking-widest uppercase mb-1">Your Guide</div>
-                                    <div className="text-[15px] font-bold text-[#0e1a18] dark:text-white">日本語ガイド同行</div>
-                                </div>
-                            </div>
-                            <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-3">
-                                全ガイドが日本語能力試験N1取得済み。モンゴルの自然と文化を深く知り、お客様の目線で丁寧にご案内します。
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                                {['N1 取得済み', '経験10年以上', '現地ガイド'].map(chip => (
-                                    <span key={chip} className="text-[10px] font-semibold px-2 py-1 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
-                                        {chip}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
+                        {/* Guide intro card — site-wide message from /api/settings (key: guide_intro).
+                            Admin edits once in /admin/guide-intro, applies to every product. */}
+                        <MobileGuideCard />
+
+                        {/* Destinations map — pins derived from itineraryBlocks via place dictionary. */}
+                        <MobileDestinationsMap product={product} />
                     </div>
                 )}
 
@@ -1077,8 +1127,8 @@ export const ProductDetail: React.FC = () => {
                 </div>
             )}
 
-            {/* FAQ — common Q&A shown on every product. Same 6 items as PC ProductDetailDesktop. */}
-            <MobileFAQ />
+            {/* FAQ — product-specific when admin set faqs, otherwise common defaults. */}
+            <MobileFAQ product={product} />
 
 
             {/* Related Products */}

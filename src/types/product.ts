@@ -47,6 +47,14 @@ export interface TourProduct {
     pricingOptions?: TourPricingOption[];
     accommodationOptions?: AccommodationOption[];
     vehicleOptions?: VehicleOption[];
+
+    // 상품별 FAQ (관리자가 편집 가능). 비어 있으면 사이트 공통 기본 FAQ가 표시됨.
+    faqs?: ProductFAQ[];
+}
+
+export interface ProductFAQ {
+    q: string;
+    a: string;
 }
 
 export interface TourPricingOption {

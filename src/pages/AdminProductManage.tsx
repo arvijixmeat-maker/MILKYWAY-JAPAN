@@ -63,6 +63,7 @@ export const AdminProductManage: React.FC = () => {
                     highlights: parse(item.highlights),
                     included: parse(item.included),
                     excluded: parse(item.excluded),
+                    faqs: parse(item.faqs),
                     viewCount: item.view_count || item.viewCount,
                     bookingCount: item.booking_count || item.bookingCount,
                     pricingOptions: parse(item.pricing_options || item.pricingOptions),
@@ -129,6 +130,7 @@ export const AdminProductManage: React.FC = () => {
                 highlights: productToSave.highlights,
                 included: productToSave.included,
                 excluded: productToSave.excluded,
+                faqs: productToSave.faqs,
                 pricing_options: productToSave.pricingOptions,
                 accommodation_options: productToSave.accommodationOptions,
                 vehicle_options: productToSave.vehicleOptions,
@@ -694,6 +696,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             highlights: [],
             included: [],
             excluded: [],
+            faqs: [],
             pricingOptions: [],
             accommodationOptions: [],
             vehicleOptions: []
@@ -746,6 +749,26 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         setFormData({
             ...formData,
             highlights: formData.highlights?.filter((_, i) => i !== index)
+        });
+    };
+
+    // FAQ Handlers — per-product Q&A list. When empty the frontend falls
+    // back to the site-wide common FAQs.
+    const addFAQ = () => {
+        setFormData({
+            ...formData,
+            faqs: [...(formData.faqs || []), { q: '', a: '' }],
+        });
+    };
+    const updateFAQ = (index: number, field: 'q' | 'a', value: string) => {
+        const updated = [...(formData.faqs || [])];
+        updated[index] = { ...updated[index], [field]: value };
+        setFormData({ ...formData, faqs: updated });
+    };
+    const removeFAQ = (index: number) => {
+        setFormData({
+            ...formData,
+            faqs: formData.faqs?.filter((_, i) => i !== index),
         });
     };
 
@@ -1614,6 +1637,67 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 />
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* FAQ — per-product Q&A. Empty list = use site-wide common FAQs. */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                FAQ (자주 묻는 질문)
+                                            </label>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                비워두면 사이트 공통 FAQ가 자동 표시됩니다.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={addFAQ}
+                                            className="text-teal-600 dark:text-teal-400 text-sm font-medium hover:underline"
+                                        >
+                                            + Q&A 추가
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {formData.faqs?.map((faq, index) => (
+                                            <div
+                                                key={index}
+                                                className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg space-y-2"
+                                            >
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-xs font-bold text-teal-600 dark:text-teal-400 pt-2.5 font-mono">
+                                                        Q{index + 1}.
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        value={faq.q}
+                                                        onChange={(e) => updateFAQ(index, 'q', e.target.value)}
+                                                        placeholder="질문"
+                                                        className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFAQ(index)}
+                                                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">delete</span>
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    value={faq.a}
+                                                    onChange={(e) => updateFAQ(index, 'a', e.target.value)}
+                                                    placeholder="답변"
+                                                    rows={3}
+                                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                                />
+                                            </div>
+                                        ))}
+                                        {(!formData.faqs || formData.faqs.length === 0) && (
+                                            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                                                Q&A를 추가하지 않으면 사이트 공통 FAQ가 사용됩니다.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
