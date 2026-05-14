@@ -5,12 +5,15 @@ import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { BottomNav } from '../components/layout/BottomNav';
 import { CategoryLanding, type CategoryLandingContent } from '../components/category/CategoryLanding';
+import { CategoryLandingDesktop } from '../components/category-desktop/CategoryLandingDesktop';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 // Fallback hero when admin hasn't configured the landing page yet.
 const FALLBACK_HERO = 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1200';
 
 export const CategoryPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
+    const isDesktop = useIsDesktop();
 
     const { data: category, isLoading: isLoadingCategory } = useQuery({
         queryKey: ['category', slug],
@@ -140,13 +143,23 @@ export const CategoryPage: React.FC = () => {
                 image={heroOgImage}
                 structuredData={[collectionLd, breadcrumbLd, itemListLd]}
             />
-            <CategoryLanding
-                content={content}
-                products={products}
-                isLoadingProducts={isLoadingProducts}
-                headerTitle={category.name}
-            />
-            <BottomNav />
+            {isDesktop ? (
+                <CategoryLandingDesktop
+                    content={content}
+                    products={products}
+                    isLoadingProducts={isLoadingProducts}
+                />
+            ) : (
+                <>
+                    <CategoryLanding
+                        content={content}
+                        products={products}
+                        isLoadingProducts={isLoadingProducts}
+                        headerTitle={category.name}
+                    />
+                    <BottomNav />
+                </>
+            )}
         </>
     );
 };
