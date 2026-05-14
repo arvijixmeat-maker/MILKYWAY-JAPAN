@@ -9,6 +9,44 @@ import { eq } from 'drizzle-orm';
 
 const app = new Hono<{ Bindings: Env }>();
 
+const LOCAL_ADMIN_EMAIL = 'gantumaidar@gmail.com';
+const LOCAL_ADMIN_PASSWORD_HASH = '28546834df2b249812883d324084fad9:22d36a2d7088cbd1af0f4efac65282444f079fcc14781af664a800ee7a3c8fa2';
+
+async function ensureLocalAuthData(env: Env) {
+    if (env.ENVIRONMENT === 'production') return;
+
+    await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            google_id TEXT UNIQUE,
+            email TEXT UNIQUE,
+            name TEXT,
+            role TEXT DEFAULT 'user',
+            avatar_url TEXT,
+            password_hash TEXT
+        )
+    `).run();
+
+    await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id),
+            expires_at INTEGER NOT NULL
+        )
+    `).run();
+
+    await env.DB.prepare(`
+        INSERT OR IGNORE INTO users (id, email, name, role, password_hash)
+        VALUES (?, ?, ?, ?, ?)
+    `).bind(
+        'local-admin',
+        LOCAL_ADMIN_EMAIL,
+        'Local Admin',
+        'admin',
+        LOCAL_ADMIN_PASSWORD_HASH
+    ).run();
+}
+
 // POST /api/auth/login - Admin email/password login
 app.post('/login', async (c) => {
     try {
@@ -21,6 +59,8 @@ app.post('/login', async (c) => {
         if (!c.env.DB) {
             return c.json({ error: 'Database binding (DB) is missing in environment' }, 500);
         }
+
+        await ensureLocalAuthData(c.env);
 
         const db = drizzle(c.env.DB);
 

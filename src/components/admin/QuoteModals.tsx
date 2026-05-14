@@ -345,31 +345,62 @@ export const QuoteDetailModal: React.FC<{
 
     if (!request) return null;
 
+    const quoteStatusMeta: Record<string, { label: string; tone: string }> = {
+        new: { label: '신규 요청', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
+        processing: { label: '견적 작성 중', tone: 'bg-orange-50 text-orange-700 border-orange-200' },
+        answered: { label: '견적 발송 완료', tone: 'bg-blue-50 text-blue-700 border-blue-200' },
+        reservation_requested: { label: '예약 요청', tone: 'bg-purple-50 text-purple-700 border-purple-200' },
+        converted: { label: '예약 전환 완료', tone: 'bg-slate-100 text-slate-600 border-slate-200' },
+        completed: { label: '완료', tone: 'bg-teal-50 text-teal-700 border-teal-200' },
+    };
+
+    const workflowSteps = [
+        { key: 'new', label: '요청 확인', icon: 'fact_check' },
+        { key: 'processing', label: '견적 작성', icon: 'edit_note' },
+        { key: 'answered', label: '고객 발송', icon: 'outgoing_mail' },
+        { key: 'reservation_requested', label: '예약 요청', icon: 'event_available' },
+        { key: 'converted', label: '예약 전환', icon: 'task_alt' },
+    ];
+
+    const currentStepIndex = Math.max(0, workflowSteps.findIndex((step) => step.key === request.status));
+    const statusMeta = quoteStatusMeta[request.status] || quoteStatusMeta.new;
+    const checklistItems = [
+        { label: '여행 조건 확인', done: Boolean(request.destination && request.headcount && request.period) },
+        { label: '확정 일정 입력', done: Boolean(confirmedStartDate && confirmedEndDate) },
+        { label: '금액/예약금 입력', done: priceDetail.totalAmount > 0 && priceDetail.deposit >= 0 },
+        { label: '견적서 URL 입력', done: Boolean(estimateUrl) },
+        { label: '고객 안내문 입력', done: Boolean(adminNote.trim()) },
+    ];
+    const canSendEstimate = checklistItems.every((item) => item.done) && priceDetail.totalAmount >= priceDetail.deposit;
+    const quickNotes = [
+        {
+            label: '기본 안내',
+            text: 'お見積りをご確認ください。日程・料金に問題がなければ、予約相談へお進みください。',
+        },
+        {
+            label: '상담 유도',
+            text: 'ご希望条件に合わせて日程と料金を調整しました。ご不明点や変更希望があればお気軽にご相談ください。',
+        },
+    ];
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 text-slate-900 dark:text-gray-100 font-sans">
             <div
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
             ></div>
-            <div className="relative w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="relative w-full max-w-5xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800 sticky top-0 z-10">
                     <div className="flex items-center gap-3">
                         <div className="w-1 h-8 rounded-full bg-primary"></div>
                         <div>
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-white">견적 상세 정보</h2>
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-white">맞춤 견적 관리</h2>
                             <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">No. {request.id.slice(0, 8).toUpperCase()}</p>
                         </div>
-                        {request.status === 'reservation_requested' && (
-                            <span className="bg-primary/10 text-primary-dark text-[10px] px-2 py-1 rounded-lg font-bold ml-2 animate-pulse uppercase tracking-wider border border-primary/20">
-                                예약 상담 요청 중
-                            </span>
-                        )}
-                        {request.status === 'answered' && (
-                            <span className="bg-primary/10 text-primary text-[10px] px-2 py-1 rounded-lg font-bold ml-2 uppercase tracking-wider border border-primary/10">
-                                답변 완료
-                            </span>
-                        )}
+                        <span className={`ml-2 rounded-lg border px-2.5 py-1 text-[10px] font-bold ${statusMeta.tone}`}>
+                            {statusMeta.label}
+                        </span>
                     </div>
                     <button
                         onClick={onClose}
@@ -381,141 +412,244 @@ export const QuoteDetailModal: React.FC<{
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto custom-scrollbar space-y-8">
-                    {/* Action Area (Reply/Estimate) */}
-                    <div className={`${request.status === 'reservation_requested' ? 'bg-primary/5 border-primary/10' : 'bg-primary/5 border-primary/10'} dark:bg-slate-800/50 p-6 rounded-2xl border transition-all duration-300`}>
-                        <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-base">
-                                {request.status === 'reservation_requested' ? 'bookmark_add' : 'send'}
-                            </span>
-                            {request.status === 'reservation_requested' ? '예약 전환 관리' : '견적서 발송 및 답변'}
-                        </h3>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-5 dark:border-slate-700 dark:bg-slate-900/40">
+                        <div className="grid gap-3 md:grid-cols-5">
+                            {workflowSteps.map((step, index) => {
+                                const isActive = index === currentStepIndex;
+                                const isDone = index < currentStepIndex;
 
-                        <div className="grid grid-cols-1 gap-6">
-                            {request.status === 'reservation_requested' ? (
-                                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                                    <div className="text-sm text-slate-600 dark:text-slate-300 font-medium">
-                                        <p>고객님이 견적서를 확인하고 예약을 요청했습니다.</p>
-                                        <p className="text-xs text-slate-400 mt-1">상담을 통해 일정을 확정하고 예약을 생성해주세요.</p>
-                                    </div>
-                                    <button
-                                        onClick={onOpenConvert}
-                                        className="w-full sm:w-auto px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
+                                return (
+                                    <div
+                                        key={step.key}
+                                        className={`rounded-xl border p-3 transition-colors ${isActive
+                                            ? 'border-primary/30 bg-white text-primary shadow-sm dark:bg-slate-800'
+                                            : isDone
+                                                ? 'border-teal-100 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300'
+                                                : 'border-slate-100 bg-white/70 text-slate-400 dark:border-slate-700 dark:bg-slate-800/60'
+                                            }`}
                                     >
-                                        <span className="material-symbols-outlined">sync_alt</span>
-                                        예약 및 확정
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">견적서 URL (Google/Excel)</label>
-                                            <input
-                                                type="url"
-                                                value={estimateUrl}
-                                                onChange={(e) => setEstimateUrl(e.target.value)}
-                                                placeholder="https://docs.google.com/..."
-                                                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary-dark outline-none transition-all text-sm"
-                                            />
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <span className="material-symbols-outlined text-[18px]">{isDone ? 'check_circle' : step.icon}</span>
+                                            <span className="text-[10px] font-black">STEP {index + 1}</span>
                                         </div>
-                                        <div className="flex items-end gap-2">
-                                            <button
-                                                onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate)}
-                                                className="flex-1 py-3 bg-primary-dark hover:bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary-dark/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">send</span>
-                                                견적서 발송 처리
-                                            </button>
-                                        </div>
+                                        <p className="text-xs font-black">{step.label}</p>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">관리자 메모 (고객에게 노출)</label>
-                                        <textarea
-                                            value={adminNote}
-                                            onChange={(e) => setAdminNote(e.target.value)}
-                                            placeholder="견적에 대한 상세 설명이나 안내 사항을 입력해주세요."
-                                            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary-dark outline-none transition-all h-24 resize-none text-sm"
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })}
                         </div>
                     </div>
 
-                    {/* Payment Info Section */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                <span className="material-symbols-outlined text-base text-primary">payments</span>
-                                결제 및 금액 정보
+                    <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                    <span className="material-symbols-outlined text-base text-primary">summarize</span>
+                                    요청 요약
+                                </h3>
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-500 transition-colors hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300"
+                                >
+                                    정보 수정
+                                </button>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900/60">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">고객</p>
+                                    <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{request.name}</p>
+                                    <p className="mt-1 truncate text-xs text-slate-500">{request.phone || request.email}</p>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900/60">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">여행 조건</p>
+                                    <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{request.destination || '목적지 미정'}</p>
+                                    <p className="mt-1 text-xs text-slate-500">{request.headcount || '인원 미정'} · {request.period || '일정 미정'}</p>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900/60">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">예산/차량</p>
+                                    <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{request.budget || '예산 미정'}</p>
+                                    <p className="mt-1 text-xs text-slate-500">{request.vehicle || '차량/가이드 미정'}</p>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900/60">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">견적 금액</p>
+                                    <p className="mt-1 text-sm font-black text-slate-900 dark:text-white">{priceDetail.totalAmount ? `${priceDetail.totalAmount.toLocaleString()}엔` : '미입력'}</p>
+                                    <p className="mt-1 text-xs text-slate-500">예약금 {priceDetail.deposit ? `${priceDetail.deposit.toLocaleString()}엔` : '0엔'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                            <h3 className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                <span className="material-symbols-outlined text-base text-primary">checklist</span>
+                                발송 전 체크
                             </h3>
+                            <div className="space-y-2">
+                                {checklistItems.map((item) => (
+                                    <div key={item.label} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/60">
+                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
+                                        <span className={`material-symbols-outlined text-[18px] ${item.done ? 'text-teal-500' : 'text-slate-300'}`}>
+                                            {item.done ? 'check_circle' : 'radio_button_unchecked'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">총 결제금액</p>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={formatNumber(priceDetail.totalAmount)}
-                                        onChange={(e) => setPriceDetail({ ...priceDetail, totalAmount: unformatNumber(e.target.value) })}
-                                        className="w-full bg-transparent text-base font-bold text-slate-800 dark:text-white outline-none border-b border-transparent focus:border-primary transition-all text-right"
-                                        placeholder="0"
-                                    />
-                                    <span className="text-sm font-bold text-slate-400">원</span>
-                                </div>
-                                {priceDetail.totalAmount > 0 && (
-                                    <p className="mt-1 text-[9px] font-bold text-primary/60 text-right">
-                                        ≈ {typeof priceDetail.totalAmount === 'number' && !isNaN(priceDetail.totalAmount) ? (priceDetail.totalAmount / 10000).toLocaleString() : 0}만원
-                                    </p>
-                                )}
+                    </div>
+
+                    {/* Quote Workspace */}
+                    <div className="overflow-hidden rounded-2xl border border-teal-100 bg-white shadow-sm dark:border-teal-500/20 dark:bg-slate-800">
+                        <div className="flex flex-col gap-3 border-b border-teal-100 bg-teal-50/70 px-6 py-5 dark:border-teal-500/20 dark:bg-teal-500/10 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h3 className="flex items-center gap-2 text-base font-black text-slate-900 dark:text-white">
+                                    <span className="material-symbols-outlined text-[22px] text-primary">contract_edit</span>
+                                    견적 작성 워크스페이스
+                                </h3>
+                                <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                    확정 일정, 금액, 견적서 링크, 고객 안내문을 한 번에 정리한 뒤 발송합니다.
+                                </p>
                             </div>
-                            <div className="bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">예약금 (Deposit)</p>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={formatNumber(priceDetail.deposit)}
-                                        onChange={(e) => setPriceDetail({ ...priceDetail, deposit: unformatNumber(e.target.value) })}
-                                        className="w-full bg-transparent text-base font-bold text-primary dark:text-primary-dark outline-none border-b border-transparent focus:border-primary transition-all text-right"
-                                        placeholder="0"
-                                    />
-                                    <span className="text-sm font-bold text-slate-400">원</span>
-                                </div>
-                                {priceDetail.deposit > 0 && (
-                                    <p className="mt-1 text-[9px] font-bold text-primary/60 text-right">
-                                        ≈ {typeof priceDetail.deposit === 'number' && !isNaN(priceDetail.deposit) ? (priceDetail.deposit / 10000).toLocaleString() : 0}만원
-                                    </p>
-                                )}
-                            </div>
+                            {request.status === 'reservation_requested' && (
+                                <button
+                                    onClick={onOpenConvert}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-purple-600/20 transition-colors hover:bg-purple-700"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">sync_alt</span>
+                                    예약으로 전환
+                                </button>
+                            )}
                         </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/30 rounded-xl border border-slate-100">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">예약금 상태</span>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${priceDetail.depositStatus === 'paid' ? 'bg-primary/10 text-primary-dark border-primary/20' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                    {priceDetail.depositStatus === 'paid' ? '입금 완료' : '미입금'}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/30 rounded-xl border border-slate-100">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">잔금 상태</span>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${priceDetail.balanceStatus === 'paid' ? 'bg-primary/10 text-primary-dark border-primary/20' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-                                    {priceDetail.balanceStatus === 'paid' ? '결제 완료' : '결제 대기'}
-                                </span>
-                            </div>
-                        </div>
+                        <div className="grid gap-0 lg:grid-cols-[1fr_1.1fr]">
+                            <div className="space-y-5 border-b border-slate-100 p-6 dark:border-slate-700 lg:border-b-0 lg:border-r">
+                                <div>
+                                    <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        <span className="material-symbols-outlined text-base text-primary">event</span>
+                                        1. 확정 일정
+                                    </h4>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <label className="block">
+                                            <span className="mb-1.5 block text-[10px] font-bold text-slate-400">시작일</span>
+                                            <input
+                                                type="date"
+                                                value={confirmedStartDate}
+                                                onChange={(e) => setConfirmedStartDate(e.target.value)}
+                                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                            />
+                                        </label>
+                                        <label className="block">
+                                            <span className="mb-1.5 block text-[10px] font-bold text-slate-400">종료일</span>
+                                            <input
+                                                type="date"
+                                                value={confirmedEndDate}
+                                                onChange={(e) => setConfirmedEndDate(e.target.value)}
+                                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
 
-                        <div className={`mt-4 p-4 rounded-2xl border flex items-center justify-between transition-all ${priceDetail.totalAmount - priceDetail.deposit < 0 ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30' : 'bg-primary/10 dark:bg-primary/10 border-primary/10 dark:border-primary/30'}`}>
-                            <div className="flex flex-col">
-                                <span className={`text-[10px] font-bold uppercase tracking-widest ${priceDetail.totalAmount - priceDetail.deposit < 0 ? 'text-red-600' : 'text-primary dark:text-primary-dark'}`}>
-                                    예상 잔금 (Balance)
-                                </span>
-                                {priceDetail.totalAmount - priceDetail.deposit < 0 && (
-                                    <span className="text-[9px] text-red-500 font-bold mt-0.5 animate-pulse">! 예약금이 총액보다 큽니다</span>
-                                )}
+                                <div>
+                                    <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        <span className="material-symbols-outlined text-base text-primary">payments</span>
+                                        2. 금액 입력
+                                    </h4>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70">
+                                            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">총 결제금액</p>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={formatNumber(priceDetail.totalAmount)}
+                                                    onChange={(e) => setPriceDetail({ ...priceDetail, totalAmount: unformatNumber(e.target.value) })}
+                                                    className="w-full bg-transparent text-right text-2xl font-black text-slate-900 outline-none dark:text-white"
+                                                    placeholder="0"
+                                                />
+                                                <span className="text-sm font-bold text-slate-400">엔</span>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 dark:border-teal-500/30 dark:bg-teal-500/10">
+                                            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-teal-700 dark:text-teal-300">예약금</p>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={formatNumber(priceDetail.deposit)}
+                                                    onChange={(e) => setPriceDetail({ ...priceDetail, deposit: unformatNumber(e.target.value) })}
+                                                    className="w-full bg-transparent text-right text-2xl font-black text-primary outline-none dark:text-teal-300"
+                                                    placeholder="0"
+                                                />
+                                                <span className="text-sm font-bold text-teal-500">엔</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className={`mt-3 flex items-center justify-between rounded-xl border px-4 py-3 ${priceDetail.totalAmount - priceDetail.deposit < 0 ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'}`}>
+                                        <span className="text-xs font-bold">예상 잔금</span>
+                                        <span className="text-base font-black">
+                                            {typeof priceDetail.totalAmount === 'number' && typeof priceDetail.deposit === 'number' && !isNaN(priceDetail.totalAmount) && !isNaN(priceDetail.deposit) ? (priceDetail.totalAmount - priceDetail.deposit).toLocaleString() : 0}엔
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <p className={`text-base font-bold ${priceDetail.totalAmount - priceDetail.deposit < 0 ? 'text-red-600' : 'text-primary dark:text-primary-dark'}`}>
-                                {typeof priceDetail.totalAmount === 'number' && typeof priceDetail.deposit === 'number' && !isNaN(priceDetail.totalAmount) && !isNaN(priceDetail.deposit) ? (priceDetail.totalAmount - priceDetail.deposit).toLocaleString() : 0}원
-                            </p>
+
+                            <div className="space-y-5 p-6">
+                                <div>
+                                    <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        <span className="material-symbols-outlined text-base text-primary">link</span>
+                                        3. 견적서 링크
+                                    </h4>
+                                    <input
+                                        type="url"
+                                        value={estimateUrl}
+                                        onChange={(e) => setEstimateUrl(e.target.value)}
+                                        placeholder="https://docs.google.com/..."
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                            <span className="material-symbols-outlined text-base text-primary">chat</span>
+                                            4. 고객 안내문
+                                        </h4>
+                                        <div className="flex gap-1.5">
+                                            {quickNotes.map((note) => (
+                                                <button
+                                                    key={note.label}
+                                                    type="button"
+                                                    onClick={() => setAdminNote(note.text)}
+                                                    className="rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500 transition-colors hover:bg-teal-50 hover:text-primary dark:bg-slate-900 dark:text-slate-300"
+                                                >
+                                                    {note.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <textarea
+                                        value={adminNote}
+                                        onChange={(e) => setAdminNote(e.target.value)}
+                                        placeholder="고객 화면에는 일본어로 보이므로 일본어 안내문을 입력하세요."
+                                        className="h-28 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70">
+                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">고객 화면 미리보기</p>
+                                    <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                                        <p><b>見積金額:</b> {priceDetail.totalAmount ? `${priceDetail.totalAmount.toLocaleString()}円` : '未入力'}</p>
+                                        <p><b>予約金:</b> {priceDetail.deposit ? `${priceDetail.deposit.toLocaleString()}円` : '未入力'}</p>
+                                        <p><b>日程:</b> {confirmedStartDate && confirmedEndDate ? `${confirmedStartDate} ~ ${confirmedEndDate}` : '未入力'}</p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate)}
+                                    disabled={!canSendEstimate}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-dark px-5 py-4 text-sm font-black text-white shadow-lg shadow-primary-dark/20 transition-all hover:bg-primary active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-700"
+                                    title={!canSendEstimate ? '확정 일정, 금액, URL, 안내문을 모두 입력해야 발송할 수 있습니다.' : undefined}
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">send</span>
+                                    견적서 발송 처리
+                                </button>
+                            </div>
                         </div>
                     </div>
 

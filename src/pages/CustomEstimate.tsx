@@ -185,7 +185,7 @@ export const CustomEstimate: React.FC = () => {
                                         <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-slate-500">L</div>
                                         <div className="flex flex-col">
                                             <span className="text-xs font-medium text-slate-900 dark:text-white">이**님 <span className="text-slate-400 font-normal">|</span> 몽골 5박6일</span>
-                                            <span className="text-[10px] text-blue-500 font-medium">견적 발송 완료</span>
+                                            <span className="text-[10px] text-blue-500 font-medium">お見積り送信完了</span>
                                         </div>
                                     </div>
                                     <span className="text-[10px] text-slate-400">1분 전</span>

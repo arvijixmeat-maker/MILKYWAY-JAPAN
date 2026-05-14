@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
 import { api } from '../lib/api';
 import { type QuoteRequest, ConvertSelectionModal, QuoteDetailModal } from '../components/admin/QuoteModals';
 import { sendNotificationEmail } from '../lib/email';
@@ -78,6 +78,130 @@ interface Reservation {
     // Quote Specific
     quoteDetail?: QuoteRequest;
 }
+
+const quoteWorkflowMeta: Record<string, { label: string; hint: string; icon: string; tone: string }> = {
+    new: {
+        label: '신규 요청',
+        hint: '요청 조건 확인 필요',
+        icon: 'fiber_new',
+        tone: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30',
+    },
+    processing: {
+        label: '견적 작성 중',
+        hint: '일정·금액 입력 단계',
+        icon: 'edit_note',
+        tone: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:border-orange-500/30',
+    },
+    answered: {
+        label: '견적 발송 완료',
+        hint: '고객 확인 대기',
+        icon: 'mark_email_read',
+        tone: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30',
+    },
+    reservation_requested: {
+        label: '예약 요청',
+        hint: '예약 전환 필요',
+        icon: 'priority_high',
+        tone: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/30',
+    },
+    converted: {
+        label: '예약 전환 완료',
+        hint: '예약 관리에서 진행',
+        icon: 'task_alt',
+        tone: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    },
+};
+
+const getQuoteAction = (reservation: Reservation) => {
+    if (reservation.type !== 'quote') {
+        return {
+            label: '상세 확인',
+            description: reservation.status === 'pending_payment' ? '입금 상태 확인' : '예약 내용 관리',
+            icon: 'visibility',
+            nextStatus: null as Reservation['status'] | null,
+            primary: false,
+        };
+    }
+
+    switch (reservation.status) {
+        case 'new':
+            return {
+                label: '검토 시작',
+                description: '클릭하면 검토 중으로 변경',
+                icon: 'play_arrow',
+                nextStatus: 'processing' as Reservation['status'],
+                primary: true,
+            };
+        case 'processing':
+            return {
+                label: '견적 작성',
+                description: '금액·메모·URL 입력',
+                icon: 'edit_note',
+                nextStatus: null,
+                primary: true,
+            };
+        case 'answered':
+            return {
+                label: '재확인',
+                description: '발송 내용 확인·재발송',
+                icon: 'outgoing_mail',
+                nextStatus: null,
+                primary: false,
+            };
+        case 'reservation_requested':
+            return {
+                label: '예약 전환',
+                description: '예약 생성 필요',
+                icon: 'sync_alt',
+                nextStatus: null,
+                primary: true,
+            };
+        default:
+            return {
+                label: '견적 관리',
+                description: '상세 내용 확인',
+                icon: 'manage_search',
+                nextStatus: null,
+                primary: false,
+            };
+    }
+};
+
+const getWorkflowMeta = (reservation: Reservation) => {
+    if (reservation.type === 'quote') {
+        return quoteWorkflowMeta[reservation.status] || {
+            label: '견적 진행',
+            hint: '상태 확인 필요',
+            icon: 'request_quote',
+            tone: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+        };
+    }
+
+    if (reservation.status === 'pending_payment') {
+        return {
+            label: '입금 대기',
+            hint: '예약금 확인 필요',
+            icon: 'payments',
+            tone: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',
+        };
+    }
+
+    if (reservation.status === 'confirmed' || reservation.status === 'paid') {
+        return {
+            label: reservation.status === 'confirmed' ? '예약 확정' : '결제 완료',
+            hint: '일정 운영 관리',
+            icon: 'event_available',
+            tone: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:border-teal-500/30',
+        };
+    }
+
+    return {
+        label: '예약 관리',
+        hint: '상세 확인',
+        icon: 'assignment',
+        tone: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    };
+};
 
 const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Reservation['status']) => void }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -1345,10 +1469,10 @@ export const AdminReservationManage: React.FC = () => {
                         date: q.period || '일정 미정',
                         bookedAt: createdAt ? new Date(createdAt).toLocaleDateString('ko-KR') : '',
                         status: q.status,
-                        totalAmount: 0,
-                        deposit: 0,
+                        totalAmount: q.confirmedPrice || q.confirmed_price || 0,
+                        deposit: q.deposit || 0,
                         depositStatus: 'unpaid',
-                        balance: 0,
+                        balance: (q.confirmedPrice || q.confirmed_price || 0) - (q.deposit || 0),
                         balanceStatus: 'unpaid',
                         headcount: q.headcount,
                         totalPeople: 0,
@@ -1364,6 +1488,12 @@ export const AdminReservationManage: React.FC = () => {
                             adminNote: q.adminNote || q.admin_note,
                             estimateUrl: q.estimateUrl || q.estimate_url,
                             confirmedPrice: q.confirmedPrice || q.confirmed_price,
+                            confirmed_price: q.confirmed_price || q.confirmedPrice,
+                            confirmed_start_date: q.confirmed_start_date || q.confirmedStartDate,
+                            confirmed_end_date: q.confirmed_end_date || q.confirmedEndDate,
+                            deposit: q.deposit || 0,
+                            deposit_status: q.deposit_status || q.depositStatus || 'unpaid',
+                            balance_status: q.balance_status || q.balanceStatus || 'unpaid',
                             date: createdAt ? new Date(createdAt).toLocaleDateString() : ''
                         }
                     };
@@ -1547,10 +1677,20 @@ export const AdminReservationManage: React.FC = () => {
                 }
             }
 
+            const updatedStatus = newStatus as Reservation['status'];
+
             // Optimistic update
-            setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus as any } : r));
+            setReservations(prev => prev.map(r => r.id === id ? {
+                ...r,
+                status: updatedStatus,
+                quoteDetail: r.quoteDetail ? { ...r.quoteDetail, status: updatedStatus as QuoteRequest['status'] } : r.quoteDetail,
+            } : r));
             if (selectedReservation && selectedReservation.id === id) {
-                setSelectedReservation(prev => prev ? { ...prev, status: newStatus as any } : null);
+                setSelectedReservation(prev => prev ? {
+                    ...prev,
+                    status: updatedStatus,
+                    quoteDetail: prev.quoteDetail ? { ...prev.quoteDetail, status: updatedStatus as QuoteRequest['status'] } : prev.quoteDetail,
+                } : null);
             }
 
         } catch (error) {
@@ -1592,8 +1732,13 @@ export const AdminReservationManage: React.FC = () => {
                 (filterStatus === '입금 대기' && res.status === 'pending_payment') ||
                 (filterStatus === '결제 완료' && res.status === 'paid') ||
                 (filterStatus === '예약 확정' && res.status === 'confirmed') ||
-                (filterStatus === '취소됨' && res.status === 'cancelled');
+                (filterStatus === '취소됨' && res.status === 'cancelled') ||
+                (filterStatus === '신규 견적' && res.status === 'new') ||
+                (filterStatus === '견적 작성 중' && res.status === 'processing') ||
+                (filterStatus === '견적 발송 완료' && res.status === 'answered') ||
+                (filterStatus === '예약 요청' && res.status === 'reservation_requested');
             const matchesType = filterType === '전체 유형' ||
+                (filterType === '맞춤 견적' && res.type === 'quote') ||
                 (filterType === '일반 상품' && res.type !== 'quote');
 
             return matchesSearch && matchesStatus && matchesType;
@@ -1609,10 +1754,13 @@ export const AdminReservationManage: React.FC = () => {
 
     // Stats
     const stats = useMemo(() => {
+        const activeQuoteStatuses = ['new', 'processing', 'reservation_requested'];
         return {
             total: reservations.length,
             pending: reservations.filter(r => r.status === 'pending_payment').length,
-            confirmed: reservations.filter(r => r.status === 'confirmed' || r.status === 'paid').length
+            confirmed: reservations.filter(r => r.status === 'confirmed' || r.status === 'paid').length,
+            quoteTodo: reservations.filter(r => r.type === 'quote' && activeQuoteStatuses.includes(r.status)).length,
+            quoteRequested: reservations.filter(r => r.type === 'quote' && r.status === 'reservation_requested').length,
         };
     }, [reservations]);
 
@@ -1622,69 +1770,68 @@ export const AdminReservationManage: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-            {/* Sidebar */}
-            <AdminSidebar
+        <>
+            <AdminLayout
                 activePage="reservations"
+                title="통합 예약 관리"
+                description="상품 예약, 맞춤 견적 전환, 결제 상태를 한 화면에서 관리합니다."
                 isDarkMode={isDarkMode}
                 toggleTheme={toggleTheme}
-            />
-
-            {/* Main Content */}
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">통합 예약 관리</h1>
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <button className="p-2 text-slate-400 hover:text-teal-500 transition-colors">
-                                <span className="material-symbols-outlined">notifications</span>
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">관리자님, 환영합니다</span>
-                            <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-500">
-                                <span className="material-symbols-outlined">person</span>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <div className="p-8 space-y-6 bg-slate-50 dark:bg-slate-900">
+                actions={
+                    <button
+                        type="button"
+                        onClick={fetchReservations}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-teal-500/50 dark:hover:bg-teal-500/10"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">refresh</span>
+                        새로고침
+                    </button>
+                }
+            >
+                <div className="space-y-6">
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">전체 예약</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.total}건</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">전체 예약</p>
+                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.total}건</h3>
                             </div>
-                            <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-lg bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-300 flex items-center justify-center">
                                 <span className="material-symbols-outlined">list_alt</span>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">입금 대기</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.pending}건</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">입금 대기</p>
+                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.pending}건</h3>
                             </div>
-                            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-lg bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center">
                                 <span className="material-symbols-outlined">payments</span>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">예약 확정</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.confirmed}건</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">예약 확정</p>
+                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.confirmed}건</h3>
                             </div>
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center">
                                 <span className="material-symbols-outlined">event_available</span>
+                            </div>
+                        </div>
+                        <div className="rounded-lg border border-purple-200 bg-purple-50/60 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-purple-500/30 dark:bg-purple-500/10 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">처리할 견적</p>
+                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.quoteTodo}건</h3>
+                                <p className="mt-1 text-xs font-medium text-purple-500 dark:text-purple-300">예약 요청 {stats.quoteRequested}건</p>
+                            </div>
+                            <div className="w-12 h-12 rounded-lg bg-white text-purple-600 flex items-center justify-center shadow-sm dark:bg-purple-500/15 dark:text-purple-300">
+                                <span className="material-symbols-outlined">request_quote</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Filter Section */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                             <div className="md:col-span-4">
                                 <label className="block text-xs font-bold text-slate-400 mb-2">예약자 / 상품명 검색</label>
@@ -1695,7 +1842,7 @@ export const AdminReservationManage: React.FC = () => {
                                         placeholder="이름 또는 투어명 검색"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     />
                                 </div>
                             </div>
@@ -1704,7 +1851,7 @@ export const AdminReservationManage: React.FC = () => {
                                 <select
                                     value={filterType}
                                     onChange={(e) => setFilterType(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
                                 >
                                     <option>전체 유형</option>
                                     <option value="product">일반 상품</option>
@@ -1716,17 +1863,21 @@ export const AdminReservationManage: React.FC = () => {
                                 <select
                                     value={filterStatus}
                                     onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
                                 >
                                     <option>전체 상태</option>
                                     <option value="입금 대기">입금 대기</option>
                                     <option value="결제 완료">결제 완료</option>
                                     <option value="예약 확정">예약 확정</option>
+                                    <option value="신규 견적">신규 견적</option>
+                                    <option value="견적 작성 중">견적 작성 중</option>
+                                    <option value="견적 발송 완료">견적 발송 완료</option>
+                                    <option value="예약 요청">예약 요청</option>
                                     <option value="취소됨">취소됨</option>
                                 </select>
                             </div>
                             <div className="md:col-span-2">
-                                <button onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setFilterType('전체 유형'); }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <button onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setFilterType('전체 유형'); }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors flex items-center justify-center gap-2 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
                                     <span className="material-symbols-outlined text-lg">refresh</span>
                                     초기화
                                 </button>
@@ -1735,10 +1886,10 @@ export const AdminReservationManage: React.FC = () => {
                     </div>
 
                     {/* Reservation Table */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="overflow-x-auto min-h-[400px]">
                             <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-50 dark:bg-slate-700/50">
+                                <thead className="bg-slate-50 dark:bg-slate-800/70">
                                     <tr>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">구분</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">예약일</th>
@@ -1746,61 +1897,92 @@ export const AdminReservationManage: React.FC = () => {
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">예약자</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">여행일정</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">총 결제금액 (예약금)</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">다음 할 일</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">상태</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">관리</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {displayedReservations.length > 0 ? displayedReservations.map((res) => (
-                                        <tr key={res.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                            <td className="px-6 py-5">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${res.type !== 'quote' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
-                                                    {res.type !== 'quote' ? '일반상품' : (res.type === 'quote' ? '맞춤견적' : '맞춤견적')}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-5 text-sm text-slate-500 dark:text-slate-400">{res.bookedAt}</td>
-                                            <td className="px-6 py-5">
-                                                <div className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={res.productName}>
-                                                    {res.productName}
-                                                </div>
-                                                <div className="text-xs text-slate-500 mt-0.5">{res.headcount}</div>
-                                            </td>
-                                            <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">
-                                                <div className="font-medium">{res.customerName}</div>
-                                                <div className="text-xs text-slate-400">{res.phone}</div>
-                                            </td>
-                                            <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{res.date}</td>
-                                            <td className="px-6 py-5 text-right">
-                                                <div className="text-sm font-bold text-slate-800 dark:text-white">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) ? res.totalAmount.toLocaleString() : 0}원</div>
-                                                <div className="text-xs text-slate-400 dark:text-slate-500">(예약금: {typeof res.deposit === 'number' && !isNaN(res.deposit) ? res.deposit.toLocaleString() : 0}원)</div>
-                                            </td>
-                                            <td className="px-6 py-5 text-center">
-                                                <StatusDropdown
-                                                    status={res.status}
-                                                    onChange={(newStatus) => handleStatusChange(res.id, newStatus, res.type)}
-                                                />
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center justify-center gap-2">
+                                    {displayedReservations.length > 0 ? displayedReservations.map((res) => {
+                                        const workflow = getWorkflowMeta(res);
+                                        const nextAction = getQuoteAction(res);
+
+                                        return (
+                                            <tr key={res.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+                                                <td className="px-6 py-5">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${res.type !== 'quote' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                                                        {res.type !== 'quote' ? '일반상품' : '맞춤견적'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-sm text-slate-500 dark:text-slate-400">{res.bookedAt}</td>
+                                                <td className="px-6 py-5">
+                                                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={res.productName}>
+                                                        {res.productName}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 mt-0.5">{res.headcount}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">
+                                                    <div className="font-medium">{res.customerName}</div>
+                                                    <div className="text-xs text-slate-400">{res.phone}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{res.date}</td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-bold text-slate-800 dark:text-white">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) ? res.totalAmount.toLocaleString() : 0}원</div>
+                                                    <div className="text-xs text-slate-400 dark:text-slate-500">(예약금: {typeof res.deposit === 'number' && !isNaN(res.deposit) ? res.deposit.toLocaleString() : 0}원)</div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className={`mb-2 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${workflow.tone}`}>
+                                                        <span className="material-symbols-outlined text-[15px]">{workflow.icon}</span>
+                                                        {workflow.label}
+                                                    </div>
+                                                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{workflow.hint}</div>
                                                     <button
-                                                        onClick={() => setSelectedReservation(res)}
-                                                        className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-lg transition-colors"
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (nextAction.nextStatus) {
+                                                                handleStatusChange(res.id, nextAction.nextStatus, res.type);
+                                                            } else {
+                                                                setSelectedReservation(res);
+                                                            }
+                                                        }}
+                                                        className={`mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${nextAction.primary
+                                                            ? 'bg-teal-500 text-white hover:bg-teal-600'
+                                                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800'
+                                                            }`}
+                                                        title={nextAction.description}
                                                     >
-                                                        {res.type === 'quote' ? '견적 관리' : '상세'}
+                                                        <span className="material-symbols-outlined text-[16px]">{nextAction.icon}</span>
+                                                        {nextAction.label}
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(res.id, res.type)}
-                                                        className="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-500 rounded-lg transition-colors"
-                                                        title="삭제"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )) : (
+                                                </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    <StatusDropdown
+                                                        status={res.status}
+                                                        onChange={(newStatus) => handleStatusChange(res.id, newStatus, res.type)}
+                                                    />
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedReservation(res)}
+                                                            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                                        >
+                                                            {res.type === 'quote' ? '견적 관리' : '상세'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(res.id, res.type)}
+                                                            className="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-500 rounded-lg transition-colors"
+                                                            title="삭제"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }) : (
                                         <tr>
-                                            <td colSpan={8} className="px-6 py-10 text-center text-slate-400">
+                                            <td colSpan={9} className="px-6 py-10 text-center text-slate-400">
                                                 검색 결과가 없습니다.
                                             </td>
                                         </tr>
@@ -1811,7 +1993,7 @@ export const AdminReservationManage: React.FC = () => {
                         {/* Pagination */}
                         <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-slate-500 dark:text-slate-400">
                             <span className="text-xs">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredReservations.length)} of {filteredReservations.length} entries
+                                총 {filteredReservations.length}건 중 {filteredReservations.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredReservations.length)} 표시
                             </span>
                             <div className="flex items-center gap-2">
                                 <button
@@ -1832,7 +2014,7 @@ export const AdminReservationManage: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </main>
+            </AdminLayout>
 
             {selectedReservation && selectedReservation.type !== 'quote' && (
                 <ReservationDetailModal
@@ -1976,6 +2158,6 @@ export const AdminReservationManage: React.FC = () => {
                     }}
                 />
             )}
-        </div>
+        </>
     );
 };

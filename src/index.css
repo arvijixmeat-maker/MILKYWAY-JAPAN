@@ -10,6 +10,30 @@
     font-display: swap;
 }
 
+@font-face {
+    font-family: 'Pretendard';
+    src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pretendard';
+    src: url('/fonts/Pretendard-Medium.woff2') format('woff2');
+    font-weight: 500 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Pretendard';
+    src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
+    font-weight: 700 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
@@ -18,8 +42,6 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
-
-/* Local Optimized Pretendard Loading (Static Full) - REMOVED */
 
 body {
     font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif !important;
@@ -53,6 +75,15 @@ body {
     width: 100%;
     min-height: 100dvh;
     position: relative;
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+.admin-app-wrapper .font-sans,
+.admin-app-wrapper input,
+.admin-app-wrapper button,
+.admin-app-wrapper select,
+.admin-app-wrapper textarea {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
 }
 
 .magazine-card {
