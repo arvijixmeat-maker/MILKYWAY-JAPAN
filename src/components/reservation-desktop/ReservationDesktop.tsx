@@ -6,7 +6,16 @@ import type {
     VehicleOption,
 } from '../../types/product';
 import { MatIcon } from '../desktop-primitives/MatIcon';
-import { Card, CardHeader, addDaysDate, fmtMD, formatPrice, stepCircle } from './primitives';
+import {
+    Card,
+    CardHeader,
+    addDaysDate,
+    fmtMD,
+    formatPrice,
+    stepCircle,
+    isUsableImageUrl,
+    FALLBACK_HERO_GRADIENT,
+} from './primitives';
 import { ReservationShell } from './ReservationShell';
 import { CalendarBig } from './CalendarBig';
 import { PriceTableModal } from './PriceTableModal';
@@ -89,16 +98,9 @@ export function ReservationDesktop({
                                 padding: '0 28px 24px',
                             }}
                         >
-                            <div
-                                style={{
-                                    aspectRatio: '4/3',
-                                    borderRadius: 12,
-                                    backgroundImage: product.mainImages?.[0]
-                                        ? `url(${product.mainImages[0]})`
-                                        : 'linear-gradient(135deg, #134e4a, #0f766e)',
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                }}
+                            <SelectedTourThumb
+                                imageUrl={product.mainImages?.[0]}
+                                alt={product.name}
                             />
                             <div>
                                 <div
@@ -541,6 +543,43 @@ function vehicleSub(o: VehicleOption | undefined): string | undefined {
     return o.priceModifier > 0
         ? `+ ¥${formatPrice(o.priceModifier)}`
         : `${formatPrice(o.priceModifier)} 円`;
+}
+
+/**
+ * Tour thumbnail next to the title. Renders an actual <img> tag (not a
+ * background-image div) so we get an onError event and can swap to the
+ * brand-color gradient when the URL turns out to be broken or invalid.
+ */
+function SelectedTourThumb({ imageUrl, alt }: { imageUrl?: string; alt: string }) {
+    const [broken, setBroken] = useState(false);
+    const ok = !broken && isUsableImageUrl(imageUrl);
+    return (
+        <div
+            style={{
+                aspectRatio: '4/3',
+                borderRadius: 12,
+                overflow: 'hidden',
+                background: FALLBACK_HERO_GRADIENT,
+                position: 'relative',
+            }}
+        >
+            {ok && (
+                <img
+                    src={imageUrl}
+                    alt={alt}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setBroken(true)}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                    }}
+                />
+            )}
+        </div>
+    );
 }
 
 function EmptyHint({ label }: { label: string }) {
