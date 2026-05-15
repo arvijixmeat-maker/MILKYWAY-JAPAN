@@ -55,6 +55,13 @@ interface ApiBanner {
     title?: string;
     subtitle?: string;
     link?: string;
+    // PC-only text overrides. Each falls back to its mobile equivalent above.
+    pc_title?: string;
+    pcTitle?: string;
+    pc_subtitle?: string;
+    pcSubtitle?: string;
+    pc_tag?: string;
+    pcTag?: string;
 }
 
 export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopProps) {
@@ -70,9 +77,14 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                 const raw: ApiBanner[] = Array.isArray(data?.banners) ? data.banners : [];
                 if (raw.length === 0) return FALLBACK_SLIDES;
                 return raw.slice(0, 5).map((b, i): HeroSlide => {
-                    const title = clean(b.title);
-                    const subtitle = clean(b.subtitle);
-                    const tag = clean(b.tag);
+                    // PC-specific text overrides take precedence; mobile values are
+                    // the fallback. Admin can leave PC fields blank to reuse mobile.
+                    const pcTitle = clean(b.pc_title || b.pcTitle);
+                    const pcSubtitle = clean(b.pc_subtitle || b.pcSubtitle);
+                    const pcTag = clean(b.pc_tag || b.pcTag);
+                    const title = pcTitle || clean(b.title);
+                    const subtitle = pcSubtitle || clean(b.subtitle);
+                    const tag = pcTag || clean(b.tag);
                     const lines = title.split('\n');
                     // Prefer the PC-specific wide image when admin uploaded one,
                     // then fall back to the mobile image, then to the bundled fallback.
@@ -83,7 +95,7 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                         tone: (['premium', 'hot', 'new'] as TagTone[])[i % 3],
                         eyebrow: tag || '2026 SEASON',
                         title: lines[0] || FALLBACK_SLIDES[0].title,
-                        title2: lines[1] || subtitle || FALLBACK_SLIDES[0].title2,
+                        title2: lines[1] || (lines.length === 1 ? '' : subtitle) || FALLBACK_SLIDES[0].title2,
                         body: subtitle || FALLBACK_SLIDES[0].body,
                         cta: b.link || '/products',
                     };
@@ -169,12 +181,24 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                     </div>
                     <h1
                         style={{
-                            fontSize: 60,
+                            // Auto-shrink font for long Japanese headlines so we
+                            // don't get ugly mid-word wraps at 60px.
+                            fontSize: (() => {
+                                const longest = Math.max(cur.title.length, cur.title2?.length || 0);
+                                if (longest > 22) return 38;
+                                if (longest > 16) return 46;
+                                if (longest > 12) return 54;
+                                return 60;
+                            })(),
                             fontWeight: 700,
-                            lineHeight: 1.12,
+                            lineHeight: 1.18,
                             margin: 0,
                             letterSpacing: '-0.02em',
                             textShadow: '0 2px 24px rgba(0,0,0,0.3)',
+                            // Japanese has no spaces; prevent mid-word wraps that
+                            // looked like 「果てしない大草原を駆 / ける乗馬ツアー」.
+                            wordBreak: 'keep-all',
+                            overflowWrap: 'break-word',
                         }}
                     >
                         {cur.title}

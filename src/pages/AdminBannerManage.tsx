@@ -11,6 +11,11 @@ interface Banner {
     title: string;
     subtitle: string;
     link?: string;
+    // PC-only text overrides. When blank, PC reuses the mobile equivalents
+    // above. Lets the admin write a shorter headline for PC's 60px font.
+    pcTitle?: string;
+    pcSubtitle?: string;
+    pcTag?: string;
 }
 
 interface QuickLink {
@@ -142,7 +147,10 @@ export const AdminBannerManage: React.FC = () => {
                     setBanners(data.banners.map((b: any) => ({
                         id: b.id, image: b.image, pcImage: b.pc_image || b.pcImage || '',
                         tag: b.tag || 'Premium Trip',
-                        title: b.title, subtitle: b.subtitle, link: b.link
+                        title: b.title, subtitle: b.subtitle, link: b.link,
+                        pcTitle: b.pc_title || b.pcTitle || '',
+                        pcSubtitle: b.pc_subtitle || b.pcSubtitle || '',
+                        pcTag: b.pc_tag || b.pcTag || '',
                     })));
                 }
                 if (data.quickLinks && data.quickLinks.length > 0) {
@@ -178,7 +186,8 @@ export const AdminBannerManage: React.FC = () => {
         const newId = `banner-${Date.now()}`;
         setBanners([...banners, {
             id: newId, image: "", pcImage: "",
-            tag: "", title: "", subtitle: "", link: ""
+            tag: "", title: "", subtitle: "", link: "",
+            pcTitle: "", pcSubtitle: "", pcTag: "",
         }]);
         markUnsaved();
     };
@@ -425,43 +434,94 @@ export const AdminBannerManage: React.FC = () => {
                                     </div>
 
                                     <div className="flex-1 space-y-3 pr-8">
-                                        <div className="grid grid-cols-2 gap-4">
+                                        {/* Mobile (default) text section */}
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-3">
+                                            <div className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-xs">smartphone</span>
+                                                모바일 텍스트 (기본값 — PC에도 자동 적용)
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs text-slate-400 block mb-1">태그 (Tag)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={banner.tag}
+                                                        onChange={(e) => handleBannerChange(banner.id, 'tag', e.target.value)}
+                                                        className="w-full text-sm font-medium border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-slate-400 block mb-1">링크 (Link)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={banner.link || ''}
+                                                        placeholder="/products/..."
+                                                        onChange={(e) => handleBannerChange(banner.id, 'link', e.target.value)}
+                                                        className="w-full text-xs text-blue-500 border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
                                             <div>
-                                                <label className="text-xs text-slate-400 block mb-1">태그 (Tag)</label>
-                                                <input
-                                                    type="text"
-                                                    value={banner.tag}
-                                                    onChange={(e) => handleBannerChange(banner.id, 'tag', e.target.value)}
-                                                    className="w-full text-sm font-medium border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
+                                                <label className="text-xs text-slate-400 block mb-1">제목 (Title)</label>
+                                                <textarea
+                                                    value={banner.title}
+                                                    onChange={(e) => handleBannerChange(banner.id, 'title', e.target.value)}
+                                                    className="w-full text-sm font-bold border-slate-200 rounded px-2 py-1 whitespace-pre-wrap h-14 resize-none focus:ring-1 focus:ring-teal-500 outline-none"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="text-xs text-slate-400 block mb-1">링크 (Link)</label>
+                                                <label className="text-xs text-slate-400 block mb-1">부제목 (Subtitle)</label>
                                                 <input
                                                     type="text"
-                                                    value={banner.link || ''}
-                                                    placeholder="/products/..."
-                                                    onChange={(e) => handleBannerChange(banner.id, 'link', e.target.value)}
-                                                    className="w-full text-xs text-blue-500 border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                                                    value={banner.subtitle}
+                                                    onChange={(e) => handleBannerChange(banner.id, 'subtitle', e.target.value)}
+                                                    className="w-full text-xs text-slate-500 border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
                                                 />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="text-xs text-slate-400 block mb-1">제목 (Title)</label>
-                                            <textarea
-                                                value={banner.title}
-                                                onChange={(e) => handleBannerChange(banner.id, 'title', e.target.value)}
-                                                className="w-full text-sm font-bold border-slate-200 rounded px-2 py-1 whitespace-pre-wrap h-14 resize-none focus:ring-1 focus:ring-teal-500 outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-slate-400 block mb-1">부제목 (Subtitle)</label>
-                                            <input
-                                                type="text"
-                                                value={banner.subtitle}
-                                                onChange={(e) => handleBannerChange(banner.id, 'subtitle', e.target.value)}
-                                                className="w-full text-xs text-slate-500 border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
-                                            />
+
+                                        {/* PC-only override section */}
+                                        <div className="rounded-lg border border-dashed border-teal-300 bg-teal-50/30 p-3 space-y-3">
+                                            <div className="text-[11px] font-bold text-teal-700 flex items-center justify-between">
+                                                <span className="flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-xs">desktop_windows</span>
+                                                    PC 전용 텍스트 (선택 — 비워두면 모바일 텍스트 사용)
+                                                </span>
+                                                <span className="text-[10px] font-normal text-teal-600">
+                                                    PC는 폰트가 커서 모바일과 다른 짧은 문구를 쓰는 것을 추천
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs text-slate-500 block mb-1">PC 태그</label>
+                                                    <input
+                                                        type="text"
+                                                        value={banner.pcTag || ''}
+                                                        placeholder={banner.tag || '(모바일 값 사용)'}
+                                                        onChange={(e) => handleBannerChange(banner.id, 'pcTag', e.target.value)}
+                                                        className="w-full text-sm font-medium border-teal-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-slate-500 block mb-1">PC 제목 (줄바꿈은 Enter로)</label>
+                                                <textarea
+                                                    value={banner.pcTitle || ''}
+                                                    placeholder={banner.title || '(모바일 값 사용)'}
+                                                    onChange={(e) => handleBannerChange(banner.id, 'pcTitle', e.target.value)}
+                                                    className="w-full text-sm font-bold border-teal-200 rounded px-2 py-1 whitespace-pre-wrap h-14 resize-none focus:ring-1 focus:ring-teal-500 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-slate-500 block mb-1">PC 부제목</label>
+                                                <input
+                                                    type="text"
+                                                    value={banner.pcSubtitle || ''}
+                                                    placeholder={banner.subtitle || '(모바일 값 사용)'}
+                                                    onChange={(e) => handleBannerChange(banner.id, 'pcSubtitle', e.target.value)}
+                                                    className="w-full text-xs text-slate-600 border-teal-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
