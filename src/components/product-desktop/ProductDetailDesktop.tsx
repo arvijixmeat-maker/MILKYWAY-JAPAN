@@ -169,8 +169,14 @@ export function ProductDetailDesktop({
     const total = pricePerPerson * people;
     const firstTag = product.tags?.[0];
     const hasOriginal = !!product.originalPrice && product.originalPrice > product.price;
-    const ratingValue = 4.9; // default if no aggregate available
-    const reviewCount = reviews.length || product.bookingCount || 0;
+    // Average rating, derived from the actual reviews array. Mobile + this
+    // page now agree: no reviews = "—" instead of a hardcoded 4.9.
+    const ratingValue = reviews.length > 0
+        ? Math.round(
+            (reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length) * 10
+        ) / 10
+        : 0;
+    const reviewCount = reviews.length;
 
     const scrollToSection = (id: SectionId) => {
         const el = document.getElementById('sec-' + id);
@@ -239,12 +245,16 @@ export function ProductDetailDesktop({
                                     <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{product.duration}</span>
                                 </>
                             )}
-                            <span style={{ width: 4, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--fg-3)' }}>
-                                <MatIcon name="star" size={14} filled color="#facc15" />
-                                <span style={{ fontWeight: 700 }}>{ratingValue}</span>
-                                {reviewCount > 0 && <span style={{ color: 'var(--fg-5)' }}>({reviewCount} 件のレビュー)</span>}
-                            </span>
+                            {reviewCount > 0 && (
+                                <>
+                                    <span style={{ width: 4, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--fg-3)' }}>
+                                        <MatIcon name="star" size={14} filled color="#facc15" />
+                                        <span style={{ fontWeight: 700 }}>{ratingValue.toFixed(1)}</span>
+                                        <span style={{ color: 'var(--fg-5)' }}>({reviewCount} 件のレビュー)</span>
+                                    </span>
+                                </>
+                            )}
                             {(product.bookingCount ?? 0) > 0 && (
                                 <>
                                     <span style={{ width: 4, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
@@ -1743,13 +1753,23 @@ function IncludedBlock({ product }: { product: TourProduct }) {
 
 function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rating: number; count: number }) {
     const [filter, setFilter] = useState<'all' | '5' | 'photo'>('all');
-    const dist = [
-        { s: 5, pct: 82 },
-        { s: 4, pct: 14 },
-        { s: 3, pct: 3 },
-        { s: 2, pct: 1 },
-        { s: 1, pct: 0 },
-    ];
+
+    // Distribution = histogram of real ratings, so 0 reviews stays at 0% across
+    // the board (no more fake 82/14/3/1/0 fixture).
+    const dist = useMemo(() => {
+        const buckets: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        for (const r of reviews) {
+            const rounded = Math.round(Number(r.rating) || 0);
+            if (rounded >= 1 && rounded <= 5) buckets[rounded] += 1;
+        }
+        return ([5, 4, 3, 2, 1] as const).map((s) => ({
+            s,
+            pct: count > 0 ? Math.round((buckets[s] / count) * 100) : 0,
+        }));
+    }, [reviews, count]);
+
+    // Stars to render in the summary (0 when no reviews so we don't fake-glow).
+    const fullStars = Math.round(rating);
 
     const displayed = useMemo(() => {
         if (filter === '5') return reviews.filter((r) => (r.rating || 0) >= 5);
@@ -1770,12 +1790,18 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
                 }}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                    <div style={{ fontSize: 56, fontWeight: 700, color: 'var(--fg-1)', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                        {rating}
+                    <div style={{ fontSize: 56, fontWeight: 700, color: count > 0 ? 'var(--fg-1)' : 'var(--fg-5)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                        {count > 0 ? rating.toFixed(1) : '—'}
                     </div>
                     <div style={{ display: 'flex', gap: 2, marginTop: 8 }}>
                         {Array.from({ length: 5 }).map((_, i) => (
-                            <MatIcon key={i} name="star" size={20} filled color="#facc15" />
+                            <MatIcon
+                                key={i}
+                                name="star"
+                                size={20}
+                                filled={i < fullStars}
+                                color={i < fullStars ? '#facc15' : 'var(--border)'}
+                            />
                         ))}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--fg-4)', marginTop: 10 }}>{count > 0 ? `${count} 件のレビュー` : 'レビュー募集中'}</div>
