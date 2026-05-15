@@ -115,6 +115,13 @@ export interface DayInfoContent {
         dinner?: string;     // 석식 (예: "캠프식")
     };
     accommodation?: string;  // 숙소 (예: "개별화장실과 샤워실이 구비된 디럭스게르")
+    /**
+     * Optional link to a record in the hotels master library. Set when the
+     * admin picks from the picker modal instead of typing free-form text.
+     * `accommodation` always holds the display name (snapshot), so historical
+     * data survives even if the master entry is later edited or deleted.
+     */
+    accommodationHotelId?: string;
 }
 
 export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo';

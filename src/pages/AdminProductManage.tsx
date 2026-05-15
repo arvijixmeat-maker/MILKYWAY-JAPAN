@@ -6,6 +6,8 @@ import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 import type { Category } from '../types/category';
+import type { Hotel } from '../types/hotel';
+import { HotelPickerModal } from '../components/admin/HotelPickerModal';
 
 
 
@@ -982,6 +984,21 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         setFormData({ ...formData, detailBlocks: blocks });
     };
 
+
+    // ─── Hotel picker (opens for a specific itinerary block index) ─────
+    const [hotelPickerForIndex, setHotelPickerForIndex] = useState<number | null>(null);
+    const handleHotelPick = (hotel: Hotel) => {
+        if (hotelPickerForIndex == null) return;
+        const block = formData.itineraryBlocks?.[hotelPickerForIndex];
+        if (block && block.type === 'dayInfo') {
+            updateItineraryBlockContent(hotelPickerForIndex, {
+                ...(block.content as DayInfoContent),
+                accommodation: hotel.name_kr,       // snapshot — survives master deletion
+                accommodationHotelId: hotel.id,     // link for future reference
+            });
+        }
+        setHotelPickerForIndex(null);
+    };
 
     // ─── Bulk image upload (drag&drop multi-file) ─────────────────────
     // Uploads all files in parallel and appends one image block per file.
@@ -2343,8 +2360,30 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             </div>
                                                         </div>
                                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                            <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
-                                                            <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400">🏠 숙소 정보</label>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setHotelPickerForIndex(index)}
+                                                                    className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-bold rounded transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">hotel</span>
+                                                                    호텔 마스터에서 선택
+                                                                </button>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={(block.content as DayInfoContent).accommodation || ''}
+                                                                onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value, accommodationHotelId: undefined })}
+                                                                placeholder="개별화장실과 샤워실이 구비된 디럭스게르 (또는 위 버튼으로 마스터 선택)"
+                                                                className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                                                            />
+                                                            {(block.content as DayInfoContent).accommodationHotelId && (
+                                                                <div className="mt-1.5 text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                                                    <span className="material-symbols-outlined text-xs">link</span>
+                                                                    호텔 마스터에서 선택됨. 직접 입력하면 연결이 해제됩니다.
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -2704,6 +2743,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                         </button>
                     </div>
                 </form>
+
+                {/* Hotel picker modal — opens from any dayInfo block's "호텔 마스터에서 선택" button. */}
+                <HotelPickerModal
+                    open={hotelPickerForIndex != null}
+                    onPick={handleHotelPick}
+                    onClose={() => setHotelPickerForIndex(null)}
+                />
             </div >
         </div >
     );

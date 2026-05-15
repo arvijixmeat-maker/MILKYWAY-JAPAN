@@ -280,3 +280,28 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     is_read INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Hotels — reusable master library for the itinerary editor's
+-- accommodation field. dayInfo.accommodation stores either a free-form
+-- string (legacy) or a hotel id (new) so the picker can resolve back
+-- to the master record.
+CREATE TABLE IF NOT EXISTS hotels (
+    id TEXT PRIMARY KEY NOT NULL,
+    code TEXT DEFAULT '',
+    name_kr TEXT NOT NULL,
+    name_local TEXT DEFAULT '',
+    country TEXT DEFAULT '',
+    city TEXT DEFAULT '',
+    region TEXT DEFAULT '',
+    star_rating INTEGER DEFAULT 0,
+    address TEXT DEFAULT '',
+    latitude REAL,
+    longitude REAL,
+    description TEXT DEFAULT '',
+    website TEXT DEFAULT '',
+    images TEXT DEFAULT '[]',
+    amenities TEXT DEFAULT '[]',
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
