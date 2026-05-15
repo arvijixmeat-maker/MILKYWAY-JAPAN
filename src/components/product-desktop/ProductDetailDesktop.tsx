@@ -1881,73 +1881,25 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
                     まだレビューがありません。最初のレビュアーになりましょう！
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {displayed.slice(0, 6).map((r, i) => (
-                        <div
-                            key={r.id ?? i}
-                            style={{
-                                padding: 22,
-                                background: '#fff',
-                                border: '1px solid var(--border-subtle)',
-                                borderRadius: 16,
-                                boxShadow: 'var(--shadow-toss)',
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                                <div
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 999,
-                                        background: 'var(--primary-tint)',
-                                        color: '#0f766e',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 700,
-                                        fontSize: 14,
-                                    }}
-                                >
-                                    {(r.user_name || r.author || '匿')?.charAt(0)}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>
-                                        {r.user_name || r.author || '匿名'} 様
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                                        <div style={{ display: 'flex', gap: 1 }}>
-                                            {Array.from({ length: 5 }).map((_, j) => (
-                                                <MatIcon
-                                                    key={j}
-                                                    name="star"
-                                                    size={13}
-                                                    filled
-                                                    color={j < (r.rating || 5) ? '#facc15' : '#e2e8f0'}
-                                                />
-                                            ))}
-                                        </div>
-                                        {(r.visit_date || r.visitDate) && (
-                                            <span style={{ fontSize: 11, color: 'var(--fg-5)' }}>{r.visit_date || r.visitDate}</span>
-                                        )}
-                                    </div>
-                                </div>
-                                {r.tag && (
-                                    <span
-                                        style={{
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            color: 'var(--fg-3)',
-                                            padding: '4px 10px',
-                                            background: 'var(--bg-muted)',
-                                            borderRadius: 999,
-                                        }}
-                                    >
-                                        {r.tag}
-                                    </span>
-                                )}
-                            </div>
-                            <div style={{ fontSize: 14, color: 'var(--fg-3)', lineHeight: 1.7 }}>{r.content}</div>
-                        </div>
+                // Horizontal scroll carousel — matches mobile + home design and
+                // lets the section accommodate many reviews without dominating
+                // the page vertically. Card click navigates to the review detail.
+                <div
+                    className="scrollbar-hide"
+                    style={{
+                        display: 'flex',
+                        gap: 16,
+                        overflowX: 'auto',
+                        scrollSnapType: 'x mandatory',
+                        paddingBottom: 6,
+                        marginLeft: -4,
+                        marginRight: -4,
+                        paddingLeft: 4,
+                        paddingRight: 4,
+                    }}
+                >
+                    {displayed.map((r, i) => (
+                        <ReviewCardLink key={r.id ?? i} review={r} />
                     ))}
                 </div>
             )}
@@ -1975,6 +1927,135 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
                 </button>
             )}
         </div>
+    );
+}
+
+/**
+ * Clickable review card used in the product detail page's horizontal carousel.
+ * Click → /reviews/<id> so a long review can be read in full without bloating
+ * the product page. Mobile + home use the same navigation target.
+ */
+function ReviewCardLink({ review: r }: { review: ReviewLike }) {
+    const navigate = useNavigate();
+    const stars = Math.max(0, Math.min(5, Number(r.rating) || 0));
+    const author = r.user_name || r.author || '匿名';
+    const visitDate = r.visit_date || r.visitDate;
+    const handleClick = () => {
+        if (!r.id) return;
+        navigate(`/reviews/${r.id}`);
+    };
+    return (
+        <article
+            onClick={handleClick}
+            role={r.id ? 'button' : undefined}
+            tabIndex={r.id ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (!r.id) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClick();
+                }
+            }}
+            style={{
+                flex: '0 0 340px',
+                scrollSnapAlign: 'start',
+                padding: 22,
+                background: '#fff',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 16,
+                boxShadow: 'var(--shadow-toss)',
+                cursor: r.id ? 'pointer' : 'default',
+                transition: 'all 200ms',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+            onMouseEnter={(e) => {
+                if (!r.id) return;
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 14px 30px -6px rgba(0,0,0,0.12)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = 'var(--shadow-toss)';
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <div
+                    style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 999,
+                        background: 'var(--primary-tint, rgba(15,118,110,0.08))',
+                        color: '#0f766e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: 14,
+                    }}
+                >
+                    {author.charAt(0)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                        style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: 'var(--fg-1)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
+                        {author} 様
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                        <div style={{ display: 'flex', gap: 1 }}>
+                            {Array.from({ length: 5 }).map((_, j) => (
+                                <MatIcon
+                                    key={j}
+                                    name="star"
+                                    size={13}
+                                    filled
+                                    color={j < stars ? '#facc15' : '#e2e8f0'}
+                                />
+                            ))}
+                        </div>
+                        {visitDate && (
+                            <span style={{ fontSize: 11, color: 'var(--fg-5)' }}>{visitDate}</span>
+                        )}
+                    </div>
+                </div>
+            </div>
+            <div
+                style={{
+                    fontSize: 14,
+                    color: 'var(--fg-3)',
+                    lineHeight: 1.7,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 5,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                }}
+            >
+                {r.content}
+            </div>
+            {r.id && (
+                <div
+                    style={{
+                        marginTop: 14,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: '#0f766e',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                    }}
+                >
+                    全文を読む <MatIcon name="arrow_forward" size={14} color="#0f766e" />
+                </div>
+            )}
+        </article>
     );
 }
 
