@@ -1405,6 +1405,13 @@ function Timeline({ product }: { product: TourProduct }) {
                 if (b.type === 'timeline') {
                     const dayNum = dayNumbers[i] ?? 1;
                     const c = b.content as TimelineContent;
+                    // Timeline blocks let admin attach 1+ images per event.
+                    // `images` may be absent on older entries — guard for null.
+                    const imgs = Array.isArray((c as { images?: unknown }).images)
+                        ? ((c as unknown as { images: unknown[] }).images.filter(
+                            (x): x is string => typeof x === 'string'
+                        ))
+                        : [];
                     return (
                         <DayCard
                             key={b.id || String(i)}
@@ -1412,6 +1419,7 @@ function Timeline({ product }: { product: TourProduct }) {
                             dayNumber={dayNum}
                             title={c.title}
                             description={c.description}
+                            images={imgs}
                         />
                     );
                 }
@@ -1458,6 +1466,7 @@ function DayCard({
     description,
     meals,
     accommodation,
+    images,
 }: {
     dayLabel: string;
     dayNumber: number;
@@ -1465,7 +1474,11 @@ function DayCard({
     description?: string;
     meals?: string;
     accommodation?: string;
+    /** Per-block images. Timeline blocks can attach photos that should display
+     *  inline; dayInfo blocks usually don't have any. */
+    images?: string[];
 }) {
+    const photos = (images ?? []).filter((s) => typeof s === 'string' && s.length > 0);
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 24, alignItems: 'flex-start' }}>
             <div
@@ -1507,6 +1520,38 @@ function DayCard({
                 {description && (
                     <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.7, marginBottom: 12, whiteSpace: 'pre-wrap' }}>
                         {description}
+                    </div>
+                )}
+                {photos.length > 0 && (
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns:
+                                photos.length === 1
+                                    ? '1fr'
+                                    : photos.length === 2
+                                        ? 'repeat(2, 1fr)'
+                                        : 'repeat(3, 1fr)',
+                            gap: 8,
+                            margin: '4px 0 14px',
+                        }}
+                    >
+                        {photos.map((src, i) => (
+                            <img
+                                key={i}
+                                src={src}
+                                alt={title ? `${title} - ${i + 1}` : `D${dayNumber} - ${i + 1}`}
+                                loading="lazy"
+                                decoding="async"
+                                style={{
+                                    width: '100%',
+                                    aspectRatio: photos.length === 1 ? '16/9' : '4/3',
+                                    objectFit: 'cover',
+                                    borderRadius: 10,
+                                    display: 'block',
+                                }}
+                            />
+                        ))}
                     </div>
                 )}
                 {(meals || accommodation) && (
