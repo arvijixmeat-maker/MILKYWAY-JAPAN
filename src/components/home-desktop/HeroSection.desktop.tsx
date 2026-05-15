@@ -164,7 +164,7 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                     color: '#fff',
                 }}
             >
-                <div style={{ maxWidth: 620 }}>
+                <div style={{ maxWidth: 780 }}>
                     <div style={{ marginBottom: 22, display: 'flex', alignItems: 'center', gap: 12 }}>
                         <TagChip tone={cur.tone}>{cur.tag}</TagChip>
                         <span
@@ -181,13 +181,19 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                     </div>
                     <h1
                         style={{
-                            // Auto-shrink font for long Japanese headlines so we
-                            // don't get ugly mid-word wraps at 60px.
+                            // Auto-shrink font for long Japanese headlines so each
+                            // admin-entered line actually fits on ONE visual line in
+                            // the 780px text column. Japanese full-width chars are
+                            // ~0.92em wide, so:
+                            //   60px × 0.92 = 55px/char → 780/55 ≈ 14 chars max
+                            //   54px × 0.92 = 50px/char → 780/50 ≈ 15 chars max
+                            //   46px × 0.92 = 42px/char → 780/42 ≈ 18 chars max
+                            //   38px × 0.92 = 35px/char → 780/35 ≈ 22 chars max
                             fontSize: (() => {
                                 const longest = Math.max(cur.title.length, cur.title2?.length || 0);
-                                if (longest > 22) return 38;
-                                if (longest > 16) return 46;
-                                if (longest > 12) return 54;
+                                if (longest > 21) return 36;
+                                if (longest > 17) return 44;
+                                if (longest > 14) return 52;
                                 return 60;
                             })(),
                             fontWeight: 700,
