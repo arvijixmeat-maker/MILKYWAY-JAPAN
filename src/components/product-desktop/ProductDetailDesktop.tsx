@@ -346,13 +346,13 @@ export function ProductDetailDesktop({
                 <div
                     style={{
                         position: 'sticky',
-                        top: 158,
+                        top: 170,
                         zIndex: 30,
                         background: '#fff',
                         margin: '0 -32px 0',
                         padding: '0 32px',
                         borderBottom: '1px solid var(--border-subtle)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                        boxShadow: '0 2px 6px -2px rgba(0,0,0,0.08)',
                     }}
                 >
                     <div className="scrollbar-hide" style={{ display: 'flex', gap: 2, overflowX: 'auto' }}>
@@ -1576,7 +1576,7 @@ function DayTabs({ days }: { days: DayGroup[] }) {
                 borderBottom: '1px solid var(--border-subtle)',
                 overflowX: 'auto',
                 position: 'sticky',
-                top: 200,
+                top: 215,
                 background: '#fff',
                 zIndex: 20,
             }}
