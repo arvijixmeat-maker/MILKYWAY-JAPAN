@@ -41,8 +41,6 @@ export const AdminHotelManage: React.FC = () => {
 
     // Filters
     const [q, setQ] = useState('');
-    const [filterCountry, setFilterCountry] = useState('');
-    const [filterCity, setFilterCity] = useState('');
     const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
 
     // Selected hotel (right pane)
@@ -66,35 +64,18 @@ export const AdminHotelManage: React.FC = () => {
         load();
     }, []);
 
-    // Derive country/city dropdown choices from the loaded list.
-    const countries = useMemo(() => {
-        const s = new Set<string>();
-        hotels.forEach((h) => h.country && s.add(h.country));
-        return Array.from(s).sort();
-    }, [hotels]);
-    const cities = useMemo(() => {
-        const s = new Set<string>();
-        hotels.forEach((h) => {
-            if (filterCountry && h.country !== filterCountry) return;
-            if (h.city) s.add(h.city);
-        });
-        return Array.from(s).sort();
-    }, [hotels, filterCountry]);
-
     const filtered = useMemo(() => {
         return hotels.filter((h) => {
             if (filterActive === 'active' && !h.is_active) return false;
             if (filterActive === 'inactive' && h.is_active) return false;
-            if (filterCountry && h.country !== filterCountry) return false;
-            if (filterCity && h.city !== filterCity) return false;
             if (q) {
                 const needle = q.toLowerCase();
-                const hay = `${h.name_kr} ${h.name_local || ''} ${h.code || ''}`.toLowerCase();
+                const hay = `${h.name_kr} ${h.name_local || ''}`.toLowerCase();
                 if (!hay.includes(needle)) return false;
             }
             return true;
         });
-    }, [hotels, q, filterCountry, filterCity, filterActive]);
+    }, [hotels, q, filterActive]);
 
     const startNew = () => {
         setEditing({ ...EMPTY_HOTEL });
@@ -182,31 +163,15 @@ export const AdminHotelManage: React.FC = () => {
                 <div className="flex-1 p-8 flex gap-6 min-h-0">
                     {/* ─── LEFT: List + filters ─── */}
                     <div className="flex-1 min-w-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 flex-wrap">
                             <input
                                 type="text"
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
-                                placeholder="코드 또는 호텔명 검색"
-                                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none col-span-2"
+                                placeholder="호텔명으로 검색"
+                                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                             />
-                            <select
-                                value={filterCountry}
-                                onChange={(e) => { setFilterCountry(e.target.value); setFilterCity(''); }}
-                                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                            >
-                                <option value="">국가 (전체)</option>
-                                {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                            <select
-                                value={filterCity}
-                                onChange={(e) => setFilterCity(e.target.value)}
-                                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                            >
-                                <option value="">도시 (전체)</option>
-                                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                            <div className="col-span-2 md:col-span-4 flex items-center gap-2 text-sm">
+                            <div className="flex items-center gap-2 text-sm">
                                 <span className="text-slate-500 dark:text-slate-400">사용여부:</span>
                                 {([
                                     { v: 'all', l: '전체' },
@@ -225,10 +190,10 @@ export const AdminHotelManage: React.FC = () => {
                                         {opt.l}
                                     </button>
                                 ))}
-                                <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
-                                    전체 {hotels.length}개 중 <strong className="text-slate-900 dark:text-white">{filtered.length}</strong>개 표시
-                                </span>
                             </div>
+                            <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
+                                전체 {hotels.length}개 중 <strong className="text-slate-900 dark:text-white">{filtered.length}</strong>개 표시
+                            </span>
                         </div>
 
                         <div className="flex-1 overflow-auto">
@@ -242,12 +207,9 @@ export const AdminHotelManage: React.FC = () => {
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                                         <tr className="text-xs text-slate-500 dark:text-slate-400">
-                                            <th className="text-left px-4 py-3 font-medium">코드</th>
                                             <th className="text-left px-4 py-3 font-medium">호텔명</th>
-                                            <th className="text-left px-4 py-3 font-medium">국가</th>
-                                            <th className="text-left px-4 py-3 font-medium">도시</th>
-                                            <th className="text-center px-4 py-3 font-medium">★</th>
-                                            <th className="text-center px-4 py-3 font-medium">사용</th>
+                                            <th className="text-left px-4 py-3 font-medium">주소</th>
+                                            <th className="text-center px-4 py-3 font-medium w-24">사용</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -258,19 +220,14 @@ export const AdminHotelManage: React.FC = () => {
                                                 className={`border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors ${editing?.id === h.id ? 'bg-teal-50/60 dark:bg-teal-900/30' : ''
                                                     }`}
                                             >
-                                                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                                                    {h.code || '-'}
-                                                </td>
                                                 <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                                                     {h.name_kr}
                                                     {h.name_local && (
                                                         <span className="ml-2 text-xs font-normal text-slate-500">{h.name_local}</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{h.country || '-'}</td>
-                                                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{h.city || '-'}</td>
-                                                <td className="px-4 py-3 text-center text-xs text-slate-600 dark:text-slate-300">
-                                                    {(h.star_rating ?? 0) > 0 ? '★'.repeat(h.star_rating!) : '-'}
+                                                <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
+                                                    {h.address || '-'}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${h.is_active
@@ -324,78 +281,25 @@ export const AdminHotelManage: React.FC = () => {
                             </div>
 
                             <div className="flex-1 overflow-auto p-4 space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Field label="명칭 (한글)" required>
-                                        <input
-                                            type="text"
-                                            value={editing.name_kr}
-                                            onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
-                                            placeholder="마리나베이샌즈호텔"
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                    <Field label="명칭 (현지/영문)">
-                                        <input
-                                            type="text"
-                                            value={editing.name_local || ''}
-                                            onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
-                                            placeholder="Marina Bay Sands"
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                </div>
+                                <Field label="명칭 (한글)" required>
+                                    <input
+                                        type="text"
+                                        value={editing.name_kr}
+                                        onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
+                                        placeholder="마리나베이샌즈호텔"
+                                        className={inputCls}
+                                    />
+                                </Field>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Field label="코드 (선택)">
-                                        <input
-                                            type="text"
-                                            value={editing.code || ''}
-                                            onChange={(e) => setEditing({ ...editing, code: e.target.value })}
-                                            placeholder="HS40530"
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                    <Field label="별점 (1~5, 0=미지정)">
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            max={5}
-                                            value={editing.star_rating ?? 0}
-                                            onChange={(e) => setEditing({ ...editing, star_rating: Number(e.target.value) })}
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-3">
-                                    <Field label="지역">
-                                        <input
-                                            type="text"
-                                            value={editing.region || ''}
-                                            onChange={(e) => setEditing({ ...editing, region: e.target.value })}
-                                            placeholder="아시아"
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                    <Field label="국가">
-                                        <input
-                                            type="text"
-                                            value={editing.country || ''}
-                                            onChange={(e) => setEditing({ ...editing, country: e.target.value })}
-                                            placeholder="싱가포르"
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                    <Field label="도시">
-                                        <input
-                                            type="text"
-                                            value={editing.city || ''}
-                                            onChange={(e) => setEditing({ ...editing, city: e.target.value })}
-                                            placeholder="싱가포르"
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                </div>
+                                <Field label="명칭 (현지/영문)">
+                                    <input
+                                        type="text"
+                                        value={editing.name_local || ''}
+                                        onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
+                                        placeholder="Marina Bay Sands (선택)"
+                                        className={inputCls}
+                                    />
+                                </Field>
 
                                 <Field label="주소">
                                     <input
@@ -403,47 +307,6 @@ export const AdminHotelManage: React.FC = () => {
                                         value={editing.address || ''}
                                         onChange={(e) => setEditing({ ...editing, address: e.target.value })}
                                         placeholder="10 Bayfront Ave, Singapore 018956"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Field label="위도 (선택)">
-                                        <input
-                                            type="number"
-                                            step="0.000001"
-                                            value={editing.latitude ?? ''}
-                                            onChange={(e) =>
-                                                setEditing({
-                                                    ...editing,
-                                                    latitude: e.target.value === '' ? null : Number(e.target.value),
-                                                })
-                                            }
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                    <Field label="경도 (선택)">
-                                        <input
-                                            type="number"
-                                            step="0.000001"
-                                            value={editing.longitude ?? ''}
-                                            onChange={(e) =>
-                                                setEditing({
-                                                    ...editing,
-                                                    longitude: e.target.value === '' ? null : Number(e.target.value),
-                                                })
-                                            }
-                                            className={inputCls}
-                                        />
-                                    </Field>
-                                </div>
-
-                                <Field label="웹사이트">
-                                    <input
-                                        type="url"
-                                        value={editing.website || ''}
-                                        onChange={(e) => setEditing({ ...editing, website: e.target.value })}
-                                        placeholder="https://..."
                                         className={inputCls}
                                     />
                                 </Field>

@@ -28,8 +28,6 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
     const [hotels, setHotels] = useState<Hotel[]>([]);
     const [loading, setLoading] = useState(false);
     const [q, setQ] = useState('');
-    const [filterCountry, setFilterCountry] = useState('');
-    const [filterCity, setFilterCity] = useState('');
 
     useEffect(() => {
         if (!open) return;
@@ -47,39 +45,20 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
             }
         };
         load();
-        // Reset filters each time the modal opens so admin starts fresh.
         setQ('');
-        setFilterCountry('');
-        setFilterCity('');
         return () => { cancelled = true; };
     }, [open]);
 
-    const countries = useMemo(() => {
-        const s = new Set<string>();
-        hotels.forEach((h) => h.country && s.add(h.country));
-        return Array.from(s).sort();
-    }, [hotels]);
-    const cities = useMemo(() => {
-        const s = new Set<string>();
-        hotels.forEach((h) => {
-            if (filterCountry && h.country !== filterCountry) return;
-            if (h.city) s.add(h.city);
-        });
-        return Array.from(s).sort();
-    }, [hotels, filterCountry]);
-
     const filtered = useMemo(() => {
         return hotels.filter((h) => {
-            if (filterCountry && h.country !== filterCountry) return false;
-            if (filterCity && h.city !== filterCity) return false;
             if (q) {
                 const needle = q.toLowerCase();
-                const hay = `${h.name_kr} ${h.name_local || ''} ${h.code || ''}`.toLowerCase();
+                const hay = `${h.name_kr} ${h.name_local || ''}`.toLowerCase();
                 if (!hay.includes(needle)) return false;
             }
             return true;
         });
-    }, [hotels, q, filterCountry, filterCity]);
+    }, [hotels, q]);
 
     if (!open) return null;
 
@@ -110,31 +89,15 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
                 </div>
 
                 {/* Filter bar */}
-                <div className="p-4 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <input
                         type="text"
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
-                        placeholder="코드 또는 호텔명 검색"
+                        placeholder="호텔명으로 검색"
                         autoFocus
-                        className="col-span-2 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                     />
-                    <select
-                        value={filterCountry}
-                        onChange={(e) => { setFilterCountry(e.target.value); setFilterCity(''); }}
-                        className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                    >
-                        <option value="">국가 (전체)</option>
-                        {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <select
-                        value={filterCity}
-                        onChange={(e) => setFilterCity(e.target.value)}
-                        className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                    >
-                        <option value="">도시 (전체)</option>
-                        {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
                 </div>
 
                 {/* List */}
@@ -151,12 +114,9 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0">
                                 <tr className="text-xs text-slate-500 dark:text-slate-400">
-                                    <th className="text-left px-4 py-2.5 font-medium">코드</th>
                                     <th className="text-left px-4 py-2.5 font-medium">호텔명</th>
-                                    <th className="text-left px-4 py-2.5 font-medium">국가</th>
-                                    <th className="text-left px-4 py-2.5 font-medium">도시</th>
-                                    <th className="text-center px-4 py-2.5 font-medium">★</th>
-                                    <th className="text-right px-4 py-2.5 font-medium">선택</th>
+                                    <th className="text-left px-4 py-2.5 font-medium">주소</th>
+                                    <th className="text-right px-4 py-2.5 font-medium w-24">선택</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -166,19 +126,14 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
                                         onClick={() => onPick(h)}
                                         className="border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors"
                                     >
-                                        <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                                            {h.code || '-'}
-                                        </td>
                                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                                             {h.name_kr}
                                             {h.name_local && (
                                                 <span className="ml-2 text-xs font-normal text-slate-500">{h.name_local}</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{h.country || '-'}</td>
-                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{h.city || '-'}</td>
-                                        <td className="px-4 py-3 text-center text-xs text-slate-600 dark:text-slate-300">
-                                            {(h.star_rating ?? 0) > 0 ? '★'.repeat(h.star_rating!) : '-'}
+                                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
+                                            {h.address || '-'}
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <span className="inline-block px-3 py-1 rounded bg-teal-500 text-white text-xs font-bold">
