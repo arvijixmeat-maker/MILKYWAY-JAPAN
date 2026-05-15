@@ -15,7 +15,6 @@ import { HeroSectionDesktop } from '../components/home-desktop/HeroSection.deskt
 import { QuickLinksRowDesktop } from '../components/home-desktop/QuickLinksRow.desktop';
 import { ThemeTabsBarDesktop } from '../components/home-desktop/ThemeTabsBar.desktop';
 import { CategorySectionDesktop } from '../components/home-desktop/CategorySection.desktop';
-import { PromoStripDesktop } from '../components/home-desktop/PromoStrip.desktop';
 import { MagazineSectionDesktop } from '../components/home-desktop/MagazineSection.desktop';
 import { ReviewSectionDesktop } from '../components/home-desktop/ReviewSection.desktop';
 
@@ -96,8 +95,6 @@ export const Home: React.FC = () => {
                         products={data.products}
                     />
                 ))}
-
-                <PromoStripDesktop />
 
                 {!isLoading && data.categories.slice(2).map((category) => (
                     <CategorySectionDesktop
