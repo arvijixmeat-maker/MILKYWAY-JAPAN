@@ -339,20 +339,21 @@ export function ProductDetailDesktop({
                     ))}
                 </div>
 
-                {/* In-page sticky tab nav */}
+                {/* In-page sticky tab nav — visually subordinate to the site
+                    header above. Slimmer padding, smaller font, subtle grey
+                    background so it doesn't compete with the main nav. */}
                 <div
                     style={{
                         position: 'sticky',
                         top: 158,
                         zIndex: 30,
-                        background: '#fff',
+                        background: 'var(--bg-muted, #f8fafc)',
                         margin: '0 -32px 0',
                         padding: '0 32px',
-                        borderTop: '1px solid var(--border-subtle)',
                         borderBottom: '1px solid var(--border-subtle)',
                     }}
                 >
-                    <div className="scrollbar-hide" style={{ display: 'flex', gap: 4, overflowX: 'auto' }}>
+                    <div className="scrollbar-hide" style={{ display: 'flex', gap: 2, overflowX: 'auto' }}>
                         {visibleSections.map((s) => {
                             const on = activeSec === s.id;
                             return (
@@ -363,15 +364,22 @@ export function ProductDetailDesktop({
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        padding: '16px 18px',
+                                        padding: '10px 14px',
                                         cursor: 'pointer',
-                                        fontSize: 14,
+                                        fontSize: 13,
                                         fontWeight: on ? 700 : 500,
-                                        color: on ? 'var(--fg-1)' : 'var(--fg-4)',
+                                        color: on ? '#0f766e' : 'var(--fg-4)',
                                         borderBottom: on ? '2px solid #0f766e' : '2px solid transparent',
                                         marginBottom: -1,
                                         fontFamily: 'inherit',
                                         whiteSpace: 'nowrap',
+                                        transition: 'color 120ms',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!on) e.currentTarget.style.color = 'var(--fg-2)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!on) e.currentTarget.style.color = 'var(--fg-4)';
                                     }}
                                 >
                                     {s.label}
