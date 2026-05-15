@@ -27,16 +27,13 @@ interface ProductDetailDesktopProps {
     contentWidth?: number;
 }
 
-type SectionId = 'overview' | 'highlights' | 'details' | 'itinerary' | 'options' | 'guide' | 'location' | 'included' | 'reviews' | 'faq';
+type SectionId = 'overview' | 'highlights' | 'details' | 'itinerary' | 'included' | 'reviews' | 'faq';
 
 const ALL_SECTIONS: { id: SectionId; label: string }[] = [
     { id: 'overview', label: '概要' },
     { id: 'highlights', label: 'ハイライト' },
     { id: 'details', label: '詳細情報' },
     { id: 'itinerary', label: '詳細日程' },
-    { id: 'options', label: 'プラン・オプション' },
-    { id: 'guide', label: 'ガイド紹介' },
-    { id: 'location', label: '目的地' },
     { id: 'included', label: '含まれるもの' },
     { id: 'reviews', label: 'レビュー' },
     { id: 'faq', label: 'ご注意・FAQ' },
@@ -110,19 +107,13 @@ export function ProductDetailDesktop({
     const hasItineraryContent =
         (product.itineraryBlocks && product.itineraryBlocks.some(isMeaningfulItineraryBlock)) ||
         (product.itineraryImages && product.itineraryImages.length > 0);
-    const hasOptionsContent =
-        (product.pricingOptions && product.pricingOptions.length > 0) ||
-        (product.accommodationOptions && product.accommodationOptions.length > 0) ||
-        (product.vehicleOptions && product.vehicleOptions.length > 0);
-
     const visibleSections = useMemo(
         () => ALL_SECTIONS.filter((s) => {
             if (s.id === 'details') return hasDetailContent;
             if (s.id === 'itinerary') return hasItineraryContent;
-            if (s.id === 'options') return hasOptionsContent;
             return true;
         }),
-        [hasDetailContent, hasItineraryContent, hasOptionsContent]
+        [hasDetailContent, hasItineraryContent]
     );
 
     // Scroll observers (sticky bar + active section)
@@ -443,19 +434,11 @@ export function ProductDetailDesktop({
                             </Section>
                         )}
 
-                        {hasOptionsContent && (
-                            <Section id="options" title="プラン・オプション" eyebrow="Pricing & Options">
-                                <OptionsBlock product={product} />
-                            </Section>
-                        )}
-
-                        <Section id="guide" title="ガイド紹介" eyebrow="Meet Your Guide">
-                            <GuideCard />
-                        </Section>
-
-                        <Section id="location" title="目的地" eyebrow="Destinations on This Tour">
-                            <LocationBlock product={product} />
-                        </Section>
+                        {/* プラン・オプション (options), ガイド紹介 (guide),
+                            目的地 (location) sections removed per admin request.
+                            The data still exists on TourProduct and the booking
+                            sidebar uses pricingOptions, so removing only the
+                            display sections is safe. */}
 
                         <Section id="included" title="含まれるもの・含まれないもの" eyebrow="What's Included">
                             <IncludedBlock product={product} />
