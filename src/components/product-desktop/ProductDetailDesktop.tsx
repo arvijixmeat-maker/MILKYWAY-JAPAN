@@ -300,7 +300,7 @@ export function ProductDetailDesktop({
                 <div
                     style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
                         gap: 12,
                         marginBottom: 36,
                         padding: '20px 24px',
@@ -311,7 +311,6 @@ export function ProductDetailDesktop({
                 >
                     {[
                         { i: 'calendar_month', k: '期間', v: product.duration || '日程相談' },
-                        { i: 'event_available', k: '出発', v: '毎週 水・金' },
                         { i: 'translate', k: '言語', v: '日本語専属' },
                         { i: 'group', k: '最少催行', v: '2 名様〜' },
                         { i: 'verified', k: '含むもの', v: '食事 + 宿泊' },
@@ -729,7 +728,7 @@ export function ProductDetailDesktop({
                                 {product.name}
                             </div>
                             <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 2 }}>
-                                {date} ・ 大人 {people} 名
+                                大人 {people} 名 ・ お一人様 ¥{pricePerPerson.toLocaleString()}
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
