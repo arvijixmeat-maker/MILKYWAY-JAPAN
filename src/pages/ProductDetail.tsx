@@ -14,6 +14,7 @@ import { ProductDetailDesktop } from '../components/product-desktop/ProductDetai
 import { useGuideIntro } from '../hooks/useGuideIntro';
 import { DestinationsMap } from '../components/desktop-primitives/DestinationsMap';
 import { extractPlacesFromItinerary } from '../constants/mongoliaPlaces';
+import { MobileItineraryTimeline } from '../components/product/MobileItineraryTimeline';
 
 import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
 
@@ -929,96 +930,14 @@ export const ProductDetail: React.FC = () => {
             </div>
             )}
 
-            {/* Itinerary Section */}
+            {/* Itinerary Section — new tab/spine timeline. Handles dayInfo,
+                timeline events with images, hotel + meals per day, and falls
+                back to flat image stack for legacy image-only products. */}
             {hasItineraryContent && (
-            <div className="bg-white dark:bg-background-dark mt-2" id="itinerary">
-                <h3 className="text-lg font-bold mb-6 px-6 pt-6">{t('product_detail.itinerary_title')}</h3>
-
-                {product.itineraryBlocks && product.itineraryBlocks.length > 0 ? (
-                    <div className="space-y-8 pb-8">
-                        {product.itineraryBlocks.map(block => {
-                            if (block.type === 'image') {
-                                return (
-                                    <img
-                                        key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'productItinerary')}
-                                        alt="Itinerary info"
-                                        className="w-full h-auto"
-                                        loading="lazy"
-                                        decoding="async"
-                                        onError={hideBrokenImage}
-                                    />
-                                );
-                            } else if (block.type === 'slide') {
-                                const slide = block.content as DetailSlide;
-                                return (
-                                    <div key={block.id} className="space-y-3 px-6">
-                                        {slide.title && (
-                                            <h4 className="font-bold text-base px-1">{slide.title}</h4>
-                                        )}
-                                        <div className="flex overflow-x-auto pb-4 gap-3 snap-x snap-mandatory scrollbar-hide -mx-6 px-6">
-                                            {slide.images.map((img, imgIdx) => (
-                                                <div
-                                                    key={imgIdx}
-                                                    className="relative shrink-0 w-[85%] snap-center"
-                                                >
-                                                    <img
-                                                        src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                        alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
-                                                        className="w-full h-auto rounded-xl shadow-sm"
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        onError={hideBrokenImage}
-                                                    />
-                                                    <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                                                        {imgIdx + 1} / {slide.images.length}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {slide.description && (
-                                            <p className="text-sm text-gray-600 dark:text-gray-400 px-1 leading-relaxed">
-                                                {slide.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            } else if (block.type === 'divider') {
-                                const divider = block.content as DividerContent;
-                                return (
-                                    <div
-                                        key={block.id}
-                                        style={{ height: `${divider.height}px` }}
-                                        className={`w-full flex items-center justify-center ${divider.style === 'line'
-                                            ? 'border-b border-gray-200 dark:border-gray-700'
-                                            : ''
-                                            }`}
-                                    />
-                                );
-                            }
-                            // Unknown block type — log and skip so the page doesn't render blank.
-                            if (import.meta.env.DEV) {
-                                console.warn('[ProductDetail] Unknown itinerary block type:', block.type, block);
-                            }
-                            return null;
-                        })}
-                    </div>
-                ) : (
-                    <div className="space-y-0">
-                        {product.itineraryImages!.map((img, index) => (
-                            <img
-                                key={index}
-                                src={getOptimizedImageUrl(img, 'productItinerary')}
-                                alt={`Itinerary ${index + 1}`}
-                                className="w-full h-auto"
-                                loading="lazy"
-                                decoding="async"
-                                onError={hideBrokenImage}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
+                <div className="bg-white dark:bg-background-dark mt-2 px-6 pt-6 pb-8" id="itinerary">
+                    <h3 className="text-lg font-bold mb-4">{t('product_detail.itinerary_title')}</h3>
+                    <MobileItineraryTimeline product={product} />
+                </div>
             )}
 
             {/* Customer Reviews Section */}
