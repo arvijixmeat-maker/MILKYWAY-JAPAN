@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { ReservationCompleteDesktop } from '../components/reservation-desktop/ReservationCompleteDesktop';
 
 export const ReservationComplete: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const isDesktop = useIsDesktop();
     const [reservation, setReservation] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -45,6 +48,18 @@ export const ReservationComplete: React.FC = () => {
     if (!reservation) return null;
 
     const { price_breakdown } = reservation;
+
+    // Desktop: render the wizard's final step. Mobile UI untouched.
+    if (isDesktop) {
+        return (
+            <ReservationCompleteDesktop
+                productName={reservation.product_name || ''}
+                email={reservation.customer_info?.email || ''}
+                total={price_breakdown?.total || 0}
+                deposit={price_breakdown?.deposit || 0}
+            />
+        );
+    }
 
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
