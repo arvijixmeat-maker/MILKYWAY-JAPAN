@@ -169,8 +169,14 @@ export function ProductDetailDesktop({
     const total = pricePerPerson * people;
     const firstTag = product.tags?.[0];
     const hasOriginal = !!product.originalPrice && product.originalPrice > product.price;
-    const ratingValue = 4.9; // default if no aggregate available
-    const reviewCount = reviews.length || product.bookingCount || 0;
+    // Average rating, derived from the actual reviews array. Mobile + this
+    // page now agree: no reviews = "—" instead of a hardcoded 4.9.
+    const ratingValue = reviews.length > 0
+        ? Math.round(
+            (reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length) * 10
+        ) / 10
+        : 0;
+    const reviewCount = reviews.length;
 
     const scrollToSection = (id: SectionId) => {
         const el = document.getElementById('sec-' + id);
@@ -239,12 +245,16 @@ export function ProductDetailDesktop({
                                     <span style={{ fontSize: 12, color: 'var(--fg-3)' }}>{product.duration}</span>
                                 </>
                             )}
-                            <span style={{ width: 4, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--fg-3)' }}>
-                                <MatIcon name="star" size={14} filled color="#facc15" />
-                                <span style={{ fontWeight: 700 }}>{ratingValue}</span>
-                                {reviewCount > 0 && <span style={{ color: 'var(--fg-5)' }}>({reviewCount} 件のレビュー)</span>}
-                            </span>
+                            {reviewCount > 0 && (
+                                <>
+                                    <span style={{ width: 4, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--fg-3)' }}>
+                                        <MatIcon name="star" size={14} filled color="#facc15" />
+                                        <span style={{ fontWeight: 700 }}>{ratingValue.toFixed(1)}</span>
+                                        <span style={{ color: 'var(--fg-5)' }}>({reviewCount} 件のレビュー)</span>
+                                    </span>
+                                </>
+                            )}
                             {(product.bookingCount ?? 0) > 0 && (
                                 <>
                                     <span style={{ width: 4, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
@@ -1743,13 +1753,23 @@ function IncludedBlock({ product }: { product: TourProduct }) {
 
 function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rating: number; count: number }) {
     const [filter, setFilter] = useState<'all' | '5' | 'photo'>('all');
-    const dist = [
-        { s: 5, pct: 82 },
-        { s: 4, pct: 14 },
-        { s: 3, pct: 3 },
-        { s: 2, pct: 1 },
-        { s: 1, pct: 0 },
-    ];
+
+    // Distribution = histogram of real ratings, so 0 reviews stays at 0% across
+    // the board (no more fake 82/14/3/1/0 fixture).
+    const dist = useMemo(() => {
+        const buckets: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        for (const r of reviews) {
+            const rounded = Math.round(Number(r.rating) || 0);
+            if (rounded >= 1 && rounded <= 5) buckets[rounded] += 1;
+        }
+        return ([5, 4, 3, 2, 1] as const).map((s) => ({
+            s,
+            pct: count > 0 ? Math.round((buckets[s] / count) * 100) : 0,
+        }));
+    }, [reviews, count]);
+
+    // Stars to render in the summary (0 when no reviews so we don't fake-glow).
+    const fullStars = Math.round(rating);
 
     const displayed = useMemo(() => {
         if (filter === '5') return reviews.filter((r) => (r.rating || 0) >= 5);
@@ -1770,12 +1790,18 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
                 }}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                    <div style={{ fontSize: 56, fontWeight: 700, color: 'var(--fg-1)', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                        {rating}
+                    <div style={{ fontSize: 56, fontWeight: 700, color: count > 0 ? 'var(--fg-1)' : 'var(--fg-5)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                        {count > 0 ? rating.toFixed(1) : '—'}
                     </div>
                     <div style={{ display: 'flex', gap: 2, marginTop: 8 }}>
                         {Array.from({ length: 5 }).map((_, i) => (
-                            <MatIcon key={i} name="star" size={20} filled color="#facc15" />
+                            <MatIcon
+                                key={i}
+                                name="star"
+                                size={20}
+                                filled={i < fullStars}
+                                color={i < fullStars ? '#facc15' : 'var(--border)'}
+                            />
                         ))}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--fg-4)', marginTop: 10 }}>{count > 0 ? `${count} 件のレビュー` : 'レビュー募集中'}</div>
@@ -1855,73 +1881,25 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
                     まだレビューがありません。最初のレビュアーになりましょう！
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {displayed.slice(0, 6).map((r, i) => (
-                        <div
-                            key={r.id ?? i}
-                            style={{
-                                padding: 22,
-                                background: '#fff',
-                                border: '1px solid var(--border-subtle)',
-                                borderRadius: 16,
-                                boxShadow: 'var(--shadow-toss)',
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                                <div
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 999,
-                                        background: 'var(--primary-tint)',
-                                        color: '#0f766e',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 700,
-                                        fontSize: 14,
-                                    }}
-                                >
-                                    {(r.user_name || r.author || '匿')?.charAt(0)}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>
-                                        {r.user_name || r.author || '匿名'} 様
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                                        <div style={{ display: 'flex', gap: 1 }}>
-                                            {Array.from({ length: 5 }).map((_, j) => (
-                                                <MatIcon
-                                                    key={j}
-                                                    name="star"
-                                                    size={13}
-                                                    filled
-                                                    color={j < (r.rating || 5) ? '#facc15' : '#e2e8f0'}
-                                                />
-                                            ))}
-                                        </div>
-                                        {(r.visit_date || r.visitDate) && (
-                                            <span style={{ fontSize: 11, color: 'var(--fg-5)' }}>{r.visit_date || r.visitDate}</span>
-                                        )}
-                                    </div>
-                                </div>
-                                {r.tag && (
-                                    <span
-                                        style={{
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            color: 'var(--fg-3)',
-                                            padding: '4px 10px',
-                                            background: 'var(--bg-muted)',
-                                            borderRadius: 999,
-                                        }}
-                                    >
-                                        {r.tag}
-                                    </span>
-                                )}
-                            </div>
-                            <div style={{ fontSize: 14, color: 'var(--fg-3)', lineHeight: 1.7 }}>{r.content}</div>
-                        </div>
+                // Horizontal scroll carousel — matches mobile + home design and
+                // lets the section accommodate many reviews without dominating
+                // the page vertically. Card click navigates to the review detail.
+                <div
+                    className="scrollbar-hide"
+                    style={{
+                        display: 'flex',
+                        gap: 16,
+                        overflowX: 'auto',
+                        scrollSnapType: 'x mandatory',
+                        paddingBottom: 6,
+                        marginLeft: -4,
+                        marginRight: -4,
+                        paddingLeft: 4,
+                        paddingRight: 4,
+                    }}
+                >
+                    {displayed.map((r, i) => (
+                        <ReviewCardLink key={r.id ?? i} review={r} />
                     ))}
                 </div>
             )}
@@ -1949,6 +1927,135 @@ function ReviewsBlockV2({ reviews, rating, count }: { reviews: ReviewLike[]; rat
                 </button>
             )}
         </div>
+    );
+}
+
+/**
+ * Clickable review card used in the product detail page's horizontal carousel.
+ * Click → /reviews/<id> so a long review can be read in full without bloating
+ * the product page. Mobile + home use the same navigation target.
+ */
+function ReviewCardLink({ review: r }: { review: ReviewLike }) {
+    const navigate = useNavigate();
+    const stars = Math.max(0, Math.min(5, Number(r.rating) || 0));
+    const author = r.user_name || r.author || '匿名';
+    const visitDate = r.visit_date || r.visitDate;
+    const handleClick = () => {
+        if (!r.id) return;
+        navigate(`/reviews/${r.id}`);
+    };
+    return (
+        <article
+            onClick={handleClick}
+            role={r.id ? 'button' : undefined}
+            tabIndex={r.id ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (!r.id) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClick();
+                }
+            }}
+            style={{
+                flex: '0 0 340px',
+                scrollSnapAlign: 'start',
+                padding: 22,
+                background: '#fff',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 16,
+                boxShadow: 'var(--shadow-toss)',
+                cursor: r.id ? 'pointer' : 'default',
+                transition: 'all 200ms',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+            onMouseEnter={(e) => {
+                if (!r.id) return;
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 14px 30px -6px rgba(0,0,0,0.12)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = 'var(--shadow-toss)';
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                <div
+                    style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 999,
+                        background: 'var(--primary-tint, rgba(15,118,110,0.08))',
+                        color: '#0f766e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: 14,
+                    }}
+                >
+                    {author.charAt(0)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                        style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: 'var(--fg-1)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
+                        {author} 様
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                        <div style={{ display: 'flex', gap: 1 }}>
+                            {Array.from({ length: 5 }).map((_, j) => (
+                                <MatIcon
+                                    key={j}
+                                    name="star"
+                                    size={13}
+                                    filled
+                                    color={j < stars ? '#facc15' : '#e2e8f0'}
+                                />
+                            ))}
+                        </div>
+                        {visitDate && (
+                            <span style={{ fontSize: 11, color: 'var(--fg-5)' }}>{visitDate}</span>
+                        )}
+                    </div>
+                </div>
+            </div>
+            <div
+                style={{
+                    fontSize: 14,
+                    color: 'var(--fg-3)',
+                    lineHeight: 1.7,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 5,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                }}
+            >
+                {r.content}
+            </div>
+            {r.id && (
+                <div
+                    style={{
+                        marginTop: 14,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: '#0f766e',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                    }}
+                >
+                    全文を読む <MatIcon name="arrow_forward" size={14} color="#0f766e" />
+                </div>
+            )}
+        </article>
     );
 }
 
