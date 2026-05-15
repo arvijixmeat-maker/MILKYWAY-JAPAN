@@ -215,11 +215,13 @@ function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: n
                 </span>
             </div>
 
-            {/* Spine area */}
-            <div className="relative pl-8">
-                {/* Slightly bolder line so it visibly threads through dots */}
+            {/* Spine area — same alignment trick as PC: line at the *center*
+                of the 32px icon column inside each row's `grid-cols-[32px_1fr]`
+                layout. NO padding-left on this container, otherwise the line
+                drifts and stops threading through the icons. */}
+            <div className="relative">
                 <div
-                    className="absolute left-[11px] top-1 bottom-1 w-0.5 bg-gray-300 dark:bg-gray-600"
+                    className="absolute left-[15px] top-1 bottom-1 w-0.5 bg-gray-300 dark:bg-gray-600"
                     aria-hidden
                 />
 
@@ -276,14 +278,10 @@ function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: n
 // Region/city header row inline with spine — bigger pin, no card chrome.
 function LocationHeaderRow({ title, description }: { title: string; description: string }) {
     return (
-        <div className="relative mb-5 last:mb-0">
-            <div
-                className="absolute -left-[26px] flex items-center justify-center"
-                style={{ top: 2 }}
-            >
+        <div className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
+            <div className="flex items-start justify-center pt-0.5 relative z-10">
                 <span
-                    className="w-7 h-7 rounded-full bg-white dark:bg-background-dark border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
-                    style={{ zIndex: 1 }}
+                    className="w-7 h-7 rounded-full bg-white dark:bg-background-dark border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center -ml-1.5"
                 >
                     <span
                         className="material-symbols-outlined text-gray-500 dark:text-gray-400"
@@ -293,7 +291,7 @@ function LocationHeaderRow({ title, description }: { title: string; description:
                     </span>
                 </span>
             </div>
-            <div>
+            <div className="pt-1">
                 {title && (
                     <div className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">
                         {title}
@@ -310,6 +308,8 @@ function LocationHeaderRow({ title, description }: { title: string; description:
 }
 
 // ─── Generic spine row (icon column + content) ────────────────────────
+// Layout matches LocationHeaderRow: grid-cols-[32px_1fr]. The 32px column
+// centers its icon at x=16, which is exactly where the spine line sits.
 function SpineRow({
     icon,
     children,
@@ -319,15 +319,14 @@ function SpineRow({
     children: React.ReactNode;
 }) {
     return (
-        <div className="relative mb-5 last:mb-0">
+        <div className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
             <div
-                className="absolute -left-[24px] flex items-center justify-center"
-                style={{ top: icon ? 12 : 8 }}
+                className="flex justify-center relative z-10"
+                style={{ paddingTop: icon ? 12 : 8 }}
             >
                 {icon ? (
                     <span
                         className="w-6 h-6 rounded-full bg-white dark:bg-background-dark border border-gray-300 dark:border-gray-600 flex items-center justify-center"
-                        style={{ zIndex: 1 }}
                     >
                         <span
                             className="material-symbols-outlined text-gray-500 dark:text-gray-400"
@@ -337,10 +336,7 @@ function SpineRow({
                         </span>
                     </span>
                 ) : (
-                    <span
-                        className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-background-dark"
-                        style={{ zIndex: 1 }}
-                    />
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-background-dark" />
                 )}
             </div>
             <div>{children}</div>

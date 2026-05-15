@@ -1602,8 +1602,15 @@ function DaySection({
                 </span>
             </div>
 
-            {/* ─── Spine area ────────────────────────────────────────── */}
-            <div style={{ position: 'relative', paddingLeft: 56 }}>
+            {/* ─── Spine area ─────────────────────────────────────────
+                NOTE on alignment: every spine row inside uses a CSS grid of
+                `40px 1fr` for [icon | content]. The icon column starts at the
+                parent's content edge — i.e. x=0 inside this container. The
+                vertical line at left:19 therefore sits exactly at the center
+                of the 40px icon column, which is where every icon centers
+                itself. If you ever add paddingLeft back here, the line will
+                drift to the side and stop threading through the icons. */}
+            <div style={{ position: 'relative' }}>
                 <div
                     style={{
                         position: 'absolute',
@@ -1611,8 +1618,6 @@ function DaySection({
                         top: 8,
                         bottom: 8,
                         width: 2,
-                        // Slightly stronger than --border-subtle so the line
-                        // clearly threads through all markers.
                         background: 'var(--border, #e2e8f0)',
                         pointerEvents: 'none',
                     }}
