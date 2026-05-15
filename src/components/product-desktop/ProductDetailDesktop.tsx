@@ -978,7 +978,7 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                             <img
                                 key={b.id || i}
                                 src={url}
-                                alt={`${product.name} - ${i + 1}`}
+                                alt={`${product.name} 詳細${i + 1}｜モンゴル旅行・モンゴルツアー`}
                                 loading="lazy"
                                 decoding="async"
                                 style={{ width: '100%', height: 'auto', borderRadius: 16 }}
@@ -1013,7 +1013,7 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                 <img
                     key={i}
                     src={img}
-                    alt={`${product.name} - ${i + 1}`}
+                    alt={`${product.name} 詳細${i + 1}｜モンゴル旅行・モンゴルツアー`}
                     loading="lazy"
                     decoding="async"
                     style={{ width: '100%', height: 'auto', borderRadius: 16 }}
@@ -1482,7 +1482,7 @@ function Timeline({ product }: { product: TourProduct }) {
                     <img
                         key={i}
                         src={src}
-                        alt={`${product.name} - itinerary ${i + 1}`}
+                        alt={`${product.name} 行程${i + 1}｜モンゴル旅行・モンゴルツアー`}
                         loading="lazy"
                         decoding="async"
                         style={{ width: '100%', height: 'auto', borderRadius: 16 }}
@@ -2006,7 +2006,7 @@ function SpineEventRow({
             <SpineRow icon="image">
                 <img
                     src={url}
-                    alt={`${productName} - ${index + 1}`}
+                    alt={`${productName} 行程${index + 1}｜モンゴル旅行・モンゴルツアー`}
                     loading="lazy"
                     decoding="async"
                     style={{ width: '100%', height: 'auto', borderRadius: 14, display: 'block' }}
@@ -2130,7 +2130,7 @@ function SpineEventRow({
                             <img
                                 key={i}
                                 src={src}
-                                alt={c.title ? `${c.title} - ${i + 1}` : `event - ${i + 1}`}
+                                alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
                                 loading="lazy"
                                 decoding="async"
                                 style={{
@@ -2185,7 +2185,7 @@ function FlatBlockRenderer({
         return (
             <img
                 src={url}
-                alt={`${productName} - ${index + 1}`}
+                alt={`${productName} ${index + 1}｜モンゴル旅行・モンゴルツアー`}
                 loading="lazy"
                 decoding="async"
                 style={{ width: '100%', height: 'auto', borderRadius: 16 }}
@@ -2220,7 +2220,7 @@ function FlatBlockRenderer({
                     <img
                         key={i}
                         src={src}
-                        alt={`${productName} - ${index + 1}-${i + 1}`}
+                        alt={`${productName} ${index + 1}-${i + 1}｜モンゴル旅行・モンゴルツアー`}
                         loading="lazy"
                         decoding="async"
                         style={{ width: '100%', height: 'auto', borderRadius: 16 }}

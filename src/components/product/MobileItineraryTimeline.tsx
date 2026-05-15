@@ -104,7 +104,7 @@ export const MobileItineraryTimeline: React.FC<{ product: TourProduct }> = ({ pr
                     <img
                         key={i}
                         src={getOptimizedImageUrl(img, 'productItinerary')}
-                        alt={`Itinerary ${i + 1}`}
+                        alt={`${product.name} 行程${i + 1}｜モンゴル旅行・モンゴルツアー`}
                         className="w-full h-auto"
                         loading="lazy"
                         decoding="async"
@@ -376,7 +376,7 @@ function EventRow({
             <SpineRow>
                 <img
                     src={getOptimizedImageUrl(url, 'productItinerary')}
-                    alt={`${productName} - ${index + 1}`}
+                    alt={`${productName} 行程${index + 1}｜モンゴル旅行`}
                     loading="lazy"
                     decoding="async"
                     onError={hideBroken}
@@ -398,7 +398,7 @@ function EventRow({
                         <div key={i} className="relative shrink-0 w-[85%] snap-center">
                             <img
                                 src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                alt={`${slide.title || 'slide'} - ${i + 1}`}
+                                alt={`${slide.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
                                 loading="lazy"
                                 decoding="async"
                                 onError={hideBroken}
@@ -466,7 +466,7 @@ function EventRow({
                             <img
                                 key={i}
                                 src={getOptimizedImageUrl(src, imgs.length === 1 ? 'productItinerary' : 'productThumbnail')}
-                                alt={c.title ? `${c.title} - ${i + 1}` : `event - ${i + 1}`}
+                                alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
                                 loading="lazy"
                                 decoding="async"
                                 onError={hideBroken}
@@ -497,7 +497,7 @@ function FlatBlock({ block, productName }: { block: ItineraryBlock; productName:
         return (
             <img
                 src={getOptimizedImageUrl(url, 'productItinerary')}
-                alt={productName}
+                alt={`${productName}｜モンゴル旅行・モンゴルツアー`}
                 loading="lazy"
                 decoding="async"
                 onError={hideBroken}
@@ -515,7 +515,7 @@ function FlatBlock({ block, productName }: { block: ItineraryBlock; productName:
                         <div key={i} className="relative shrink-0 w-[85%] snap-center">
                             <img
                                 src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                alt={`${slide.title || 'slide'} - ${i + 1}`}
+                                alt={`${slide.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
                                 loading="lazy"
                                 decoding="async"
                                 onError={hideBroken}

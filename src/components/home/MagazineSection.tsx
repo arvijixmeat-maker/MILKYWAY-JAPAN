@@ -55,7 +55,7 @@ export const MagazineSection: React.FC<MagazineSectionProps> = ({ magazines }) =
                             {item.image ? (
                                 <img
                                     src={getOptimizedImageUrl(item.image, 'productThumbnail')}
-                                    alt={item.title}
+                                    alt={`${item.title}｜モンゴル旅行ガイド・旅マガジン`}
                                     width={280}
                                     height={400}
                                     loading="lazy"

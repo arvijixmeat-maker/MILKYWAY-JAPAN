@@ -52,7 +52,7 @@ export const HovsgolSection: React.FC = () => {
                             <div onClick={() => navigate(`/products/${product.id}`)} className="flex gap-4 group cursor-pointer">
                                 <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-slate-100 dark:bg-slate-800">
                                     <img
-                                        alt={product.name}
+                                        alt={`${product.name}｜フブスグル湖ツアー・モンゴル旅行`}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                         src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
                                         width={96}

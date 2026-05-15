@@ -38,7 +38,8 @@ export const GobiSection: React.FC = () => {
             <div className="absolute inset-0 opacity-40">
                 {products.length > 0 && products[0].mainImages?.[0] ? (
                     <img
-                        alt="Gobi Desert Background"
+                        alt=""
+                        aria-hidden="true"
                         className="w-full h-full object-cover"
                         src={getOptimizedImageUrl(products[0].mainImages[0], 'heroBanner')}
                         width={1920}
@@ -65,7 +66,7 @@ export const GobiSection: React.FC = () => {
                         >
                             <div className="relative aspect-[4/5] rounded-3xl overflow-hidden border border-white/10 group">
                                 <img
-                                    alt={product.name}
+                                    alt={`${product.name}｜ゴビ砂漠ツアー・モンゴル旅行`}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                                     src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
                                     loading="lazy"
