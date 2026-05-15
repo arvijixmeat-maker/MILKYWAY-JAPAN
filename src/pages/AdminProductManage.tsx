@@ -983,6 +983,90 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
 
+    // ─── Bulk image upload (drag&drop multi-file) ─────────────────────
+    // Uploads all files in parallel and appends one image block per file.
+    // Lets the admin drop 20 photos at once instead of clicking "이미지 추가"
+    // → empty box → file picker for each one.
+    const [itineraryBulkUploading, setItineraryBulkUploading] = useState(false);
+    const [itineraryBulkProgress, setItineraryBulkProgress] = useState<{ done: number; total: number } | null>(null);
+    const bulkAddItineraryImages = async (files: File[]) => {
+        if (files.length === 0) return;
+        setItineraryBulkUploading(true);
+        setItineraryBulkProgress({ done: 0, total: files.length });
+        try {
+            // Upload all files. Track progress as each resolves so admin sees
+            // "5/20 업로드 중..." instead of just spinning indefinitely.
+            let done = 0;
+            const urls = await Promise.all(
+                files.map((f) =>
+                    uploadImage(f, 'product-details').then((url) => {
+                        done += 1;
+                        setItineraryBulkProgress({ done, total: files.length });
+                        return url;
+                    })
+                )
+            );
+            const stamp = Date.now();
+            const newBlocks: DetailContentBlock[] = urls.map((url, i) => ({
+                id: `block-${stamp}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+                type: 'image',
+                content: url,
+            }));
+            setFormData((prev) => ({
+                ...prev,
+                itineraryBlocks: [...(prev.itineraryBlocks || []), ...newBlocks],
+            }));
+        } catch (e) {
+            console.error('Bulk itinerary image upload failed:', e);
+            alert('이미지 업로드 중 일부가 실패했습니다.');
+        } finally {
+            setItineraryBulkUploading(false);
+            setItineraryBulkProgress(null);
+        }
+    };
+
+    // ─── N-day skeleton generator ────────────────────────────────────
+    // One click → creates N dayInfo blocks (1日目 … N日目) with dividers
+    // between them. Admin then just fills in titles / descriptions per day.
+    const DAY_LABELS_JP = [
+        '1日目（いちにちめ）', '2日目（ふつかめ）', '3日目（みっかめ）',
+        '4日目（よっかめ）', '5日目（いつかめ）', '6日目（むいかめ）',
+        '7日目（なのかめ）', '8日目（ようかめ）', '9日目（ここのかめ）',
+        '10日目（とおかめ）',
+    ];
+    const addDaysSkeleton = (days: number) => {
+        if (!Number.isFinite(days) || days < 1) return;
+        const capped = Math.min(14, Math.max(1, Math.floor(days)));
+        const stamp = Date.now();
+        const newBlocks: DetailContentBlock[] = [];
+        for (let i = 0; i < capped; i++) {
+            newBlocks.push({
+                id: `block-${stamp}-d${i}-info`,
+                type: 'dayInfo',
+                content: {
+                    id: `dayinfo-${stamp}-${i}`,
+                    dayLabel: DAY_LABELS_JP[i] || `${i + 1}日目`,
+                    dayDate: '',
+                    title: '',
+                    description: '',
+                    meals: { breakfast: '', lunch: '', dinner: '' },
+                    accommodation: '',
+                },
+            });
+            if (i < capped - 1) {
+                newBlocks.push({
+                    id: `block-${stamp}-d${i}-divider`,
+                    type: 'divider',
+                    content: { style: 'space', height: 40 },
+                });
+            }
+        }
+        setFormData((prev) => ({
+            ...prev,
+            itineraryBlocks: [...(prev.itineraryBlocks || []), ...newBlocks],
+        }));
+    };
+
     // Itinerary Block Handlers (same as Detail Block but for itinerary)
     const addItineraryBlock = (type: 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo', dayLabel?: string) => {
         let content: any = '';
@@ -2013,6 +2097,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                         {/* Itinerary Tab */}
                         {currentTab === 'itinerary' && (
                             <div className="space-y-6">
+                                {/* ─── Quick actions: bulk image upload + N-day skeleton ─── */}
+                                <ItineraryQuickActions
+                                    onBulkImages={bulkAddItineraryImages}
+                                    onSkeleton={addDaysSkeleton}
+                                    uploading={itineraryBulkUploading}
+                                    progress={itineraryBulkProgress}
+                                />
+
                                 {/* Itinerary Block Content Section */}
                                 <div>
                                     <div className="flex items-center justify-between mb-4">
@@ -2622,5 +2714,148 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                 </form>
             </div >
         </div >
+    );
+};
+
+// ============================================================================
+// Itinerary Quick Actions — bulk image upload zone + N-day skeleton macro.
+// Lives at the top of the "일정" tab so adding many photos or stamping out a
+// multi-day skeleton is one click away instead of a clicking marathon.
+// ============================================================================
+interface ItineraryQuickActionsProps {
+    onBulkImages: (files: File[]) => void | Promise<void>;
+    onSkeleton: (days: number) => void;
+    uploading: boolean;
+    progress: { done: number; total: number } | null;
+}
+
+const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
+    onBulkImages,
+    onSkeleton,
+    uploading,
+    progress,
+}) => {
+    const [drag, setDrag] = useState(false);
+    const [skeletonDays, setSkeletonDays] = useState<number>(3);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleFiles = (fileList: FileList | null) => {
+        if (!fileList) return;
+        const files = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
+        if (files.length === 0) return;
+        onBulkImages(files);
+    };
+
+    return (
+        <div className="space-y-4">
+            {/* ─── Bulk image drop zone ─── */}
+            <div
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!uploading) setDrag(true);
+                }}
+                onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDrag(false);
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDrag(false);
+                    if (uploading) return;
+                    handleFiles(e.dataTransfer.files);
+                }}
+                onClick={() => {
+                    if (uploading) return;
+                    fileInputRef.current?.click();
+                }}
+                className={`relative w-full rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                    drag
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                        : uploading
+                            ? 'border-slate-300 bg-slate-50 dark:bg-slate-800 cursor-wait'
+                            : 'border-slate-300 dark:border-slate-700 hover:border-teal-400 hover:bg-teal-50/30 dark:hover:bg-slate-800/50'
+                }`}
+                style={{ padding: '28px 24px' }}
+                role="button"
+                tabIndex={0}
+            >
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                        handleFiles(e.target.files);
+                        // reset so picking the same files again still fires
+                        e.target.value = '';
+                    }}
+                />
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined text-teal-600 dark:text-teal-400 text-2xl">
+                            {uploading ? 'hourglass_top' : 'cloud_upload'}
+                        </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                            {uploading
+                                ? `업로드 중... ${progress ? `${progress.done} / ${progress.total}` : ''}`
+                                : '이미지 한 번에 업로드'}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            여러 장의 사진을 이 박스에 드래그하거나 클릭해서 선택하세요. 각 사진이 자동으로 일정 끝에 추가됩니다.
+                        </div>
+                    </div>
+                    {!uploading && (
+                        <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl">
+                            add_photo_alternate
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* ─── N-day skeleton macro ─── */}
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 flex-wrap">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-amber-700 dark:text-amber-400">
+                        calendar_view_day
+                    </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-amber-900 dark:text-amber-300">
+                        N일 일정 골격 만들기
+                    </div>
+                    <div className="text-xs text-amber-800/80 dark:text-amber-400/80 mt-0.5">
+                        1日目 ~ N日目 헤더와 구분선을 한 번에 생성합니다. 각 날짜는 펼쳐서 내용 채우세요.
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <label className="text-xs font-medium text-amber-900 dark:text-amber-300">일수</label>
+                    <select
+                        value={skeletonDays}
+                        onChange={(e) => setSkeletonDays(Number(e.target.value))}
+                        className="px-2 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-sm font-semibold text-amber-900 dark:text-amber-300"
+                    >
+                        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <option key={n} value={n}>
+                                {n}일
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        type="button"
+                        onClick={() => onSkeleton(skeletonDays)}
+                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        생성
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };

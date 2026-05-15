@@ -1323,14 +1323,45 @@ function HighlightsBlock({ product }: { product: TourProduct }) {
     );
 }
 
+// Shape of one logical day after grouping.
+interface DayGroup {
+    dayInfo: { id?: string; type: string; content: unknown };
+    events: Array<{ id?: string; type: string; content: unknown }>;
+}
+
+/**
+ * Walk the flat list of itinerary blocks and group anything between two
+ * dayInfo blocks into the "events" of the first one. Blocks that appear
+ * BEFORE the first dayInfo (intro images etc.) go into preBlocks.
+ *
+ * Pure function — easier to test and reason about than mutating state.
+ */
+function groupBlocksByDay(blocks: Array<{ id?: string; type: string; content: unknown }>): {
+    preBlocks: Array<{ id?: string; type: string; content: unknown }>;
+    days: DayGroup[];
+} {
+    const days: DayGroup[] = [];
+    const preBlocks: typeof blocks = [];
+    let current: DayGroup | null = null;
+    for (const b of blocks) {
+        if (b.type === 'dayInfo') {
+            if (current) days.push(current);
+            current = { dayInfo: b, events: [] };
+        } else if (current) {
+            current.events.push(b);
+        } else {
+            preBlocks.push(b);
+        }
+    }
+    if (current) days.push(current);
+    return { preBlocks, days };
+}
+
 function Timeline({ product }: { product: TourProduct }) {
-    // Drop empty dayInfo/timeline blocks left over from old admin sessions —
-    // they would otherwise render as phantom "D1, D2, ..." cards even though
-    // the admin never typed anything into them.
     const blocks = (product.itineraryBlocks ?? []).filter(isMeaningfulItineraryBlock);
     const legacyImages = product.itineraryImages ?? [];
 
-    // No data at all → empty placeholder
+    // 1) No data at all → placeholder
     if (blocks.length === 0 && legacyImages.length === 0) {
         return (
             <div
@@ -1347,8 +1378,7 @@ function Timeline({ product }: { product: TourProduct }) {
         );
     }
 
-    // No structured blocks but admin has legacy itineraryImages → render as a
-    // simple image stack (matches mobile fallback).
+    // 2) Legacy only → simple image stack
     if (blocks.length === 0 && legacyImages.length > 0) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1366,212 +1396,575 @@ function Timeline({ product }: { product: TourProduct }) {
         );
     }
 
-    // Precompute day numbers in a pure pass so the render below stays pure.
-    // dayInfo / timeline blocks get a sequential D1, D2, ... number; image /
-    // slide / divider blocks don't.
-    const dayNumbers: (number | null)[] = [];
-    let seenDays = 0;
-    for (const b of blocks) {
-        if (b.type === 'dayInfo' || b.type === 'timeline') {
-            seenDays += 1;
-            dayNumbers.push(seenDays);
-        } else {
-            dayNumbers.push(null);
-        }
+    const { preBlocks, days } = groupBlocksByDay(blocks);
+
+    // 3) No dayInfo blocks → flat layout (image-only / slide products)
+    if (days.length === 0) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {preBlocks.map((b, i) => (
+                    <FlatBlockRenderer
+                        key={b.id || i}
+                        block={b}
+                        index={i}
+                        productName={product.name}
+                    />
+                ))}
+            </div>
+        );
     }
 
+    // 4) Has dayInfo blocks → day-tab + vertical-spine layout
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {blocks.map((b, i) => {
-                if (b.type === 'dayInfo') {
-                    const dayNum = dayNumbers[i] ?? 1;
-                    const c = b.content as DayInfoContent;
-                    const mealsArr: string[] = [];
-                    if (c.meals?.breakfast) mealsArr.push('朝');
-                    if (c.meals?.lunch) mealsArr.push('昼');
-                    if (c.meals?.dinner) mealsArr.push('夕');
-                    return (
-                        <DayCard
-                            key={b.id || String(i)}
-                            dayLabel={c.dayLabel || `DAY ${dayNum}`}
-                            dayNumber={dayNum}
-                            title={c.title}
-                            description={c.description}
-                            meals={mealsArr.length > 0 ? mealsArr.join('・') : undefined}
-                            accommodation={c.accommodation}
+        <div>
+            <DayTabs days={days} />
+            {preBlocks.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 36 }}>
+                    {preBlocks.map((b, i) => (
+                        <FlatBlockRenderer
+                            key={b.id || i}
+                            block={b}
+                            index={i}
+                            productName={product.name}
                         />
-                    );
-                }
-                if (b.type === 'timeline') {
-                    const dayNum = dayNumbers[i] ?? 1;
-                    const c = b.content as TimelineContent;
-                    // Timeline blocks let admin attach 1+ images per event.
-                    // `images` may be absent on older entries — guard for null.
-                    const imgs = Array.isArray((c as { images?: unknown }).images)
-                        ? ((c as unknown as { images: unknown[] }).images.filter(
-                            (x): x is string => typeof x === 'string'
-                        ))
-                        : [];
-                    return (
-                        <DayCard
-                            key={b.id || String(i)}
-                            dayLabel={c.time || `#${dayNum}`}
-                            dayNumber={dayNum}
-                            title={c.title}
-                            description={c.description}
-                            images={imgs}
-                        />
-                    );
-                }
-                if (b.type === 'image') {
-                    const url = typeof b.content === 'string' ? b.content : '';
-                    if (!url) return null;
-                    return (
-                        <img
-                            key={b.id || String(i)}
-                            src={url}
-                            alt={`${product.name} - ${i + 1}`}
-                            loading="lazy"
-                            decoding="async"
-                            style={{ width: '100%', height: 'auto', borderRadius: 16 }}
-                        />
-                    );
-                }
-                if (b.type === 'slide') {
-                    const slide = b.content as DetailSlide;
-                    return <SlideBlock key={b.id || String(i)} slide={slide} productName={product.name} />;
-                }
-                if (b.type === 'divider') {
-                    const div = b.content as DividerContent;
-                    return (
-                        <div
-                            key={b.id || String(i)}
-                            style={{
-                                height: div.height,
-                                borderBottom: div.style === 'line' ? '1px solid var(--border-subtle)' : 'none',
-                            }}
-                        />
-                    );
-                }
-                return null;
+                    ))}
+                </div>
+            )}
+            {days.map((day, i) => (
+                <DaySection
+                    key={day.dayInfo.id || i}
+                    day={day}
+                    dayIndex={i}
+                    productName={product.name}
+                />
+            ))}
+        </div>
+    );
+}
+
+/**
+ * Top tab bar — one tab per dayInfo. Click scrolls smoothly to the matching
+ * section. Sticks under the in-page nav so it stays reachable while reading
+ * a long itinerary.
+ */
+function DayTabs({ days }: { days: DayGroup[] }) {
+    const jump = (idx: number) => {
+        const el = document.getElementById(`itin-day-${idx + 1}`);
+        if (!el) return;
+        const top = el.getBoundingClientRect().top + window.scrollY - 220;
+        window.scrollTo({ top, behavior: 'smooth' });
+    };
+    return (
+        <div
+            className="scrollbar-hide"
+            style={{
+                display: 'flex',
+                gap: 4,
+                marginBottom: 32,
+                borderBottom: '1px solid var(--border-subtle)',
+                overflowX: 'auto',
+                position: 'sticky',
+                top: 200,
+                background: '#fff',
+                zIndex: 20,
+            }}
+        >
+            {days.map((d, i) => {
+                const c = d.dayInfo.content as DayInfoContent;
+                const label = (c?.dayLabel || `${i + 1}日目`).replace(/（.*?）/, '');
+                return (
+                    <button
+                        key={d.dayInfo.id || i}
+                        type="button"
+                        onClick={() => jump(i)}
+                        style={{
+                            padding: '14px 22px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: 'var(--fg-3)',
+                            fontWeight: 600,
+                            fontSize: 14,
+                            cursor: 'pointer',
+                            borderBottom: '2px solid transparent',
+                            fontFamily: 'inherit',
+                            whiteSpace: 'nowrap',
+                            transition: 'color 150ms',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#0f766e';
+                            e.currentTarget.style.borderBottomColor = '#0f766e';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--fg-3)';
+                            e.currentTarget.style.borderBottomColor = 'transparent';
+                        }}
+                    >
+                        {label}
+                    </button>
+                );
             })}
         </div>
     );
 }
 
-function DayCard({
-    dayLabel,
-    dayNumber,
-    title,
-    description,
-    meals,
-    accommodation,
-    images,
+/**
+ * One full day section. The vertical spine line runs through the icon column;
+ * each row inside (location header, events, hotel, meals) sits on its own dot.
+ */
+function DaySection({
+    day,
+    dayIndex,
+    productName,
 }: {
-    dayLabel: string;
-    dayNumber: number;
-    title?: string;
-    description?: string;
-    meals?: string;
-    accommodation?: string;
-    /** Per-block images. Timeline blocks can attach photos that should display
-     *  inline; dayInfo blocks usually don't have any. */
-    images?: string[];
+    day: DayGroup;
+    dayIndex: number;
+    productName: string;
 }) {
-    const photos = (images ?? []).filter((s) => typeof s === 'string' && s.length > 0);
+    const c = day.dayInfo.content as DayInfoContent;
+    const cityTitle = c?.title || c?.dayLabel || `${dayIndex + 1}日目`;
+    const description = c?.description;
+
+    // Build meal entries — only show slots admin actually filled in.
+    const meals: Array<{ k: string; v: string }> = [];
+    if (c?.meals?.breakfast) meals.push({ k: '朝食', v: c.meals.breakfast });
+    if (c?.meals?.lunch) meals.push({ k: '昼食', v: c.meals.lunch });
+    if (c?.meals?.dinner) meals.push({ k: '夕食', v: c.meals.dinner });
+
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 24, alignItems: 'flex-start' }}>
+        <section
+            id={`itin-day-${dayIndex + 1}`}
+            style={{ position: 'relative', paddingLeft: 56, marginBottom: 48, scrollMarginTop: 260 }}
+        >
+            {/* Vertical spine line — sits behind the icons. */}
             <div
                 style={{
-                    width: 40,
-                    height: 40,
+                    position: 'absolute',
+                    left: 19,
+                    top: 18,
+                    bottom: 18,
+                    width: 2,
+                    background: 'var(--border-subtle)',
+                    pointerEvents: 'none',
+                }}
+            />
+
+            {/* Day header — big map pin */}
+            <SpineRow
+                icon="location_on"
+                iconFilled
+                large
+                iconColor="#0f766e"
+            >
+                <div
+                    style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#0f766e',
+                        letterSpacing: '0.08em',
+                        marginBottom: 4,
+                    }}
+                >
+                    DAY {dayIndex + 1}
+                </div>
+                <h3
+                    style={{
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color: 'var(--fg-1)',
+                        margin: 0,
+                        letterSpacing: '-0.01em',
+                        lineHeight: 1.35,
+                    }}
+                >
+                    {cityTitle}
+                </h3>
+                {description && (
+                    <p
+                        style={{
+                            fontSize: 14,
+                            color: 'var(--fg-3)',
+                            lineHeight: 1.7,
+                            marginTop: 10,
+                            marginBottom: 0,
+                            whiteSpace: 'pre-wrap',
+                        }}
+                    >
+                        {description}
+                    </p>
+                )}
+            </SpineRow>
+
+            {/* Events under this day */}
+            {day.events.map((b, i) => (
+                <SpineEventRow key={b.id || i} block={b} index={i} productName={productName} />
+            ))}
+
+            {/* Accommodation row */}
+            {c?.accommodation && (
+                <SpineRow icon="hotel" iconColor="#0f766e">
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            flexWrap: 'wrap',
+                        }}
+                    >
+                        <span
+                            style={{
+                                padding: '3px 10px',
+                                background: 'var(--bg-muted)',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                color: 'var(--fg-2)',
+                                fontWeight: 700,
+                            }}
+                        >
+                            予定
+                        </span>
+                        <span
+                            style={{
+                                fontSize: 15,
+                                fontWeight: 700,
+                                color: 'var(--fg-1)',
+                            }}
+                        >
+                            {c.accommodation}
+                        </span>
+                    </div>
+                    <div
+                        style={{
+                            fontSize: 11,
+                            color: 'var(--fg-5)',
+                            marginTop: 6,
+                        }}
+                    >
+                        * 宿泊先は出発1日前までにご案内します
+                    </div>
+                </SpineRow>
+            )}
+
+            {/* Meals row */}
+            {meals.length > 0 && (
+                <SpineRow icon="restaurant_menu" iconColor="#0f766e">
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: 22,
+                            flexWrap: 'wrap',
+                            paddingTop: 4,
+                        }}
+                    >
+                        {meals.map((m, i) => (
+                            <span
+                                key={i}
+                                style={{
+                                    fontSize: 13,
+                                    color: 'var(--fg-2)',
+                                }}
+                            >
+                                <span style={{ color: '#0f766e', fontWeight: 700 }}>
+                                    [{m.k}]
+                                </span>{' '}
+                                <span style={{ fontWeight: 600 }}>{m.v}</span>
+                            </span>
+                        ))}
+                    </div>
+                </SpineRow>
+            )}
+        </section>
+    );
+}
+
+/**
+ * Generic row aligned to the vertical spine. The left column is fixed width
+ * for the icon dot; the right column holds the content.
+ */
+function SpineRow({
+    icon,
+    iconFilled,
+    iconColor,
+    large,
+    children,
+}: {
+    icon: string;
+    iconFilled?: boolean;
+    iconColor?: string;
+    /** Use the bigger location-pin styling instead of the small dot. */
+    large?: boolean;
+    children: ReactNode;
+}) {
+    const size = large ? 38 : 22;
+    return (
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '40px 1fr',
+                gap: 16,
+                alignItems: 'flex-start',
+                marginBottom: large ? 24 : 18,
+            }}
+        >
+            <div
+                style={{
+                    width: size,
+                    height: size,
                     borderRadius: 999,
-                    background: '#0f766e',
-                    color: '#fff',
+                    background: '#fff',
+                    border: large ? '2px solid #0f766e' : '2px solid #fff',
+                    boxShadow: large ? 'none' : '0 0 0 3px #fff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    fontFamily: 'ui-monospace, Menlo, monospace',
-                    boxShadow: '0 0 0 4px #fff, 0 0 0 5px var(--primary-tint)',
-                    letterSpacing: '-0.02em',
+                    position: 'relative',
+                    zIndex: 1,
+                    marginLeft: large ? 0 : 8,
+                    marginTop: large ? 0 : 4,
                 }}
             >
-                D{dayNumber}
-            </div>
-            <div
-                style={{
-                    background: '#fff',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 16,
-                    padding: '18px 22px',
-                    boxShadow: 'var(--shadow-toss)',
-                }}
-            >
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#0f766e', letterSpacing: '0.08em', marginBottom: 4 }}>
-                    {dayLabel}
-                </div>
-                {title && (
-                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 8, letterSpacing: '-0.01em' }}>
-                        {title}
-                    </div>
-                )}
-                {description && (
-                    <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.7, marginBottom: 12, whiteSpace: 'pre-wrap' }}>
-                        {description}
-                    </div>
-                )}
-                {photos.length > 0 && (
-                    <div
+                {large ? (
+                    <MatIcon
+                        name={icon}
+                        size={20}
+                        filled={iconFilled}
+                        color={iconColor || '#0f766e'}
+                    />
+                ) : (
+                    <span
                         style={{
-                            display: 'grid',
-                            gridTemplateColumns:
-                                photos.length === 1
-                                    ? '1fr'
-                                    : photos.length === 2
-                                        ? 'repeat(2, 1fr)'
-                                        : 'repeat(3, 1fr)',
-                            gap: 8,
-                            margin: '4px 0 14px',
+                            width: 10,
+                            height: 10,
+                            borderRadius: 999,
+                            background: '#dc2626',
                         }}
-                    >
-                        {photos.map((src, i) => (
-                            <img
-                                key={i}
-                                src={src}
-                                alt={title ? `${title} - ${i + 1}` : `D${dayNumber} - ${i + 1}`}
-                                loading="lazy"
-                                decoding="async"
-                                style={{
-                                    width: '100%',
-                                    aspectRatio: photos.length === 1 ? '16/9' : '4/3',
-                                    objectFit: 'cover',
-                                    borderRadius: 10,
-                                    display: 'block',
-                                }}
-                            />
-                        ))}
-                    </div>
-                )}
-                {(meals || accommodation) && (
-                    <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--fg-5)', flexWrap: 'wrap' }}>
-                        {meals && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                <MatIcon name="restaurant" size={14} color="var(--fg-5)" /> 食事: {meals}
-                            </span>
-                        )}
-                        {accommodation && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                <MatIcon name="hotel" size={14} color="var(--fg-5)" /> 宿泊: {accommodation}
-                            </span>
-                        )}
-                    </div>
+                    />
                 )}
             </div>
+            <div style={{ paddingTop: large ? 4 : 0 }}>{children}</div>
         </div>
     );
 }
+
+/**
+ * One event row inside a day. Handles all non-dayInfo block types:
+ * timeline (title + description + images), image, slide, divider.
+ */
+function SpineEventRow({
+    block,
+    index,
+    productName,
+}: {
+    block: { id?: string; type: string; content: unknown };
+    index: number;
+    productName: string;
+}) {
+    // Divider → just render a thin gap inside the spine
+    if (block.type === 'divider') {
+        const div = block.content as DividerContent;
+        return (
+            <div
+                style={{
+                    marginLeft: 56,
+                    height: typeof div.height === 'number' ? div.height : 24,
+                    borderBottom: div.style === 'line' ? '1px solid var(--border-subtle)' : 'none',
+                    marginBottom: 12,
+                }}
+            />
+        );
+    }
+
+    // Image → full-width image inside the day, still aligned with content column
+    if (block.type === 'image') {
+        const url = typeof block.content === 'string' ? block.content : '';
+        if (!url) return null;
+        return (
+            <SpineRow icon="image">
+                <img
+                    src={url}
+                    alt={`${productName} - ${index + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ width: '100%', height: 'auto', borderRadius: 14, display: 'block' }}
+                />
+            </SpineRow>
+        );
+    }
+
+    // Slide → re-use the existing SlideBlock component
+    if (block.type === 'slide') {
+        const slide = block.content as DetailSlide;
+        return (
+            <SpineRow icon="view_carousel">
+                <SlideBlock slide={slide} productName={productName} />
+            </SpineRow>
+        );
+    }
+
+    // Timeline → title + description + image grid
+    if (block.type === 'timeline') {
+        const c = block.content as TimelineContent & { images?: unknown };
+        const imgs = Array.isArray(c.images)
+            ? c.images.filter((x): x is string => typeof x === 'string')
+            : [];
+        return (
+            <SpineRow icon="trip_origin">
+                <div
+                    style={{
+                        background: '#fff',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 16,
+                        padding: '18px 22px',
+                        boxShadow: 'var(--shadow-toss)',
+                    }}
+                >
+                    {c.time && (
+                        <div
+                            style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: '#0f766e',
+                                letterSpacing: '0.06em',
+                                marginBottom: 6,
+                            }}
+                        >
+                            {c.time}
+                        </div>
+                    )}
+                    {c.title && (
+                        <h4
+                            style={{
+                                fontSize: 17,
+                                fontWeight: 700,
+                                color: 'var(--fg-1)',
+                                margin: 0,
+                                letterSpacing: '-0.01em',
+                            }}
+                        >
+                            {c.title}
+                        </h4>
+                    )}
+                    {c.description && (
+                        <p
+                            style={{
+                                fontSize: 13.5,
+                                color: 'var(--fg-3)',
+                                lineHeight: 1.75,
+                                marginTop: 8,
+                                marginBottom: 0,
+                                whiteSpace: 'pre-wrap',
+                            }}
+                        >
+                            {c.description}
+                        </p>
+                    )}
+                    {imgs.length > 0 && (
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns:
+                                    imgs.length === 1
+                                        ? '1fr'
+                                        : imgs.length === 2
+                                            ? 'repeat(2, 1fr)'
+                                            : 'repeat(3, 1fr)',
+                                gap: 8,
+                                marginTop: c.title || c.description ? 14 : 0,
+                            }}
+                        >
+                            {imgs.map((src, i) => (
+                                <img
+                                    key={i}
+                                    src={src}
+                                    alt={c.title ? `${c.title} - ${i + 1}` : `event - ${i + 1}`}
+                                    loading="lazy"
+                                    decoding="async"
+                                    style={{
+                                        width: '100%',
+                                        aspectRatio: imgs.length === 1 ? '16/9' : '4/3',
+                                        objectFit: 'cover',
+                                        borderRadius: 10,
+                                        display: 'block',
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </SpineRow>
+        );
+    }
+
+    return null;
+}
+
+/**
+ * Renders a block without the spine column — used when the product has no
+ * dayInfo blocks (image-only / slide-only products).
+ */
+function FlatBlockRenderer({
+    block,
+    index,
+    productName,
+}: {
+    block: { id?: string; type: string; content: unknown };
+    index: number;
+    productName: string;
+}) {
+    if (block.type === 'image') {
+        const url = typeof block.content === 'string' ? block.content : '';
+        if (!url) return null;
+        return (
+            <img
+                src={url}
+                alt={`${productName} - ${index + 1}`}
+                loading="lazy"
+                decoding="async"
+                style={{ width: '100%', height: 'auto', borderRadius: 16 }}
+            />
+        );
+    }
+    if (block.type === 'slide') {
+        const slide = block.content as DetailSlide;
+        return <SlideBlock slide={slide} productName={productName} />;
+    }
+    if (block.type === 'divider') {
+        const div = block.content as DividerContent;
+        return (
+            <div
+                style={{
+                    height: typeof div.height === 'number' ? div.height : 24,
+                    borderBottom: div.style === 'line' ? '1px solid var(--border-subtle)' : 'none',
+                }}
+            />
+        );
+    }
+    // timeline blocks rendered flat = just images (rare path)
+    if (block.type === 'timeline') {
+        const c = block.content as TimelineContent & { images?: unknown };
+        const imgs = Array.isArray(c.images)
+            ? c.images.filter((x): x is string => typeof x === 'string')
+            : [];
+        if (imgs.length === 0) return null;
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {imgs.map((src, i) => (
+                    <img
+                        key={i}
+                        src={src}
+                        alt={`${productName} - ${index + 1}-${i + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: '100%', height: 'auto', borderRadius: 16 }}
+                    />
+                ))}
+            </div>
+        );
+    }
+    return null;
+}
+
+// DayCard removed — replaced by SpineRow + DaySection in the new
+// tab-based timeline layout above.
 
 function GuideCard() {
     // Site-wide generic guide intro from /api/settings (key: guide_intro).
