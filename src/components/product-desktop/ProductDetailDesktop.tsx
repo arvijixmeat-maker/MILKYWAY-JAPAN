@@ -1608,10 +1608,12 @@ function DaySection({
                     style={{
                         position: 'absolute',
                         left: 19,
-                        top: 14,
-                        bottom: 14,
+                        top: 8,
+                        bottom: 8,
                         width: 2,
-                        background: 'var(--border-subtle)',
+                        // Slightly stronger than --border-subtle so the line
+                        // clearly threads through all markers.
+                        background: 'var(--border, #e2e8f0)',
                         pointerEvents: 'none',
                     }}
                 />
@@ -1851,11 +1853,13 @@ function SpineRow({
                 ) : (
                     <span
                         style={{
-                            width: 8,
-                            height: 8,
+                            width: 9,
+                            height: 9,
                             borderRadius: 999,
                             background: '#dc2626',
-                            boxShadow: '0 0 0 4px #fff',
+                            // Smaller white halo (2px) so the spine line stays
+                            // visible right up to the dot edges.
+                            boxShadow: '0 0 0 2px #fff',
                         }}
                     />
                 )}

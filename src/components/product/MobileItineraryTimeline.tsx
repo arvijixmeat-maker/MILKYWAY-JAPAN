@@ -217,8 +217,9 @@ function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: n
 
             {/* Spine area */}
             <div className="relative pl-8">
+                {/* Slightly bolder line so it visibly threads through dots */}
                 <div
-                    className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-700"
+                    className="absolute left-[11px] top-1 bottom-1 w-0.5 bg-gray-300 dark:bg-gray-600"
                     aria-hidden
                 />
 
@@ -337,7 +338,7 @@ function SpineRow({
                     </span>
                 ) : (
                     <span
-                        className="w-2 h-2 rounded-full bg-red-500 ring-4 ring-white dark:ring-background-dark"
+                        className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-background-dark"
                         style={{ zIndex: 1 }}
                     />
                 )}

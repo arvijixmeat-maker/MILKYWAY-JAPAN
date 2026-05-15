@@ -2390,28 +2390,35 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                     // TIMELINE BLOCK
                                                     <div>
                                                         {/* Master picker buttons — pull in spot or hotel data with one click. */}
-                                                        <div className="flex gap-2 mb-3 flex-wrap">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSpotPickerForIndex(index)}
-                                                                className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
-                                                                title="관광지 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">location_on</span>
-                                                                관광지에서 선택
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setHotelPickerTarget({ kind: 'timeline', index })}
-                                                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
-                                                                title="호텔 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">hotel</span>
-                                                                호텔에서 선택
-                                                            </button>
-                                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 self-center ml-1">
-                                                                또는 아래에 직접 입력
-                                                            </span>
+                                                        <div className="mb-3">
+                                                            <div className="flex gap-2 mb-2 flex-wrap">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSpotPickerForIndex(index)}
+                                                                    className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                    title="관광지 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-sm">location_on</span>
+                                                                    관광지에서 선택
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setHotelPickerTarget({ kind: 'timeline', index })}
+                                                                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                    title="호텔 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-sm">hotel</span>
+                                                                    호텔에서 선택
+                                                                </button>
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                                                                💡 <strong>3가지 방법 중 선택:</strong>
+                                                                <ol className="list-decimal ml-4 mt-1 space-y-0.5">
+                                                                    <li><span className="text-teal-700 dark:text-teal-400 font-semibold">관광지/호텔에서 선택</span> — 마스터 데이터 자동 채움</li>
+                                                                    <li>아래에 <strong>제목·설명을 직접 입력</strong> + 이미지 업로드 → 흰 카드로 표시</li>
+                                                                    <li>아래에 <strong>제목·설명만 입력</strong> (이미지 없음) → 큰 핀+텍스트로 표시 (지역 안내·이동 정보용)</li>
+                                                                </ol>
+                                                            </div>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
