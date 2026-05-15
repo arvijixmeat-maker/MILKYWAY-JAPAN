@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, ProductFAQ, TourPricingOption } from '../../types/product';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
+import { PCard, type PCardData } from '../desktop-primitives/PCard';
 import { DestinationsMap } from '../desktop-primitives/DestinationsMap';
 import { extractPlacesFromItinerary } from '../../constants/mongoliaPlaces';
 import { useGuideIntro } from '../../hooks/useGuideIntro';
@@ -2098,30 +2099,47 @@ function PricingTierSelector({
 }
 
 function RelatedTours({ productId, category }: { productId: string; category: string }) {
-    interface ApiP {
-        id: string;
-        name: string;
-        category?: string;
-        price: number;
-        original_price?: number;
-        duration?: string;
-        main_images?: string[];
-        tags?: string[];
-        status?: string;
-        booking_count?: number;
-        is_popular?: 0 | 1 | boolean;
-    }
     const navigate = useNavigate();
-    const [items, setItems] = useState<ApiP[]>([]);
+    const [items, setItems] = useState<PCardData[]>([]);
 
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
             try {
-                const data = await (window as Window & typeof globalThis).fetch('/api/products').then((r) => r.json()).catch(() => null);
+                const data = await fetch('/api/products').then((r) => r.json()).catch(() => null);
                 if (!cancelled && Array.isArray(data)) {
-                    const same = (data as ApiP[]).filter((p) => p.id !== productId && p.status !== 'inactive' && p.category === category);
-                    same.sort((a, b) => (Number(b.is_popular === 1 || b.is_popular === true) - Number(a.is_popular === 1 || a.is_popular === true)) || ((b.booking_count || 0) - (a.booking_count || 0)));
+                    // /api/products responds with mixed camelCase + snake_case. Normalize
+                    // both forms so mainImages always lands in mainImages (PCard expects it).
+                    const toArr = (v: unknown): string[] => {
+                        if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+                        if (typeof v === 'string') {
+                            try {
+                                const parsed = JSON.parse(v);
+                                return Array.isArray(parsed) ? parsed.filter((x: unknown): x is string => typeof x === 'string') : [];
+                            } catch {
+                                return [];
+                            }
+                        }
+                        return [];
+                    };
+                    const same = (data as Array<Record<string, unknown>>)
+                        .filter((p) => p.id !== productId && p.status !== 'inactive' && p.category === category)
+                        .map<PCardData & { _popular: number; _booked: number }>((p) => ({
+                            id: String(p.id),
+                            name: String(p.name ?? ''),
+                            category: typeof p.category === 'string' ? p.category : undefined,
+                            duration: typeof p.duration === 'string' ? p.duration : undefined,
+                            price: Number(p.price ?? 0),
+                            originalPrice: typeof p.originalPrice === 'number'
+                                ? p.originalPrice
+                                : typeof p.original_price === 'number' ? p.original_price : undefined,
+                            mainImages: toArr(p.mainImages ?? p.main_images),
+                            tags: Array.isArray(p.tags) ? p.tags.filter((t: unknown): t is string => typeof t === 'string') : [],
+                            isPopular: p.is_popular === 1 || p.is_popular === true || p.isPopular === true,
+                            _popular: (p.is_popular === 1 || p.is_popular === true || p.isPopular === true) ? 1 : 0,
+                            _booked: Number(p.booking_count ?? p.bookingCount ?? 0),
+                        }));
+                    same.sort((a, b) => (b._popular - a._popular) || (b._booked - a._booked));
                     setItems(same.slice(0, 4));
                 }
             } catch {
@@ -2178,61 +2196,8 @@ function RelatedTours({ productId, category }: { productId: string; category: st
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
                 {items.map((p) => (
-                    <RelatedCard key={p.id} p={p} onClick={() => navigate(`/products/${p.id}`)} />
+                    <PCard key={p.id} p={p} layout="block" onClick={() => navigate(`/products/${p.id}`)} />
                 ))}
-            </div>
-        </div>
-    );
-}
-
-function RelatedCard({ p, onClick }: { p: { id: string; name: string; category?: string; price: number; duration?: string; main_images?: string[]; tags?: string[]; original_price?: number }; onClick: () => void }) {
-    const img = p.main_images?.[0] || '/og-image.jpg';
-    const firstTag = p.tags?.[0];
-    const hasOriginal = !!p.original_price && p.original_price > p.price;
-    return (
-        <div
-            onClick={onClick}
-            role="button"
-            style={{
-                background: '#fff',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 16,
-                overflow: 'hidden',
-                boxShadow: 'var(--shadow-toss)',
-                cursor: 'pointer',
-                transition: 'all 200ms',
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 14px 30px -6px rgba(0,0,0,0.12)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = 'var(--shadow-toss)';
-                e.currentTarget.style.transform = '';
-            }}
-        >
-            <div style={{ aspectRatio: '4/3', backgroundImage: `url(${img})`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent 50%)' }} />
-                {firstTag && <div style={{ position: 'absolute', top: 12, left: 12 }}><TagChip tone={tagTone(firstTag)}>{firstTag}</TagChip></div>}
-                {p.duration && (
-                    <div style={{ position: 'absolute', bottom: 12, left: 12, color: '#fff', fontSize: 12, fontWeight: 700 }}>{p.duration}</div>
-                )}
-            </div>
-            <div style={{ padding: '16px 18px 18px' }}>
-                <div style={{ fontSize: 12, color: 'var(--fg-5)', marginBottom: 6 }}>{p.category}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)', lineHeight: 1.4, marginBottom: 12, minHeight: 42, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {p.name}
-                </div>
-                <div>
-                    {hasOriginal && (
-                        <div style={{ fontSize: 11, color: 'var(--fg-5)', textDecoration: 'line-through' }}>
-                            ¥{p.original_price!.toLocaleString()}
-                        </div>
-                    )}
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#0f766e' }}>
-                        ¥{p.price.toLocaleString()}<span style={{ fontSize: 13 }}>〜</span>
-                    </div>
-                </div>
             </div>
         </div>
     );

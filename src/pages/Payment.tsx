@@ -4,11 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { sendNotificationEmail } from '../lib/email';
 import { SEO } from '../components/seo/SEO';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { PaymentDesktop } from '../components/reservation-desktop/PaymentDesktop';
 
 export const Payment: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
+    const isDesktop = useIsDesktop();
     const [showToast, setShowToast] = useState(false);
 
     // Customer info state
@@ -18,6 +21,10 @@ export const Payment: React.FC = () => {
         email: ''
     });
     const [agreeToTerms, setAgreeToTerms] = useState(false);
+    // Free-form memo. Desktop exposes a textarea for this; mobile currently
+    // omits the field but we forward the value so it lands on the reservation
+    // record if the user does fill it in via the desktop flow.
+    const [memo, setMemo] = useState('');
 
     // Processing state
     const [isProcessing, setIsProcessing] = useState(false);
@@ -173,6 +180,13 @@ export const Payment: React.FC = () => {
 
             const now = new Date().toISOString();
 
+            // Tuck the optional memo into customer_info so admin sees it
+            // alongside the customer's contact details on the reservation
+            // detail page (no schema change required).
+            const customerInfoForSave = memo
+                ? { ...customerInfo, memo }
+                : customerInfo;
+
             const newReservation: any = {
                 user_id: me.id,
                 type: isQuote ? 'quote' : 'tour',
@@ -180,7 +194,7 @@ export const Payment: React.FC = () => {
                 product_name: product.name,
                 product_id: isQuote ? null : product.id,
                 total_people: totalPeople,
-                customer_info: customerInfo,
+                customer_info: customerInfoForSave,
                 price_breakdown: priceBreakdown,
                 created_at: now
             };
@@ -265,6 +279,50 @@ export const Payment: React.FC = () => {
                     </button>
                 </div>
             </div>
+        );
+    }
+
+    // Find matching pricing tier so the desktop summary card can show the
+    // per-person price the customer is about to be charged.
+    const baseOptionForDesktop = (() => {
+        const options = product.pricingOptions;
+        if (!Array.isArray(options) || options.length === 0 || !totalPeople) return null;
+        const sorted = [...options].sort((a: any, b: any) => a.people - b.people);
+        const exact = sorted.find((p: any) => p.people === totalPeople);
+        if (exact) return exact;
+        if (totalPeople < sorted[0].people) return sorted[0];
+        if (totalPeople > sorted[sorted.length - 1].people) return sorted[sorted.length - 1];
+        return sorted.filter((p: any) => p.people <= totalPeople).pop() || sorted[0];
+    })();
+
+    // Desktop: render the wizard layout (step 2 of 3). Mobile UI untouched.
+    if (isDesktop) {
+        return (
+            <>
+                <SEO
+                    title={`${product?.name || ''} - ${t('payment.title')}`}
+                    description="お支払いおよび予約確認ページ。"
+                />
+                <PaymentDesktop
+                    product={product}
+                    selectedStartDate={selectedStartDate ? new Date(selectedStartDate) : null}
+                    endDate={endDate}
+                    nights={parsedDuration?.nights ?? 0}
+                    days={parsedDuration?.days ?? 0}
+                    totalPeople={totalPeople ?? 0}
+                    baseOption={baseOptionForDesktop}
+                    priceBreakdown={priceBreakdown}
+                    customerInfo={customerInfo}
+                    setCustomerInfo={setCustomerInfo}
+                    memo={memo}
+                    setMemo={setMemo}
+                    agreeToTerms={agreeToTerms}
+                    setAgreeToTerms={setAgreeToTerms}
+                    isProcessing={isProcessing}
+                    onSubmit={handlePayment}
+                    onBack={() => navigate(-1)}
+                />
+            </>
         );
     }
 

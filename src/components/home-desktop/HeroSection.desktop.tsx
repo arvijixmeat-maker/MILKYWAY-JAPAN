@@ -49,6 +49,8 @@ interface ApiBanner {
     id: string;
     image?: string;
     image_url?: string;
+    pc_image?: string;   // PC-only wide-aspect image. Admin uploads via banner manage page.
+    pcImage?: string;
     tag?: string;
     title?: string;
     subtitle?: string;
@@ -72,8 +74,11 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                     const subtitle = clean(b.subtitle);
                     const tag = clean(b.tag);
                     const lines = title.split('\n');
+                    // Prefer the PC-specific wide image when admin uploaded one,
+                    // then fall back to the mobile image, then to the bundled fallback.
+                    const pcImg = b.pc_image || b.pcImage || '';
                     return {
-                        img: b.image || b.image_url || FALLBACK_SLIDES[0].img,
+                        img: pcImg || b.image || b.image_url || FALLBACK_SLIDES[0].img,
                         tag: (tag || 'PREMIUM TRIP').toUpperCase().slice(0, 24),
                         tone: (['premium', 'hot', 'new'] as TagTone[])[i % 3],
                         eyebrow: tag || '2026 SEASON',

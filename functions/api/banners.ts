@@ -41,9 +41,12 @@ app.put('/', async (c) => {
         if (banners) {
             for (let i = 0; i < banners.length; i++) {
                 const b = banners[i];
+                // Accept either pcImage (camelCase from admin form) or pc_image (snake_case)
+                // so future callers don't break if the convention changes.
+                const pcImg = b.pcImage ?? b.pc_image ?? '';
                 stmts.push(db.prepare(
-                    'INSERT INTO banners (id, image, tag, title, subtitle, link, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).bind(b.id, b.image || '', b.tag || '', b.title || '', b.subtitle || '', b.link || '', i));
+                    'INSERT INTO banners (id, image, pc_image, tag, title, subtitle, link, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+                ).bind(b.id, b.image || '', pcImg, b.tag || '', b.title || '', b.subtitle || '', b.link || '', i));
             }
         }
 

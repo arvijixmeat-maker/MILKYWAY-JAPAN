@@ -4,11 +4,14 @@ import { useTranslation } from 'react-i18next';
 import type { TourProduct } from '../types/product';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { ReservationDesktop } from '../components/reservation-desktop/ReservationDesktop';
 
 export const Reservation: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const isDesktop = useIsDesktop();
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -167,6 +170,53 @@ export const Reservation: React.FC = () => {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">{t('reservation.messages.loading')}</div>;
     if (!product) return <div className="min-h-screen flex items-center justify-center">{t('reservation.messages.not_found')}</div>;
+
+    // Shared "Next" handler — used by both mobile and desktop CTAs so any
+    // future flow change only needs to be made in one place.
+    const handleNext = () => {
+        if (!selectedStartDate) {
+            alert(t('reservation.messages.please_select_date'));
+            return;
+        }
+        navigate('/payment', {
+            state: {
+                product,
+                selectedStartDate,
+                totalPeople,
+                parsedDuration,
+                priceBreakdown,
+                selectedAccomId,
+                selectedVehicleId,
+            },
+        });
+    };
+
+    // Desktop: render the wizard layout. Mobile UI below is untouched.
+    if (isDesktop) {
+        return (
+            <>
+                <SEO
+                    title={`${product.name} - ${t('reservation.title')}`}
+                    description={`${product.name} 予約ページ`}
+                />
+                <ReservationDesktop
+                    product={product}
+                    parsedDuration={parsedDuration}
+                    selectedStartDate={selectedStartDate}
+                    setSelectedStartDate={setSelectedStartDate}
+                    totalPeople={totalPeople}
+                    setTotalPeople={setTotalPeople}
+                    selectedAccomId={selectedAccomId}
+                    setSelectedAccomId={setSelectedAccomId}
+                    selectedVehicleId={selectedVehicleId}
+                    setSelectedVehicleId={setSelectedVehicleId}
+                    baseOption={baseOption}
+                    priceBreakdown={priceBreakdown}
+                    onNext={handleNext}
+                />
+            </>
+        );
+    }
 
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
@@ -470,23 +520,7 @@ export const Reservation: React.FC = () => {
                         </div>
                     </div>
                     <button
-                        onClick={() => {
-                            if (!selectedStartDate) {
-                                alert(t('reservation.messages.please_select_date'));
-                                return;
-                            }
-                            navigate('/payment', {
-                                state: {
-                                    product,
-                                    selectedStartDate,
-                                    totalPeople,
-                                    parsedDuration,
-                                    priceBreakdown,
-                                    selectedAccomId,
-                                    selectedVehicleId
-                                }
-                            });
-                        }}
+                        onClick={handleNext}
                         className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
                     >
                         {t('reservation.buttons.next_step')}
