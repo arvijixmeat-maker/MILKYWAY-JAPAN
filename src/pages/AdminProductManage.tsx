@@ -1124,10 +1124,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                 });
             }
         }
-        setFormData((prev) => ({
-            ...prev,
-            itineraryBlocks: [...(prev.itineraryBlocks || []), ...newBlocks],
-        }));
+        // Prepend day-skeleton blocks before any existing content. This way if
+        // the admin already added timeline events without dayInfo, those events
+        // fall under the new day 1 (the frontend groups by dayInfo order).
+        setFormData((prev) => {
+            const existing = prev.itineraryBlocks || [];
+            const hasAnyDayInfo = existing.some((b) => b.type === 'dayInfo');
+            if (!hasAnyDayInfo) {
+                return { ...prev, itineraryBlocks: [...newBlocks, ...existing] };
+            }
+            return { ...prev, itineraryBlocks: [...existing, ...newBlocks] };
+        });
     };
 
     // Itinerary Block Handlers (same as Detail Block but for itinerary)
@@ -1177,6 +1184,49 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             ...formData,
             itineraryBlocks: [...(formData.itineraryBlocks || []), newBlock]
         });
+    };
+
+    /**
+     * Adds a TIMELINE block right after the dayInfo at `afterDayIndex`,
+     * i.e. at the *end* of that day's events but *before* the next dayInfo.
+     * This lets admin add 5~10 events per day without using ↑/↓ arrows.
+     */
+    const addTimelineAfterDay = (afterDayIndex: number) => {
+        const blocks = formData.itineraryBlocks ?? [];
+        if (afterDayIndex < 0 || afterDayIndex >= blocks.length) return;
+        if (blocks[afterDayIndex].type !== 'dayInfo') return;
+
+        // Find the index of the next dayInfo block (or end of array).
+        let insertAt = blocks.length;
+        for (let i = afterDayIndex + 1; i < blocks.length; i++) {
+            if (blocks[i].type === 'dayInfo') {
+                insertAt = i;
+                break;
+            }
+        }
+
+        const newBlock: DetailContentBlock = {
+            id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: 'timeline',
+            content: {
+                id: `timeline-${Date.now()}`,
+                time: '',
+                title: '',
+                description: '',
+                images: [],
+            },
+        };
+
+        const next = [...blocks];
+        next.splice(insertAt, 0, newBlock);
+        setFormData({ ...formData, itineraryBlocks: next });
+
+        // Scroll to the newly inserted block after the next paint so the admin
+        // sees where it went.
+        setTimeout(() => {
+            const el = document.querySelector(`[data-itinerary-block="${newBlock.id}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
     };
 
     const removeItineraryBlock = (index: number) => {
@@ -2454,6 +2504,24 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                     호텔 마스터에서 선택됨. 직접 입력하면 연결이 해제됩니다.
                                                                 </div>
                                                             )}
+                                                        </div>
+
+                                                        {/* ★ Add an event to this specific day — inserts a timeline block
+                                                            right after this dayInfo so admin can pile on events without
+                                                            using ↑/↓ arrows. */}
+                                                        <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-300 dark:border-slate-600">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => addTimelineAfterDay(index)}
+                                                                className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg text-sm font-bold text-blue-700 dark:text-blue-300 transition-colors flex items-center justify-center gap-2"
+                                                            >
+                                                                <span className="material-symbols-outlined text-lg">add_circle</span>
+                                                                이 일자에 일정 항목 추가
+                                                            </button>
+                                                            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 text-center">
+                                                                이 버튼을 누르면 <strong className="text-blue-600 dark:text-blue-400">{(block.content as DayInfoContent).dayLabel || '이 일자'}</strong>의 마지막 일정으로 새 항목이 추가됩니다.
+                                                                관광지 마스터에서 한 번에 채울 수 있어요.
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 ) : (

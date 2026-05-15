@@ -1396,7 +1396,23 @@ function Timeline({ product }: { product: TourProduct }) {
         );
     }
 
-    const { preBlocks, days } = groupBlocksByDay(blocks);
+    const grouped = groupBlocksByDay(blocks);
+
+    // Defensive: if admin created timeline blocks *before* adding a dayInfo
+    // (very common — they generate "N日 골격" last), those blocks would
+    // technically sit before any day. Treat them as events of day 1 instead
+    // of orphans rendered above the day header — that's almost always the
+    // admin's intent and matches what they see in the admin block order.
+    const preBlocks: typeof grouped.preBlocks = [];
+    const days: typeof grouped.days = grouped.days;
+    if (grouped.preBlocks.length > 0 && days.length > 0) {
+        days[0] = {
+            dayInfo: days[0].dayInfo,
+            events: [...grouped.preBlocks, ...days[0].events],
+        };
+    } else {
+        preBlocks.push(...grouped.preBlocks);
+    }
 
     // 3) No dayInfo blocks → flat layout (image-only / slide products)
     if (days.length === 0) {

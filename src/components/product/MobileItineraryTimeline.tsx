@@ -71,7 +71,21 @@ export const MobileItineraryTimeline: React.FC<{ product: TourProduct }> = ({ pr
     const rawBlocks = (product.itineraryBlocks ?? []).filter(isMeaningful) as ItineraryBlock[];
     const legacyImages = product.itineraryImages ?? [];
 
-    const { preBlocks, days } = useMemo(() => groupBlocksByDay(rawBlocks), [rawBlocks]);
+    const { preBlocks, days } = useMemo(() => {
+        const grouped = groupBlocksByDay(rawBlocks);
+        // Same defensive merge as PC: admin who creates timeline blocks
+        // *before* adding a dayInfo would otherwise see orphan images at the
+        // top with the day header below. Almost never the intent.
+        if (grouped.preBlocks.length > 0 && grouped.days.length > 0) {
+            const adjustedDays = [...grouped.days];
+            adjustedDays[0] = {
+                dayInfo: adjustedDays[0].dayInfo,
+                events: [...grouped.preBlocks, ...adjustedDays[0].events],
+            };
+            return { preBlocks: [] as ItineraryBlock[], days: adjustedDays };
+        }
+        return grouped;
+    }, [rawBlocks]);
 
     // 1) Empty → placeholder
     if (rawBlocks.length === 0 && legacyImages.length === 0) {
