@@ -17,7 +17,6 @@ import { ThemeTabsBarDesktop } from '../components/home-desktop/ThemeTabsBar.des
 import { CategorySectionDesktop } from '../components/home-desktop/CategorySection.desktop';
 import { PromoStripDesktop } from '../components/home-desktop/PromoStrip.desktop';
 import { MagazineSectionDesktop } from '../components/home-desktop/MagazineSection.desktop';
-import { TrustSectionDesktop } from '../components/home-desktop/TrustSection.desktop';
 import { ReviewSectionDesktop } from '../components/home-desktop/ReviewSection.desktop';
 
 export const Home: React.FC = () => {
@@ -109,7 +108,6 @@ export const Home: React.FC = () => {
                 ))}
 
                 <MagazineSectionDesktop magazines={data.magazines} />
-                <TrustSectionDesktop />
                 <ReviewSectionDesktop />
                 <div style={{ height: 96 }} />
             </>
