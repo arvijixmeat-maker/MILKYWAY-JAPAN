@@ -49,8 +49,7 @@ export function DesktopHeader({ contentWidth = 1280 }: DesktopHeaderProps) {
                 position: 'sticky',
                 top: 0,
                 zIndex: 50,
-                background: 'rgba(255,255,255,0.96)',
-                backdropFilter: 'blur(12px)',
+                background: '#ffffff',
                 borderBottom: scrolled ? '1px solid var(--border-subtle)' : '1px solid transparent',
                 transition: 'border-color 200ms',
             }}
