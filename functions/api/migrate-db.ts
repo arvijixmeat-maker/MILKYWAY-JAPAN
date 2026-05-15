@@ -370,6 +370,25 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped banners.pc_image: ${e.message}`);
     }
 
+    // Banners: PC-specific text fields. Mobile and PC need different lengths
+    // because the desktop hero uses 60px font on a 620px max-width column
+    // and a long mobile title wraps mid-word. Each falls back to the mobile
+    // equivalent (title/subtitle/tag) when blank.
+    const bannerPcTextColumns = [
+        "pc_title TEXT",
+        "pc_subtitle TEXT",
+        "pc_tag TEXT",
+    ];
+    for (const col of bannerPcTextColumns) {
+        const colName = col.split(' ')[0];
+        try {
+            await c.env.DB.prepare(`ALTER TABLE banners ADD COLUMN ${col}`).run();
+            migrationResults.push(`Added banners.${colName}`);
+        } catch (e: any) {
+            migrationResults.push(`Skipped banners.${colName}: ${e.message}`);
+        }
+    }
+
     // Magazines: location/map columns for embedding Google Maps in posts
     const magazineLocationColumns = [
         "location_name TEXT",
