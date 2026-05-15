@@ -142,6 +142,32 @@ export function HeroSectionDesktop({ contentWidth = 1280 }: HeroSectionDesktopPr
                     }}
                 />
             ))}
+            {/* SEO: backgroundImage alone provides no alt text for crawlers and
+                image search. Emit a hidden but on-page <img> for the active slide
+                so Google Image / accessibility tools can read a Japanese-keyword
+                alt. Hidden via clip-path (still indexable; display:none would skip). */}
+            {hasUsableImage(cur.img) && (
+                <img
+                    src={cur.img}
+                    alt={`${cur.title}${cur.title2 ? ' ' + cur.title2 : ''}｜モンゴル旅行・モンゴルツアー専門 Milkyway Japan`}
+                    width={1280}
+                    height={640}
+                    loading="eager"
+                    decoding="async"
+                    style={{
+                        position: 'absolute',
+                        width: 1,
+                        height: 1,
+                        overflow: 'hidden',
+                        clip: 'rect(0,0,0,0)',
+                        clipPath: 'inset(50%)',
+                        whiteSpace: 'nowrap',
+                        border: 0,
+                        padding: 0,
+                        margin: -1,
+                    }}
+                />
+            )}
             <div
                 style={{
                     position: 'absolute',

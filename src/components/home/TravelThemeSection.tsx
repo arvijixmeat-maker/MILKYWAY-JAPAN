@@ -74,7 +74,7 @@ export const TravelThemeSection: React.FC<TravelThemeSectionProps> = ({ products
                     {/* 2. Main Image Layer (Fit Contain) -> Cover */}
                     <img
                         src={getOptimizedImageUrl(currentTabInfo.bannerImage, 'heroBanner')}
-                        alt={currentTabInfo.title}
+                        alt={`${currentTabInfo.title}｜${currentTabInfo.name} モンゴル旅行`}
                         width={800}
                         height={340}
                         fetchPriority="high"
@@ -106,7 +106,7 @@ export const TravelThemeSection: React.FC<TravelThemeSectionProps> = ({ products
                                     {product.mainImages?.[0] ? (
                                         <img
                                             src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
-                                            alt={product.name}
+                                            alt={`${product.name}｜モンゴル旅行・モンゴルツアー`}
                                             loading="lazy"
                                             className="w-full h-full object-contain"
                                             onError={(e) => {

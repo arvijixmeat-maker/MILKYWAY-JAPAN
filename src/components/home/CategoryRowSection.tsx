@@ -61,7 +61,7 @@ export const CategoryRowSection: React.FC<CategoryRowSectionProps> = ({ category
                             {product.mainImages?.[0] ? (
                                 <img
                                     src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
-                                    alt={product.name}
+                                    alt={`${product.name}｜モンゴル旅行・モンゴルツアー`}
                                     loading="lazy"
                                     className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {

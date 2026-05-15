@@ -75,7 +75,7 @@ export const CentralMongoliaSection: React.FC = () => {
                     >
                         <div className="relative aspect-square rounded-2xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-800">
                             <img
-                                alt={product.name}
+                                alt={`${product.name}｜中央モンゴル旅行・モンゴルツアー`}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
                                 loading="lazy"

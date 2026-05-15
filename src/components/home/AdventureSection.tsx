@@ -47,7 +47,7 @@ export const AdventureSection: React.FC<AdventureSectionProps> = ({ products }) 
                             {product.mainImages?.[0] ? (
                                 <img
                                     src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
-                                    alt={product.name}
+                                    alt={`${product.name}｜モンゴル旅行・モンゴルツアー`}
                                     loading="lazy"
                                     className="w-full h-full object-cover"
                                     onError={(e) => {

@@ -659,7 +659,7 @@ export const ProductDetail: React.FC = () => {
                             >
                                 <img
                                     {...getResponsiveImageProps(img, 'banner')}
-                                    alt={`${product.name} - ${index + 1}`}
+                                    alt={`${product.name} ${index + 1}｜モンゴル旅行・モンゴルツアー`}
                                     className="w-full h-full object-cover"
                                     loading={index === 0 ? 'eager' : 'lazy'}
                                     fetchPriority={index === 0 ? 'high' : 'auto'}
@@ -805,7 +805,7 @@ export const ProductDetail: React.FC = () => {
                                     <img
                                         key={block.id}
                                         src={getOptimizedImageUrl(block.content as string, 'productDetail')}
-                                        alt="Detailed info"
+                                        alt={`${product.name} 詳細情報｜モンゴル旅行・モンゴルツアー`}
                                         className="w-full h-auto"
                                         loading="lazy"
                                         decoding="async"
@@ -827,7 +827,7 @@ export const ProductDetail: React.FC = () => {
                                                 >
                                                     <img
                                                         src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                        alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
+                                                        alt={`${slide.title || product.name} ${imgIdx + 1}｜モンゴル旅行・モンゴルツアー`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
                                                         decoding="async"
@@ -875,7 +875,7 @@ export const ProductDetail: React.FC = () => {
                                     <img
                                         key={index}
                                         src={getOptimizedImageUrl(img, 'productItinerary')}
-                                        alt={`Detail ${index + 1}`}
+                                        alt={`${product.name} 詳細${index + 1}｜モンゴル旅行・モンゴルツアー`}
                                         className="w-full h-auto"
                                         loading="lazy"
                                         decoding="async"
@@ -901,7 +901,7 @@ export const ProductDetail: React.FC = () => {
                                                 >
                                                     <img
                                                         src={getOptimizedImageUrl(img, 'productThumbnail')}
-                                                        alt={`${slide.title || 'Slide'} - ${imgIdx + 1}`}
+                                                        alt={`${slide.title || product.name} ${imgIdx + 1}｜モンゴル旅行・モンゴルツアー`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
                                                         decoding="async"
@@ -1086,7 +1086,7 @@ export const ProductDetail: React.FC = () => {
                                     {item.image ? (
                                         <img
                                             src={getOptimizedImageUrl(item.image, 'thumbnailSmall')}
-                                            alt={item.title}
+                                            alt={`${item.title}｜モンゴル旅行・モンゴルツアー`}
                                             loading="lazy"
                                             decoding="async"
                                             className="w-full h-full object-cover"
