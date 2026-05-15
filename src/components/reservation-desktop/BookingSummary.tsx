@@ -1,6 +1,13 @@
+import { useState } from 'react';
 import type { TourProduct, TourPricingOption } from '../../types/product';
 import { MatIcon } from '../desktop-primitives/MatIcon';
-import { SummaryRow, fmtMD, formatPrice } from './primitives';
+import {
+    SummaryRow,
+    fmtMD,
+    formatPrice,
+    isUsableImageUrl,
+    FALLBACK_HERO_GRADIENT,
+} from './primitives';
 
 interface BookingSummaryProps {
     product: TourProduct;
@@ -54,12 +61,8 @@ export function BookingSummary({
     canProceedHint,
 }: BookingSummaryProps) {
     const hero = product.mainImages?.[0];
-    const usableHero =
-        hero && (hero.startsWith('http') || hero.startsWith('/')) && hero !== '/og-image.jpg';
-    const heroBg = usableHero
-        ? `url(${hero})`
-        : 'linear-gradient(135deg, #134e4a 0%, #115e59 50%, #0f766e 100%)';
-
+    const [heroBroken, setHeroBroken] = useState(false);
+    const showHeroImg = !heroBroken && isUsableImageUrl(hero);
     const cleanTitle = product.name.replace(/^\[[^\]]+\]\s*/, '');
     const perPax = baseOption?.pricePerPerson ?? product.price ?? 0;
 
@@ -74,16 +77,31 @@ export function BookingSummary({
                     overflow: 'hidden',
                 }}
             >
-                {/* Hero photo */}
+                {/* Hero photo — actual <img> so onError lets us swap to the
+                    brand-color gradient when admin's URL is broken or missing. */}
                 <div
                     style={{
                         aspectRatio: '16/9',
-                        backgroundImage: heroBg,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
                         position: 'relative',
+                        background: FALLBACK_HERO_GRADIENT,
+                        overflow: 'hidden',
                     }}
                 >
+                    {showHeroImg && (
+                        <img
+                            src={hero!}
+                            alt={cleanTitle}
+                            loading="lazy"
+                            decoding="async"
+                            onError={() => setHeroBroken(true)}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                            }}
+                        />
+                    )}
                     <div
                         style={{
                             position: 'absolute',

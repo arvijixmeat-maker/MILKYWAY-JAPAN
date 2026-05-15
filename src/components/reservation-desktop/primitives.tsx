@@ -299,3 +299,21 @@ export function fmtFull(d: Date | null): string {
 }
 
 export const formatPrice = (price: number): string => (price ? price.toLocaleString() : '0');
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Image URL guard
+// ──────────────────────────────────────────────────────────────────────────────
+// A few admin records still have leftovers like "/og-image.jpg" or relative
+// paths that fail to load. Centralise the check so the hero photo and the
+// "Selected Tour" thumbnail behave the same way.
+export function isUsableImageUrl(v: unknown): v is string {
+    if (typeof v !== 'string') return false;
+    const s = v.trim();
+    if (!s) return false;
+    if (s === '/og-image.jpg') return false;
+    return s.startsWith('http') || s.startsWith('/');
+}
+
+/** Brand-color gradient used whenever no usable image is available. */
+export const FALLBACK_HERO_GRADIENT =
+    'linear-gradient(135deg, #134e4a 0%, #115e59 50%, #0f766e 100%)';

@@ -63,33 +63,50 @@ export const Reservation: React.FC = () => {
                 const data = await api.products.get(id);
 
                 if (data) {
+                    // /api/products responds with mixed camelCase + snake_case
+                    // (see CLAUDE.md §6.3). Accept both so we never miss a
+                    // field — without this, mainImages was always empty and
+                    // the booking summary fell back to a gradient.
+                    const pickArr = (camel: unknown, snake: unknown): any[] => {
+                        const v = camel ?? snake;
+                        if (Array.isArray(v)) return v;
+                        if (typeof v === 'string') {
+                            try {
+                                const parsed = JSON.parse(v);
+                                return Array.isArray(parsed) ? parsed : [];
+                            } catch {
+                                return [];
+                            }
+                        }
+                        return [];
+                    };
                     const found: TourProduct = {
                         id: data.id,
                         name: data.name,
                         price: data.price,
-                        originalPrice: data.original_price,
+                        originalPrice: data.originalPrice ?? data.original_price,
                         duration: data.duration,
                         category: data.category,
-                        mainImages: data.main_images || [],
-                        isPopular: data.is_popular,
-                        tags: data.tags || [],
+                        mainImages: pickArr(data.mainImages, data.main_images),
+                        isPopular: data.isPopular ?? data.is_popular,
+                        tags: pickArr(data.tags, data.tags),
                         description: data.description,
-                        galleryImages: data.gallery_images || [],
-                        detailImages: data.detail_images || [],
-                        itineraryImages: data.itinerary_images || [],
-                        detailSlides: data.detail_slides || [],
+                        galleryImages: pickArr(data.galleryImages, data.gallery_images),
+                        detailImages: pickArr(data.detailImages, data.detail_images),
+                        itineraryImages: pickArr(data.itineraryImages, data.itinerary_images),
+                        detailSlides: pickArr(data.detailSlides, data.detail_slides),
                         status: data.status,
-                        isFeatured: data.is_featured,
-                        highlights: data.highlights || [],
-                        included: data.included || [],
-                        excluded: data.excluded || [],
-                        pricingOptions: Array.isArray(data.pricing_options) ? data.pricing_options : (typeof data.pricing_options === 'string' ? JSON.parse(data.pricing_options) : []),
-                        accommodationOptions: Array.isArray(data.accommodation_options) ? data.accommodation_options : (typeof data.accommodation_options === 'string' ? JSON.parse(data.accommodation_options) : []),
-                        vehicleOptions: Array.isArray(data.vehicle_options) ? data.vehicle_options : (typeof data.vehicle_options === 'string' ? JSON.parse(data.vehicle_options) : []),
-                        viewCount: data.view_count || 0,
-                        bookingCount: data.booking_count || 0,
-                        createdAt: data.created_at,
-                        updatedAt: data.updated_at
+                        isFeatured: data.isFeatured ?? data.is_featured,
+                        highlights: pickArr(data.highlights, data.highlights),
+                        included: pickArr(data.included, data.included),
+                        excluded: pickArr(data.excluded, data.excluded),
+                        pricingOptions: pickArr(data.pricingOptions, data.pricing_options),
+                        accommodationOptions: pickArr(data.accommodationOptions, data.accommodation_options),
+                        vehicleOptions: pickArr(data.vehicleOptions, data.vehicle_options),
+                        viewCount: data.viewCount ?? data.view_count ?? 0,
+                        bookingCount: data.bookingCount ?? data.booking_count ?? 0,
+                        createdAt: data.createdAt ?? data.created_at,
+                        updatedAt: data.updatedAt ?? data.updated_at,
                     };
 
                     setProduct(found);
