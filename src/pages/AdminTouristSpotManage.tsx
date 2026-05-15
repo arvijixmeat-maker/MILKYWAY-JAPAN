@@ -195,6 +195,7 @@ export const AdminTouristSpotManage: React.FC = () => {
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                                         <tr className="text-xs text-slate-500 dark:text-slate-400">
+                                            <th className="text-left px-4 py-3 font-medium w-20">대표</th>
                                             <th className="text-left px-4 py-3 font-medium">관광지명</th>
                                             <th className="text-left px-4 py-3 font-medium">주소</th>
                                             <th className="text-center px-4 py-3 font-medium w-20">사진</th>
@@ -202,35 +203,52 @@ export const AdminTouristSpotManage: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filtered.map((s) => (
-                                            <tr
-                                                key={s.id}
-                                                onClick={() => startEdit(s)}
-                                                className={`border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors ${editing?.id === s.id ? 'bg-teal-50/60 dark:bg-teal-900/30' : ''
-                                                    }`}
-                                            >
-                                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                                                    {s.name_kr}
-                                                    {s.name_local && (
-                                                        <span className="ml-2 text-xs font-normal text-slate-500">{s.name_local}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
-                                                    {s.address || '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-center text-xs text-slate-500">
-                                                    {(s.images || []).length}장
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${s.is_active
-                                                        ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'
-                                                        : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                                                        }`}>
-                                                        {s.is_active ? 'Y' : 'N'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {filtered.map((s) => {
+                                            const thumb = (s.images || []).find((url) => !!url);
+                                            return (
+                                                <tr
+                                                    key={s.id}
+                                                    onClick={() => startEdit(s)}
+                                                    className={`border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors ${editing?.id === s.id ? 'bg-teal-50/60 dark:bg-teal-900/30' : ''
+                                                        }`}
+                                                >
+                                                    <td className="px-4 py-2">
+                                                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                                                            {thumb ? (
+                                                                <img
+                                                                    src={thumb}
+                                                                    alt={s.name_kr}
+                                                                    loading="lazy"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-slate-400 text-base">image</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                                                        {s.name_kr}
+                                                        {s.name_local && (
+                                                            <span className="ml-2 text-xs font-normal text-slate-500">{s.name_local}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
+                                                        {s.address || '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-xs text-slate-500">
+                                                        {(s.images || []).length}장
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${s.is_active
+                                                            ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'
+                                                            : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                                                            }`}>
+                                                            {s.is_active ? 'Y' : 'N'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             )}

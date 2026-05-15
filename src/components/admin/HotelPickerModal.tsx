@@ -114,34 +114,51 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0">
                                 <tr className="text-xs text-slate-500 dark:text-slate-400">
+                                    <th className="text-left px-4 py-2.5 font-medium w-16">대표</th>
                                     <th className="text-left px-4 py-2.5 font-medium">호텔명</th>
                                     <th className="text-left px-4 py-2.5 font-medium">주소</th>
+                                    <th className="text-center px-4 py-2.5 font-medium w-16">사진</th>
                                     <th className="text-right px-4 py-2.5 font-medium w-24">선택</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((h) => (
-                                    <tr
-                                        key={h.id}
-                                        onClick={() => onPick(h)}
-                                        className="border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors"
-                                    >
-                                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                                            {h.name_kr}
-                                            {h.name_local && (
-                                                <span className="ml-2 text-xs font-normal text-slate-500">{h.name_local}</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
-                                            {h.address || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <span className="inline-block px-3 py-1 rounded bg-teal-500 text-white text-xs font-bold">
-                                                선택
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {filtered.map((h) => {
+                                    const thumb = (h.images || []).find((url) => !!url);
+                                    return (
+                                        <tr
+                                            key={h.id}
+                                            onClick={() => onPick(h)}
+                                            className="border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors"
+                                        >
+                                            <td className="px-4 py-2">
+                                                <div className="w-12 h-12 rounded overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                                                    {thumb ? (
+                                                        <img src={thumb} alt={h.name_kr} loading="lazy" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-slate-400 text-sm">hotel</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                                                {h.name_kr}
+                                                {h.name_local && (
+                                                    <span className="ml-2 text-xs font-normal text-slate-500">{h.name_local}</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
+                                                {h.address || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-center text-xs text-slate-500">
+                                                {(h.images || []).length}장
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <span className="inline-block px-3 py-1 rounded bg-teal-500 text-white text-xs font-bold">
+                                                    선택
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     )}
