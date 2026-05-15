@@ -339,18 +339,20 @@ export function ProductDetailDesktop({
                     ))}
                 </div>
 
-                {/* In-page sticky tab nav — visually subordinate to the site
-                    header above. Slimmer padding, smaller font, subtle grey
-                    background so it doesn't compete with the main nav. */}
+                {/* In-page sticky tab nav — slim, white-on-white so it doesn't
+                    compete with the main site nav above. Visual hierarchy via
+                    smaller font and primary-color active state instead of
+                    background. */}
                 <div
                     style={{
                         position: 'sticky',
                         top: 158,
                         zIndex: 30,
-                        background: 'var(--bg-muted, #f8fafc)',
+                        background: '#fff',
                         margin: '0 -32px 0',
                         padding: '0 32px',
                         borderBottom: '1px solid var(--border-subtle)',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                     }}
                 >
                     <div className="scrollbar-hide" style={{ display: 'flex', gap: 2, overflowX: 'auto' }}>
