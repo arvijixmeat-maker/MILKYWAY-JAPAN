@@ -790,12 +790,9 @@ export const ProductDetail: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Guide intro card — site-wide message from /api/settings (key: guide_intro).
-                            Admin edits once in /admin/guide-intro, applies to every product. */}
-                        <MobileGuideCard />
-
-                        {/* Destinations map — pins derived from itineraryBlocks via place dictionary. */}
-                        <MobileDestinationsMap product={product} />
+                        {/* MobileGuideCard (ガイド紹介) and MobileDestinationsMap
+                            (目的地) removed per admin request — kept here as a
+                            note for future restoration if needed. */}
                     </div>
                 )}
 

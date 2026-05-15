@@ -71,7 +71,21 @@ export const MobileItineraryTimeline: React.FC<{ product: TourProduct }> = ({ pr
     const rawBlocks = (product.itineraryBlocks ?? []).filter(isMeaningful) as ItineraryBlock[];
     const legacyImages = product.itineraryImages ?? [];
 
-    const { preBlocks, days } = useMemo(() => groupBlocksByDay(rawBlocks), [rawBlocks]);
+    const { preBlocks, days } = useMemo(() => {
+        const grouped = groupBlocksByDay(rawBlocks);
+        // Same defensive merge as PC: admin who creates timeline blocks
+        // *before* adding a dayInfo would otherwise see orphan images at the
+        // top with the day header below. Almost never the intent.
+        if (grouped.preBlocks.length > 0 && grouped.days.length > 0) {
+            const adjustedDays = [...grouped.days];
+            adjustedDays[0] = {
+                dayInfo: adjustedDays[0].dayInfo,
+                events: [...grouped.preBlocks, ...adjustedDays[0].events],
+            };
+            return { preBlocks: [] as ItineraryBlock[], days: adjustedDays };
+        }
+        return grouped;
+    }, [rawBlocks]);
 
     // 1) Empty → placeholder
     if (rawBlocks.length === 0 && legacyImages.length === 0) {
@@ -170,11 +184,12 @@ function DayTabs({ days }: { days: DayGroup[] }) {
     );
 }
 
-// ─── One day section (header + events + hotel + meals) ────────────────
+// ─── One day section (header bar + events + hotel + meals) ────────────
 function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: number; productName: string }) {
     const c = day.dayInfo.content as DayInfoContent | undefined;
-    const cityTitle = c?.title || c?.dayLabel || `${dayIndex + 1}日目`;
-    const description = c?.description;
+    const dayLabel = (c?.dayLabel || `${dayIndex + 1}日目`).replace(/（.*?）/, '');
+    const dayDate = c?.dayDate?.trim();
+    const headerRight = dayDate || c?.title?.trim() || c?.dayLabel || '';
 
     const meals: { k: string; v: string }[] = [];
     if (c?.meals?.breakfast) meals.push({ k: '朝食', v: c.meals.breakfast });
@@ -182,120 +197,146 @@ function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: n
     if (c?.meals?.dinner) meals.push({ k: '夕食', v: c.meals.dinner });
     const accommodation = c?.accommodation;
 
+    const hasDayHeader = !!(c?.title || c?.description);
+
     return (
         <section
             id={`mob-day-${dayIndex + 1}`}
-            className="relative pl-8 mb-8"
+            className="mb-8"
             style={{ scrollMarginTop: 100 }}
         >
-            {/* Vertical spine line — sits behind the dots. */}
-            <div
-                className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-gray-200 dark:bg-gray-700"
-                aria-hidden
-            />
+            {/* Slim day header bar */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-lg px-4 py-3 mb-5 flex items-center gap-3">
+                <span className="shrink-0 px-2.5 py-1 bg-white dark:bg-gray-900 rounded text-[11px] font-bold text-gray-800 dark:text-gray-100">
+                    {dayLabel}
+                </span>
+                <span className="text-[15px] font-bold text-gray-900 dark:text-white truncate">
+                    {headerRight}
+                </span>
+            </div>
 
-            {/* Day header — bigger pin marker */}
-            <SpineRow large filled>
-                <div className="text-[10px] font-bold tracking-widest text-primary uppercase mb-1">
-                    DAY {dayIndex + 1}
-                </div>
-                <h3 className="text-base font-bold text-gray-900 dark:text-white leading-snug">
-                    {cityTitle}
-                </h3>
-                {description && (
-                    <p className="text-[13px] text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed whitespace-pre-wrap">
-                        {description}
-                    </p>
+            {/* Spine area — same alignment trick as PC: line at the *center*
+                of the 32px icon column inside each row's `grid-cols-[32px_1fr]`
+                layout. NO padding-left on this container, otherwise the line
+                drifts and stops threading through the icons. */}
+            <div className="relative">
+                <div
+                    className="absolute left-[15px] top-1 bottom-1 w-0.5 bg-gray-300 dark:bg-gray-600"
+                    aria-hidden
+                />
+
+                {/* Synthetic dayInfo header (when admin filled title/description) */}
+                {hasDayHeader && (
+                    <LocationHeaderRow
+                        title={c?.title || ''}
+                        description={c?.description || ''}
+                    />
                 )}
-            </SpineRow>
 
-            {/* Events */}
-            {day.events.map((b, i) => (
-                <EventRow key={b.id || i} block={b} index={i} productName={productName} />
-            ))}
+                {/* Events */}
+                {day.events.map((b, i) => (
+                    <EventRow key={b.id || i} block={b} index={i} productName={productName} />
+                ))}
 
-            {/* Accommodation */}
-            {accommodation && (
-                <SpineRow icon="hotel">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-gray-700 dark:text-gray-200">
-                            予定
-                        </span>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">
-                            {accommodation}
-                        </span>
-                    </div>
-                    <div className="text-[11px] text-gray-500 mt-1">
-                        * 宿泊先は出発1日前までにご案内します
-                    </div>
-                </SpineRow>
-            )}
+                {/* Accommodation */}
+                {accommodation && (
+                    <SpineRow icon="bed">
+                        <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-gray-700 dark:text-gray-200">
+                                    予定
+                                </span>
+                                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                    {accommodation}
+                                </span>
+                            </div>
+                            <div className="text-[11px] text-gray-500 mt-1">
+                                * 宿泊先は出発1日前までにご案内します。
+                            </div>
+                        </div>
+                    </SpineRow>
+                )}
 
-            {/* Meals */}
-            {meals.length > 0 && (
-                <SpineRow icon="restaurant_menu">
-                    <div className="flex gap-3 flex-wrap text-[12px]">
-                        {meals.map((m, i) => (
-                            <span key={i}>
-                                <span className="font-bold text-primary">[{m.k}]</span>{' '}
-                                <span className="text-gray-700 dark:text-gray-200 font-semibold">{m.v}</span>
-                            </span>
-                        ))}
-                    </div>
-                </SpineRow>
-            )}
+                {/* Meals */}
+                {meals.length > 0 && (
+                    <SpineRow icon="restaurant_menu">
+                        <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex gap-4 flex-wrap text-[12px]">
+                            {meals.map((m, i) => (
+                                <span key={i}>
+                                    <span className="font-bold text-primary">[{m.k}]</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-200 font-semibold">{m.v}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </SpineRow>
+                )}
+            </div>
         </section>
     );
 }
 
+// Region/city header row inline with spine — bigger pin, no card chrome.
+function LocationHeaderRow({ title, description }: { title: string; description: string }) {
+    return (
+        <div className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
+            <div className="flex items-start justify-center pt-0.5 relative z-10">
+                <span
+                    className="w-7 h-7 rounded-full bg-white dark:bg-background-dark border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center -ml-1.5"
+                >
+                    <span
+                        className="material-symbols-outlined text-gray-500 dark:text-gray-400"
+                        style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}
+                    >
+                        location_on
+                    </span>
+                </span>
+            </div>
+            <div className="pt-1">
+                {title && (
+                    <div className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">
+                        {title}
+                    </div>
+                )}
+                {description && (
+                    <div className="text-[13px] text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed whitespace-pre-wrap">
+                        {description}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ─── Generic spine row (icon column + content) ────────────────────────
+// Layout matches LocationHeaderRow: grid-cols-[32px_1fr]. The 32px column
+// centers its icon at x=16, which is exactly where the spine line sits.
 function SpineRow({
     icon,
-    large,
-    filled,
     children,
 }: {
+    /** When set, render an outlined circle with this material icon (hotel/meals). Otherwise a small red dot. */
     icon?: string;
-    large?: boolean;
-    filled?: boolean;
     children: React.ReactNode;
 }) {
     return (
-        <div className="relative mb-4 last:mb-0">
-            {/* Marker — absolutely positioned to sit on the spine. */}
+        <div className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
             <div
-                className="absolute -left-[22px] flex items-center justify-center"
-                style={{ top: large ? 2 : 6 }}
+                className="flex justify-center relative z-10"
+                style={{ paddingTop: icon ? 12 : 8 }}
             >
-                {large ? (
+                {icon ? (
                     <span
-                        className="w-6 h-6 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-sm"
-                        style={{ zIndex: 1 }}
-                    >
-                        <span
-                            className="material-symbols-outlined text-primary"
-                            style={{ fontSize: 14, fontVariationSettings: filled ? "'FILL' 1" : "'FILL' 0" }}
-                        >
-                            location_on
-                        </span>
-                    </span>
-                ) : icon ? (
-                    <span
-                        className="w-5 h-5 rounded-full bg-white border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
-                        style={{ zIndex: 1 }}
+                        className="w-6 h-6 rounded-full bg-white dark:bg-background-dark border border-gray-300 dark:border-gray-600 flex items-center justify-center"
                     >
                         <span
                             className="material-symbols-outlined text-gray-500 dark:text-gray-400"
-                            style={{ fontSize: 11 }}
+                            style={{ fontSize: 13 }}
                         >
                             {icon}
                         </span>
                     </span>
                 ) : (
-                    <span
-                        className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-white dark:ring-background-dark"
-                        style={{ zIndex: 1 }}
-                    />
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-background-dark" />
                 )}
             </div>
             <div>{children}</div>
@@ -379,31 +420,42 @@ function EventRow({
         const imgs = Array.isArray(c.images)
             ? (c.images as unknown[]).filter((x): x is string => typeof x === 'string')
             : [];
+
+        // No images = location header (region/city + notes, no card chrome).
+        if (imgs.length === 0) {
+            return (
+                <LocationHeaderRow
+                    title={c.title || ''}
+                    description={c.description || ''}
+                />
+            );
+        }
+
+        // Has images = spot card (bordered white card with photos).
         return (
             <SpineRow>
-                {c.time && (
-                    <div className="text-[10px] font-bold tracking-wider text-primary uppercase mb-1">
-                        {c.time}
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                        {c.title && (
+                            <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">
+                                {c.title}
+                            </h4>
+                        )}
+                        <span className="shrink-0 text-[11px] text-gray-400 font-semibold inline-flex items-center gap-0.5 whitespace-nowrap">
+                            詳細
+                            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>arrow_forward</span>
+                        </span>
                     </div>
-                )}
-                {c.title && (
-                    <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">
-                        {c.title}
-                    </h4>
-                )}
-                {c.description && (
-                    <p className="text-[13px] text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed whitespace-pre-wrap">
-                        {c.description}
-                    </p>
-                )}
-                {imgs.length > 0 && (
+                    {c.time && (
+                        <div className="text-[12px] text-gray-500 dark:text-gray-400 mb-3 leading-snug">
+                            {c.time}
+                        </div>
+                    )}
                     <div
-                        className={`grid gap-2 mt-3 ${
+                        className={`grid gap-1.5 ${
                             imgs.length === 1
                                 ? 'grid-cols-1'
-                                : imgs.length === 2
-                                    ? 'grid-cols-2'
-                                    : 'grid-cols-3'
+                                : 'grid-cols-2'
                         }`}
                     >
                         {imgs.map((src, i) => (
@@ -420,7 +472,12 @@ function EventRow({
                             />
                         ))}
                     </div>
-                )}
+                    {c.description && (
+                        <p className="text-[13px] text-gray-700 dark:text-gray-200 mt-3 leading-relaxed whitespace-pre-wrap">
+                            {c.description}
+                        </p>
+                    )}
+                </div>
             </SpineRow>
         );
     }

@@ -27,16 +27,13 @@ interface ProductDetailDesktopProps {
     contentWidth?: number;
 }
 
-type SectionId = 'overview' | 'highlights' | 'details' | 'itinerary' | 'options' | 'guide' | 'location' | 'included' | 'reviews' | 'faq';
+type SectionId = 'overview' | 'highlights' | 'details' | 'itinerary' | 'included' | 'reviews' | 'faq';
 
 const ALL_SECTIONS: { id: SectionId; label: string }[] = [
     { id: 'overview', label: '概要' },
     { id: 'highlights', label: 'ハイライト' },
     { id: 'details', label: '詳細情報' },
     { id: 'itinerary', label: '詳細日程' },
-    { id: 'options', label: 'プラン・オプション' },
-    { id: 'guide', label: 'ガイド紹介' },
-    { id: 'location', label: '目的地' },
     { id: 'included', label: '含まれるもの' },
     { id: 'reviews', label: 'レビュー' },
     { id: 'faq', label: 'ご注意・FAQ' },
@@ -110,19 +107,13 @@ export function ProductDetailDesktop({
     const hasItineraryContent =
         (product.itineraryBlocks && product.itineraryBlocks.some(isMeaningfulItineraryBlock)) ||
         (product.itineraryImages && product.itineraryImages.length > 0);
-    const hasOptionsContent =
-        (product.pricingOptions && product.pricingOptions.length > 0) ||
-        (product.accommodationOptions && product.accommodationOptions.length > 0) ||
-        (product.vehicleOptions && product.vehicleOptions.length > 0);
-
     const visibleSections = useMemo(
         () => ALL_SECTIONS.filter((s) => {
             if (s.id === 'details') return hasDetailContent;
             if (s.id === 'itinerary') return hasItineraryContent;
-            if (s.id === 'options') return hasOptionsContent;
             return true;
         }),
-        [hasDetailContent, hasItineraryContent, hasOptionsContent]
+        [hasDetailContent, hasItineraryContent]
     );
 
     // Scroll observers (sticky bar + active section)
@@ -443,19 +434,11 @@ export function ProductDetailDesktop({
                             </Section>
                         )}
 
-                        {hasOptionsContent && (
-                            <Section id="options" title="プラン・オプション" eyebrow="Pricing & Options">
-                                <OptionsBlock product={product} />
-                            </Section>
-                        )}
-
-                        <Section id="guide" title="ガイド紹介" eyebrow="Meet Your Guide">
-                            <GuideCard />
-                        </Section>
-
-                        <Section id="location" title="目的地" eyebrow="Destinations on This Tour">
-                            <LocationBlock product={product} />
-                        </Section>
+                        {/* プラン・オプション (options), ガイド紹介 (guide),
+                            目的地 (location) sections removed per admin request.
+                            The data still exists on TourProduct and the booking
+                            sidebar uses pricingOptions, so removing only the
+                            display sections is safe. */}
 
                         <Section id="included" title="含まれるもの・含まれないもの" eyebrow="What's Included">
                             <IncludedBlock product={product} />
@@ -1396,7 +1379,23 @@ function Timeline({ product }: { product: TourProduct }) {
         );
     }
 
-    const { preBlocks, days } = groupBlocksByDay(blocks);
+    const grouped = groupBlocksByDay(blocks);
+
+    // Defensive: if admin created timeline blocks *before* adding a dayInfo
+    // (very common — they generate "N日 골격" last), those blocks would
+    // technically sit before any day. Treat them as events of day 1 instead
+    // of orphans rendered above the day header — that's almost always the
+    // admin's intent and matches what they see in the admin block order.
+    const preBlocks: typeof grouped.preBlocks = [];
+    const days: typeof grouped.days = grouped.days;
+    if (grouped.preBlocks.length > 0 && days.length > 0) {
+        days[0] = {
+            dayInfo: days[0].dayInfo,
+            events: [...grouped.preBlocks, ...days[0].events],
+        };
+    } else {
+        preBlocks.push(...grouped.preBlocks);
+    }
 
     // 3) No dayInfo blocks → flat layout (image-only / slide products)
     if (days.length === 0) {
@@ -1508,8 +1507,12 @@ function DayTabs({ days }: { days: DayGroup[] }) {
 }
 
 /**
- * One full day section. The vertical spine line runs through the icon column;
- * each row inside (location header, events, hotel, meals) sits on its own dot.
+ * One full day section. New layout matches the reference design:
+ *   - Slim header bar at top (day number + date, optionally collapsible)
+ *   - Vertical spine on left with two kinds of markers:
+ *       📍 large pin = location header (timeline block with no images)
+ *       ● small red dot = spot card (timeline block with images)
+ *   - Hotel + meals rows at the end
  */
 function DaySection({
     day,
@@ -1521,180 +1524,283 @@ function DaySection({
     productName: string;
 }) {
     const c = day.dayInfo.content as DayInfoContent;
-    const cityTitle = c?.title || c?.dayLabel || `${dayIndex + 1}日目`;
-    const description = c?.description;
+    const dayDate = c?.dayDate?.trim();
+    // Header right side text. If admin set a date, show it bold; otherwise fall
+    // back to the dayInfo title (e.g., "고르히-테렐지") so the bar never sits empty.
+    const headerRight = dayDate || c?.title?.trim() || c?.dayLabel || '';
 
-    // Build meal entries — only show slots admin actually filled in.
     const meals: Array<{ k: string; v: string }> = [];
     if (c?.meals?.breakfast) meals.push({ k: '朝食', v: c.meals.breakfast });
     if (c?.meals?.lunch) meals.push({ k: '昼食', v: c.meals.lunch });
     if (c?.meals?.dinner) meals.push({ k: '夕食', v: c.meals.dinner });
 
+    // If admin filled in dayInfo.title/description (e.g., region name +
+    // overview), surface that as a synthetic first "location header" so the
+    // big pin doesn't disappear when there are no other location-style
+    // timeline blocks.
+    const hasDayHeaderContent = !!(c?.title || c?.description);
+
     return (
         <section
             id={`itin-day-${dayIndex + 1}`}
-            style={{ position: 'relative', paddingLeft: 56, marginBottom: 48, scrollMarginTop: 260 }}
+            style={{ marginBottom: 56, scrollMarginTop: 260 }}
         >
-            {/* Vertical spine line — sits behind the icons. */}
+            {/* ─── Slim day header bar ───────────────────────────────── */}
             <div
                 style={{
-                    position: 'absolute',
-                    left: 19,
-                    top: 18,
-                    bottom: 18,
-                    width: 2,
-                    background: 'var(--border-subtle)',
-                    pointerEvents: 'none',
+                    background: 'var(--bg-muted)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 12,
+                    padding: '14px 22px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 18,
+                    marginBottom: 28,
                 }}
-            />
-
-            {/* Day header — big map pin */}
-            <SpineRow
-                icon="location_on"
-                iconFilled
-                large
-                iconColor="#0f766e"
             >
-                <div
+                <span
                     style={{
-                        fontSize: 11,
+                        flexShrink: 0,
+                        padding: '5px 12px',
+                        background: '#fff',
+                        borderRadius: 6,
+                        fontSize: 12,
                         fontWeight: 700,
-                        color: '#0f766e',
-                        letterSpacing: '0.08em',
-                        marginBottom: 4,
+                        color: 'var(--fg-2)',
+                        letterSpacing: '-0.01em',
                     }}
                 >
-                    DAY {dayIndex + 1}
-                </div>
-                <h3
+                    {(c?.dayLabel || `${dayIndex + 1}日目`).replace(/（.*?）/, '')}
+                </span>
+                <span
                     style={{
-                        fontSize: 20,
+                        flex: 1,
+                        fontSize: 17,
                         fontWeight: 700,
                         color: 'var(--fg-1)',
-                        margin: 0,
                         letterSpacing: '-0.01em',
-                        lineHeight: 1.35,
                     }}
                 >
-                    {cityTitle}
-                </h3>
-                {description && (
-                    <p
-                        style={{
-                            fontSize: 14,
-                            color: 'var(--fg-3)',
-                            lineHeight: 1.7,
-                            marginTop: 10,
-                            marginBottom: 0,
-                            whiteSpace: 'pre-wrap',
-                        }}
-                    >
-                        {description}
-                    </p>
+                    {headerRight}
+                </span>
+            </div>
+
+            {/* ─── Spine area ─────────────────────────────────────────
+                NOTE on alignment: every spine row inside uses a CSS grid of
+                `40px 1fr` for [icon | content]. The icon column starts at the
+                parent's content edge — i.e. x=0 inside this container. The
+                vertical line at left:19 therefore sits exactly at the center
+                of the 40px icon column, which is where every icon centers
+                itself. If you ever add paddingLeft back here, the line will
+                drift to the side and stop threading through the icons. */}
+            <div style={{ position: 'relative' }}>
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: 19,
+                        top: 8,
+                        bottom: 8,
+                        width: 2,
+                        background: 'var(--border, #e2e8f0)',
+                        pointerEvents: 'none',
+                    }}
+                />
+
+                {/* Synthetic dayInfo header row (only when admin filled it in) */}
+                {hasDayHeaderContent && (
+                    <LocationHeaderRow
+                        title={c?.title || ''}
+                        description={c?.description || ''}
+                    />
                 )}
-            </SpineRow>
 
-            {/* Events under this day */}
-            {day.events.map((b, i) => (
-                <SpineEventRow key={b.id || i} block={b} index={i} productName={productName} />
-            ))}
+                {/* Real timeline blocks */}
+                {day.events.map((b, i) => (
+                    <SpineEventRow
+                        key={b.id || i}
+                        block={b}
+                        index={i}
+                        productName={productName}
+                    />
+                ))}
 
-            {/* Accommodation row */}
-            {c?.accommodation && (
-                <SpineRow icon="hotel" iconColor="#0f766e">
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            flexWrap: 'wrap',
-                        }}
-                    >
-                        <span
+                {/* Hotel row */}
+                {c?.accommodation && (
+                    <SpineRow icon="bed" small>
+                        <div
                             style={{
-                                padding: '3px 10px',
-                                background: 'var(--bg-muted)',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                color: 'var(--fg-2)',
-                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 16,
+                                paddingTop: 16,
+                                borderTop: '1px solid var(--border-subtle)',
                             }}
                         >
-                            予定
-                        </span>
-                        <span
-                            style={{
-                                fontSize: 15,
-                                fontWeight: 700,
-                                color: 'var(--fg-1)',
-                            }}
-                        >
-                            {c.accommodation}
-                        </span>
-                    </div>
-                    <div
-                        style={{
-                            fontSize: 11,
-                            color: 'var(--fg-5)',
-                            marginTop: 6,
-                        }}
-                    >
-                        * 宿泊先は出発1日前までにご案内します
-                    </div>
-                </SpineRow>
-            )}
-
-            {/* Meals row */}
-            {meals.length > 0 && (
-                <SpineRow icon="restaurant_menu" iconColor="#0f766e">
-                    <div
-                        style={{
-                            display: 'flex',
-                            gap: 22,
-                            flexWrap: 'wrap',
-                            paddingTop: 4,
-                        }}
-                    >
-                        {meals.map((m, i) => (
                             <span
-                                key={i}
                                 style={{
-                                    fontSize: 13,
+                                    padding: '4px 10px',
+                                    background: 'var(--bg-muted)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: 6,
+                                    fontSize: 11,
                                     color: 'var(--fg-2)',
+                                    fontWeight: 700,
                                 }}
                             >
-                                <span style={{ color: '#0f766e', fontWeight: 700 }}>
-                                    [{m.k}]
-                                </span>{' '}
-                                <span style={{ fontWeight: 600 }}>{m.v}</span>
+                                予定
                             </span>
-                        ))}
-                    </div>
-                </SpineRow>
-            )}
+                            <span
+                                style={{
+                                    fontSize: 16,
+                                    fontWeight: 700,
+                                    color: 'var(--fg-1)',
+                                }}
+                            >
+                                {c.accommodation}
+                            </span>
+                        </div>
+                        <div
+                            style={{
+                                fontSize: 11,
+                                color: 'var(--fg-5)',
+                                marginTop: 6,
+                            }}
+                        >
+                            * 宿泊先は出発1日前までにご案内します。
+                        </div>
+                    </SpineRow>
+                )}
+
+                {/* Meals row */}
+                {meals.length > 0 && (
+                    <SpineRow icon="restaurant_menu" small>
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 40,
+                                flexWrap: 'wrap',
+                                paddingTop: 16,
+                                borderTop: '1px solid var(--border-subtle)',
+                            }}
+                        >
+                            {meals.map((m, i) => (
+                                <span
+                                    key={i}
+                                    style={{ fontSize: 14, color: 'var(--fg-2)' }}
+                                >
+                                    <span style={{ color: '#0f766e', fontWeight: 700 }}>
+                                        [{m.k}]
+                                    </span>{' '}
+                                    <span style={{ fontWeight: 600 }}>{m.v}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </SpineRow>
+                )}
+            </div>
         </section>
     );
 }
 
 /**
- * Generic row aligned to the vertical spine. The left column is fixed width
- * for the icon dot; the right column holds the content.
+ * "Region / city" header inline with the spine — bigger pin, no card chrome.
+ * Renders dayInfo.title + dayInfo.description when admin filled them.
+ */
+function LocationHeaderRow({
+    title,
+    description,
+}: {
+    title: string;
+    description: string;
+}) {
+    return (
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '40px 1fr',
+                gap: 16,
+                marginBottom: 28,
+                alignItems: 'flex-start',
+            }}
+        >
+            <div
+                style={{
+                    width: 40,
+                    height: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    zIndex: 1,
+                }}
+            >
+                <div
+                    style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 999,
+                        background: '#fff',
+                        border: '2px solid var(--border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <MatIcon
+                        name="location_on"
+                        size={20}
+                        filled
+                        color="var(--fg-3)"
+                    />
+                </div>
+            </div>
+            <div style={{ paddingTop: 4 }}>
+                {title && (
+                    <div
+                        style={{
+                            fontSize: 17,
+                            fontWeight: 700,
+                            color: 'var(--fg-1)',
+                            marginBottom: description ? 6 : 0,
+                            letterSpacing: '-0.01em',
+                        }}
+                    >
+                        {title}
+                    </div>
+                )}
+                {description && (
+                    <div
+                        style={{
+                            fontSize: 14,
+                            color: 'var(--fg-3)',
+                            lineHeight: 1.75,
+                            whiteSpace: 'pre-wrap',
+                        }}
+                    >
+                        {description}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Generic row aligned to the vertical spine. Icons can be:
+ *   - small=true and no icon → small red dot (default for spot cards)
+ *   - small=true and icon → outlined circle with material icon (hotel/meals)
+ *   - icon === 'location_on' → larger map pin (for region headers)
  */
 function SpineRow({
     icon,
-    iconFilled,
-    iconColor,
-    large,
+    small,
     children,
 }: {
-    icon: string;
-    iconFilled?: boolean;
-    iconColor?: string;
-    /** Use the bigger location-pin styling instead of the small dot. */
-    large?: boolean;
+    icon?: string;
+    /** When true, render a 24px outlined circle with the icon (for hotel/meals). */
+    small?: boolean;
     children: ReactNode;
 }) {
-    const size = large ? 38 : 22;
     return (
         <div
             style={{
@@ -1702,45 +1808,51 @@ function SpineRow({
                 gridTemplateColumns: '40px 1fr',
                 gap: 16,
                 alignItems: 'flex-start',
-                marginBottom: large ? 24 : 18,
+                marginBottom: 28,
             }}
         >
             <div
                 style={{
-                    width: size,
-                    height: size,
-                    borderRadius: 999,
-                    background: '#fff',
-                    border: large ? '2px solid #0f766e' : '2px solid #fff',
-                    boxShadow: large ? 'none' : '0 0 0 3px #fff',
+                    width: 40,
+                    height: 40,
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     justifyContent: 'center',
+                    paddingTop: 12,
                     position: 'relative',
                     zIndex: 1,
-                    marginLeft: large ? 0 : 8,
-                    marginTop: large ? 0 : 4,
                 }}
             >
-                {large ? (
-                    <MatIcon
-                        name={icon}
-                        size={20}
-                        filled={iconFilled}
-                        color={iconColor || '#0f766e'}
-                    />
+                {icon && small ? (
+                    <div
+                        style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 999,
+                            background: '#fff',
+                            border: '1.5px solid var(--border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <MatIcon name={icon} size={14} color="var(--fg-3)" />
+                    </div>
                 ) : (
                     <span
                         style={{
-                            width: 10,
-                            height: 10,
+                            width: 9,
+                            height: 9,
                             borderRadius: 999,
                             background: '#dc2626',
+                            // Smaller white halo (2px) so the spine line stays
+                            // visible right up to the dot edges.
+                            boxShadow: '0 0 0 2px #fff',
                         }}
                     />
                 )}
             </div>
-            <div style={{ paddingTop: large ? 4 : 0 }}>{children}</div>
+            <div>{children}</div>
         </div>
     );
 }
@@ -1800,94 +1912,138 @@ function SpineEventRow({
         );
     }
 
-    // Timeline → title + description + image grid
+    // Timeline → auto-detect: with images = spot card, without images = location header
     if (block.type === 'timeline') {
         const c = block.content as TimelineContent & { images?: unknown };
         const imgs = Array.isArray(c.images)
             ? c.images.filter((x): x is string => typeof x === 'string')
             : [];
+
+        // ── No images = location header (region/city/notes only) ──
+        if (imgs.length === 0) {
+            return (
+                <LocationHeaderRow
+                    title={c.title || ''}
+                    description={c.description || ''}
+                />
+            );
+        }
+
+        // ── Has images = spot card (the reference design's "place card") ──
         return (
-            <SpineRow icon="trip_origin">
+            <SpineRow>
                 <div
                     style={{
                         background: '#fff',
                         border: '1px solid var(--border-subtle)',
-                        borderRadius: 16,
-                        padding: '18px 22px',
-                        boxShadow: 'var(--shadow-toss)',
+                        borderRadius: 12,
+                        padding: '22px 24px',
                     }}
                 >
+                    {/* Title row + 자세히보기 link */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            gap: 16,
+                            marginBottom: c.time || c.description ? 6 : 14,
+                        }}
+                    >
+                        {c.title && (
+                            <h4
+                                style={{
+                                    fontSize: 18,
+                                    fontWeight: 700,
+                                    color: 'var(--fg-1)',
+                                    margin: 0,
+                                    letterSpacing: '-0.01em',
+                                    lineHeight: 1.35,
+                                }}
+                            >
+                                {c.title}
+                            </h4>
+                        )}
+                        <span
+                            style={{
+                                flexShrink: 0,
+                                fontSize: 12,
+                                color: 'var(--fg-4)',
+                                fontWeight: 600,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            詳細を見る
+                            <MatIcon
+                                name="arrow_forward"
+                                size={14}
+                                color="var(--fg-4)"
+                            />
+                        </span>
+                    </div>
+
+                    {/* Optional subtitle (we reuse the `time` field for this). */}
                     {c.time && (
                         <div
                             style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: '#0f766e',
-                                letterSpacing: '0.06em',
-                                marginBottom: 6,
+                                fontSize: 13,
+                                color: 'var(--fg-4)',
+                                marginBottom: 14,
+                                lineHeight: 1.6,
                             }}
                         >
                             {c.time}
                         </div>
                     )}
-                    {c.title && (
-                        <h4
-                            style={{
-                                fontSize: 17,
-                                fontWeight: 700,
-                                color: 'var(--fg-1)',
-                                margin: 0,
-                                letterSpacing: '-0.01em',
-                            }}
-                        >
-                            {c.title}
-                        </h4>
-                    )}
+
+                    {/* Image grid — 3-col when many, 2-col for 2, full for 1 */}
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns:
+                                imgs.length === 1
+                                    ? '1fr'
+                                    : imgs.length === 2
+                                        ? 'repeat(2, 1fr)'
+                                        : 'repeat(3, 1fr)',
+                            gap: 8,
+                            marginBottom: c.description ? 16 : 0,
+                        }}
+                    >
+                        {imgs.map((src, i) => (
+                            <img
+                                key={i}
+                                src={src}
+                                alt={c.title ? `${c.title} - ${i + 1}` : `event - ${i + 1}`}
+                                loading="lazy"
+                                decoding="async"
+                                style={{
+                                    width: '100%',
+                                    aspectRatio: imgs.length === 1 ? '16/9' : '4/3',
+                                    objectFit: 'cover',
+                                    borderRadius: 8,
+                                    display: 'block',
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Description below images, matching the reference layout. */}
                     {c.description && (
                         <p
                             style={{
-                                fontSize: 13.5,
-                                color: 'var(--fg-3)',
-                                lineHeight: 1.75,
-                                marginTop: 8,
-                                marginBottom: 0,
+                                fontSize: 14,
+                                color: 'var(--fg-2)',
+                                lineHeight: 1.85,
+                                margin: 0,
                                 whiteSpace: 'pre-wrap',
                             }}
                         >
                             {c.description}
                         </p>
-                    )}
-                    {imgs.length > 0 && (
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns:
-                                    imgs.length === 1
-                                        ? '1fr'
-                                        : imgs.length === 2
-                                            ? 'repeat(2, 1fr)'
-                                            : 'repeat(3, 1fr)',
-                                gap: 8,
-                                marginTop: c.title || c.description ? 14 : 0,
-                            }}
-                        >
-                            {imgs.map((src, i) => (
-                                <img
-                                    key={i}
-                                    src={src}
-                                    alt={c.title ? `${c.title} - ${i + 1}` : `event - ${i + 1}`}
-                                    loading="lazy"
-                                    decoding="async"
-                                    style={{
-                                        width: '100%',
-                                        aspectRatio: imgs.length === 1 ? '16/9' : '4/3',
-                                        objectFit: 'cover',
-                                        borderRadius: 10,
-                                        display: 'block',
-                                    }}
-                                />
-                            ))}
-                        </div>
                     )}
                 </div>
             </SpineRow>
