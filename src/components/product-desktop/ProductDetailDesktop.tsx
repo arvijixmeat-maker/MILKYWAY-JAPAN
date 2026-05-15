@@ -1030,91 +1030,194 @@ function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: s
     if (!slide.images || slide.images.length === 0) return null;
     const n = slide.images.length;
 
-    // Adaptive layout based on image count so images never get squashed into
-    // tiny grid cells on a wide PC viewport.
-    // - 1 image  → full-width 16:9 hero
-    // - 2 images → 2 columns
-    // - 3 images → 3 columns
-    // - 4+ images → horizontal-scroll gallery (matches mobile carousel feel)
+    // Each slide image renders as a TALL premium-looking card with a soft
+    // dark gradient at the bottom — closer to a hero banner than a thumbnail.
+    // Layouts:
+    //   1 image  → full-width 16:9 hero
+    //   2 images → 2 columns of 3:4 cards
+    //   3+ images → 2-column grid, 3:4 cards (cards wrap into rows)
     let body: React.ReactNode;
+
     if (n === 1) {
         body = (
-            <img
+            <PremiumImageCard
                 src={slide.images[0]}
                 alt={`${slide.title || productName} - 1`}
-                loading="lazy"
-                decoding="async"
-                style={{
-                    width: '100%',
-                    aspectRatio: '16/9',
-                    objectFit: 'cover',
-                    borderRadius: 14,
-                    display: 'block',
-                }}
+                aspectRatio="16/9"
+                title={slide.title}
+                description={slide.description}
+                counterText={undefined}
             />
         );
-    } else if (n === 2) {
+    } else {
+        // 2+ images — bigger cards in a 2-column grid. No counter when only 2.
         body = (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 18,
+                }}
+            >
                 {slide.images.map((img, i) => (
-                    <img
+                    <PremiumImageCard
                         key={i}
                         src={img}
                         alt={`${slide.title || productName} - ${i + 1}`}
-                        loading="lazy"
-                        decoding="async"
-                        style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 14, display: 'block' }}
+                        aspectRatio="3/4"
+                        title={slide.title}
+                        description={slide.description}
+                        counterText={n > 2 ? `${i + 1} / ${n}` : undefined}
                     />
-                ))}
-            </div>
-        );
-    } else {
-        // 3+ images — 2-column responsive grid. Big, readable cards on PC.
-        body = (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                {slide.images.map((img, i) => (
-                    <div key={i} style={{ position: 'relative' }}>
-                        <img
-                            src={img}
-                            alt={`${slide.title || productName} - ${i + 1}`}
-                            loading="lazy"
-                            decoding="async"
-                            style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 14, display: 'block' }}
-                        />
-                        <div
-                            style={{
-                                position: 'absolute',
-                                bottom: 10,
-                                right: 10,
-                                padding: '3px 10px',
-                                background: 'rgba(0,0,0,0.55)',
-                                color: '#fff',
-                                fontSize: 11,
-                                fontWeight: 700,
-                                borderRadius: 999,
-                                backdropFilter: 'blur(4px)',
-                            }}
-                        >
-                            {i + 1} / {n}
-                        </div>
-                    </div>
                 ))}
             </div>
         );
     }
 
+    // Title/description rendered ONCE above (kept for sections that have a
+    // textual lead-in), but each card also has the same title overlaid at the
+    // top — gives the premium banner feel even when scrolled past the heading.
     return (
         <div>
-            {slide.title && (
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 12px', letterSpacing: '-0.01em' }}>
+            {n === 1 && slide.title && (
+                <h3
+                    style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: 'var(--fg-1)',
+                        margin: '0 0 12px',
+                        letterSpacing: '-0.01em',
+                    }}
+                >
                     {slide.title}
                 </h3>
             )}
             {body}
-            {slide.description && (
+            {n === 1 && slide.description && (
                 <p style={{ fontSize: 14, color: 'var(--fg-4)', lineHeight: 1.75, marginTop: 14 }}>
                     {slide.description}
                 </p>
+            )}
+        </div>
+    );
+}
+
+/**
+ * Tall image card with a dark gradient + text overlay. Used by SlideBlock to
+ * make slide images feel like premium hero banners instead of small thumbnails.
+ */
+function PremiumImageCard({
+    src,
+    alt,
+    aspectRatio,
+    title,
+    description,
+    counterText,
+}: {
+    src: string;
+    alt: string;
+    aspectRatio: string;
+    title?: string;
+    description?: string;
+    counterText?: string;
+}) {
+    const showOverlayText = !!(title || description);
+    return (
+        <div
+            style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio,
+                borderRadius: 16,
+                overflow: 'hidden',
+                background: '#0b0b0b',
+                boxShadow: '0 6px 18px -8px rgba(0,0,0,0.18)',
+            }}
+        >
+            <img
+                src={src}
+                alt={alt}
+                loading="lazy"
+                decoding="async"
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                }}
+            />
+            {/* Dark gradient — strong at bottom for text legibility, fades to
+                transparent ~50% up so the photo still shines. */}
+            <div
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background:
+                        'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0) 70%)',
+                    pointerEvents: 'none',
+                }}
+            />
+            {showOverlayText && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: 22,
+                        right: 22,
+                        bottom: 22,
+                        color: '#fff',
+                    }}
+                >
+                    {title && (
+                        <div
+                            style={{
+                                fontSize: 18,
+                                fontWeight: 700,
+                                lineHeight: 1.3,
+                                letterSpacing: '-0.01em',
+                                textShadow: '0 2px 12px rgba(0,0,0,0.45)',
+                            }}
+                        >
+                            {title}
+                        </div>
+                    )}
+                    {description && (
+                        <div
+                            style={{
+                                fontSize: 13,
+                                marginTop: 6,
+                                opacity: 0.92,
+                                lineHeight: 1.55,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textShadow: '0 1px 8px rgba(0,0,0,0.45)',
+                            }}
+                        >
+                            {description}
+                        </div>
+                    )}
+                </div>
+            )}
+            {counterText && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        padding: '4px 10px',
+                        background: 'rgba(0,0,0,0.55)',
+                        color: '#fff',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        borderRadius: 999,
+                        backdropFilter: 'blur(4px)',
+                    }}
+                >
+                    {counterText}
+                </div>
             )}
         </div>
     );
