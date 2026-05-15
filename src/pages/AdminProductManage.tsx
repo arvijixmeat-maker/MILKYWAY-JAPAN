@@ -7,7 +7,9 @@ import { getOptimizedImageUrl } from '../utils/cloudflareImage';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 import type { Category } from '../types/category';
 import type { Hotel } from '../types/hotel';
+import type { TouristSpot } from '../types/touristSpot';
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
+import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 
 
 
@@ -985,19 +987,63 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
 
-    // ─── Hotel picker (opens for a specific itinerary block index) ─────
-    const [hotelPickerForIndex, setHotelPickerForIndex] = useState<number | null>(null);
+    // ─── Hotel picker — works for both dayInfo (숙소) and timeline (일정 항목) ─
+    // Target type lets the picker know which block to update on selection.
+    const [hotelPickerTarget, setHotelPickerTarget] = useState<
+        { kind: 'dayInfoAccommodation' | 'timeline'; index: number } | null
+    >(null);
     const handleHotelPick = (hotel: Hotel) => {
-        if (hotelPickerForIndex == null) return;
-        const block = formData.itineraryBlocks?.[hotelPickerForIndex];
-        if (block && block.type === 'dayInfo') {
-            updateItineraryBlockContent(hotelPickerForIndex, {
+        if (!hotelPickerTarget) return;
+        const { kind, index } = hotelPickerTarget;
+        const block = formData.itineraryBlocks?.[index];
+        if (!block) {
+            setHotelPickerTarget(null);
+            return;
+        }
+
+        if (kind === 'dayInfoAccommodation' && block.type === 'dayInfo') {
+            updateItineraryBlockContent(index, {
                 ...(block.content as DayInfoContent),
-                accommodation: hotel.name_kr,       // snapshot — survives master deletion
-                accommodationHotelId: hotel.id,     // link for future reference
+                accommodation: hotel.name_kr,
+                accommodationHotelId: hotel.id,
+            });
+        } else if (kind === 'timeline' && block.type === 'timeline') {
+            // For a TIMELINE block: push hotel data into title + description + images.
+            // This is the "hotel as a timeline event" flow (e.g., 호텔 체크인).
+            const current = block.content as TimelineContent;
+            const hotelDesc = [hotel.description, hotel.address].filter(Boolean).join('\n\n');
+            updateItineraryBlockContent(index, {
+                ...current,
+                title: hotel.name_kr,
+                description: hotelDesc || current.description,
+                images: hotel.images && hotel.images.length > 0 ? [...hotel.images] : current.images,
             });
         }
-        setHotelPickerForIndex(null);
+        setHotelPickerTarget(null);
+    };
+
+    // ─── Tourist spot picker — only opens from TIMELINE blocks ─────────
+    const [spotPickerForIndex, setSpotPickerForIndex] = useState<number | null>(null);
+    const handleSpotPick = (spot: TouristSpot) => {
+        if (spotPickerForIndex == null) return;
+        const block = formData.itineraryBlocks?.[spotPickerForIndex];
+        if (block && block.type === 'timeline') {
+            const current = block.content as TimelineContent;
+            const desc = [spot.description, spot.address].filter(Boolean).join('\n\n');
+            updateItineraryBlockContent(spotPickerForIndex, {
+                ...current,
+                title: spot.name_kr,
+                description: desc || current.description,
+                images: spot.images && spot.images.length > 0 ? [...spot.images] : current.images,
+            });
+        }
+        setSpotPickerForIndex(null);
+    };
+
+    // Backwards-compat helper for the existing dayInfo button.
+    const setHotelPickerForIndex = (index: number | null) => {
+        if (index == null) setHotelPickerTarget(null);
+        else setHotelPickerTarget({ kind: 'dayInfoAccommodation', index });
     };
 
     // ─── Bulk image upload (drag&drop multi-file) ─────────────────────
@@ -2293,6 +2339,30 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 ) : block.type === 'timeline' ? (
                                                     // TIMELINE BLOCK
                                                     <div>
+                                                        {/* Master picker buttons — pull in spot or hotel data with one click. */}
+                                                        <div className="flex gap-2 mb-3 flex-wrap">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSpotPickerForIndex(index)}
+                                                                className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                title="관광지 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">location_on</span>
+                                                                관광지에서 선택
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setHotelPickerTarget({ kind: 'timeline', index })}
+                                                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                title="호텔 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">hotel</span>
+                                                                호텔에서 선택
+                                                            </button>
+                                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 self-center ml-1">
+                                                                또는 아래에 직접 입력
+                                                            </span>
+                                                        </div>
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
                                                                 <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
@@ -2744,11 +2814,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                     </div>
                 </form>
 
-                {/* Hotel picker modal — opens from any dayInfo block's "호텔 마스터에서 선택" button. */}
+                {/* Master pickers — open from either dayInfo or timeline buttons. */}
                 <HotelPickerModal
-                    open={hotelPickerForIndex != null}
+                    open={hotelPickerTarget != null}
                     onPick={handleHotelPick}
-                    onClose={() => setHotelPickerForIndex(null)}
+                    onClose={() => setHotelPickerTarget(null)}
+                />
+                <TouristSpotPickerModal
+                    open={spotPickerForIndex != null}
+                    onPick={handleSpotPick}
+                    onClose={() => setSpotPickerForIndex(null)}
                 />
             </div >
         </div >

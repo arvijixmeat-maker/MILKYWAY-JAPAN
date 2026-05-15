@@ -305,3 +305,18 @@ CREATE TABLE IF NOT EXISTS hotels (
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Tourist spots — reusable master library for timeline blocks in product
+-- itineraries. Picking from the picker modal pushes name_kr → title,
+-- description → description, images → images onto the timeline block.
+CREATE TABLE IF NOT EXISTS tourist_spots (
+    id TEXT PRIMARY KEY NOT NULL,
+    name_kr TEXT NOT NULL,
+    name_local TEXT DEFAULT '',
+    address TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    images TEXT DEFAULT '[]',
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);

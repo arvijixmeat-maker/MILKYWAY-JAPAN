@@ -225,6 +225,29 @@ export const api = {
         }),
         delete: async (id: string) => request(`${API_BASE}/magazines/${id}`, { method: 'DELETE' }),
     },
+    touristSpots: {
+        // Reusable master library — admin picks from this when filling out
+        // a timeline event in the itinerary editor.
+        list: async (params?: { q?: string; active?: boolean }) => {
+            const qs = new URLSearchParams();
+            if (params?.q) qs.set('q', params.q);
+            if (params?.active === false) qs.set('active', '0');
+            const tail = qs.toString();
+            return request(`${API_BASE}/tourist-spots${tail ? '?' + tail : ''}`);
+        },
+        get: async (id: string) => request(`${API_BASE}/tourist-spots/${id}`),
+        create: async (data: any) => request(`${API_BASE}/tourist-spots`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        update: async (id: string, data: any) => request(`${API_BASE}/tourist-spots/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        delete: async (id: string) => request(`${API_BASE}/tourist-spots/${id}`, { method: 'DELETE' }),
+    },
     hotels: {
         // Reusable master library — admin picks from this when filling out
         // a day's accommodation slot in the itinerary editor.
