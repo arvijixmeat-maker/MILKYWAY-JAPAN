@@ -65,6 +65,8 @@ const AdminCategoryManage = lazy(() => import('./pages/AdminCategoryManage').the
 const AdminGuideManage = lazy(() => import('./pages/AdminGuideManage').then(module => ({ default: module.AdminGuideManage })))
 const AdminMagazineManage = lazy(() => import('./pages/AdminMagazineManage').then(module => ({ default: module.AdminMagazineManage })))
 const AdminAccommodationManage = lazy(() => import('./pages/AdminAccommodationManage').then(module => ({ default: module.AdminAccommodationManage })))
+const AdminHotelManage = lazy(() => import('./pages/AdminHotelManage').then(module => ({ default: module.AdminHotelManage })))
+const AdminTouristSpotManage = lazy(() => import('./pages/AdminTouristSpotManage').then(module => ({ default: module.AdminTouristSpotManage })))
 const AdminTemplateManage = lazy(() => import('./pages/AdminTemplateManage').then(module => ({ default: module.AdminTemplateManage })))
 const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(module => ({ default: module.AdminReviewManage })))
 const AdminFAQManage = lazy(() => import('./pages/AdminFAQManage').then(module => ({ default: module.AdminFAQManage })))
@@ -147,6 +149,8 @@ function App() {
             <Route path="/admin/categories" element={<AdminGuard><AdminCategoryManage /></AdminGuard>} />
             <Route path="/admin/guides" element={<AdminGuard><AdminGuideManage /></AdminGuard>} />
             <Route path="/admin/magazines" element={<AdminGuard><AdminMagazineManage /></AdminGuard>} />
+            <Route path="/admin/hotels" element={<AdminGuard><AdminHotelManage /></AdminGuard>} />
+            <Route path="/admin/tourist-spots" element={<AdminGuard><AdminTouristSpotManage /></AdminGuard>} />
             <Route path="/admin/accommodations" element={<AdminGuard><AdminAccommodationManage /></AdminGuard>} />
             <Route path="/admin/templates" element={<AdminGuard><AdminTemplateManage /></AdminGuard>} />
             <Route path="/admin/reviews" element={<AdminGuard><AdminReviewManage /></AdminGuard>} />

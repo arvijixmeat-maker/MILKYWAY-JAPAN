@@ -308,6 +308,59 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped products.faqs: ${e.message}`);
     }
 
+    // Hotels — reusable hotel master library.
+    // Picked from dayInfo.accommodation in the product itinerary editor
+    // so admin doesn't have to type "마리나베이샌즈호텔" repeatedly.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS hotels (
+                id TEXT PRIMARY KEY NOT NULL,
+                code TEXT DEFAULT '',
+                name_kr TEXT NOT NULL,
+                name_local TEXT DEFAULT '',
+                country TEXT DEFAULT '',
+                city TEXT DEFAULT '',
+                region TEXT DEFAULT '',
+                star_rating INTEGER DEFAULT 0,
+                address TEXT DEFAULT '',
+                latitude REAL,
+                longitude REAL,
+                description TEXT DEFAULT '',
+                website TEXT DEFAULT '',
+                images TEXT DEFAULT '[]',
+                amenities TEXT DEFAULT '[]',
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created hotels table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped hotels table: ${e.message}`);
+    }
+
+    // Tourist spots — reusable master library for the timeline blocks.
+    // Picked from timeline events in the product itinerary editor so
+    // admin doesn't have to retype spot title/description/photos.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS tourist_spots (
+                id TEXT PRIMARY KEY NOT NULL,
+                name_kr TEXT NOT NULL,
+                name_local TEXT DEFAULT '',
+                address TEXT DEFAULT '',
+                description TEXT DEFAULT '',
+                images TEXT DEFAULT '[]',
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created tourist_spots table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped tourist_spots table: ${e.message}`);
+    }
+
     // Banners: PC-specific hero image (wider aspect ratio than mobile).
     // Falls back to `image` when not set.
     try {

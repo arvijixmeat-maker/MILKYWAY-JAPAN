@@ -6,6 +6,10 @@ import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
 import type { Category } from '../types/category';
+import type { Hotel } from '../types/hotel';
+import type { TouristSpot } from '../types/touristSpot';
+import { HotelPickerModal } from '../components/admin/HotelPickerModal';
+import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 
 
 
@@ -982,6 +986,149 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         setFormData({ ...formData, detailBlocks: blocks });
     };
 
+
+    // ─── Hotel picker — works for both dayInfo (숙소) and timeline (일정 항목) ─
+    // Target type lets the picker know which block to update on selection.
+    const [hotelPickerTarget, setHotelPickerTarget] = useState<
+        { kind: 'dayInfoAccommodation' | 'timeline'; index: number } | null
+    >(null);
+    const handleHotelPick = (hotel: Hotel) => {
+        if (!hotelPickerTarget) return;
+        const { kind, index } = hotelPickerTarget;
+        const block = formData.itineraryBlocks?.[index];
+        if (!block) {
+            setHotelPickerTarget(null);
+            return;
+        }
+
+        if (kind === 'dayInfoAccommodation' && block.type === 'dayInfo') {
+            updateItineraryBlockContent(index, {
+                ...(block.content as DayInfoContent),
+                accommodation: hotel.name_kr,
+                accommodationHotelId: hotel.id,
+            });
+        } else if (kind === 'timeline' && block.type === 'timeline') {
+            // For a TIMELINE block: push hotel data into title + description + images.
+            // This is the "hotel as a timeline event" flow (e.g., 호텔 체크인).
+            const current = block.content as TimelineContent;
+            const hotelDesc = [hotel.description, hotel.address].filter(Boolean).join('\n\n');
+            updateItineraryBlockContent(index, {
+                ...current,
+                title: hotel.name_kr,
+                description: hotelDesc || current.description,
+                images: hotel.images && hotel.images.length > 0 ? [...hotel.images] : current.images,
+            });
+        }
+        setHotelPickerTarget(null);
+    };
+
+    // ─── Tourist spot picker — only opens from TIMELINE blocks ─────────
+    const [spotPickerForIndex, setSpotPickerForIndex] = useState<number | null>(null);
+    const handleSpotPick = (spot: TouristSpot) => {
+        if (spotPickerForIndex == null) return;
+        const block = formData.itineraryBlocks?.[spotPickerForIndex];
+        if (block && block.type === 'timeline') {
+            const current = block.content as TimelineContent;
+            const desc = [spot.description, spot.address].filter(Boolean).join('\n\n');
+            updateItineraryBlockContent(spotPickerForIndex, {
+                ...current,
+                title: spot.name_kr,
+                description: desc || current.description,
+                images: spot.images && spot.images.length > 0 ? [...spot.images] : current.images,
+            });
+        }
+        setSpotPickerForIndex(null);
+    };
+
+    // Backwards-compat helper for the existing dayInfo button.
+    const setHotelPickerForIndex = (index: number | null) => {
+        if (index == null) setHotelPickerTarget(null);
+        else setHotelPickerTarget({ kind: 'dayInfoAccommodation', index });
+    };
+
+    // ─── Bulk image upload (drag&drop multi-file) ─────────────────────
+    // Uploads all files in parallel and appends one image block per file.
+    // Lets the admin drop 20 photos at once instead of clicking "이미지 추가"
+    // → empty box → file picker for each one.
+    const [itineraryBulkUploading, setItineraryBulkUploading] = useState(false);
+    const [itineraryBulkProgress, setItineraryBulkProgress] = useState<{ done: number; total: number } | null>(null);
+    const bulkAddItineraryImages = async (files: File[]) => {
+        if (files.length === 0) return;
+        setItineraryBulkUploading(true);
+        setItineraryBulkProgress({ done: 0, total: files.length });
+        try {
+            // Upload all files. Track progress as each resolves so admin sees
+            // "5/20 업로드 중..." instead of just spinning indefinitely.
+            let done = 0;
+            const urls = await Promise.all(
+                files.map((f) =>
+                    uploadImage(f, 'product-details').then((url) => {
+                        done += 1;
+                        setItineraryBulkProgress({ done, total: files.length });
+                        return url;
+                    })
+                )
+            );
+            const stamp = Date.now();
+            const newBlocks: DetailContentBlock[] = urls.map((url, i) => ({
+                id: `block-${stamp}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+                type: 'image',
+                content: url,
+            }));
+            setFormData((prev) => ({
+                ...prev,
+                itineraryBlocks: [...(prev.itineraryBlocks || []), ...newBlocks],
+            }));
+        } catch (e) {
+            console.error('Bulk itinerary image upload failed:', e);
+            alert('이미지 업로드 중 일부가 실패했습니다.');
+        } finally {
+            setItineraryBulkUploading(false);
+            setItineraryBulkProgress(null);
+        }
+    };
+
+    // ─── N-day skeleton generator ────────────────────────────────────
+    // One click → creates N dayInfo blocks (1日目 … N日目) with dividers
+    // between them. Admin then just fills in titles / descriptions per day.
+    const DAY_LABELS_JP = [
+        '1日目（いちにちめ）', '2日目（ふつかめ）', '3日目（みっかめ）',
+        '4日目（よっかめ）', '5日目（いつかめ）', '6日目（むいかめ）',
+        '7日目（なのかめ）', '8日目（ようかめ）', '9日目（ここのかめ）',
+        '10日目（とおかめ）',
+    ];
+    const addDaysSkeleton = (days: number) => {
+        if (!Number.isFinite(days) || days < 1) return;
+        const capped = Math.min(14, Math.max(1, Math.floor(days)));
+        const stamp = Date.now();
+        const newBlocks: DetailContentBlock[] = [];
+        for (let i = 0; i < capped; i++) {
+            newBlocks.push({
+                id: `block-${stamp}-d${i}-info`,
+                type: 'dayInfo',
+                content: {
+                    id: `dayinfo-${stamp}-${i}`,
+                    dayLabel: DAY_LABELS_JP[i] || `${i + 1}日目`,
+                    dayDate: '',
+                    title: '',
+                    description: '',
+                    meals: { breakfast: '', lunch: '', dinner: '' },
+                    accommodation: '',
+                },
+            });
+            if (i < capped - 1) {
+                newBlocks.push({
+                    id: `block-${stamp}-d${i}-divider`,
+                    type: 'divider',
+                    content: { style: 'space', height: 40 },
+                });
+            }
+        }
+        setFormData((prev) => ({
+            ...prev,
+            itineraryBlocks: [...(prev.itineraryBlocks || []), ...newBlocks],
+        }));
+    };
 
     // Itinerary Block Handlers (same as Detail Block but for itinerary)
     const addItineraryBlock = (type: 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo', dayLabel?: string) => {
@@ -2013,68 +2160,68 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                         {/* Itinerary Tab */}
                         {currentTab === 'itinerary' && (
                             <div className="space-y-6">
+                                {/* ─── Quick actions: bulk image upload + N-day skeleton ─── */}
+                                <ItineraryQuickActions
+                                    onBulkImages={bulkAddItineraryImages}
+                                    onSkeleton={addDaysSkeleton}
+                                    uploading={itineraryBulkUploading}
+                                    progress={itineraryBulkProgress}
+                                />
+
                                 {/* Itinerary Block Content Section */}
                                 <div>
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            일정 컨텐츠 (이미지 & 슬라이드 순서 편집)
+                                            일정 블록 (위에서 아래로 표시되는 순서)
                                         </label>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap">
+                                            <button
+                                                type="button"
+                                                onClick={() => addItineraryBlock('timeline')}
+                                                className="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                                                title="시간·제목·설명·이미지가 들어가는 일정 항목 (예: '10:00 자이승 전망대 + 사진 3장')"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">add_location</span>
+                                                일정 항목 추가
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={() => addItineraryBlock('image')}
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+                                                title="단일 이미지 하나만 (긴 한 장 이미지에 적합)"
                                             >
                                                 <span className="material-symbols-outlined text-sm">image</span>
-                                                이미지 추가
+                                                사진 1장
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => addItineraryBlock('slide')}
                                                 className="px-3 py-1.5 bg-teal-500 text-white text-xs font-medium rounded-lg hover:bg-teal-600 transition-colors flex items-center gap-1"
+                                                title="사진 여러 장을 가로 갤러리로 묶음 (제목 부여 가능)"
                                             >
                                                 <span className="material-symbols-outlined text-sm">view_carousel</span>
-                                                슬라이드 추가
+                                                갤러리
                                             </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addItineraryBlock('timeline')}
-                                                className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">timeline</span>
-                                                타임라인 추가
-                                            </button>
-                                            <select
-                                                onChange={(e) => { if (e.target.value) { addItineraryBlock('dayInfo', e.target.value); e.target.value = ''; } }}
-                                                defaultValue=""
-                                                className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 transition-colors cursor-pointer appearance-none"
-                                                style={{ backgroundImage: 'none' }}
-                                            >
-                                                <option value="" disabled>📅 일차 추가</option>
-                                                <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
-                                                <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
-                                                <option value="3日目（みっかめ）">3日目（みっかめ）</option>
-                                                <option value="4日目（よっかめ）">4日目（よっかめ）</option>
-                                                <option value="5日目（いつかめ）">5日目（いつかめ）</option>
-                                                <option value="6日目（むいかめ）">6日目（むいかめ）</option>
-                                                <option value="7日目（なのかめ）">7日目（なのかめ）</option>
-                                                <option value="8日目（ようかめ）">8日目（ようかめ）</option>
-                                                <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
-                                                <option value="10日目（とおかめ）">10日目（とおかめ）</option>
-                                            </select>
                                             <button
                                                 type="button"
                                                 onClick={() => addItineraryBlock('divider')}
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+                                                title="블록 사이 간격 또는 가로선"
                                             >
                                                 <span className="material-symbols-outlined text-sm">remove</span>
-                                                구분선/여백
+                                                구분선
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                                        일정 이미지와 슬라이드를 자유롭게 배치하여 상세 일정을 구성하세요. 순서를 변경하거나 삭제할 수 있습니다.
-                                    </p>
+                                    <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                        💡 <strong>사용 방법:</strong>
+                                        <ul className="mt-1.5 ml-4 list-disc space-y-0.5">
+                                            <li><strong>1日目, 2日目 헤더</strong>는 위쪽 <span className="text-amber-700 dark:text-amber-400 font-semibold">「N일 일정 골격 만들기」</span> 버튼으로 한 번에 생성하세요. 헤더 안에 도시명·식사·숙소를 입력하시면 됩니다.</li>
+                                            <li><strong>각 일자 안의 이벤트</strong>(예: 자이승 전망대 방문 + 사진 5장)는 <span className="text-blue-600 dark:text-blue-400 font-semibold">「일정 항목 추가」</span> 버튼으로 추가. 시간·제목·설명·사진 여러 장 입력 가능.</li>
+                                            <li>해당 일자의 식사·숙소는 그 일자의 <strong>DAY INFO</strong> 블록 안에 입력 — PC 화면에서 자동으로 그 일자 맨 아래에 표시됩니다.</li>
+                                            <li>이미지만 길게 한 장씩 올리는 상품은 위쪽 <span className="text-teal-600 dark:text-teal-400 font-semibold">드래그&드롭 박스</span>로 한꺼번에.</li>
+                                        </ul>
+                                    </div>
 
                                     <div className="space-y-4">
                                         {(formData.itineraryBlocks || []).map((block, index) => (
@@ -2192,6 +2339,30 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 ) : block.type === 'timeline' ? (
                                                     // TIMELINE BLOCK
                                                     <div>
+                                                        {/* Master picker buttons — pull in spot or hotel data with one click. */}
+                                                        <div className="flex gap-2 mb-3 flex-wrap">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSpotPickerForIndex(index)}
+                                                                className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                title="관광지 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">location_on</span>
+                                                                관광지에서 선택
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setHotelPickerTarget({ kind: 'timeline', index })}
+                                                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                title="호텔 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">hotel</span>
+                                                                호텔에서 선택
+                                                            </button>
+                                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 self-center ml-1">
+                                                                또는 아래에 직접 입력
+                                                            </span>
+                                                        </div>
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
                                                                 <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
@@ -2259,8 +2430,30 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                             </div>
                                                         </div>
                                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                            <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
-                                                            <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400">🏠 숙소 정보</label>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setHotelPickerForIndex(index)}
+                                                                    className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-bold rounded transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">hotel</span>
+                                                                    호텔 마스터에서 선택
+                                                                </button>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={(block.content as DayInfoContent).accommodation || ''}
+                                                                onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value, accommodationHotelId: undefined })}
+                                                                placeholder="개별화장실과 샤워실이 구비된 디럭스게르 (또는 위 버튼으로 마스터 선택)"
+                                                                className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                                                            />
+                                                            {(block.content as DayInfoContent).accommodationHotelId && (
+                                                                <div className="mt-1.5 text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                                                    <span className="material-symbols-outlined text-xs">link</span>
+                                                                    호텔 마스터에서 선택됨. 직접 입력하면 연결이 해제됩니다.
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -2620,7 +2813,162 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                         </button>
                     </div>
                 </form>
+
+                {/* Master pickers — open from either dayInfo or timeline buttons. */}
+                <HotelPickerModal
+                    open={hotelPickerTarget != null}
+                    onPick={handleHotelPick}
+                    onClose={() => setHotelPickerTarget(null)}
+                />
+                <TouristSpotPickerModal
+                    open={spotPickerForIndex != null}
+                    onPick={handleSpotPick}
+                    onClose={() => setSpotPickerForIndex(null)}
+                />
             </div >
         </div >
+    );
+};
+
+// ============================================================================
+// Itinerary Quick Actions — bulk image upload zone + N-day skeleton macro.
+// Lives at the top of the "일정" tab so adding many photos or stamping out a
+// multi-day skeleton is one click away instead of a clicking marathon.
+// ============================================================================
+interface ItineraryQuickActionsProps {
+    onBulkImages: (files: File[]) => void | Promise<void>;
+    onSkeleton: (days: number) => void;
+    uploading: boolean;
+    progress: { done: number; total: number } | null;
+}
+
+const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
+    onBulkImages,
+    onSkeleton,
+    uploading,
+    progress,
+}) => {
+    const [drag, setDrag] = useState(false);
+    const [skeletonDays, setSkeletonDays] = useState<number>(3);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleFiles = (fileList: FileList | null) => {
+        if (!fileList) return;
+        const files = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
+        if (files.length === 0) return;
+        onBulkImages(files);
+    };
+
+    return (
+        <div className="space-y-4">
+            {/* ─── Bulk image drop zone ─── */}
+            <div
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!uploading) setDrag(true);
+                }}
+                onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDrag(false);
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDrag(false);
+                    if (uploading) return;
+                    handleFiles(e.dataTransfer.files);
+                }}
+                onClick={() => {
+                    if (uploading) return;
+                    fileInputRef.current?.click();
+                }}
+                className={`relative w-full rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                    drag
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                        : uploading
+                            ? 'border-slate-300 bg-slate-50 dark:bg-slate-800 cursor-wait'
+                            : 'border-slate-300 dark:border-slate-700 hover:border-teal-400 hover:bg-teal-50/30 dark:hover:bg-slate-800/50'
+                }`}
+                style={{ padding: '28px 24px' }}
+                role="button"
+                tabIndex={0}
+            >
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                        handleFiles(e.target.files);
+                        // reset so picking the same files again still fires
+                        e.target.value = '';
+                    }}
+                />
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined text-teal-600 dark:text-teal-400 text-2xl">
+                            {uploading ? 'hourglass_top' : 'cloud_upload'}
+                        </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                            {uploading
+                                ? `업로드 중... ${progress ? `${progress.done} / ${progress.total}` : ''}`
+                                : '이미지 한 번에 업로드'}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            여러 장의 사진을 이 박스에 드래그하거나 클릭해서 선택하세요. 각 사진이 자동으로 일정 끝에 추가됩니다.
+                        </div>
+                    </div>
+                    {!uploading && (
+                        <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl">
+                            add_photo_alternate
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* ─── N-day skeleton macro ─── */}
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 flex-wrap">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-amber-700 dark:text-amber-400">
+                        calendar_view_day
+                    </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-amber-900 dark:text-amber-300">
+                        N일 일정 골격 만들기
+                    </div>
+                    <div className="text-xs text-amber-800/80 dark:text-amber-400/80 mt-0.5">
+                        1日目 ~ N日目 헤더와 구분선을 한 번에 생성합니다. 각 날짜는 펼쳐서 내용 채우세요.
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <label className="text-xs font-medium text-amber-900 dark:text-amber-300">일수</label>
+                    <select
+                        value={skeletonDays}
+                        onChange={(e) => setSkeletonDays(Number(e.target.value))}
+                        className="px-2 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-sm font-semibold text-amber-900 dark:text-amber-300"
+                    >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <option key={n} value={n}>
+                                {n}일
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        type="button"
+                        onClick={() => onSkeleton(skeletonDays)}
+                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        생성
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };
