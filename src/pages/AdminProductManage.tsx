@@ -2107,66 +2107,58 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                                 {/* Itinerary Block Content Section */}
                                 <div>
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            일정 컨텐츠 (이미지 & 슬라이드 순서 편집)
+                                            일정 블록 (위에서 아래로 표시되는 순서)
                                         </label>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap">
+                                            <button
+                                                type="button"
+                                                onClick={() => addItineraryBlock('timeline')}
+                                                className="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                                                title="시간·제목·설명·이미지가 들어가는 일정 항목 (예: '10:00 자이승 전망대 + 사진 3장')"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">add_location</span>
+                                                일정 항목 추가
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={() => addItineraryBlock('image')}
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+                                                title="단일 이미지 하나만 (긴 한 장 이미지에 적합)"
                                             >
                                                 <span className="material-symbols-outlined text-sm">image</span>
-                                                이미지 추가
+                                                사진 1장
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => addItineraryBlock('slide')}
                                                 className="px-3 py-1.5 bg-teal-500 text-white text-xs font-medium rounded-lg hover:bg-teal-600 transition-colors flex items-center gap-1"
+                                                title="사진 여러 장을 가로 갤러리로 묶음 (제목 부여 가능)"
                                             >
                                                 <span className="material-symbols-outlined text-sm">view_carousel</span>
-                                                슬라이드 추가
+                                                갤러리
                                             </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addItineraryBlock('timeline')}
-                                                className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">timeline</span>
-                                                타임라인 추가
-                                            </button>
-                                            <select
-                                                onChange={(e) => { if (e.target.value) { addItineraryBlock('dayInfo', e.target.value); e.target.value = ''; } }}
-                                                defaultValue=""
-                                                className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 transition-colors cursor-pointer appearance-none"
-                                                style={{ backgroundImage: 'none' }}
-                                            >
-                                                <option value="" disabled>📅 일차 추가</option>
-                                                <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
-                                                <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
-                                                <option value="3日目（みっかめ）">3日目（みっかめ）</option>
-                                                <option value="4日目（よっかめ）">4日目（よっかめ）</option>
-                                                <option value="5日目（いつかめ）">5日目（いつかめ）</option>
-                                                <option value="6日目（むいかめ）">6日目（むいかめ）</option>
-                                                <option value="7日目（なのかめ）">7日目（なのかめ）</option>
-                                                <option value="8日目（ようかめ）">8日目（ようかめ）</option>
-                                                <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
-                                                <option value="10日目（とおかめ）">10日目（とおかめ）</option>
-                                            </select>
                                             <button
                                                 type="button"
                                                 onClick={() => addItineraryBlock('divider')}
                                                 className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+                                                title="블록 사이 간격 또는 가로선"
                                             >
                                                 <span className="material-symbols-outlined text-sm">remove</span>
-                                                구분선/여백
+                                                구분선
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                                        일정 이미지와 슬라이드를 자유롭게 배치하여 상세 일정을 구성하세요. 순서를 변경하거나 삭제할 수 있습니다.
-                                    </p>
+                                    <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                        💡 <strong>사용 방법:</strong>
+                                        <ul className="mt-1.5 ml-4 list-disc space-y-0.5">
+                                            <li><strong>1日目, 2日目 헤더</strong>는 위쪽 <span className="text-amber-700 dark:text-amber-400 font-semibold">「N일 일정 골격 만들기」</span> 버튼으로 한 번에 생성하세요. 헤더 안에 도시명·식사·숙소를 입력하시면 됩니다.</li>
+                                            <li><strong>각 일자 안의 이벤트</strong>(예: 자이승 전망대 방문 + 사진 5장)는 <span className="text-blue-600 dark:text-blue-400 font-semibold">「일정 항목 추가」</span> 버튼으로 추가. 시간·제목·설명·사진 여러 장 입력 가능.</li>
+                                            <li>해당 일자의 식사·숙소는 그 일자의 <strong>DAY INFO</strong> 블록 안에 입력 — PC 화면에서 자동으로 그 일자 맨 아래에 표시됩니다.</li>
+                                            <li>이미지만 길게 한 장씩 올리는 상품은 위쪽 <span className="text-teal-600 dark:text-teal-400 font-semibold">드래그&드롭 박스</span>로 한꺼번에.</li>
+                                        </ul>
+                                    </div>
 
                                     <div className="space-y-4">
                                         {(formData.itineraryBlocks || []).map((block, index) => (
@@ -2840,7 +2832,7 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
                         onChange={(e) => setSkeletonDays(Number(e.target.value))}
                         className="px-2 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-sm font-semibold text-amber-900 dark:text-amber-300"
                     >
-                        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                             <option key={n} value={n}>
                                 {n}일
                             </option>
