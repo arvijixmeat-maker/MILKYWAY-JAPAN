@@ -77,11 +77,6 @@ export function DesktopHeader({ contentWidth = 1280 }: DesktopHeaderProps) {
                         </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <MatIcon name="language" size={14} color="#cbd5e1" /> 日本語
-                            <MatIcon name="expand_more" size={14} color="#cbd5e1" />
-                        </span>
-                        <span style={{ opacity: 0.4 }}>|</span>
                         <button type="button" onClick={() => navigate('/login')} style={utilLinkBtn}>
                             ログイン
                         </button>

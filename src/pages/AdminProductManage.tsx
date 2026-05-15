@@ -1335,7 +1335,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            상품 설명 <span className="text-xs font-normal text-slate-500">(검색 결과·공유 미리보기용)</span>
+                                            상품 설명 / 概要 <span className="text-xs font-normal text-slate-500">(PC 상세페이지 「概要」 + 검색 결과·공유 미리보기)</span>
                                         </label>
                                         <span className={`text-xs ${(formData.description?.length || 0) > 160 ? 'text-red-500' : 'text-slate-400'}`}>
                                             {formData.description?.length || 0} / 160
@@ -1557,13 +1557,18 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                 {/* Highlights */}
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            하이라이트
-                                        </label>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                하이라이트 / ハイライト
+                                            </label>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                PC 상세페이지 「ハイライト」 4개 카드. 비워두면 기본값(다크스카이·자연경관·ゲル宿泊·日本語ガイド)이 표시됩니다.
+                                            </p>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={addHighlight}
-                                            className="text-teal-600 dark:text-teal-400 text-sm font-medium hover:underline"
+                                            className="text-teal-600 dark:text-teal-400 text-sm font-medium hover:underline shrink-0 ml-3"
                                         >
                                             + 추가
                                         </button>
