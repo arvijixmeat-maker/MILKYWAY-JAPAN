@@ -1751,96 +1751,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     </div>
                                 </div>
 
-                                {/* Highlights */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                하이라이트 / ハイライト
-                                            </label>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                상품 상세 「ハイライト」 섹션. 갯수 제한 없음 (2열 그리드로 자동 정렬). 비워두면 기본 4개(다크스카이·자연경관·ゲル宿泊·日本語ガイド)가 표시됩니다.
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={addHighlight}
-                                            className="text-teal-600 dark:text-teal-400 text-sm font-medium hover:underline shrink-0 ml-3"
-                                        >
-                                            + 추가
-                                        </button>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {formData.highlights?.map((highlight, index) => (
-                                            <div key={index} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg space-y-2">
-                                                <div className="flex gap-2 items-start">
-                                                    {/* Icon Image Upload */}
-                                                    <div className="flex-shrink-0">
-                                                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">아이콘</label>
-                                                        {highlight.icon ? (
-                                                            <div className="relative w-16 h-16 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                                                                <img src={getOptimizedImageUrl(highlight.icon, 'productThumbnail')} alt="Icon" className="w-full h-full object-cover" />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => updateHighlight(index, 'icon', '')}
-                                                                    className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-bl"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-xs">close</span>
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <label className="w-16 h-16 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-teal-500">
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    className="hidden"
-                                                                    onChange={async (e) => {
-                                                                        const file = e.target.files?.[0];
-                                                                        if (file) {
-                                                                            try {
-                                                                                const url = await uploadImage(file, 'highlight-icons');
-                                                                                updateHighlight(index, 'icon', url);
-                                                                            } catch (error) {
-                                                                                console.error('Highlight icon upload failed:', error);
-                                                                            }
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                <span className="material-symbols-outlined text-slate-400">add_photo_alternate</span>
-                                                            </label>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Title and Delete */}
-                                                    <div className="flex-1">
-                                                        <input
-                                                            type="text"
-                                                            value={highlight.title}
-                                                            onChange={(e) => updateHighlight(index, 'title', e.target.value)}
-                                                            placeholder="제목"
-                                                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                        />
-                                                    </div>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeHighlight(index)}
-                                                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">delete</span>
-                                                    </button>
-                                                </div>
-                                                <textarea
-                                                    value={highlight.description}
-                                                    onChange={(e) => updateHighlight(index, 'description', e.target.value)}
-                                                    placeholder="설명"
-                                                    rows={2}
-                                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                {/* Highlights form removed per admin request.
+                                    addHighlight/updateHighlight/removeHighlight
+                                    handlers are kept in case any legacy data
+                                    still flows through saves, but no UI exposes
+                                    them now. */}
 
                                 {/* FAQ — per-product Q&A. Empty list = use site-wide common FAQs. */}
                                 <div>

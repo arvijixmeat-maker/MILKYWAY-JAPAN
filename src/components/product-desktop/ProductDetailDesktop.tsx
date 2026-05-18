@@ -29,11 +29,10 @@ interface ProductDetailDesktopProps {
     contentWidth?: number;
 }
 
-type SectionId = 'overview' | 'highlights' | 'details' | 'itinerary' | 'included' | 'reviews' | 'faq';
+type SectionId = 'overview' | 'details' | 'itinerary' | 'included' | 'reviews' | 'faq';
 
 const ALL_SECTIONS: { id: SectionId; label: string }[] = [
     { id: 'overview', label: '概要' },
-    { id: 'highlights', label: 'ハイライト' },
     { id: 'details', label: '詳細情報' },
     { id: 'itinerary', label: '詳細日程' },
     { id: 'included', label: '含まれるもの' },
@@ -432,10 +431,6 @@ export function ProductDetailDesktop({
                                     ))}
                                 </div>
                             )}
-                        </Section>
-
-                        <Section id="highlights" title="ハイライト" eyebrow="Highlights">
-                            <HighlightsBlock product={product} />
                         </Section>
 
                         {hasDetailContent && (
@@ -1390,69 +1385,6 @@ function priceModifierStyle(modifier: number): CSSProperties {
         fontWeight: 700,
         color: modifier > 0 ? '#0f766e' : '#16a34a',
     };
-}
-
-// True when `icon` is an admin-uploaded image URL (R2/Cloudflare or http(s))
-// rather than a Material Symbols icon name. AdminProductManage uploads the
-// highlight icon to /highlight-icons folder and stores the URL into this
-// field, so we need to render it as <img>, not as a Material icon.
-const isImageUrl = (v: string | undefined): boolean => {
-    if (!v) return false;
-    return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/') || /\.(png|jpe?g|webp|svg|gif)$/i.test(v);
-};
-
-function HighlightsBlock({ product }: { product: TourProduct }) {
-    // No upper limit — admin can add as many highlights as needed. They wrap
-    // naturally in the 2-column grid below. Previously sliced to 4 which
-    // silently dropped the 5th+ card.
-    const items = (product.highlights && product.highlights.length > 0)
-        ? product.highlights
-        : [
-            { icon: 'auto_awesome', title: '世界屈指のダークスカイ', description: '光害ゼロのモンゴルの大草原・砂漠で、肉眼で天の川がはっきり見えます。' },
-            { icon: 'landscape', title: '壮大な自然景観', description: '草原・砂漠・山岳など、地球規模の絶景を体感できます。' },
-            { icon: 'cottage', title: '本物のゲル宿泊', description: '遊牧民の伝統住居で過ごす夜。ベッドと寝具完備。' },
-            { icon: 'translate', title: '日本語ガイド同行', description: '日本語堪能なガイドが同行、言葉の壁なく安心の旅。' },
-        ];
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {items.map((h, i) => (
-                <div key={i} style={{ padding: 22, background: 'var(--bg-muted)', borderRadius: 16, display: 'flex', gap: 14 }}>
-                    <div
-                        style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 12,
-                            background: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            overflow: 'hidden',
-                            boxShadow: 'var(--shadow-toss)',
-                        }}
-                    >
-                        {isImageUrl(h.icon) ? (
-                            <img
-                                src={h.icon}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                        ) : (
-                            <MatIcon name={h.icon || 'star'} size={22} filled color="#0f766e" />
-                        )}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 6, letterSpacing: '-0.01em' }}>
-                            {h.title}
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--fg-4)', lineHeight: 1.65 }}>{h.description}</div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
 }
 
 // Shape of one logical day after grouping.
