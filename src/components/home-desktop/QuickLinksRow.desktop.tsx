@@ -69,14 +69,15 @@ export function QuickLinksRowDesktop({ contentWidth = 1280 }: QuickLinksRowProps
                     >
                         <div
                             style={{
-                                width: 76,
-                                height: 76,
-                                borderRadius: 22,
-                                background: '#f6f8fb',
+                                width: 84,
+                                height: 84,
+                                borderRadius: 999,
+                                background: '#f1f4f8',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
+                                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)',
                             }}
                         >
                             <img
