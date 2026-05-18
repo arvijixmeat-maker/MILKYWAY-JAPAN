@@ -491,8 +491,10 @@ export const ProductDetail: React.FC = () => {
     }));
 
     // ── Section content flags (used to hide empty tabs and sections) ──
+    // Intro tab shows when there's a description (overview) OR any detail
+    // content. Highlights removed.
     const hasIntroContent =
-        (product.highlights?.length ?? 0) > 0 ||
+        !!product.description ||
         (product.detailBlocks?.length ?? 0) > 0 ||
         (product.detailImages?.length ?? 0) > 0 ||
         (product.detailSlides?.length ?? 0) > 0;
@@ -790,49 +792,35 @@ export const ProductDetail: React.FC = () => {
                 </div>
             )}
 
-            {/* Travel Highlights & Details */}
+            {/* Travel Highlights section removed per admin request.
+                product.highlights data is kept in schema for backward
+                compatibility but no longer rendered anywhere. */}
             {hasIntroContent && (
             <div className="bg-white dark:bg-background-dark mt-2" id="intro">
-                {product.highlights && product.highlights.length > 0 && (
-                    <div className="p-6 pb-2">
-                        <h3 className="text-lg font-bold mb-4">{t('product_detail.highlights_title')}</h3>
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            {product.highlights.map((highlight, index) => {
-                                // Admin may upload an image URL OR enter a Material
-                                // Symbols icon name. Detect URL vs name and render
-                                // accordingly so uploaded icons actually show.
-                                const v = highlight.icon || '';
-                                const isImg = v.startsWith('http') || v.startsWith('/') || /\.(png|jpe?g|webp|svg|gif)$/i.test(v);
-                                return (
-                                    <div
-                                        key={index}
-                                        className="flex flex-col gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"
-                                    >
-                                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm overflow-hidden">
-                                            {isImg ? (
-                                                <img
-                                                    src={v}
-                                                    alt=""
-                                                    loading="lazy"
-                                                    decoding="async"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <span className="material-symbols-outlined text-primary text-xl">
-                                                    {v || 'auto_awesome'}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="font-bold text-[14px] leading-snug text-[#0e1a18] dark:text-white">{highlight.title}</p>
-                                        <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">{highlight.description}</p>
-                                    </div>
-                                );
-                            })}
+                {/* Overview — mirrors PC '概要' section. Renders product.description
+                    + tag chips. Shown above the detail blocks. */}
+                {product.description && (
+                    <div className="px-6 pt-6 pb-2">
+                        <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-2">
+                            About this tour
                         </div>
-
-                        {/* MobileGuideCard (ガイド紹介) and MobileDestinationsMap
-                            (目的地) removed per admin request — kept here as a
-                            note for future restoration if needed. */}
+                        <h3 className="text-lg font-bold mb-4">概要</h3>
+                        <div
+                            className="text-[14px] leading-[1.85] text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words"
+                            dangerouslySetInnerHTML={{ __html: product.description }}
+                        />
+                        {product.tags && product.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-4">
+                                {product.tags.slice(0, 8).map((tag) => (
+                                    <span
+                                        key={tag}
+                                        className="px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-300 font-medium bg-white dark:bg-gray-900"
+                                    >
+                                        #{tag}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
