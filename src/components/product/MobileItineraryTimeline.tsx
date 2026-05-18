@@ -476,13 +476,17 @@ function EventRow({
                             <div className={`grid gap-1.5 ${visible.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                                 {visible.map((src, i) => {
                                     const isLastVisible = i === visible.length - 1;
-                                    const showMoreOverlay = isLastVisible && remaining > 0;
+                                    const showMoreBadge = isLastVisible && remaining > 0;
                                     return (
                                         <button
                                             key={i}
                                             type="button"
-                                            onClick={() => onOpenImages?.(imgs, i)}
-                                            className="relative p-0 border-0 bg-transparent block w-full"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (onOpenImages) onOpenImages(imgs, i);
+                                            }}
+                                            className="relative p-0 border-0 bg-transparent block w-full cursor-pointer"
                                             aria-label={`${c.title || '画像'} ${i + 1}枚目を拡大`}
                                         >
                                             <img
@@ -491,13 +495,17 @@ function EventRow({
                                                 loading="lazy"
                                                 decoding="async"
                                                 onError={hideBroken}
-                                                className={`w-full ${visible.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'} object-cover rounded-lg`}
+                                                className={`w-full ${visible.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'} object-cover rounded-lg pointer-events-none`}
                                             />
-                                            {showMoreOverlay && (
-                                                <div className="absolute inset-0 bg-black/55 text-white flex flex-col items-center justify-center rounded-lg font-bold pointer-events-none">
-                                                    <span className="text-2xl leading-none">+{remaining}</span>
-                                                    <span className="text-[10px] opacity-85 mt-0.5 tracking-wider">もっと見る</span>
-                                                </div>
+                                            {showMoreBadge && (
+                                                <>
+                                                    <div className="absolute left-0 right-0 bottom-0 h-1/2 rounded-lg pointer-events-none"
+                                                         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }} />
+                                                    <div className="absolute right-2 bottom-2 bg-black/65 text-white px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm border border-white/20 inline-flex items-center gap-1 pointer-events-none">
+                                                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>add_photo_alternate</span>
+                                                        +{remaining}
+                                                    </div>
+                                                </>
                                             )}
                                         </button>
                                     );

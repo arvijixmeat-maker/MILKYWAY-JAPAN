@@ -2141,12 +2141,16 @@ function SpineEventRow({
                             >
                                 {visible.map((src, i) => {
                                     const isLastVisible = i === visible.length - 1;
-                                    const showMoreOverlay = isLastVisible && remaining > 0;
+                                    const showMoreBadge = isLastVisible && remaining > 0;
                                     return (
                                         <button
                                             key={i}
                                             type="button"
-                                            onClick={() => onOpenImages?.(imgs, i)}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (onOpenImages) onOpenImages(imgs, i);
+                                            }}
                                             style={{
                                                 position: 'relative',
                                                 padding: 0,
@@ -2156,6 +2160,7 @@ function SpineEventRow({
                                                 borderRadius: 8,
                                                 overflow: 'hidden',
                                                 display: 'block',
+                                                width: '100%',
                                             }}
                                             aria-label={`${c.title || '画像'} ${i + 1}枚目を拡大`}
                                         >
@@ -2171,36 +2176,48 @@ function SpineEventRow({
                                                     borderRadius: 8,
                                                     display: 'block',
                                                     transition: 'transform 220ms',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.transform = 'scale(1.02)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.transform = '';
+                                                    pointerEvents: 'none',
                                                 }}
                                             />
-                                            {showMoreOverlay && (
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        background: 'rgba(0,0,0,0.55)',
-                                                        color: '#fff',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        flexDirection: 'column',
-                                                        gap: 4,
-                                                        fontWeight: 700,
-                                                        borderRadius: 8,
-                                                        pointerEvents: 'none',
-                                                    }}
-                                                >
-                                                    <span style={{ fontSize: 28, lineHeight: 1 }}>+{remaining}</span>
-                                                    <span style={{ fontSize: 11, opacity: 0.85, letterSpacing: '0.05em' }}>
-                                                        もっと見る
-                                                    </span>
-                                                </div>
+                                            {/* "+N more" — small corner pill (no longer covers the whole image).
+                                                Subtle dark gradient on the bottom edge for legibility. */}
+                                            {showMoreBadge && (
+                                                <>
+                                                    <div
+                                                        style={{
+                                                            position: 'absolute',
+                                                            left: 0,
+                                                            right: 0,
+                                                            bottom: 0,
+                                                            height: '50%',
+                                                            background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)',
+                                                            pointerEvents: 'none',
+                                                            borderRadius: 8,
+                                                        }}
+                                                    />
+                                                    <div
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: 10,
+                                                            bottom: 10,
+                                                            background: 'rgba(0,0,0,0.65)',
+                                                            color: '#fff',
+                                                            padding: '6px 12px',
+                                                            borderRadius: 999,
+                                                            fontSize: 12,
+                                                            fontWeight: 700,
+                                                            backdropFilter: 'blur(6px)',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 6,
+                                                            pointerEvents: 'none',
+                                                            border: '1px solid rgba(255,255,255,0.18)',
+                                                        }}
+                                                    >
+                                                        <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_photo_alternate</span>
+                                                        +{remaining} もっと見る
+                                                    </div>
+                                                </>
                                             )}
                                         </button>
                                     );
