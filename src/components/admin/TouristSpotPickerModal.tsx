@@ -1,6 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
-import type { TouristSpot } from '../../types/touristSpot';
+import type { SpotRegion, TouristSpot } from '../../types/touristSpot';
+import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
+
+type RegionFilter = 'all' | SpotRegion | 'uncat';
+
+const REGION_TABS: { value: RegionFilter; label: string }[] = [
+    { value: 'all', label: '전체' },
+    { value: 'central', label: '중앙몽골' },
+    { value: 'gobi', label: '고비사막' },
+    { value: 'hovsgol', label: '홉스굴' },
+    { value: 'uncat', label: '미분류' },
+];
 
 interface TouristSpotPickerModalProps {
     open: boolean;
@@ -23,6 +34,7 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
     const [spots, setSpots] = useState<TouristSpot[]>([]);
     const [loading, setLoading] = useState(false);
     const [q, setQ] = useState('');
+    const [region, setRegion] = useState<RegionFilter>('all');
 
     useEffect(() => {
         if (!open) return;
@@ -41,11 +53,20 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
         };
         load();
         setQ('');
+        setRegion('all');
         return () => { cancelled = true; };
     }, [open]);
 
     const filtered = useMemo(() => {
         return spots.filter((s) => {
+            if (region !== 'all') {
+                const rowRegion = (s.region || '') as SpotRegion;
+                if (region === 'uncat') {
+                    if (rowRegion) return false;
+                } else if (rowRegion !== region) {
+                    return false;
+                }
+            }
             if (q) {
                 const needle = q.toLowerCase();
                 const hay = `${s.name_kr} ${s.name_local || ''}`.toLowerCase();
@@ -53,7 +74,13 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
             }
             return true;
         });
-    }, [spots, q]);
+    }, [spots, q, region]);
+
+    const regionLabel = (r?: SpotRegion | null): string | null => {
+        if (!r) return null;
+        const found = SPOT_REGION_OPTIONS.find((o) => o.value === r);
+        return found ? found.label : null;
+    };
 
     if (!open) return null;
 
@@ -80,6 +107,38 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
                     >
                         <span className="material-symbols-outlined text-slate-500">close</span>
                     </button>
+                </div>
+
+                {/* Region tabs — same filter as the master page so admin
+                    can quickly switch between 중앙몽골 / 고비사막 / 홉스굴 */}
+                <div className="px-6 pt-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto">
+                    {REGION_TABS.map((tab) => {
+                        const count = tab.value === 'all'
+                            ? spots.length
+                            : tab.value === 'uncat'
+                                ? spots.filter((s) => !s.region).length
+                                : spots.filter((s) => s.region === tab.value).length;
+                        const on = region === tab.value;
+                        return (
+                            <button
+                                key={tab.value}
+                                type="button"
+                                onClick={() => setRegion(tab.value)}
+                                className={`shrink-0 px-3 pb-2.5 -mb-px text-sm font-medium border-b-2 transition-colors ${
+                                    on
+                                        ? 'border-teal-500 text-teal-600 dark:text-teal-400'
+                                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                                }`}
+                            >
+                                {tab.label}
+                                <span className={`ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                    on ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                }`}>
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
@@ -132,6 +191,11 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                                                {regionLabel(s.region) && (
+                                                    <span className="inline-block mr-2 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300 align-middle">
+                                                        {regionLabel(s.region)}
+                                                    </span>
+                                                )}
                                                 {s.name_kr}
                                                 {s.name_local && (
                                                     <span className="ml-2 text-xs font-normal text-slate-500">{s.name_local}</span>
