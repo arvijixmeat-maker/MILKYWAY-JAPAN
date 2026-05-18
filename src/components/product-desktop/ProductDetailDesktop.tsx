@@ -1624,7 +1624,7 @@ function DayTabs({ days }: { days: DayGroup[] }) {
  *   - Slim header bar at top (day number + date, optionally collapsible)
  *   - Vertical spine on left with two kinds of markers:
  *       📍 large pin = location header (timeline block with no images)
- *       ● small red dot = spot card (timeline block with images)
+ *       ● small teal dot = spot card (timeline block with images)
  *   - Hotel + meals rows at the end
  */
 function DaySection({
@@ -1900,7 +1900,7 @@ function LocationHeaderRow({
 
 /**
  * Generic row aligned to the vertical spine. Icons can be:
- *   - small=true and no icon → small red dot (default for spot cards)
+ *   - small=true and no icon → small teal dot (default for spot cards)
  *   - small=true and icon → outlined circle with material icon (hotel/meals)
  *   - icon === 'location_on' → larger map pin (for region headers)
  */
@@ -1957,7 +1957,9 @@ function SpineRow({
                             width: 9,
                             height: 9,
                             borderRadius: 999,
-                            background: '#dc2626',
+                            // Brand teal — single primary color per design system
+                            // (CLAUDE.md 9.5: 'teal #0f766e, no secondary colors').
+                            background: '#0f766e',
                             // Smaller white halo (2px) so the spine line stays
                             // visible right up to the dot edges.
                             boxShadow: '0 0 0 2px #fff',

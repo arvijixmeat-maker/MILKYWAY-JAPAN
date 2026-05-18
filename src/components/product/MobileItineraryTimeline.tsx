@@ -340,7 +340,7 @@ function SpineRow({
                         </span>
                     </span>
                 ) : (
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-background-dark" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-white dark:ring-background-dark" />
                 )}
             </div>
             <div>{children}</div>
