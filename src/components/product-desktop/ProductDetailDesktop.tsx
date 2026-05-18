@@ -1760,7 +1760,7 @@ function DaySection({
                     const visible = hotelImages.slice(0, 2);
                     const remaining = hotelImages.length - visible.length;
                     return (
-                        <SpineRow icon="bed">
+                        <SpineRow icon="bed" small>
                             <div
                                 style={{
                                     background: '#fff',
