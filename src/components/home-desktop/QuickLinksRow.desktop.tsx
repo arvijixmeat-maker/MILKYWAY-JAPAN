@@ -42,29 +42,26 @@ export function QuickLinksRowDesktop({ contentWidth = 1280 }: QuickLinksRowProps
                         type="button"
                         onClick={() => navigate(it.path)}
                         style={{
-                            background: '#fff',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: 20,
-                            padding: '22px 14px 18px',
+                            // Minimal — no card chrome. Only the inner circle
+                            // (rendered below) provides visual structure, matching
+                            // the reference design's floating-circle row.
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '8px 4px',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             gap: 12,
                             cursor: 'pointer',
                             textAlign: 'center',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                            transition: 'all 220ms var(--ease-out, ease-out)',
+                            transition: 'transform 220ms var(--ease-out, ease-out)',
                             fontFamily: 'inherit',
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.boxShadow = '0 12px 28px -8px rgba(0,0,0,0.12)';
                             e.currentTarget.style.transform = 'translateY(-3px)';
-                            e.currentTarget.style.borderColor = 'var(--border, #e2e8f0)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
                             e.currentTarget.style.transform = '';
-                            e.currentTarget.style.borderColor = 'var(--border-subtle)';
                         }}
                     >
                         <div
