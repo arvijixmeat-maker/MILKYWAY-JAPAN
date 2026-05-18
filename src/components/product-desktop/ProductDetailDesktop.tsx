@@ -1402,8 +1402,11 @@ const isImageUrl = (v: string | undefined): boolean => {
 };
 
 function HighlightsBlock({ product }: { product: TourProduct }) {
+    // No upper limit — admin can add as many highlights as needed. They wrap
+    // naturally in the 2-column grid below. Previously sliced to 4 which
+    // silently dropped the 5th+ card.
     const items = (product.highlights && product.highlights.length > 0)
-        ? product.highlights.slice(0, 4)
+        ? product.highlights
         : [
             { icon: 'auto_awesome', title: '世界屈指のダークスカイ', description: '光害ゼロのモンゴルの大草原・砂漠で、肉眼で天の川がはっきり見えます。' },
             { icon: 'landscape', title: '壮大な自然景観', description: '草原・砂漠・山岳など、地球規模の絶景を体感できます。' },
