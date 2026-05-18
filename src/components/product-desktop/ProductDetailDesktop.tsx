@@ -1709,52 +1709,201 @@ function DaySection({
                     />
                 ))}
 
-                {/* Hotel row */}
-                {c?.accommodation && (
-                    <SpineRow icon="bed" small>
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 16,
-                                paddingTop: 16,
-                                borderTop: '1px solid var(--border-subtle)',
-                            }}
-                        >
-                            <span
+                {/* Hotel row — when admin picked a hotel from the master, we
+                    have images/description/address snapshotted in dayInfo and
+                    render a rich photo card (max 2 images + +N badge).
+                    Falls back to a simple text row when only the name is set. */}
+                {c?.accommodation && (() => {
+                    const hotelImages = Array.isArray(c.accommodationImages)
+                        ? c.accommodationImages.filter((u): u is string => typeof u === 'string' && !!u)
+                        : [];
+                    const hasRich = hotelImages.length > 0
+                        || !!c.accommodationDescription
+                        || !!c.accommodationAddress;
+
+                    if (!hasRich) {
+                        return (
+                            <SpineRow icon="bed" small>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 16,
+                                        paddingTop: 16,
+                                        borderTop: '1px solid var(--border-subtle)',
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            padding: '4px 10px',
+                                            background: 'var(--bg-muted)',
+                                            border: '1px solid var(--border-subtle)',
+                                            borderRadius: 6,
+                                            fontSize: 11,
+                                            color: 'var(--fg-2)',
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        予定
+                                    </span>
+                                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--fg-1)' }}>
+                                        {c.accommodation}
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 6 }}>
+                                    * 宿泊先は出発1日前までにご案内します。
+                                </div>
+                            </SpineRow>
+                        );
+                    }
+
+                    const visible = hotelImages.slice(0, 2);
+                    const remaining = hotelImages.length - visible.length;
+                    return (
+                        <SpineRow icon="bed">
+                            <div
                                 style={{
-                                    padding: '4px 10px',
-                                    background: 'var(--bg-muted)',
+                                    background: '#fff',
                                     border: '1px solid var(--border-subtle)',
-                                    borderRadius: 6,
-                                    fontSize: 11,
-                                    color: 'var(--fg-2)',
-                                    fontWeight: 700,
+                                    borderRadius: 12,
+                                    padding: '20px 22px',
+                                    marginTop: 4,
                                 }}
                             >
-                                予定
-                            </span>
-                            <span
-                                style={{
-                                    fontSize: 16,
-                                    fontWeight: 700,
-                                    color: 'var(--fg-1)',
-                                }}
-                            >
-                                {c.accommodation}
-                            </span>
-                        </div>
-                        <div
-                            style={{
-                                fontSize: 11,
-                                color: 'var(--fg-5)',
-                                marginTop: 6,
-                            }}
-                        >
-                            * 宿泊先は出発1日前までにご案内します。
-                        </div>
-                    </SpineRow>
-                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                    <span
+                                        style={{
+                                            padding: '3px 9px',
+                                            background: 'var(--bg-muted)',
+                                            border: '1px solid var(--border-subtle)',
+                                            borderRadius: 6,
+                                            fontSize: 10,
+                                            color: 'var(--fg-2)',
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        宿泊
+                                    </span>
+                                    <h4
+                                        style={{
+                                            fontSize: 17,
+                                            fontWeight: 700,
+                                            color: 'var(--fg-1)',
+                                            margin: 0,
+                                            letterSpacing: '-0.01em',
+                                            lineHeight: 1.35,
+                                            flex: 1,
+                                            minWidth: 0,
+                                        }}
+                                    >
+                                        {c.accommodation}
+                                        {c.accommodationSubtitle && (
+                                            <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 500, color: 'var(--fg-5)' }}>
+                                                {c.accommodationSubtitle}
+                                            </span>
+                                        )}
+                                    </h4>
+                                </div>
+
+                                {visible.length > 0 && (
+                                    <div
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: visible.length === 1 ? '1fr' : 'repeat(2, 1fr)',
+                                            gap: 8,
+                                            marginTop: 12,
+                                            marginBottom: 12,
+                                        }}
+                                    >
+                                        {visible.map((src, i) => {
+                                            const isLastVisible = i === visible.length - 1;
+                                            const showMoreBadge = isLastVisible && remaining > 0;
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (onOpenImages) onOpenImages(hotelImages, i);
+                                                    }}
+                                                    style={{
+                                                        position: 'relative',
+                                                        padding: 0,
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        cursor: 'pointer',
+                                                        borderRadius: 8,
+                                                        overflow: 'hidden',
+                                                        display: 'block',
+                                                        width: '100%',
+                                                    }}
+                                                    aria-label={`${c.accommodation || 'hotel'} ${i + 1}枚目を拡大`}
+                                                >
+                                                    <img
+                                                        src={src}
+                                                        alt={`${c.accommodation || 'hotel'} ${i + 1}｜モンゴル旅行・宿泊`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        style={{
+                                                            width: '100%',
+                                                            aspectRatio: visible.length === 1 ? '16/9' : '4/3',
+                                                            objectFit: 'cover',
+                                                            borderRadius: 8,
+                                                            display: 'block',
+                                                            pointerEvents: 'none',
+                                                        }}
+                                                    />
+                                                    {showMoreBadge && (
+                                                        <>
+                                                            <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)', pointerEvents: 'none', borderRadius: 8 }} />
+                                                            <div style={{ position: 'absolute', right: 10, bottom: 10, background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, backdropFilter: 'blur(6px)', display: 'inline-flex', alignItems: 'center', gap: 6, pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)' }}>
+                                                                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_photo_alternate</span>
+                                                                +{remaining} もっと見る
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {c.accommodationDescription && (
+                                    <p
+                                        style={{
+                                            fontSize: 14,
+                                            color: 'var(--fg-2)',
+                                            lineHeight: 1.8,
+                                            margin: 0,
+                                            whiteSpace: 'pre-wrap',
+                                        }}
+                                    >
+                                        {c.accommodationDescription}
+                                    </p>
+                                )}
+                                {c.accommodationAddress && (
+                                    <div
+                                        style={{
+                                            marginTop: c.accommodationDescription ? 10 : 0,
+                                            fontSize: 12,
+                                            color: 'var(--fg-5)',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                        }}
+                                    >
+                                        <MatIcon name="location_on" size={14} color="var(--fg-5)" />
+                                        {c.accommodationAddress}
+                                    </div>
+                                )}
+                                <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 10 }}>
+                                    * 宿泊先は出発1日前までにご案内します。
+                                </div>
+                            </div>
+                        </SpineRow>
+                    );
+                })()}
 
                 {/* Meals row */}
                 {meals.length > 0 && (

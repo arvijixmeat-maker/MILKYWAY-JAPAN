@@ -122,6 +122,16 @@ export interface DayInfoContent {
      * data survives even if the master entry is later edited or deleted.
      */
     accommodationHotelId?: string;
+    /**
+     * Hotel snapshot (images + description + address) captured at pick time.
+     * Lets the user-facing page render a photo card under the accommodation
+     * row without re-fetching from the hotels master. Survives master edits/
+     * deletions just like `accommodation`.
+     */
+    accommodationImages?: string[];
+    accommodationDescription?: string;
+    accommodationAddress?: string;
+    accommodationSubtitle?: string;  // hotels.name_local — small caption below the name
 }
 
 export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo';

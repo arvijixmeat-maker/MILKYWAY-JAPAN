@@ -1002,10 +1002,17 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         }
 
         if (kind === 'dayInfoAccommodation' && block.type === 'dayInfo') {
+            // Snapshot the full hotel record so the user-facing page can render
+            // photo grid + description even if the master row is later edited
+            // or deleted.
             updateItineraryBlockContent(index, {
                 ...(block.content as DayInfoContent),
                 accommodation: hotel.name_kr,
                 accommodationHotelId: hotel.id,
+                accommodationImages: hotel.images && hotel.images.length > 0 ? [...hotel.images] : [],
+                accommodationDescription: hotel.description || '',
+                accommodationAddress: hotel.address || '',
+                accommodationSubtitle: hotel.name_local || '',
             });
         } else if (kind === 'timeline' && block.type === 'timeline') {
             // For a TIMELINE block: push hotel data into title + description + images.
