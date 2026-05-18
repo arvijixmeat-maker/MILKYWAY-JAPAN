@@ -1629,62 +1629,44 @@ function DaySection({
             id={`itin-day-${dayIndex + 1}`}
             style={{ marginBottom: 56, scrollMarginTop: 260 }}
         >
-            {/* ─── Day header — typography-led, no chip-on-bar look ──────
-                Left teal accent + bold day number on top, big title below.
-                Optional subtitle (date or auxiliary text). Cleaner hierarchy
-                than the previous gray bar + white chip combo. */}
+            {/* ─── Slim day header bar ───────────────────────────────── */}
             <div
                 style={{
+                    background: 'var(--bg-muted)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 12,
+                    padding: '14px 22px',
                     display: 'flex',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
                     gap: 18,
                     marginBottom: 28,
-                    paddingLeft: 18,
-                    borderLeft: '3px solid #0f766e',
                 }}
             >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                        style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: '#0f766e',
-                            letterSpacing: '0.12em',
-                            textTransform: 'uppercase',
-                            marginBottom: 6,
-                        }}
-                    >
-                        DAY {String(dayIndex + 1).padStart(2, '0')}
-                        {c?.dayLabel && (
-                            <span style={{ marginLeft: 8, color: 'var(--fg-5)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'none' }}>
-                                {(c.dayLabel).replace(/（.*?）/, '').trim()}
-                            </span>
-                        )}
-                    </div>
-                    <div
-                        style={{
-                            fontSize: 22,
-                            fontWeight: 700,
-                            color: 'var(--fg-1)',
-                            letterSpacing: '-0.015em',
-                            lineHeight: 1.35,
-                        }}
-                    >
-                        {headerRight || `${dayIndex + 1}日目の行程`}
-                    </div>
-                    {dayDate && c?.title && dayDate !== c.title && (
-                        <div
-                            style={{
-                                fontSize: 13,
-                                color: 'var(--fg-4)',
-                                marginTop: 6,
-                                fontWeight: 500,
-                            }}
-                        >
-                            {c.title}
-                        </div>
-                    )}
-                </div>
+                <span
+                    style={{
+                        flexShrink: 0,
+                        padding: '5px 12px',
+                        background: '#fff',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: 'var(--fg-2)',
+                        letterSpacing: '-0.01em',
+                    }}
+                >
+                    {(c?.dayLabel || `${dayIndex + 1}日目`).replace(/（.*?）/, '')}
+                </span>
+                <span
+                    style={{
+                        flex: 1,
+                        fontSize: 17,
+                        fontWeight: 700,
+                        color: 'var(--fg-1)',
+                        letterSpacing: '-0.01em',
+                    }}
+                >
+                    {headerRight}
+                </span>
             </div>
 
             {/* ─── Spine area ─────────────────────────────────────────

@@ -228,26 +228,14 @@ function DaySection({
             className="mb-8"
             style={{ scrollMarginTop: 100 }}
         >
-            {/* Day header — mirrors PC: teal left accent + DAY NN eyebrow
-                + bold title underneath. Cleaner than the previous gray bar
-                + white chip. */}
-            <div className="mb-5 pl-3 border-l-[3px] border-primary">
-                <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-1">
-                    DAY {String(dayIndex + 1).padStart(2, '0')}
-                    {dayLabel && (
-                        <span className="ml-2 text-gray-400 dark:text-gray-500 normal-case font-semibold tracking-normal">
-                            {dayLabel}
-                        </span>
-                    )}
-                </div>
-                <div className="text-[18px] font-bold text-gray-900 dark:text-white leading-snug">
-                    {headerRight || `${dayIndex + 1}日目の行程`}
-                </div>
-                {dayDate && c?.title && dayDate !== c.title && (
-                    <div className="text-[12px] text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                        {c.title}
-                    </div>
-                )}
+            {/* Slim day header bar */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-lg px-4 py-3 mb-5 flex items-center gap-3">
+                <span className="shrink-0 px-2.5 py-1 bg-white dark:bg-gray-900 rounded text-[11px] font-bold text-gray-800 dark:text-gray-100">
+                    {dayLabel}
+                </span>
+                <span className="text-[15px] font-bold text-gray-900 dark:text-white truncate">
+                    {headerRight}
+                </span>
             </div>
 
             {/* Spine area — same alignment trick as PC: line at the *center*
