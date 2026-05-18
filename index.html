@@ -107,6 +107,38 @@
 
   <!-- Critical CSS Inline -->
   <style>
+    /* FOUT GUARD for Material Symbols
+       ─────────────────────────────────────────────────────────────────
+       Material Symbols Outlined uses ligatures — class names like 'search',
+       'chevron_right', 'home' resolve to icon glyphs ONLY after the font
+       loads. font-display: block hides text for ~3 s, then falls back to
+       the system font and shows the raw ligature names (FOUT) on slow
+       mobile networks. We register a zero-sized fallback font so even if
+       the icon font hasn't arrived after 3 s, the literal ligature text
+       collapses to invisible width / height instead of flashing letters. */
+    @font-face {
+      font-family: 'MSO-fallback';
+      src: local('Arial'), local('Helvetica'), local('sans-serif');
+      size-adjust: 0%;
+      ascent-override: 0%;
+      descent-override: 0%;
+      line-gap-override: 0%;
+    }
+    .material-symbols-outlined,
+    .material-symbols-rounded,
+    .material-symbols-sharp {
+      font-family: 'Material Symbols Outlined', 'MSO-fallback' !important;
+      /* Hide raw ligature characters until the document.fonts.ready event
+         confirms the icon font is loaded (set by the inline script below).
+         Layered defense on top of the size-adjust fallback above. */
+      visibility: hidden;
+    }
+    html.mso-ready .material-symbols-outlined,
+    html.mso-ready .material-symbols-rounded,
+    html.mso-ready .material-symbols-sharp {
+      visibility: visible;
+    }
+
     :root {
       font-family: 'Noto Sans JP', sans-serif;
       --primary: #0f766e;
@@ -158,6 +190,27 @@
     }
     @keyframes prl-spin { to { transform: rotate(360deg); } }
   </style>
+
+  <!-- Tag <html> once the Material Symbols font is fully loaded so the
+       CSS above can un-hide icons. Pairs with the .mso-ready CSS rules
+       — without this script, icons stay invisible. -->
+  <script>
+    (function () {
+      var done = function () { document.documentElement.classList.add('mso-ready'); };
+      // Safety: never leave icons hidden longer than ~4s even if fonts.ready
+      // hangs on a flaky network — better to show an icon than nothing.
+      var timer = setTimeout(done, 4000);
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load('24px "Material Symbols Outlined"').then(function () {
+          clearTimeout(timer);
+          done();
+        }).catch(function () { /* fall through to timer */ });
+      } else {
+        clearTimeout(timer);
+        done();
+      }
+    })();
+  </script>
 
   <!-- Channel Talk — stub only. The real SDK (~400KB) is loaded lazily after the
        page is fully interactive (5s after 'load') OR on the first click that calls
