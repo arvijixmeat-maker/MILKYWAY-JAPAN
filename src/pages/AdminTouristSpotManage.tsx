@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
-import type { TouristSpot } from '../types/touristSpot';
+import type { SpotRegion, TouristSpot } from '../types/touristSpot';
+import { SPOT_REGION_OPTIONS } from '../types/touristSpot';
 
 const EMPTY_SPOT: TouristSpot = {
     id: '',
@@ -11,7 +12,24 @@ const EMPTY_SPOT: TouristSpot = {
     address: '',
     description: '',
     images: [],
+    region: '',
     is_active: true,
+};
+
+type RegionFilter = 'all' | SpotRegion | 'uncat';
+
+const REGION_FILTER_TABS: { value: RegionFilter; label: string }[] = [
+    { value: 'all', label: '전체' },
+    { value: 'central', label: '중앙몽골' },
+    { value: 'gobi', label: '고비사막' },
+    { value: 'hovsgol', label: '홉스굴' },
+    { value: 'uncat', label: '미분류' },
+];
+
+const regionLabel = (r?: SpotRegion | null): string | null => {
+    if (!r) return null;
+    const found = SPOT_REGION_OPTIONS.find((o) => o.value === r);
+    return found ? found.label : null;
 };
 
 /**
@@ -33,6 +51,7 @@ export const AdminTouristSpotManage: React.FC = () => {
 
     const [q, setQ] = useState('');
     const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+    const [filterRegion, setFilterRegion] = useState<RegionFilter>('all');
 
     const [editing, setEditing] = useState<TouristSpot | null>(null);
     const [isNew, setIsNew] = useState(false);
@@ -56,6 +75,14 @@ export const AdminTouristSpotManage: React.FC = () => {
         return spots.filter((s) => {
             if (filterActive === 'active' && !s.is_active) return false;
             if (filterActive === 'inactive' && s.is_active) return false;
+            if (filterRegion !== 'all') {
+                const rowRegion = (s.region || '') as SpotRegion;
+                if (filterRegion === 'uncat') {
+                    if (rowRegion) return false;        // has a region → not "미분류"
+                } else if (rowRegion !== filterRegion) {
+                    return false;
+                }
+            }
             if (q) {
                 const needle = q.toLowerCase();
                 const hay = `${s.name_kr} ${s.name_local || ''}`.toLowerCase();
@@ -63,7 +90,7 @@ export const AdminTouristSpotManage: React.FC = () => {
             }
             return true;
         });
-    }, [spots, q, filterActive]);
+    }, [spots, q, filterActive, filterRegion]);
 
     const startNew = () => {
         setEditing({ ...EMPTY_SPOT });
@@ -151,6 +178,38 @@ export const AdminTouristSpotManage: React.FC = () => {
                 <div className="flex-1 p-8 flex gap-6 min-h-0">
                     {/* LEFT: List */}
                     <div className="flex-1 min-w-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        {/* Region tab bar — primary filter so admin can quickly
+                            switch between '중앙몽골 / 고비사막 / 홉스굴'. */}
+                        <div className="px-4 pt-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto">
+                            {REGION_FILTER_TABS.map((tab) => {
+                                const count = tab.value === 'all'
+                                    ? spots.length
+                                    : tab.value === 'uncat'
+                                        ? spots.filter((s) => !s.region).length
+                                        : spots.filter((s) => s.region === tab.value).length;
+                                const on = filterRegion === tab.value;
+                                return (
+                                    <button
+                                        key={tab.value}
+                                        type="button"
+                                        onClick={() => setFilterRegion(tab.value)}
+                                        className={`shrink-0 px-3 pb-2.5 -mb-px text-sm font-medium border-b-2 transition-colors ${
+                                            on
+                                                ? 'border-teal-500 text-teal-600 dark:text-teal-400'
+                                                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                        <span className={`ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                            on ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                        }`}>
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 flex-wrap">
                             <input
                                 type="text"
@@ -197,6 +256,7 @@ export const AdminTouristSpotManage: React.FC = () => {
                                         <tr className="text-xs text-slate-500 dark:text-slate-400">
                                             <th className="text-left px-4 py-3 font-medium w-20">대표</th>
                                             <th className="text-left px-4 py-3 font-medium">관광지명</th>
+                                            <th className="text-left px-4 py-3 font-medium w-28">지역</th>
                                             <th className="text-left px-4 py-3 font-medium">주소</th>
                                             <th className="text-center px-4 py-3 font-medium w-20">사진</th>
                                             <th className="text-center px-4 py-3 font-medium w-24">사용</th>
@@ -230,6 +290,15 @@ export const AdminTouristSpotManage: React.FC = () => {
                                                         {s.name_kr}
                                                         {s.name_local && (
                                                             <span className="ml-2 text-xs font-normal text-slate-500">{s.name_local}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs">
+                                                        {regionLabel(s.region) ? (
+                                                            <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium">
+                                                                {regionLabel(s.region)}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-400">미분류</span>
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
@@ -291,6 +360,25 @@ export const AdminTouristSpotManage: React.FC = () => {
                             </div>
 
                             <div className="flex-1 overflow-auto p-4 space-y-3">
+                                <Field label="지역 분류" hint="필터에서 이 분류로 빠르게 찾을 수 있습니다. (선택)">
+                                    <div className="flex gap-2 flex-wrap">
+                                        {[{ v: '' as SpotRegion, l: '미분류' }, ...SPOT_REGION_OPTIONS.map((o) => ({ v: o.value, l: o.label }))].map((opt) => (
+                                            <button
+                                                key={opt.v || 'none'}
+                                                type="button"
+                                                onClick={() => setEditing({ ...editing, region: opt.v })}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                                                    (editing.region || '') === opt.v
+                                                        ? 'bg-teal-500 border-teal-500 text-white'
+                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                                }`}
+                                            >
+                                                {opt.l}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </Field>
+
                                 <Field label="대제목" required hint="일정 카드의 큰 제목으로 표시됩니다. (예: 차강소브라)">
                                     <input
                                         type="text"

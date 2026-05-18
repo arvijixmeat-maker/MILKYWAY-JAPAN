@@ -21,11 +21,12 @@ const decorate = (row: any) => ({
     is_active: row.is_active === 1 || row.is_active === true,
 });
 
-// GET /api/tourist-spots?q=&active=
+// GET /api/tourist-spots?q=&active=&region=central|gobi|hovsgol|uncat
 app.get('/', async (c) => {
     const db = c.env.DB;
     const q = (c.req.query('q') || '').trim();
     const onlyActive = c.req.query('active') !== '0';
+    const region = (c.req.query('region') || '').trim();
     try {
         const where: string[] = [];
         const bind: any[] = [];
@@ -34,6 +35,13 @@ app.get('/', async (c) => {
             where.push('(name_kr LIKE ? OR name_local LIKE ?)');
             const like = `%${q}%`;
             bind.push(like, like);
+        }
+        if (region === 'uncat') {
+            // Sentinel — admin picked "미분류" tab. Match rows with no region.
+            where.push("(region IS NULL OR region = '')");
+        } else if (region && ['central', 'gobi', 'hovsgol'].includes(region)) {
+            where.push('region = ?');
+            bind.push(region);
         }
         const sql = `SELECT * FROM tourist_spots ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY name_kr ASC LIMIT 500`;
         const result = await db.prepare(sql).bind(...bind).all();
@@ -55,6 +63,12 @@ app.get('/:id', async (c) => {
     }
 });
 
+// Normalize region input — only allow the 3 known values, fall back to ''.
+const validRegion = (r: unknown): string => {
+    if (typeof r !== 'string') return '';
+    return ['central', 'gobi', 'hovsgol'].includes(r) ? r : '';
+};
+
 app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
@@ -62,8 +76,8 @@ app.post('/', requireAdmin, async (c) => {
     try {
         await db.prepare(`
             INSERT INTO tourist_spots (
-                id, name_kr, name_local, address, description, images, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                id, name_kr, name_local, address, description, images, region, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
             id,
             data.name_kr || data.nameKr || '',
@@ -71,6 +85,7 @@ app.post('/', requireAdmin, async (c) => {
             data.address || '',
             data.description || '',
             JSON.stringify(safeArr(data.images)),
+            validRegion(data.region),
             data.is_active === false || data.is_active === 0 ? 0 : 1
         ).run();
         return c.json({ id });
@@ -86,7 +101,7 @@ app.put('/:id', requireAdmin, async (c) => {
     try {
         await db.prepare(`
             UPDATE tourist_spots SET
-                name_kr = ?, name_local = ?, address = ?, description = ?, images = ?, is_active = ?,
+                name_kr = ?, name_local = ?, address = ?, description = ?, images = ?, region = ?, is_active = ?,
                 updated_at = datetime('now')
             WHERE id = ?
         `).bind(
@@ -95,6 +110,7 @@ app.put('/:id', requireAdmin, async (c) => {
             data.address || '',
             data.description || '',
             JSON.stringify(safeArr(data.images)),
+            validRegion(data.region),
             data.is_active === false || data.is_active === 0 ? 0 : 1,
             id
         ).run();

@@ -361,6 +361,16 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped tourist_spots table: ${e.message}`);
     }
 
+    // Tourist spots: region tag so admin can filter by Central Mongolia /
+    // Gobi / Hovsgol when picking a spot to attach to a timeline block.
+    // Stored as a lowercase string ('central' | 'gobi' | 'hovsgol' | '').
+    try {
+        await c.env.DB.prepare("ALTER TABLE tourist_spots ADD COLUMN region TEXT DEFAULT ''").run();
+        migrationResults.push('Added tourist_spots.region');
+    } catch (e: any) {
+        migrationResults.push(`Skipped tourist_spots.region: ${e.message}`);
+    }
+
     // Banners: PC-specific hero image (wider aspect ratio than mobile).
     // Falls back to `image` when not set.
     try {
