@@ -797,20 +797,37 @@ export const ProductDetail: React.FC = () => {
                     <div className="p-6 pb-2">
                         <h3 className="text-lg font-bold mb-4">{t('product_detail.highlights_title')}</h3>
                         <div className="grid grid-cols-2 gap-3 mb-4">
-                            {product.highlights.map((highlight, index) => (
-                                <div
-                                    key={index}
-                                    className="flex flex-col gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"
-                                >
-                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
-                                        <span className="material-symbols-outlined text-primary text-xl">
-                                            {highlight.icon || 'auto_awesome'}
-                                        </span>
+                            {product.highlights.map((highlight, index) => {
+                                // Admin may upload an image URL OR enter a Material
+                                // Symbols icon name. Detect URL vs name and render
+                                // accordingly so uploaded icons actually show.
+                                const v = highlight.icon || '';
+                                const isImg = v.startsWith('http') || v.startsWith('/') || /\.(png|jpe?g|webp|svg|gif)$/i.test(v);
+                                return (
+                                    <div
+                                        key={index}
+                                        className="flex flex-col gap-2 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm overflow-hidden">
+                                            {isImg ? (
+                                                <img
+                                                    src={v}
+                                                    alt=""
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="material-symbols-outlined text-primary text-xl">
+                                                    {v || 'auto_awesome'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="font-bold text-[14px] leading-snug text-[#0e1a18] dark:text-white">{highlight.title}</p>
+                                        <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">{highlight.description}</p>
                                     </div>
-                                    <p className="font-bold text-[14px] leading-snug text-[#0e1a18] dark:text-white">{highlight.title}</p>
-                                    <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">{highlight.description}</p>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* MobileGuideCard (ガイド紹介) and MobileDestinationsMap

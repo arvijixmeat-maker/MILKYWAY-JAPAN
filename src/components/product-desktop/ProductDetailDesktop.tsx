@@ -1392,6 +1392,15 @@ function priceModifierStyle(modifier: number): CSSProperties {
     };
 }
 
+// True when `icon` is an admin-uploaded image URL (R2/Cloudflare or http(s))
+// rather than a Material Symbols icon name. AdminProductManage uploads the
+// highlight icon to /highlight-icons folder and stores the URL into this
+// field, so we need to render it as <img>, not as a Material icon.
+const isImageUrl = (v: string | undefined): boolean => {
+    if (!v) return false;
+    return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/') || /\.(png|jpe?g|webp|svg|gif)$/i.test(v);
+};
+
 function HighlightsBlock({ product }: { product: TourProduct }) {
     const items = (product.highlights && product.highlights.length > 0)
         ? product.highlights.slice(0, 4)
@@ -1415,10 +1424,21 @@ function HighlightsBlock({ product }: { product: TourProduct }) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
+                            overflow: 'hidden',
                             boxShadow: 'var(--shadow-toss)',
                         }}
                     >
-                        <MatIcon name={h.icon || 'star'} size={22} filled color="#0f766e" />
+                        {isImageUrl(h.icon) ? (
+                            <img
+                                src={h.icon}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <MatIcon name={h.icon || 'star'} size={22} filled color="#0f766e" />
+                        )}
                     </div>
                     <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 6, letterSpacing: '-0.01em' }}>
