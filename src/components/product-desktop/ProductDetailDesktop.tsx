@@ -1845,27 +1845,19 @@ function LocationHeaderRow({
                     justifyContent: 'center',
                     position: 'relative',
                     zIndex: 1,
+                    paddingTop: 6,
                 }}
             >
-                <div
+                {/* Same teal dot as SpineRow — visual unity per design system. */}
+                <span
                     style={{
-                        width: 36,
-                        height: 36,
+                        width: 9,
+                        height: 9,
                         borderRadius: 999,
-                        background: '#fff',
-                        border: '2px solid var(--border)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        background: '#0f766e',
+                        boxShadow: '0 0 0 2px #fff',
                     }}
-                >
-                    <MatIcon
-                        name="location_on"
-                        size={20}
-                        filled
-                        color="var(--fg-3)"
-                    />
-                </div>
+                />
             </div>
             <div style={{ paddingTop: 4 }}>
                 {title && (

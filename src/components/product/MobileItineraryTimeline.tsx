@@ -275,25 +275,14 @@ function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: n
     );
 }
 
-// Region/city header row inline with spine — bigger pin, no card chrome.
-// Pin is centered in the 32px icon column so its center sits exactly on the
-// spine line at x=16 (spine: left-[15px] w-0.5). DO NOT add negative margin
-// here — it shifts the pin off the line and breaks alignment with the dots
-// in adjacent SpineRows.
+// Region/city header row inline with spine — same small teal dot as the
+// regular SpineRow events so the timeline reads as a unified series. Centered
+// in the 32px icon column to match the spine line at x=16.
 function LocationHeaderRow({ title, description }: { title: string; description: string }) {
     return (
         <div className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
-            <div className="flex items-start justify-center pt-0.5 relative z-10">
-                <span
-                    className="w-7 h-7 rounded-full bg-white dark:bg-background-dark border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"
-                >
-                    <span
-                        className="material-symbols-outlined text-gray-500 dark:text-gray-400"
-                        style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}
-                    >
-                        location_on
-                    </span>
-                </span>
+            <div className="flex items-start justify-center pt-2 relative z-10">
+                <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-white dark:ring-background-dark" />
             </div>
             <div className="pt-1">
                 {title && (
