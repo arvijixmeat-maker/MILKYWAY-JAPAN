@@ -78,7 +78,7 @@ export const AdminTouristSpotManage: React.FC = () => {
     const handleSave = async () => {
         if (!editing) return;
         if (!editing.name_kr.trim()) {
-            alert('한글 명칭은 필수입니다.');
+            alert('대제목은 필수입니다.');
             return;
         }
         setSaving(true);
@@ -291,22 +291,22 @@ export const AdminTouristSpotManage: React.FC = () => {
                             </div>
 
                             <div className="flex-1 overflow-auto p-4 space-y-3">
-                                <Field label="명칭 (한글)" required hint="이 이름이 일정의 제목으로 자동 입력됩니다.">
+                                <Field label="대제목" required hint="일정 카드의 큰 제목으로 표시됩니다. (예: 차강소브라)">
                                     <input
                                         type="text"
                                         value={editing.name_kr}
                                         onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
-                                        placeholder="테렐지 국립공원"
+                                        placeholder="차강소브라"
                                         className={inputCls}
                                     />
                                 </Field>
 
-                                <Field label="명칭 (현지/영문)">
+                                <Field label="소제목" hint="대제목 아래 작은 한 줄 설명. (예: 몽골의 그랜드캐년, 차강소브라)">
                                     <input
                                         type="text"
                                         value={editing.name_local || ''}
                                         onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
-                                        placeholder="Gorkhi-Terelj National Park (선택)"
+                                        placeholder="몽골의 그랜드캐년, 차강소브라"
                                         className={inputCls}
                                     />
                                 </Field>
