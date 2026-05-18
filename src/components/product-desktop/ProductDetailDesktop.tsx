@@ -91,6 +91,10 @@ export function ProductDetailDesktop({
     const [activeSec, setActiveSec] = useState<SectionId>('overview');
     const [showStickyBar, setShowStickyBar] = useState(false);
     const [galleryOpen, setGalleryOpen] = useState(false);
+    // Timeline images share the same GalleryLightbox UI as the hero gallery, but
+    // need their own image set so clicking a spot card opens just that card's
+    // photos (not the whole product gallery).
+    const [timelineLightbox, setTimelineLightbox] = useState<{ images: string[]; startIndex: number } | null>(null);
     const bookingRef = useRef<HTMLElement | null>(null);
 
     // Reset scroll on product change
@@ -784,6 +788,13 @@ export function ProductDetailDesktop({
             )}
 
             {galleryOpen && <GalleryLightbox images={gallery} onClose={() => setGalleryOpen(false)} />}
+            {timelineLightbox && (
+                <GalleryLightbox
+                    images={timelineLightbox.images}
+                    startIndex={timelineLightbox.startIndex}
+                    onClose={() => setTimelineLightbox(null)}
+                />
+            )}
         </div>
     );
 }
@@ -1548,6 +1559,7 @@ function Timeline({ product }: { product: TourProduct }) {
                     day={day}
                     dayIndex={i}
                     productName={product.name}
+                    onOpenImages={(images, startIndex) => setTimelineLightbox({ images, startIndex })}
                 />
             ))}
         </div>
@@ -1631,10 +1643,12 @@ function DaySection({
     day,
     dayIndex,
     productName,
+    onOpenImages,
 }: {
     day: DayGroup;
     dayIndex: number;
     productName: string;
+    onOpenImages?: (images: string[], startIndex: number) => void;
 }) {
     const c = day.dayInfo.content as DayInfoContent;
     const dayDate = c?.dayDate?.trim();
@@ -1734,6 +1748,7 @@ function DaySection({
                         block={b}
                         index={i}
                         productName={productName}
+                        onOpenImages={onOpenImages}
                     />
                 ))}
 
@@ -1972,10 +1987,12 @@ function SpineEventRow({
     block,
     index,
     productName,
+    onOpenImages,
 }: {
     block: { id?: string; type: string; content: unknown };
     index: number;
     productName: string;
+    onOpenImages?: (images: string[], startIndex: number) => void;
 }) {
     // Divider → just render a thin gap inside the spine
     if (block.type === 'divider') {
@@ -2106,37 +2123,91 @@ function SpineEventRow({
                         </div>
                     )}
 
-                    {/* Image grid — 3-col when many, 2-col for 2, full for 1 */}
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns:
-                                imgs.length === 1
-                                    ? '1fr'
-                                    : imgs.length === 2
-                                        ? 'repeat(2, 1fr)'
-                                        : 'repeat(3, 1fr)',
-                            gap: 8,
-                            marginBottom: c.description ? 16 : 0,
-                        }}
-                    >
-                        {imgs.map((src, i) => (
-                            <img
-                                key={i}
-                                src={src}
-                                alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
-                                loading="lazy"
-                                decoding="async"
+                    {/* Image grid — show max 2 photos. If more exist, overlay
+                        "+N" on the second image and clicking opens the full
+                        lightbox starting at the appropriate index. */}
+                    {(() => {
+                        const visible = imgs.slice(0, 2);
+                        const remaining = imgs.length - visible.length;
+                        return (
+                            <div
                                 style={{
-                                    width: '100%',
-                                    aspectRatio: imgs.length === 1 ? '16/9' : '4/3',
-                                    objectFit: 'cover',
-                                    borderRadius: 8,
-                                    display: 'block',
+                                    display: 'grid',
+                                    gridTemplateColumns:
+                                        visible.length === 1 ? '1fr' : 'repeat(2, 1fr)',
+                                    gap: 8,
+                                    marginBottom: c.description ? 16 : 0,
                                 }}
-                            />
-                        ))}
-                    </div>
+                            >
+                                {visible.map((src, i) => {
+                                    const isLastVisible = i === visible.length - 1;
+                                    const showMoreOverlay = isLastVisible && remaining > 0;
+                                    return (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => onOpenImages?.(imgs, i)}
+                                            style={{
+                                                position: 'relative',
+                                                padding: 0,
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                borderRadius: 8,
+                                                overflow: 'hidden',
+                                                display: 'block',
+                                            }}
+                                            aria-label={`${c.title || '画像'} ${i + 1}枚目を拡大`}
+                                        >
+                                            <img
+                                                src={src}
+                                                alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
+                                                loading="lazy"
+                                                decoding="async"
+                                                style={{
+                                                    width: '100%',
+                                                    aspectRatio: visible.length === 1 ? '16/9' : '4/3',
+                                                    objectFit: 'cover',
+                                                    borderRadius: 8,
+                                                    display: 'block',
+                                                    transition: 'transform 220ms',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.transform = 'scale(1.02)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.transform = '';
+                                                }}
+                                            />
+                                            {showMoreOverlay && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        background: 'rgba(0,0,0,0.55)',
+                                                        color: '#fff',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexDirection: 'column',
+                                                        gap: 4,
+                                                        fontWeight: 700,
+                                                        borderRadius: 8,
+                                                        pointerEvents: 'none',
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 28, lineHeight: 1 }}>+{remaining}</span>
+                                                    <span style={{ fontSize: 11, opacity: 0.85, letterSpacing: '0.05em' }}>
+                                                        もっと見る
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
 
                     {/* Description below images, matching the reference layout. */}
                     {c.description && (
@@ -3010,8 +3081,8 @@ function RelatedTours({ productId, category }: { productId: string; category: st
     );
 }
 
-function GalleryLightbox({ images, onClose }: { images: string[]; onClose: () => void }) {
-    const [i, setI] = useState(0);
+function GalleryLightbox({ images, onClose, startIndex = 0 }: { images: string[]; onClose: () => void; startIndex?: number }) {
+    const [i, setI] = useState(startIndex);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
