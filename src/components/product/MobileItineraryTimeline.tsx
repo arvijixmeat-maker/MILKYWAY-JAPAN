@@ -261,24 +261,111 @@ function DaySection({
                     <EventRow key={b.id || i} block={b} index={i} productName={productName} onOpenImages={onOpenImages} />
                 ))}
 
-                {/* Accommodation */}
-                {accommodation && (
-                    <SpineRow icon="bed">
-                        <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-gray-700 dark:text-gray-200">
-                                    予定
-                                </span>
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                    {accommodation}
-                                </span>
+                {/* Accommodation — rich photo card when admin picked from
+                    hotel master (images / description / address snapshotted),
+                    simple text row otherwise. */}
+                {accommodation && (() => {
+                    const hotelImages = Array.isArray(c?.accommodationImages)
+                        ? c!.accommodationImages!.filter((u): u is string => typeof u === 'string' && !!u)
+                        : [];
+                    const hasRich = hotelImages.length > 0 || !!c?.accommodationDescription || !!c?.accommodationAddress;
+
+                    if (!hasRich) {
+                        return (
+                            <SpineRow icon="bed">
+                                <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-gray-700 dark:text-gray-200">
+                                            予定
+                                        </span>
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                            {accommodation}
+                                        </span>
+                                    </div>
+                                    <div className="text-[11px] text-gray-500 mt-1">
+                                        * 宿泊先は出発1日前までにご案内します。
+                                    </div>
+                                </div>
+                            </SpineRow>
+                        );
+                    }
+
+                    const visible = hotelImages.slice(0, 2);
+                    const remaining = hotelImages.length - visible.length;
+                    return (
+                        <SpineRow icon="bed">
+                            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-gray-700 dark:text-gray-200">
+                                        宿泊
+                                    </span>
+                                    <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">
+                                        {accommodation}
+                                        {c?.accommodationSubtitle && (
+                                            <span className="ml-2 text-[11px] font-normal text-gray-500">
+                                                {c.accommodationSubtitle}
+                                            </span>
+                                        )}
+                                    </h4>
+                                </div>
+                                {visible.length > 0 && (
+                                    <div className={`grid gap-1.5 ${visible.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} mb-3`}>
+                                        {visible.map((src, i) => {
+                                            const isLastVisible = i === visible.length - 1;
+                                            const showMoreBadge = isLastVisible && remaining > 0;
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (onOpenImages) onOpenImages(hotelImages, i);
+                                                    }}
+                                                    className="relative p-0 border-0 bg-transparent block w-full cursor-pointer"
+                                                    aria-label={`${accommodation} ${i + 1}枚目を拡大`}
+                                                >
+                                                    <img
+                                                        src={getOptimizedImageUrl(src, visible.length === 1 ? 'productItinerary' : 'productThumbnail')}
+                                                        alt={`${accommodation} ${i + 1}｜モンゴル旅行・宿泊`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        onError={hideBroken}
+                                                        className={`w-full ${visible.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'} object-cover rounded-lg pointer-events-none`}
+                                                    />
+                                                    {showMoreBadge && (
+                                                        <>
+                                                            <div className="absolute left-0 right-0 bottom-0 h-1/2 rounded-lg pointer-events-none"
+                                                                 style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }} />
+                                                            <div className="absolute right-2 bottom-2 bg-black/65 text-white px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm border border-white/20 inline-flex items-center gap-1 pointer-events-none">
+                                                                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>add_photo_alternate</span>
+                                                                +{remaining}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {c?.accommodationDescription && (
+                                    <p className="text-[13px] text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap mt-1">
+                                        {c.accommodationDescription}
+                                    </p>
+                                )}
+                                {c?.accommodationAddress && (
+                                    <div className="mt-2 text-[11px] text-gray-500 inline-flex items-center gap-1">
+                                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>location_on</span>
+                                        {c.accommodationAddress}
+                                    </div>
+                                )}
+                                <div className="text-[11px] text-gray-500 mt-2">
+                                    * 宿泊先は出発1日前までにご案内します。
+                                </div>
                             </div>
-                            <div className="text-[11px] text-gray-500 mt-1">
-                                * 宿泊先は出発1日前までにご案内します。
-                            </div>
-                        </div>
-                    </SpineRow>
-                )}
+                        </SpineRow>
+                    );
+                })()}
 
                 {/* Meals */}
                 {meals.length > 0 && (
