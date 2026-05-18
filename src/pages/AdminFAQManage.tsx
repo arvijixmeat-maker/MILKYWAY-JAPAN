@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { TourFAQEditor } from '../components/admin/TourFAQEditor';
 import { api } from '../lib/api';
 
 interface FAQ {
@@ -21,7 +22,7 @@ interface FAQCategory {
 
 export const AdminFAQManage: React.FC = () => {
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [activeTab, setActiveTab] = useState<'faq' | 'category'>('faq');
+    const [activeTab, setActiveTab] = useState<'faq' | 'category' | 'tour-common'>('faq');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
@@ -247,7 +248,7 @@ export const AdminFAQManage: React.FC = () => {
                 <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
                     <h1 className="text-xl font-bold">FAQ 관리</h1>
                     <div className="flex gap-3">
-                        {activeTab === 'category' ? (
+                        {activeTab === 'category' && (
                             <button
                                 onClick={() => {
                                     setSelectedCategoryEdit(null);
@@ -259,7 +260,8 @@ export const AdminFAQManage: React.FC = () => {
                                 <span className="material-symbols-outlined">add</span>
                                 카테고리 추가
                             </button>
-                        ) : (
+                        )}
+                        {activeTab === 'faq' && (
                             <button
                                 onClick={() => {
                                     setSelectedFAQ(null);
@@ -277,22 +279,33 @@ export const AdminFAQManage: React.FC = () => {
 
                 <div className="p-8">
                     {/* Tabs */}
-                    <div className="flex gap-2 mb-6">
+                    <div className="flex gap-2 mb-6 flex-wrap">
                         <button
                             onClick={() => setActiveTab('faq')}
                             className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === 'faq' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
+                            title="고객센터 페이지(/faq)의 FAQ"
                         >
                             FAQ 목록
                         </button>
                         <button
                             onClick={() => setActiveTab('category')}
                             className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === 'category' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
+                            title="고객센터 FAQ 의 카테고리"
                         >
                             카테고리 관리
                         </button>
+                        <button
+                            onClick={() => setActiveTab('tour-common')}
+                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === 'tour-common' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
+                            title="모든 상품 상세 페이지 하단에 공통으로 표시되는 FAQ"
+                        >
+                            투어 공통 FAQ
+                        </button>
                     </div>
 
-                    {activeTab === 'faq' ? (
+                    {activeTab === 'tour-common' ? (
+                        <TourFAQEditor />
+                    ) : activeTab === 'faq' ? (
                         <>
                             {/* Filters */}
                             <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6 flex gap-4">

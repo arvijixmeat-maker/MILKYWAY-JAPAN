@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, ProductFAQ, TourPricingOption } from '../../types/product';
+import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
 import { PCard, type PCardData } from '../desktop-primitives/PCard';
@@ -2858,11 +2860,31 @@ const DEFAULT_PRODUCT_FAQS: ProductFAQ[] = [
 ];
 
 function FAQBlock({ product }: { product: TourProduct }) {
-    // Use product-specific FAQs when admin set them; otherwise fall back to the
-    // site-wide common Q&A so the section is never empty.
+    // Precedence:
+    //   1) product.faqs (per-product override set by admin)
+    //   2) /api/tour-faqs (global tour-common FAQ from /admin/tour-faqs)
+    //   3) hardcoded DEFAULT_PRODUCT_FAQS (safety net, never empty)
+    const { data: tourFaqs = [] } = useQuery({
+        queryKey: ['tourFaqs'],
+        queryFn: async () => {
+            try {
+                const rows = await api.tourFaqs.list();
+                return Array.isArray(rows)
+                    ? rows.map((r) => ({ q: r.question, a: r.answer }) as ProductFAQ)
+                    : [];
+            } catch (e) {
+                console.error('tour-faqs fetch failed:', e);
+                return [] as ProductFAQ[];
+            }
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+
     const items: ProductFAQ[] = (product.faqs && product.faqs.length > 0)
         ? product.faqs
-        : DEFAULT_PRODUCT_FAQS;
+        : tourFaqs.length > 0
+            ? tourFaqs
+            : DEFAULT_PRODUCT_FAQS;
     const [open, setOpen] = useState<number>(0);
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

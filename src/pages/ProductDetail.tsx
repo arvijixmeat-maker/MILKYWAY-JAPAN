@@ -36,9 +36,32 @@ const DEFAULT_MOBILE_FAQ_ITEMS: { q: string; a: string }[] = [
 ];
 
 const MobileFAQ: React.FC<{ product?: TourProduct | null }> = ({ product }) => {
+    // Precedence:
+    //   1) product.faqs (per-product override)
+    //   2) /api/tour-faqs (global tour-common, edited at /admin/tour-faqs)
+    //   3) hardcoded defaults (safety net)
+    const [tourFaqs, setTourFaqs] = useState<{ q: string; a: string }[]>([]);
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const rows = await api.tourFaqs.list();
+                if (cancelled) return;
+                if (Array.isArray(rows)) {
+                    setTourFaqs(rows.map((r: any) => ({ q: r.question, a: r.answer })));
+                }
+            } catch (e) {
+                console.error('tour-faqs fetch failed:', e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
     const items = (product?.faqs && product.faqs.length > 0)
         ? product.faqs
-        : DEFAULT_MOBILE_FAQ_ITEMS;
+        : tourFaqs.length > 0
+            ? tourFaqs
+            : DEFAULT_MOBILE_FAQ_ITEMS;
     const [openIdx, setOpenIdx] = React.useState<number>(0);
     return (
         <div className="p-6 bg-white dark:bg-background-dark mt-2">

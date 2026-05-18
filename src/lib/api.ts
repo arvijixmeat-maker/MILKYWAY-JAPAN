@@ -120,6 +120,19 @@ export const api = {
             body: JSON.stringify({ faqs })
         }),
     },
+    // Tour-common FAQ — single global list shown at the bottom of every
+    // product detail page (PC + mobile). Per-product `product.faqs` still
+    // overrides when set.
+    tourFaqs: {
+        list: async (): Promise<Array<{ id: string; question: string; answer: string; sort_order: number }>> =>
+            request(`${API_BASE}/tour-faqs`),
+        saveBulk: async (faqs: Array<{ id?: string; question: string; answer: string }>) =>
+            request(`${API_BASE}/tour-faqs`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ faqs }),
+            }),
+    },
     faqCategories: {
         list: async () => request(`${API_BASE}/faq-categories`),
         create: async (data: any) => request(`${API_BASE}/faq-categories`, {
