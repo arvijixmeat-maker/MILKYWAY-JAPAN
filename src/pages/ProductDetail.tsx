@@ -491,8 +491,10 @@ export const ProductDetail: React.FC = () => {
     }));
 
     // ── Section content flags (used to hide empty tabs and sections) ──
-    // Highlights removed; intro = detail content only.
+    // Intro tab shows when there's a description (overview) OR any detail
+    // content. Highlights removed.
     const hasIntroContent =
+        !!product.description ||
         (product.detailBlocks?.length ?? 0) > 0 ||
         (product.detailImages?.length ?? 0) > 0 ||
         (product.detailSlides?.length ?? 0) > 0;
@@ -795,6 +797,33 @@ export const ProductDetail: React.FC = () => {
                 compatibility but no longer rendered anywhere. */}
             {hasIntroContent && (
             <div className="bg-white dark:bg-background-dark mt-2" id="intro">
+                {/* Overview — mirrors PC '概要' section. Renders product.description
+                    + tag chips. Shown above the detail blocks. */}
+                {product.description && (
+                    <div className="px-6 pt-6 pb-2">
+                        <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-2">
+                            About this tour
+                        </div>
+                        <h3 className="text-lg font-bold mb-4">概要</h3>
+                        <div
+                            className="text-[14px] leading-[1.85] text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words"
+                            dangerouslySetInnerHTML={{ __html: product.description }}
+                        />
+                        {product.tags && product.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-4">
+                                {product.tags.slice(0, 8).map((tag) => (
+                                    <span
+                                        key={tag}
+                                        className="px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-[12px] text-gray-600 dark:text-gray-300 font-medium bg-white dark:bg-gray-900"
+                                    >
+                                        #{tag}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Unified Detail Content (Blocks) */}
                 {product.detailBlocks && product.detailBlocks.length > 0 ? (
                     <div className="space-y-8 mb-8">
