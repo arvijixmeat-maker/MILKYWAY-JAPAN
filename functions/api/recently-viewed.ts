@@ -15,7 +15,29 @@ const ensureTable = async (db: any) => {
     `).run();
 };
 
+// Pull the first usable image URL out of a products.main_images JSON
+// blob (or fall back to legacy thumbnail / images columns). Strips quotes
+// and brackets from the raw substr so the simple SQL we use doesn't have
+// to know about JSON parsing.
+const firstImageFromMainImages = (row: any): string | null => {
+    const candidates: Array<unknown> = [row.main_images, row.images, row.thumbnail];
+    for (const raw of candidates) {
+        if (!raw || typeof raw !== 'string') continue;
+        try {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] === 'string') return arr[0];
+        } catch { /* not JSON — try as plain string */ }
+        if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+    }
+    return null;
+};
+
 // GET /api/recently-viewed
+//   * INNER JOIN with products so entries pointing to deleted products
+//     don't return blank rows (which the UI rendered as empty placeholder
+//     cards).
+//   * Returns main_images / images / thumbnail so the server can pick the
+//     first usable image post-fetch.
 app.get('/', async (c) => {
     const db = c.env.DB;
     try {
@@ -24,16 +46,31 @@ app.get('/', async (c) => {
         let result;
         const joinQuery = `
             SELECT rv.id, rv.user_id, rv.product_id, rv.viewed_at as created_at,
-                   p.name as title, p.thumbnail as image, p.price, p.category
+                   p.name as title, p.thumbnail, p.main_images, p.images, p.price, p.category
             FROM recently_viewed rv
-            LEFT JOIN products p ON rv.product_id = p.id
+            INNER JOIN products p ON rv.product_id = p.id
         `;
         if (userId) {
             result = await db.prepare(joinQuery + ' WHERE rv.user_id = ? ORDER BY rv.viewed_at DESC LIMIT 20').bind(userId).all();
         } else {
             result = await db.prepare(joinQuery + ' ORDER BY rv.viewed_at DESC LIMIT 20').all();
         }
-        return c.json(result.results || []);
+        const rows = (result.results || []).map((r: any) => ({
+            id: r.id,
+            user_id: r.user_id,
+            product_id: r.product_id,
+            created_at: r.created_at,
+            title: r.title,
+            image: firstImageFromMainImages(r),
+            price: r.price,
+            category: r.category,
+            type: 'product',
+        }));
+        // Defensive — title shouldn't be NULL with INNER JOIN, but skip any
+        // row that somehow lacks both title and image so we never paint a
+        // blank card.
+        const cleaned = rows.filter((r: any) => r.title || r.image);
+        return c.json(cleaned);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }

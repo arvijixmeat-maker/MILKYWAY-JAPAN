@@ -302,10 +302,12 @@ export const ProductDetail: React.FC = () => {
             try {
                 const viewed = await api.recentlyViewed.list();
                 if (Array.isArray(viewed)) {
-                    // Exclude current product, keep most recent 8
+                    // Exclude current product, drop blank rows (deleted products
+                    // that slipped through the API filter), keep most recent 8.
                     setRecentlyViewed(
                         viewed
                             .filter((v: any) => v.product_id !== id && v.type !== 'magazine')
+                            .filter((v: any) => v.title || v.image)
                             .slice(0, 8)
                     );
                 }
