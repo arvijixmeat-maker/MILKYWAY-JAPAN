@@ -90,7 +90,7 @@ export const AdminHotelManage: React.FC = () => {
     const handleSave = async () => {
         if (!editing) return;
         if (!editing.name_kr.trim()) {
-            alert('한글 명칭은 필수입니다.');
+            alert('대제목은 필수입니다.');
             return;
         }
         setSaving(true);
@@ -303,7 +303,7 @@ export const AdminHotelManage: React.FC = () => {
                             </div>
 
                             <div className="flex-1 overflow-auto p-4 space-y-3">
-                                <Field label="명칭 (한글)" required>
+                                <Field label="대제목" required hint="일정 카드의 큰 제목으로 표시됩니다. (예: 마리나베이샌즈호텔)">
                                     <input
                                         type="text"
                                         value={editing.name_kr}
@@ -313,12 +313,12 @@ export const AdminHotelManage: React.FC = () => {
                                     />
                                 </Field>
 
-                                <Field label="명칭 (현지/영문)">
+                                <Field label="소제목" hint="대제목 아래 작은 한 줄 설명. (예: 5성급, 시내 중심·뷰 추천)">
                                     <input
                                         type="text"
                                         value={editing.name_local || ''}
                                         onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
-                                        placeholder="Marina Bay Sands (선택)"
+                                        placeholder="5성급, 시내 중심·뷰 추천"
                                         className={inputCls}
                                     />
                                 </Field>
@@ -441,9 +441,10 @@ export const AdminHotelManage: React.FC = () => {
 const inputCls =
     'w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none';
 
-const Field: React.FC<{ label: string; required?: boolean; children: React.ReactNode }> = ({
+const Field: React.FC<{ label: string; required?: boolean; hint?: string; children: React.ReactNode }> = ({
     label,
     required,
+    hint,
     children,
 }) => (
     <div>
@@ -451,5 +452,6 @@ const Field: React.FC<{ label: string; required?: boolean; children: React.React
             {label} {required && <span className="text-red-500">*</span>}
         </label>
         {children}
+        {hint && <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{hint}</p>}
     </div>
 );
