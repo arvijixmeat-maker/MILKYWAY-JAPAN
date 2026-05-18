@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 import type { TourProduct, DetailSlide, DividerContent, DayInfoContent, TimelineContent } from '../../types/product';
 
@@ -70,6 +70,11 @@ const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
 export const MobileItineraryTimeline: React.FC<{ product: TourProduct }> = ({ product }) => {
     const rawBlocks = (product.itineraryBlocks ?? []).filter(isMeaningful) as ItineraryBlock[];
     const legacyImages = product.itineraryImages ?? [];
+
+    // Tap-to-zoom lightbox state. Each timeline spot card now shows max 2
+    // images; tapping any opens this fullscreen viewer at the chosen index.
+    const [lightbox, setLightbox] = useState<{ images: string[]; startIndex: number } | null>(null);
+    const openImages = (images: string[], startIndex: number) => setLightbox({ images, startIndex });
 
     const { preBlocks, days } = useMemo(() => {
         const grouped = groupBlocksByDay(rawBlocks);
@@ -147,8 +152,16 @@ export const MobileItineraryTimeline: React.FC<{ product: TourProduct }> = ({ pr
                     day={day}
                     dayIndex={i}
                     productName={product.name}
+                    onOpenImages={openImages}
                 />
             ))}
+            {lightbox && (
+                <MobileLightbox
+                    images={lightbox.images}
+                    startIndex={lightbox.startIndex}
+                    onClose={() => setLightbox(null)}
+                />
+            )}
         </div>
     );
 };
@@ -185,7 +198,17 @@ function DayTabs({ days }: { days: DayGroup[] }) {
 }
 
 // ─── One day section (header bar + events + hotel + meals) ────────────
-function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: number; productName: string }) {
+function DaySection({
+    day,
+    dayIndex,
+    productName,
+    onOpenImages,
+}: {
+    day: DayGroup;
+    dayIndex: number;
+    productName: string;
+    onOpenImages?: (images: string[], startIndex: number) => void;
+}) {
     const c = day.dayInfo.content as DayInfoContent | undefined;
     const dayLabel = (c?.dayLabel || `${dayIndex + 1}日目`).replace(/（.*?）/, '');
     const dayDate = c?.dayDate?.trim();
@@ -235,7 +258,7 @@ function DaySection({ day, dayIndex, productName }: { day: DayGroup; dayIndex: n
 
                 {/* Events */}
                 {day.events.map((b, i) => (
-                    <EventRow key={b.id || i} block={b} index={i} productName={productName} />
+                    <EventRow key={b.id || i} block={b} index={i} productName={productName} onOpenImages={onOpenImages} />
                 ))}
 
                 {/* Accommodation */}
@@ -342,10 +365,12 @@ function EventRow({
     block,
     index,
     productName,
+    onOpenImages,
 }: {
     block: ItineraryBlock;
     index: number;
     productName: string;
+    onOpenImages?: (images: string[], startIndex: number) => void;
 }) {
     if (block.type === 'divider') {
         const div = block.content as DividerContent;
@@ -444,27 +469,50 @@ function EventRow({
                             {c.time}
                         </div>
                     )}
-                    <div
-                        className={`grid gap-1.5 ${
-                            imgs.length === 1
-                                ? 'grid-cols-1'
-                                : 'grid-cols-2'
-                        }`}
-                    >
-                        {imgs.map((src, i) => (
-                            <img
-                                key={i}
-                                src={getOptimizedImageUrl(src, imgs.length === 1 ? 'productItinerary' : 'productThumbnail')}
-                                alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
-                                loading="lazy"
-                                decoding="async"
-                                onError={hideBroken}
-                                className={`w-full ${
-                                    imgs.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'
-                                } object-cover rounded-lg`}
-                            />
-                        ))}
-                    </div>
+                    {(() => {
+                        const visible = imgs.slice(0, 2);
+                        const remaining = imgs.length - visible.length;
+                        return (
+                            <div className={`grid gap-1.5 ${visible.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                {visible.map((src, i) => {
+                                    const isLastVisible = i === visible.length - 1;
+                                    const showMoreBadge = isLastVisible && remaining > 0;
+                                    return (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (onOpenImages) onOpenImages(imgs, i);
+                                            }}
+                                            className="relative p-0 border-0 bg-transparent block w-full cursor-pointer"
+                                            aria-label={`${c.title || '画像'} ${i + 1}枚目を拡大`}
+                                        >
+                                            <img
+                                                src={getOptimizedImageUrl(src, visible.length === 1 ? 'productItinerary' : 'productThumbnail')}
+                                                alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
+                                                loading="lazy"
+                                                decoding="async"
+                                                onError={hideBroken}
+                                                className={`w-full ${visible.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'} object-cover rounded-lg pointer-events-none`}
+                                            />
+                                            {showMoreBadge && (
+                                                <>
+                                                    <div className="absolute left-0 right-0 bottom-0 h-1/2 rounded-lg pointer-events-none"
+                                                         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }} />
+                                                    <div className="absolute right-2 bottom-2 bg-black/65 text-white px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm border border-white/20 inline-flex items-center gap-1 pointer-events-none">
+                                                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>add_photo_alternate</span>
+                                                        +{remaining}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
                     {c.description && (
                         <p className="text-[13px] text-gray-700 dark:text-gray-200 mt-3 leading-relaxed whitespace-pre-wrap">
                             {c.description}
@@ -532,4 +580,95 @@ function FlatBlock({ block, productName }: { block: ItineraryBlock; productName:
         );
     }
     return null;
+}
+
+// ─── Mobile fullscreen lightbox ───────────────────────────────────────
+// Tap any timeline image → opens here. Supports prev/next, Escape, body
+// scroll lock, thumbnail strip. Mobile-only; PC uses GalleryLightbox.
+function MobileLightbox({
+    images,
+    startIndex,
+    onClose,
+}: {
+    images: string[];
+    startIndex: number;
+    onClose: () => void;
+}) {
+    const [i, setI] = useState(startIndex);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowRight') setI((x) => (x + 1) % images.length);
+            if (e.key === 'ArrowLeft') setI((x) => (x - 1 + images.length) % images.length);
+        };
+        window.addEventListener('keydown', onKey);
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            document.body.style.overflow = prev;
+        };
+    }, [images.length, onClose]);
+
+    return (
+        <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col" onClick={onClose}>
+            <div
+                className="flex items-center justify-between p-4 text-white text-sm font-semibold"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <span>{i + 1} / {images.length}</span>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="閉じる"
+                    className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center"
+                >
+                    <span className="material-symbols-outlined text-white" style={{ fontSize: 22 }}>close</span>
+                </button>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center relative px-4" onClick={(e) => e.stopPropagation()}>
+                <button
+                    type="button"
+                    aria-label="前へ"
+                    onClick={() => setI((i - 1 + images.length) % images.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center z-10"
+                >
+                    <span className="material-symbols-outlined text-white" style={{ fontSize: 26 }}>chevron_left</span>
+                </button>
+                <img
+                    src={images[i]}
+                    alt={`画像 ${i + 1} / ${images.length}`}
+                    className="max-w-full max-h-[75vh] object-contain rounded-lg"
+                />
+                <button
+                    type="button"
+                    aria-label="次へ"
+                    onClick={() => setI((i + 1) % images.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center z-10"
+                >
+                    <span className="material-symbols-outlined text-white" style={{ fontSize: 26 }}>chevron_right</span>
+                </button>
+            </div>
+
+            <div
+                className="flex justify-center gap-2 p-4 overflow-x-auto scrollbar-hide"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {images.map((src, j) => (
+                    <button
+                        key={j}
+                        type="button"
+                        onClick={() => setI(j)}
+                        aria-label={`サムネイル ${j + 1}`}
+                        className={`shrink-0 w-16 h-12 rounded overflow-hidden border-2 transition-opacity ${
+                            j === i ? 'border-white opacity-100' : 'border-transparent opacity-55'
+                        }`}
+                        style={{ backgroundImage: `url(${src})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                    />
+                ))}
+            </div>
+        </div>
+    );
 }
