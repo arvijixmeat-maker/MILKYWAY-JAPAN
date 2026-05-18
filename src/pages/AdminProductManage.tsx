@@ -1759,7 +1759,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                 하이라이트 / ハイライト
                                             </label>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                PC 상세페이지 「ハイライト」 4개 카드. 비워두면 기본값(다크스카이·자연경관·ゲル宿泊·日本語ガイド)이 표시됩니다.
+                                                상품 상세 「ハイライト」 섹션. 갯수 제한 없음 (2열 그리드로 자동 정렬). 비워두면 기본 4개(다크스카이·자연경관·ゲル宿泊·日本語ガイド)가 표시됩니다.
                                             </p>
                                         </div>
                                         <button

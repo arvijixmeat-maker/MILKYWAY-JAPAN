@@ -1392,9 +1392,21 @@ function priceModifierStyle(modifier: number): CSSProperties {
     };
 }
 
+// True when `icon` is an admin-uploaded image URL (R2/Cloudflare or http(s))
+// rather than a Material Symbols icon name. AdminProductManage uploads the
+// highlight icon to /highlight-icons folder and stores the URL into this
+// field, so we need to render it as <img>, not as a Material icon.
+const isImageUrl = (v: string | undefined): boolean => {
+    if (!v) return false;
+    return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/') || /\.(png|jpe?g|webp|svg|gif)$/i.test(v);
+};
+
 function HighlightsBlock({ product }: { product: TourProduct }) {
+    // No upper limit — admin can add as many highlights as needed. They wrap
+    // naturally in the 2-column grid below. Previously sliced to 4 which
+    // silently dropped the 5th+ card.
     const items = (product.highlights && product.highlights.length > 0)
-        ? product.highlights.slice(0, 4)
+        ? product.highlights
         : [
             { icon: 'auto_awesome', title: '世界屈指のダークスカイ', description: '光害ゼロのモンゴルの大草原・砂漠で、肉眼で天の川がはっきり見えます。' },
             { icon: 'landscape', title: '壮大な自然景観', description: '草原・砂漠・山岳など、地球規模の絶景を体感できます。' },
@@ -1415,10 +1427,21 @@ function HighlightsBlock({ product }: { product: TourProduct }) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
+                            overflow: 'hidden',
                             boxShadow: 'var(--shadow-toss)',
                         }}
                     >
-                        <MatIcon name={h.icon || 'star'} size={22} filled color="#0f766e" />
+                        {isImageUrl(h.icon) ? (
+                            <img
+                                src={h.icon}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <MatIcon name={h.icon || 'star'} size={22} filled color="#0f766e" />
+                        )}
                     </div>
                     <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 6, letterSpacing: '-0.01em' }}>
