@@ -71,6 +71,7 @@ const AdminTemplateManage = lazy(() => import('./pages/AdminTemplateManage').the
 const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(module => ({ default: module.AdminReviewManage })))
 const AdminFAQManage = lazy(() => import('./pages/AdminFAQManage').then(module => ({ default: module.AdminFAQManage })))
 const AdminGuideIntroManage = lazy(() => import('./pages/AdminGuideIntroManage').then(module => ({ default: module.AdminGuideIntroManage })))
+const AdminTourFAQManage = lazy(() => import('./pages/AdminTourFAQManage').then(module => ({ default: module.AdminTourFAQManage })))
 
 // Loading Component
 const PageLoader = () => (
@@ -156,6 +157,7 @@ function App() {
             <Route path="/admin/reviews" element={<AdminGuard><AdminReviewManage /></AdminGuard>} />
             <Route path="/admin/faq" element={<AdminGuard><AdminFAQManage /></AdminGuard>} />
             <Route path="/admin/guide-intro" element={<AdminGuard><AdminGuideIntroManage /></AdminGuard>} />
+            <Route path="/admin/tour-faqs" element={<AdminGuard><AdminTourFAQManage /></AdminGuard>} />
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />

@@ -23,6 +23,7 @@ const settingItems = [
     { id: 'hotels', icon: 'hotel', label: '호텔 마스터', href: '/admin/hotels' },
     { id: 'tourist-spots', icon: 'location_on', label: '관광지 마스터', href: '/admin/tourist-spots' },
     { id: 'guide-intro', icon: 'translate', label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
+    { id: 'tour-faqs', icon: 'quiz', label: '투어 공통 FAQ', href: '/admin/tour-faqs' },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, isDarkMode, toggleTheme }) => {
