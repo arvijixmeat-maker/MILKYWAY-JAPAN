@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
+import { api } from '../../lib/api';
 import type { TourProduct, DetailSlide, DividerContent, DayInfoContent, TimelineContent } from '../../types/product';
 
 interface ItineraryBlock {
@@ -222,6 +224,28 @@ function DaySection({
 
     const hasDayHeader = !!(c?.title || c?.description);
 
+    // Live hotel fetch fallback — same as PC. When dayInfo only has a hotelId
+    // (saved before the snapshot fields were added) we fetch the master so
+    // images/description still show without forcing the admin to re-save.
+    const needsHotelFetch = !!c?.accommodationHotelId
+        && !((c?.accommodationImages?.length ?? 0) > 0
+            || c?.accommodationDescription
+            || c?.accommodationAddress);
+    const { data: liveHotel } = useQuery({
+        queryKey: ['hotel', c?.accommodationHotelId],
+        queryFn: () => api.hotels.get(c!.accommodationHotelId!),
+        enabled: needsHotelFetch,
+        staleTime: 1000 * 60 * 60,
+    });
+    const mergedHotel = {
+        images: (c?.accommodationImages?.length ?? 0) > 0
+            ? c!.accommodationImages!
+            : (liveHotel?.images ?? []),
+        description: c?.accommodationDescription || liveHotel?.description || '',
+        address: c?.accommodationAddress || liveHotel?.address || '',
+        subtitle: c?.accommodationSubtitle || liveHotel?.name_local || '',
+    };
+
     return (
         <section
             id={`mob-day-${dayIndex + 1}`}
@@ -265,10 +289,10 @@ function DaySection({
                     hotel master (images / description / address snapshotted),
                     simple text row otherwise. */}
                 {accommodation && (() => {
-                    const hotelImages = Array.isArray(c?.accommodationImages)
-                        ? c!.accommodationImages!.filter((u): u is string => typeof u === 'string' && !!u)
+                    const hotelImages = Array.isArray(mergedHotel.images)
+                        ? mergedHotel.images.filter((u): u is string => typeof u === 'string' && !!u)
                         : [];
-                    const hasRich = hotelImages.length > 0 || !!c?.accommodationDescription || !!c?.accommodationAddress;
+                    const hasRich = hotelImages.length > 0 || !!mergedHotel.description || !!mergedHotel.address;
 
                     if (!hasRich) {
                         return (
@@ -301,9 +325,9 @@ function DaySection({
                                     </span>
                                     <h4 className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">
                                         {accommodation}
-                                        {c?.accommodationSubtitle && (
+                                        {mergedHotel.subtitle && (
                                             <span className="ml-2 text-[11px] font-normal text-gray-500">
-                                                {c.accommodationSubtitle}
+                                                {mergedHotel.subtitle}
                                             </span>
                                         )}
                                     </h4>
@@ -348,15 +372,15 @@ function DaySection({
                                         })}
                                     </div>
                                 )}
-                                {c?.accommodationDescription && (
+                                {mergedHotel.description && (
                                     <p className="text-[13px] text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap mt-1">
-                                        {c.accommodationDescription}
+                                        {mergedHotel.description}
                                     </p>
                                 )}
-                                {c?.accommodationAddress && (
+                                {mergedHotel.address && (
                                     <div className="mt-2 text-[11px] text-gray-500 inline-flex items-center gap-1">
                                         <span className="material-symbols-outlined" style={{ fontSize: 13 }}>location_on</span>
-                                        {c.accommodationAddress}
+                                        {mergedHotel.address}
                                     </div>
                                 )}
                                 <div className="text-[11px] text-gray-500 mt-2">
