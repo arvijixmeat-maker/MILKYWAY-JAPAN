@@ -1618,6 +1618,29 @@ function DaySection({
     if (c?.meals?.lunch) meals.push({ k: '昼食', v: c.meals.lunch });
     if (c?.meals?.dinner) meals.push({ k: '夕食', v: c.meals.dinner });
 
+    // Live-fetch hotel master fallback. Older itineraries saved only the hotel
+    // name + id (before the snapshot fields existed); fetching by id lets us
+    // show the images/description without forcing the admin to re-pick & save.
+    const needsHotelFetch = !!c?.accommodationHotelId
+        && !((c?.accommodationImages?.length ?? 0) > 0
+            || c?.accommodationDescription
+            || c?.accommodationAddress);
+    const { data: liveHotel } = useQuery({
+        queryKey: ['hotel', c?.accommodationHotelId],
+        queryFn: () => api.hotels.get(c!.accommodationHotelId!),
+        enabled: needsHotelFetch,
+        staleTime: 1000 * 60 * 60,
+    });
+    // Merge: snapshot fields take precedence; fetched data fills gaps.
+    const mergedHotel = {
+        images: (c?.accommodationImages?.length ?? 0) > 0
+            ? c!.accommodationImages!
+            : (liveHotel?.images ?? []),
+        description: c?.accommodationDescription || liveHotel?.description || '',
+        address: c?.accommodationAddress || liveHotel?.address || '',
+        subtitle: c?.accommodationSubtitle || liveHotel?.name_local || '',
+    };
+
     // If admin filled in dayInfo.title/description (e.g., region name +
     // overview), surface that as a synthetic first "location header" so the
     // big pin doesn't disappear when there are no other location-style
@@ -1714,12 +1737,12 @@ function DaySection({
                     render a rich photo card (max 2 images + +N badge).
                     Falls back to a simple text row when only the name is set. */}
                 {c?.accommodation && (() => {
-                    const hotelImages = Array.isArray(c.accommodationImages)
-                        ? c.accommodationImages.filter((u): u is string => typeof u === 'string' && !!u)
+                    const hotelImages = Array.isArray(mergedHotel.images)
+                        ? mergedHotel.images.filter((u): u is string => typeof u === 'string' && !!u)
                         : [];
                     const hasRich = hotelImages.length > 0
-                        || !!c.accommodationDescription
-                        || !!c.accommodationAddress;
+                        || !!mergedHotel.description
+                        || !!mergedHotel.address;
 
                     if (!hasRich) {
                         return (
@@ -1797,9 +1820,9 @@ function DaySection({
                                         }}
                                     >
                                         {c.accommodation}
-                                        {c.accommodationSubtitle && (
+                                        {mergedHotel.subtitle && (
                                             <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 500, color: 'var(--fg-5)' }}>
-                                                {c.accommodationSubtitle}
+                                                {mergedHotel.subtitle}
                                             </span>
                                         )}
                                     </h4>
@@ -1869,7 +1892,7 @@ function DaySection({
                                     </div>
                                 )}
 
-                                {c.accommodationDescription && (
+                                {mergedHotel.description && (
                                     <p
                                         style={{
                                             fontSize: 14,
@@ -1879,13 +1902,13 @@ function DaySection({
                                             whiteSpace: 'pre-wrap',
                                         }}
                                     >
-                                        {c.accommodationDescription}
+                                        {mergedHotel.description}
                                     </p>
                                 )}
-                                {c.accommodationAddress && (
+                                {mergedHotel.address && (
                                     <div
                                         style={{
-                                            marginTop: c.accommodationDescription ? 10 : 0,
+                                            marginTop: mergedHotel.description ? 10 : 0,
                                             fontSize: 12,
                                             color: 'var(--fg-5)',
                                             display: 'inline-flex',
@@ -1894,7 +1917,7 @@ function DaySection({
                                         }}
                                     >
                                         <MatIcon name="location_on" size={14} color="var(--fg-5)" />
-                                        {c.accommodationAddress}
+                                        {mergedHotel.address}
                                     </div>
                                 )}
                                 <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 10 }}>
