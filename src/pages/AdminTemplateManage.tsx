@@ -123,6 +123,11 @@ const TemplatesTab: React.FC = () => {
 
     const resetForm = () => { setForm({ name: '', description: '', days: [] }); setEditing(null); setBulkText(''); setQuickDays(4); };
 
+    const DAY_LABELS_JP = [
+        '1日目', '2日目', '3日目', '4日目', '5日目',
+        '6日目', '7日目', '8日目', '9日目', '10日目',
+    ];
+
     const inferActivityType = (text: string): ActivityType => {
         const value = text.toLowerCase();
         if (/(공항|픽업|도착|미팅|arrival|airport)/i.test(value)) return 'pickup';
@@ -134,8 +139,8 @@ const TemplatesTab: React.FC = () => {
         return 'sightseeing';
     };
 
-    const createBlankDays = () => {
-        const count = Math.max(1, Math.min(30, quickDays || 1));
+    const createBlankDays = (days = quickDays) => {
+        const count = Math.max(1, Math.min(14, days || 1));
         setForm(f => ({
             ...f,
             days: Array.from({ length: count }, (_, idx) => ({
@@ -146,6 +151,16 @@ const TemplatesTab: React.FC = () => {
             })),
         }));
     };
+
+    const addActivityToLastDay = () => setForm(f => {
+        const days = f.days.length > 0 ? [...f.days] : [{ day: 1, title: '', region: '', activities: [] as Activity[] }];
+        const lastIdx = days.length - 1;
+        days[lastIdx] = {
+            ...days[lastIdx],
+            activities: [...days[lastIdx].activities, { time: '', type: 'sightseeing', title: '', description: '' }],
+        };
+        return { ...f, days };
+    });
 
     const loadBulkSample = () => {
         setBulkText([
@@ -390,27 +405,28 @@ const TemplatesTab: React.FC = () => {
                                 </div>
 
                                 {/* Quick builder */}
-                                <div className="mb-5 grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-3">
-                                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                                        <div className="flex items-start gap-3 mb-3">
-                                            <span className="material-symbols-outlined text-teal-600">auto_awesome</span>
-                                            <div>
-                                                <h3 className="text-sm font-bold text-slate-800 dark:text-white">빠른 골격 만들기</h3>
-                                                <p className="text-xs text-slate-500 mt-0.5">먼저 여행 일수만 만들고 세부 일정은 아래에서 채웁니다.</p>
+                                <div className="mb-5 space-y-3">
+                                    <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 flex-wrap">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                                            <span className="material-symbols-outlined text-amber-700 dark:text-amber-400">calendar_view_day</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-bold text-amber-900 dark:text-amber-300">N일 일정 골격 만들기</div>
+                                            <div className="text-xs text-amber-800/80 dark:text-amber-400/80 mt-0.5">
+                                                상품 관리처럼 1日目 ~ N日目 일자 틀을 먼저 만들고, 각 일자 안에 일정 항목을 추가하세요.
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                max={30}
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <label className="text-xs font-medium text-amber-900 dark:text-amber-300">일수</label>
+                                            <select
                                                 value={quickDays}
                                                 onChange={e => setQuickDays(Number(e.target.value))}
-                                                className="w-20 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                            />
-                                            <span className="text-sm text-slate-500">일</span>
-                                            <button onClick={createBlankDays} className="ml-auto px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5">
-                                                <span className="material-symbols-outlined text-sm">calendar_add_on</span>골격 생성
+                                                className="px-2 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-sm font-semibold text-amber-900 dark:text-amber-300"
+                                            >
+                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n}>{n}일</option>)}
+                                            </select>
+                                            <button onClick={() => createBlankDays(quickDays)} className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 transition-colors">
+                                                <span className="material-symbols-outlined text-sm">add</span>생성
                                             </button>
                                         </div>
                                     </div>
@@ -447,9 +463,18 @@ const TemplatesTab: React.FC = () => {
                                 {/* Days */}
                                 <div className="mb-3 flex items-center justify-between">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">일정 ({form.days.length}일)</label>
-                                    <button onClick={addDay} className="text-xs px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold inline-flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">add</span>일차 추가
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={addActivityToLastDay} className="text-xs px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold inline-flex items-center gap-1" title="마지막 일자에 일정 항목을 추가합니다">
+                                            <span className="material-symbols-outlined text-sm">add_location</span>일정 항목 추가
+                                        </button>
+                                        <button onClick={addDay} className="text-xs px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold inline-flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-sm">add</span>일차 추가
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    <strong>사용 방법:</strong> 먼저 위쪽 <span className="text-amber-700 dark:text-amber-400 font-semibold">N일 일정 골격 만들기</span>로 일자를 만들고, 각 일자 아래의 <span className="text-blue-600 dark:text-blue-400 font-semibold">이 일자에 일정 항목 추가</span>로 시간표를 채우세요.
                                 </div>
 
                                 <div className="space-y-3">
@@ -457,7 +482,7 @@ const TemplatesTab: React.FC = () => {
                                         <div key={dayIdx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                                             {/* Day header */}
                                             <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 grid grid-cols-[auto_120px_1fr_auto] gap-2 items-center">
-                                                <span className="px-2 py-1 bg-teal-500 text-white text-[10px] font-bold rounded">D-{day.day}</span>
+                                                <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-[10px] font-bold rounded">{DAY_LABELS_JP[day.day - 1] || `${day.day}日目`}</span>
                                                 <input
                                                     value={day.region || ''}
                                                     onChange={e => updateDay(dayIdx, 'region', e.target.value)}
@@ -548,8 +573,8 @@ const TemplatesTab: React.FC = () => {
                                                 })}
                                                 </div>
                                                 <div className="flex items-center gap-2 pt-1">
-                                                    <button onClick={() => addActivity(dayIdx)} className="text-xs text-teal-500 hover:text-teal-600 inline-flex items-center gap-1 font-semibold">
-                                                        <span className="material-symbols-outlined text-sm">add</span>타임라인 추가
+                                                    <button onClick={() => addActivity(dayIdx)} className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg text-sm font-bold text-blue-700 dark:text-blue-300 transition-colors flex items-center justify-center gap-2">
+                                                        <span className="material-symbols-outlined text-lg">add_circle</span>이 일자에 일정 항목 추가
                                                     </button>
                                                     {day.activities.length > 1 && (
                                                         <button onClick={() => sortByTime(dayIdx)} className="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 font-semibold ml-auto" title="시간 순으로 정렬">
