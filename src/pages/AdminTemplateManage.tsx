@@ -68,14 +68,17 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                                     {d.activities.length === 0 ? (
                                         <p className="text-[11px] text-slate-400 italic">활동이 비어있습니다</p>
                                     ) : (
-                                        <ul className="space-y-2">
+                                        <ul className="space-y-0">
                                             {d.activities.map((a, i) => {
                                                 const t = a.type ? TYPE_MAP[a.type] : null;
                                                 return (
                                                     <li key={i} className="grid grid-cols-[40px_24px_1fr] gap-1.5 items-start">
                                                         <span className="text-[10px] font-bold text-slate-400 font-mono mt-0.5">{a.time || '--:--'}</span>
-                                                        <span className="material-symbols-outlined text-teal-600 text-base mt-0.5">{t?.icon || 'check_circle'}</span>
-                                                        <div className="min-w-0">
+                                                        <span className="relative flex justify-center">
+                                                            {i < d.activities.length - 1 && <span className="absolute top-5 bottom-[-18px] left-1/2 border-l border-dashed border-teal-200" />}
+                                                            <span className="material-symbols-outlined relative z-10 text-teal-600 text-base bg-white dark:bg-slate-800 rounded-full mt-0.5">{t?.icon || 'check_circle'}</span>
+                                                        </span>
+                                                        <div className="min-w-0 pb-3">
                                                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{a.title || '(활동 제목)'}</p>
                                                             {a.description && <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{a.description}</p>}
                                                         </div>
@@ -240,6 +243,14 @@ const TemplatesTab: React.FC = () => {
     const addActivity = (dayIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = [...d[dayIdx].activities, { time: '', type: 'sightseeing', title: '', description: '' }]; return { ...f, days: d }; });
     const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
     const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: any) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
+    const updateActivityText = (dayIdx: number, actIdx: number, field: 'title' | 'description', value: string) => setForm(f => {
+        const d = [...f.days];
+        const activity = d[dayIdx].activities[actIdx];
+        const next = { ...activity, [field]: value };
+        next.type = inferActivityType(`${field === 'title' ? value : next.title} ${field === 'description' ? value : next.description}`);
+        d[dayIdx].activities[actIdx] = next;
+        return { ...f, days: d };
+    });
     const moveActivity = (dayIdx: number, actIdx: number, dir: -1 | 1) => setForm(f => {
         const acts = [...f.days[dayIdx].activities];
         const newIdx = actIdx + dir;
@@ -476,60 +487,69 @@ const TemplatesTab: React.FC = () => {
                                             </div>
 
                                             {/* Activities */}
-                                            <div className="p-2 space-y-1.5">
+                                            <div className="p-4">
+                                                <div className="mb-3 flex items-center justify-between gap-2">
+                                                    <p className="text-xs font-bold text-slate-500">타임라인</p>
+                                                    <p className="text-[11px] text-slate-400">유형은 내용에 따라 자동 분류됩니다.</p>
+                                                </div>
+                                                <div className="space-y-0">
                                                 {day.activities.map((act, actIdx) => {
                                                     const t = act.type ? TYPE_MAP[act.type] : null;
                                                     return (
-                                                        <div key={actIdx} className="grid grid-cols-[60px_120px_1fr_auto] gap-1.5 items-start bg-slate-50/50 dark:bg-slate-700/20 rounded-lg p-1.5">
+                                                        <div key={actIdx} className="grid grid-cols-[72px_30px_1fr_auto] gap-3 items-start">
                                                             <input
                                                                 type="time"
                                                                 value={act.time || ''}
                                                                 onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
-                                                                className="px-1.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500 text-center"
+                                                                className="mt-1 px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500 text-center"
                                                             />
-                                                            <select
-                                                                value={act.type || 'other'}
-                                                                onChange={e => updateActivity(dayIdx, actIdx, 'type', e.target.value)}
-                                                                className="px-1.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                                            >
-                                                                {ACTIVITY_TYPES.map(opt => (
-                                                                    <option key={opt.id} value={opt.id}>{opt.label}</option>
-                                                                ))}
-                                                            </select>
-                                                            <div className="space-y-1 min-w-0">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    {t && <span className="material-symbols-outlined text-teal-600 text-base flex-shrink-0">{t.icon}</span>}
+                                                            <div className="relative flex justify-center">
+                                                                {actIdx < day.activities.length - 1 && <span className="absolute top-8 bottom-[-18px] left-1/2 border-l-2 border-dashed border-teal-200 dark:border-teal-800" />}
+                                                                <span className="relative z-10 w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700 flex items-center justify-center text-teal-600">
+                                                                    <span className="material-symbols-outlined text-base">{t?.icon || 'radio_button_checked'}</span>
+                                                                </span>
+                                                            </div>
+                                                            <div className="pb-4">
+                                                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 p-3">
+                                                                    <div className="mb-2 flex items-center gap-2">
+                                                                        <span className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-[10px] font-bold text-slate-500">
+                                                                            {t?.label || '일정'}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-slate-400">자동 분류</span>
+                                                                    </div>
                                                                     <input
                                                                         value={act.title}
-                                                                        onChange={e => updateActivity(dayIdx, actIdx, 'title', e.target.value)}
-                                                                        placeholder="활동 제목"
-                                                                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                                        onChange={e => updateActivityText(dayIdx, actIdx, 'title', e.target.value)}
+                                                                        placeholder="예: 공항 도착 후 가이드 미팅"
+                                                                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                                                    />
+                                                                    <textarea
+                                                                        value={act.description}
+                                                                        onChange={e => updateActivityText(dayIdx, actIdx, 'description', e.target.value)}
+                                                                        placeholder="상세 내용은 필요할 때만 입력"
+                                                                        rows={2}
+                                                                        className="mt-2 w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none"
                                                                     />
                                                                 </div>
-                                                                <input
-                                                                    value={act.description}
-                                                                    onChange={e => updateActivity(dayIdx, actIdx, 'description', e.target.value)}
-                                                                    placeholder="세부 내용 (선택)"
-                                                                    className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                                                />
                                                             </div>
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <button onClick={() => moveActivity(dayIdx, actIdx, -1)} disabled={actIdx === 0} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
+                                                            <div className="mt-1 flex items-center gap-0.5">
+                                                                <button onClick={() => moveActivity(dayIdx, actIdx, -1)} disabled={actIdx === 0} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
                                                                     <span className="material-symbols-outlined text-sm">arrow_upward</span>
                                                                 </button>
-                                                                <button onClick={() => moveActivity(dayIdx, actIdx, 1)} disabled={actIdx === day.activities.length - 1} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="아래로">
+                                                                <button onClick={() => moveActivity(dayIdx, actIdx, 1)} disabled={actIdx === day.activities.length - 1} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="아래로">
                                                                     <span className="material-symbols-outlined text-sm">arrow_downward</span>
                                                                 </button>
-                                                                <button onClick={() => removeActivity(dayIdx, actIdx)} className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50" title="삭제">
+                                                                <button onClick={() => removeActivity(dayIdx, actIdx)} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50" title="삭제">
                                                                     <span className="material-symbols-outlined text-sm">close</span>
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     );
                                                 })}
+                                                </div>
                                                 <div className="flex items-center gap-2 pt-1">
                                                     <button onClick={() => addActivity(dayIdx)} className="text-xs text-teal-500 hover:text-teal-600 inline-flex items-center gap-1 font-semibold">
-                                                        <span className="material-symbols-outlined text-sm">add</span>활동 추가
+                                                        <span className="material-symbols-outlined text-sm">add</span>타임라인 추가
                                                     </button>
                                                     {day.activities.length > 1 && (
                                                         <button onClick={() => sortByTime(dayIdx)} className="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 font-semibold ml-auto" title="시간 순으로 정렬">
