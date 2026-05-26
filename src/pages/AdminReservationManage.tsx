@@ -13,6 +13,7 @@ interface Reservation {
     customerName: string;
     date: string;
     bookedAt: string;
+    bookedAtMs?: number;
     status: 'pending_payment' | 'paid' | 'confirmed' | 'cancelled' | 'new' | 'processing' | 'answered' | 'reservation_requested' | 'converted';
 
     // Payment Fields
@@ -1514,6 +1515,12 @@ export const AdminReservationManage: React.FC = () => {
     // Reservations State
     const [reservations, setReservations] = useState<Reservation[]>([]);
 
+    const toTime = (value: any) => {
+        if (!value) return 0;
+        const time = new Date(value).getTime();
+        return Number.isNaN(time) ? 0 : time;
+    };
+
     const fetchReservations = async () => {
         try {
             setReservations([]); // Clear first
@@ -1550,6 +1557,7 @@ export const AdminReservationManage: React.FC = () => {
                         : r.duration || '날짜 미정',
                     bookedAt: createdAt ? new Date(createdAt).toLocaleDateString('ko-KR') : '',
                     status: r.status,
+                    bookedAtMs: toTime(createdAt),
                     totalAmount,
                     deposit: depositAmt,
                     depositStatus: r.depositStatus || r.deposit_status || (r.status === 'pending_payment' ? 'unpaid' : 'paid'),
@@ -1596,6 +1604,7 @@ export const AdminReservationManage: React.FC = () => {
                         customerName: q.name,
                         date: q.period || '일정 미정',
                         bookedAt: createdAt ? new Date(createdAt).toLocaleDateString('ko-KR') : '',
+                        bookedAtMs: toTime(createdAt),
                         status: q.status,
                         totalAmount: q.confirmedPrice || q.confirmed_price || 0,
                         deposit: q.deposit || 0,
@@ -1629,7 +1638,7 @@ export const AdminReservationManage: React.FC = () => {
                 allItems.push(...mappedQuotes);
             }
 
-            allItems.sort((a, b) => b.bookedAt.localeCompare(a.bookedAt));
+            allItems.sort((a, b) => (b.bookedAtMs || 0) - (a.bookedAtMs || 0));
             setReservations(allItems);
 
         } catch (error) {

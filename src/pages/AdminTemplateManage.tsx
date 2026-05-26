@@ -100,6 +100,8 @@ const TemplatesTab: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editing, setEditing] = useState<ItineraryTemplate | null>(null);
     const [form, setForm] = useState<{ name: string; description: string; days: TemplateDay[] }>({ name: '', description: '', days: [] });
+    const [quickDays, setQuickDays] = useState(4);
+    const [bulkText, setBulkText] = useState('');
 
     const load = async () => {
         try {
@@ -116,7 +118,105 @@ const TemplatesTab: React.FC = () => {
 
     useEffect(() => { load(); }, []);
 
-    const resetForm = () => { setForm({ name: '', description: '', days: [] }); setEditing(null); };
+    const resetForm = () => { setForm({ name: '', description: '', days: [] }); setEditing(null); setBulkText(''); setQuickDays(4); };
+
+    const inferActivityType = (text: string): ActivityType => {
+        const value = text.toLowerCase();
+        if (/(공항|픽업|도착|미팅|arrival|airport)/i.test(value)) return 'pickup';
+        if (/(이동|출발|전용차|차량|버스|transfer|drive)/i.test(value)) return 'transport';
+        if (/(식사|조식|중식|석식|점심|저녁|아침|meal|lunch|dinner|breakfast)/i.test(value)) return 'meal';
+        if (/(숙박|호텔|게르|체크인|hotel|stay|check[-\s]?in)/i.test(value)) return 'checkin';
+        if (/(체험|승마|낙타|트레킹|공연|activity|experience)/i.test(value)) return 'activity';
+        if (/(자유|휴식|free)/i.test(value)) return 'free';
+        return 'sightseeing';
+    };
+
+    const createBlankDays = () => {
+        const count = Math.max(1, Math.min(30, quickDays || 1));
+        setForm(f => ({
+            ...f,
+            days: Array.from({ length: count }, (_, idx) => ({
+                day: idx + 1,
+                title: f.days[idx]?.title || '',
+                region: f.days[idx]?.region || '',
+                activities: f.days[idx]?.activities || [],
+            })),
+        }));
+    };
+
+    const loadBulkSample = () => {
+        setBulkText([
+            'Day 1 울란바토르 도착',
+            '10:00 공항 도착 - 가이드 미팅 후 전용차 이동',
+            '12:30 점심 식사',
+            '14:00 시내 관광 - 수흐바타르 광장, 국립역사박물관',
+            '숙박: 울란바토르 호텔',
+            '',
+            'Day 2 테를지 국립공원',
+            '09:00 호텔 출발 - 테를지 국립공원 이동',
+            '11:00 거북바위 관광',
+            '13:00 현지식 점심',
+            '15:00 승마 체험',
+            '숙박: 게르 캠프',
+        ].join('\n'));
+    };
+
+    const importBulkText = () => {
+        const lines = bulkText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        if (lines.length === 0) {
+            alert('붙여넣을 일정표 내용을 입력해 주세요.');
+            return;
+        }
+
+        const parsedDays: TemplateDay[] = [];
+        let currentDay: TemplateDay | null = null;
+        const commitDay = () => {
+            if (currentDay) parsedDays.push(currentDay);
+        };
+
+        lines.forEach(line => {
+            const dayMatch = line.match(/^(?:day|d)[-\s]*(\d+)\s*[:.)-]?\s*(.*)$/i) || line.match(/^(\d+)\s*일차\s*[:.)-]?\s*(.*)$/);
+            if (dayMatch) {
+                commitDay();
+                currentDay = { day: parsedDays.length + 1, title: dayMatch[2]?.trim() || '', region: '', activities: [] };
+                return;
+            }
+
+            if (!currentDay) {
+                currentDay = { day: 1, title: '', region: '', activities: [] };
+            }
+
+            const stayMatch = line.match(/^(숙박|宿泊|hotel|stay)\s*[:：]\s*(.+)$/i);
+            if (stayMatch) {
+                const title = stayMatch[2].trim();
+                currentDay.activities.push({ time: '', type: 'checkin', title, description: '숙박' });
+                return;
+            }
+
+            const activityMatch = line.match(/^(\d{1,2}:\d{2})\s+(.+?)(?:\s*[-–]\s*(.+))?$/);
+            if (activityMatch) {
+                const title = activityMatch[2].trim();
+                const description = activityMatch[3]?.trim() || '';
+                currentDay.activities.push({
+                    time: activityMatch[1],
+                    type: inferActivityType(`${title} ${description}`),
+                    title,
+                    description,
+                });
+                return;
+            }
+
+            if (!currentDay.title) {
+                currentDay.title = line;
+            } else {
+                currentDay.activities.push({ time: '', type: inferActivityType(line), title: line, description: '' });
+            }
+        });
+
+        commitDay();
+        const days = parsedDays.map((day, idx) => ({ ...day, day: idx + 1 }));
+        setForm(f => ({ ...f, days }));
+    };
 
     // Day operations
     const addDay = () => setForm(f => ({ ...f, days: [...f.days, { day: f.days.length + 1, title: '', region: '', activities: [] }] }));
@@ -276,6 +376,61 @@ const TemplatesTab: React.FC = () => {
                                         placeholder="이 템플릿이 어떤 일정인지 한 줄 설명"
                                         className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     />
+                                </div>
+
+                                {/* Quick builder */}
+                                <div className="mb-5 grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-3">
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                                        <div className="flex items-start gap-3 mb-3">
+                                            <span className="material-symbols-outlined text-teal-600">auto_awesome</span>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-800 dark:text-white">빠른 골격 만들기</h3>
+                                                <p className="text-xs text-slate-500 mt-0.5">먼저 여행 일수만 만들고 세부 일정은 아래에서 채웁니다.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={30}
+                                                value={quickDays}
+                                                onChange={e => setQuickDays(Number(e.target.value))}
+                                                className="w-20 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            />
+                                            <span className="text-sm text-slate-500">일</span>
+                                            <button onClick={createBlankDays} className="ml-auto px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-sm">calendar_add_on</span>골격 생성
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                                        <div className="flex items-start justify-between gap-3 mb-3">
+                                            <div className="flex items-start gap-3">
+                                                <span className="material-symbols-outlined text-teal-600">content_paste_go</span>
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-slate-800 dark:text-white">일정표 원문 붙여넣기</h3>
+                                                    <p className="text-xs text-slate-500 mt-0.5">Day 1, 1일차, 10:00 일정 - 상세내용 형식을 자동으로 읽습니다.</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={loadBulkSample} className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 rounded-lg text-xs font-bold">
+                                                예시
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            value={bulkText}
+                                            onChange={e => setBulkText(e.target.value)}
+                                            rows={6}
+                                            placeholder={'Day 1 울란바토르 도착\n10:00 공항 도착 - 가이드 미팅\n12:30 점심 식사\n숙박: 울란바토르 호텔\n\nDay 2 테를지 국립공원'}
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        />
+                                        <div className="mt-2 flex items-center justify-between gap-2">
+                                            <p className="text-[11px] text-slate-400">붙여넣기 후 자동 생성하고, 부족한 부분만 아래에서 수정하세요.</p>
+                                            <button onClick={importBulkText} className="px-3 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 flex-shrink-0">
+                                                <span className="material-symbols-outlined text-sm">bolt</span>일정 자동 생성
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Days */}
