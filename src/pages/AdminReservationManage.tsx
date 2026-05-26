@@ -484,6 +484,128 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const paidAmount = (editForm.depositStatus === 'paid' ? editForm.deposit : 0) + (editForm.balanceStatus === 'paid' ? (editForm.totalAmount - editForm.deposit) : 0);
     const paidPercent = editForm.totalAmount > 0 ? Math.round((paidAmount / editForm.totalAmount) * 100) : 0;
     const getInitials = (name: string) => (name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const reservationNumber = (reservation as any).reservationNumber || reservation.id;
+    const itineraryUrl = `${window.location.origin}/documents/itinerary/${reservationNumber}`;
+    const contractUrl = `${window.location.origin}/documents/contract/${reservationNumber}`;
+    const selectedTemplate = templatesList.find((t: any) => t.id === editForm.itineraryTemplateId);
+    const itineraryReady = !!editForm.itineraryTemplateId;
+    const contractTravelers = editForm.contractData?.travelers || [];
+    const contractReady = contractTravelers.length > 0 && !!contractTravelers[0]?.name;
+    const itinerarySent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === itineraryUrl || String(e.description || '').includes('日程')));
+    const contractSent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === contractUrl || String(e.description || '').includes('契約')));
+    const guideReady = !!reservation.assignedGuide || !!reservation.areAssignmentsVisibleToUser;
+
+    const addHistory = (entry: { type: string; description: string; detail?: string }) => ({
+        ...reservation,
+        history: [
+            ...(reservation.history || []),
+            { timestamp: new Date().toISOString(), ...entry }
+        ]
+    });
+
+    const copyCustomerMessage = async (kind: 'itinerary' | 'contract' | 'final') => {
+        const url = kind === 'contract' ? contractUrl : itineraryUrl;
+        const title = kind === 'contract' ? '海外旅行契約書' : kind === 'itinerary' ? '確定日程表' : 'ご出発前の最終案内';
+        const body = `${reservation.customerName || 'お客様'} 様\n\nいつもお世話になっております。Milkyway Japanです。\n${reservation.productName}の${title}をご用意しました。\n下記リンクより内容をご確認ください。\n\n${url}\n\nご不明点や修正希望がございましたら、このままご返信ください。`;
+        await navigator.clipboard.writeText(body);
+        setCopiedDocId(`${kind}-message`);
+        setTimeout(() => setCopiedDocId(null), 1500);
+    };
+
+    const sendItineraryToCustomer = async () => {
+        if (!itineraryReady || !reservation.email) {
+            alert(!reservation.email ? '고객 이메일이 없습니다.' : '일정표 템플릿을 먼저 선택해 주세요.');
+            return;
+        }
+        setSendingItinerary(true);
+        try {
+            await sendNotificationEmail(reservation.email, 'ITINERARY_READY', {
+                customerName: reservation.customerName,
+                productName: reservation.productName,
+                reservationId: reservationNumber,
+                reservationDbId: reservation.id,
+                reservationNumber,
+                userId: reservation.userId,
+                travelDates: reservation.date,
+                itineraryUrl,
+            });
+            onUpdate(addHistory({ type: 'email', description: '確定日程表をお客様へ送信しました。', detail: itineraryUrl }));
+            alert('일정표 안내를 고객에게 발송했습니다.');
+        } catch (e: any) {
+            alert(`발송 실패: ${e.message || e}`);
+        } finally {
+            setSendingItinerary(false);
+        }
+    };
+
+    const sendContractToCustomer = async () => {
+        if (!contractReady || !reservation.email) {
+            alert(!reservation.email ? '고객 이메일이 없습니다.' : '여행자 정보를 먼저 입력해 주세요.');
+            return;
+        }
+        setSendingContract(true);
+        try {
+            await sendNotificationEmail(reservation.email, 'CONTRACT_READY', {
+                customerName: reservation.customerName,
+                productName: reservation.productName,
+                reservationId: reservationNumber,
+                reservationDbId: reservation.id,
+                reservationNumber,
+                userId: reservation.userId,
+                travelDates: reservation.date,
+                contractUrl,
+            });
+            onUpdate(addHistory({ type: 'email', description: '海外旅行契約書をお客様へ送信しました。', detail: contractUrl }));
+            alert('계약서 안내를 고객에게 발송했습니다.');
+        } catch (e: any) {
+            alert(`발송 실패: ${e.message || e}`);
+        } finally {
+            setSendingContract(false);
+        }
+    };
+
+    const operationSteps = [
+        {
+            title: '예약 접수',
+            description: '주문 내용 확인 및 고객 정보 확보',
+            icon: 'assignment_turned_in',
+            done: true,
+            actionLabel: '상세 확인',
+            onAction: undefined as (() => void) | undefined,
+        },
+        {
+            title: '결제 확인',
+            description: editForm.depositStatus === 'paid' ? '예약금 입금 확인 완료' : '예약금 입금 확인 필요',
+            icon: 'payments',
+            done: editForm.depositStatus === 'paid',
+            actionLabel: editForm.depositStatus === 'paid' ? '완료' : '입금 확인',
+            onAction: editForm.depositStatus === 'paid' ? undefined : toggleDepositStatus,
+        },
+        {
+            title: '일정표',
+            description: itinerarySent ? '고객 발송 완료' : itineraryReady ? `${selectedTemplate?.name || '선택한 템플릿'} 발송 가능` : '일정표 템플릿 선택 필요',
+            icon: 'map',
+            done: itinerarySent,
+            actionLabel: itineraryReady ? (sendingItinerary ? '발송중' : '일정표 발송') : '템플릿 선택',
+            onAction: itineraryReady ? sendItineraryToCustomer : undefined,
+        },
+        {
+            title: '계약서',
+            description: contractSent ? '고객 발송 완료' : contractReady ? `${contractTravelers.length}명 여행자 정보 입력됨` : '여행자 정보 입력 필요',
+            icon: 'description',
+            done: contractSent,
+            actionLabel: contractReady ? (sendingContract ? '발송중' : '계약서 발송') : '계약정보 입력',
+            onAction: contractReady ? sendContractToCustomer : () => setContractEditorOpen(true),
+        },
+        {
+            title: '현지 안내',
+            description: guideReady ? '가이드/숙소 안내 가능' : '가이드와 숙소 배정 필요',
+            icon: 'support_agent',
+            done: !!reservation.areAssignmentsVisibleToUser,
+            actionLabel: guideReady ? '안내문 복사' : '가이드 배정',
+            onAction: guideReady ? () => copyCustomerMessage('final') : () => setShowGuideModal(true),
+        },
+    ];
 
     const addMemo = () => {
         const text = memoDraft.trim();
@@ -551,6 +673,70 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto bg-slate-50/60 dark:bg-slate-950/40">
                     <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <section className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-2.5 py-1 text-[11px] font-bold text-teal-700 dark:bg-teal-500/10 dark:text-teal-300">
+                                        <span className="material-symbols-outlined text-[15px]">route</span>
+                                        여행사 처리 플로우
+                                    </div>
+                                    <h3 className="mt-2 text-base font-extrabold tracking-tight text-slate-900 dark:text-white">이 예약에서 다음에 할 일</h3>
+                                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">고객 회신, 일정표, 계약서, 현지 안내를 한 곳에서 순서대로 처리합니다.</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => copyCustomerMessage('itinerary')}
+                                        disabled={!itineraryReady}
+                                        className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${itineraryReady ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{copiedDocId === 'itinerary-message' ? 'check' : 'content_copy'}</span>
+                                        일정표 안내문
+                                    </button>
+                                    <button
+                                        onClick={() => copyCustomerMessage('contract')}
+                                        disabled={!contractReady}
+                                        className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${contractReady ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{copiedDocId === 'contract-message' ? 'check' : 'content_copy'}</span>
+                                        계약서 안내문
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                                {operationSteps.map((step, index) => (
+                                    <div
+                                        key={step.title}
+                                        className={`rounded-xl border p-3 min-h-[132px] flex flex-col transition-colors ${step.done
+                                            ? 'border-teal-100 bg-teal-50/70 dark:border-teal-500/20 dark:bg-teal-500/10'
+                                            : 'border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/50'
+                                            }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${step.done ? 'bg-teal-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700'}`}>
+                                                <span className="material-symbols-outlined text-[18px]">{step.done ? 'check' : step.icon}</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-400">STEP {index + 1}</span>
+                                        </div>
+                                        <div className="mt-3 flex-1">
+                                            <p className="text-sm font-extrabold text-slate-900 dark:text-white">{step.title}</p>
+                                            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{step.description}</p>
+                                        </div>
+                                        <button
+                                            onClick={step.onAction}
+                                            disabled={!step.onAction || (step.title === '일정표' && sendingItinerary) || (step.title === '계약서' && sendingContract)}
+                                            className={`mt-3 h-8 rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-1 transition-colors ${step.onAction
+                                                ? 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200'
+                                                : 'bg-white/70 text-slate-400 dark:bg-slate-800/60'
+                                                }`}
+                                        >
+                                            <span className="material-symbols-outlined text-[15px]">{step.done ? 'task_alt' : 'arrow_forward'}</span>
+                                            {step.actionLabel}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
 
                         {/* LEFT COLUMN */}
                         <div className="space-y-5 min-w-0">
@@ -980,36 +1166,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                 {copiedDocId === 'itinerary' ? '복사됨' : '복사'}
                                                             </button>
                                                             <button
-                                                                onClick={async () => {
-                                                                    if (!ready || !reservation.email) { alert(!reservation.email ? '고객 이메일이 없습니다.' : '템플릿을 먼저 선택해 주세요.'); return; }
-                                                                    setSendingItinerary(true);
-                                                                    try {
-                                                                        await sendNotificationEmail(reservation.email, 'ITINERARY_READY', {
-                                                                            customerName: reservation.customerName,
-                                                                            productName: reservation.productName,
-                                                                            reservationId: (reservation as any).reservationNumber || reservation.id,
-                                                                            reservationDbId: reservation.id,
-                                                                            reservationNumber: (reservation as any).reservationNumber,
-                                                                            userId: reservation.userId,
-                                                                            travelDates: reservation.date,
-                                                                            itineraryUrl,
-                                                                        });
-                                                                        const updated = {
-                                                                            ...reservation,
-                                                                            itineraryUrl,
-                                                                            history: [
-                                                                                ...(reservation.history || []),
-                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '確定日程表をメールで送信しました。', detail: itineraryUrl }
-                                                                            ]
-                                                                        };
-                                                                        onUpdate(updated);
-                                                                        alert('일정표 링크를 고객에게 발송했습니다.');
-                                                                    } catch (e: any) {
-                                                                        alert(`발송 실패: ${e.message || e}`);
-                                                                    } finally {
-                                                                        setSendingItinerary(false);
-                                                                    }
-                                                                }}
+                                                                onClick={sendItineraryToCustomer}
                                                                 disabled={!ready || sendingItinerary}
                                                                 className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready && !sendingItinerary ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
                                                             >
@@ -1180,36 +1337,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                 {copiedDocId === 'contract' ? '복사됨' : '복사'}
                                                             </button>
                                                             <button
-                                                                onClick={async () => {
-                                                                    if (!ready || !reservation.email) { alert(!reservation.email ? '고객 이메일이 없습니다.' : '여행자 정보를 먼저 입력해 주세요.'); return; }
-                                                                    setSendingContract(true);
-                                                                    try {
-                                                                        await sendNotificationEmail(reservation.email, 'CONTRACT_READY', {
-                                                                            customerName: reservation.customerName,
-                                                                            productName: reservation.productName,
-                                                                            reservationId: (reservation as any).reservationNumber || reservation.id,
-                                                                            reservationDbId: reservation.id,
-                                                                            reservationNumber: (reservation as any).reservationNumber,
-                                                                            userId: reservation.userId,
-                                                                            travelDates: reservation.date,
-                                                                            contractUrl,
-                                                                        });
-                                                                        const updated = {
-                                                                            ...reservation,
-                                                                            contractUrl,
-                                                                            history: [
-                                                                                ...(reservation.history || []),
-                                                                                { timestamp: new Date().toISOString(), type: 'email', description: '海外旅行契約書をメールで送信しました。', detail: contractUrl }
-                                                                            ]
-                                                                        };
-                                                                        onUpdate(updated);
-                                                                        alert('계약서 링크를 고객에게 발송했습니다.');
-                                                                    } catch (e: any) {
-                                                                        alert(`발송 실패: ${e.message || e}`);
-                                                                    } finally {
-                                                                        setSendingContract(false);
-                                                                    }
-                                                                }}
+                                                                onClick={sendContractToCustomer}
                                                                 disabled={!ready || sendingContract}
                                                                 className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready && !sendingContract ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
                                                             >

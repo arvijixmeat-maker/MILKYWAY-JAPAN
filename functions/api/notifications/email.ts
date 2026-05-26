@@ -10,6 +10,8 @@ interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 const FROM = 'Milkyway Japan <noreply@mongolryokou.com>';
+const SITE_URL = 'https://mongolryokou.com';
+const CONTACT_EMAIL = 'info@mongolryokou.com';
 
 async function sendEmail(apiKey: string, to: string | string[], subject: string, html: string) {
     const res = await fetch('https://api.resend.com/emails', {
@@ -25,242 +27,300 @@ async function sendEmail(apiKey: string, to: string | string[], subject: string,
             html,
         }),
     });
+
     if (!res.ok) {
         const err = await res.text();
         throw new Error(`Resend error: ${err}`);
     }
+
     return res.json();
 }
 
-// ─── Email Templates ────────────────────────────────────────────────
+function escapeHtml(value: unknown) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
-function baseLayout(content: string) {
-    return `<!DOCTYPE html>
+function money(value: unknown) {
+    if (value === null || value === undefined || value === '') return '-';
+    if (typeof value === 'number') return `${value.toLocaleString('ja-JP')}円`;
+    return escapeHtml(value);
+}
+
+function fieldRows(rows: Array<[string, unknown]>) {
+    return rows
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([label, value]) => `
+            <tr>
+                <th>${escapeHtml(label)}</th>
+                <td>${escapeHtml(value)}</td>
+            </tr>
+        `)
+        .join('');
+}
+
+function cta(label: string, url: string) {
+    return `
+        <div class="cta-wrap">
+            <a class="btn" href="${escapeHtml(url)}">${escapeHtml(label)}</a>
+            <p class="url-note">開けない場合はこちらをコピーしてください：<br><span>${escapeHtml(url)}</span></p>
+        </div>
+    `;
+}
+
+function baseLayout(preheader: string, content: string) {
+    return `<!doctype html>
 <html lang="ja">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Milkyway Japan</title>
 <style>
-  body{margin:0;padding:0;background:#f4f7f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a2e2a;}
-  .wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);}
-  .header{background:#1eb496;padding:28px 32px;text-align:center;}
-  .header h1{margin:0;color:#fff;font-size:20px;font-weight:700;letter-spacing:.5px;}
-  .header p{margin:4px 0 0;color:rgba(255,255,255,.85);font-size:13px;}
-  .body{padding:32px;}
-  .greeting{font-size:16px;font-weight:600;margin-bottom:20px;}
-  .card{background:#f4f9f8;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #1eb496;}
-  .card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5eeec;font-size:14px;}
-  .card-row:last-child{border-bottom:none;}
-  .card-row .label{color:#6b8f88;font-weight:500;}
-  .card-row .value{font-weight:600;text-align:right;}
-  .highlight{background:#fff3cd;border-radius:8px;padding:16px;margin:16px 0;font-size:14px;border-left:4px solid #f59e0b;}
-  .btn{display:inline-block;background:#1eb496;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;margin:20px 0;}
-  .footer{background:#f4f7f6;padding:20px 32px;text-align:center;font-size:12px;color:#6b8f88;}
-  .footer a{color:#1eb496;text-decoration:none;}
+  body{margin:0;padding:0;background:#f3f7f6;color:#102522;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;line-height:1.65;}
+  .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;}
+  .wrap{max-width:640px;margin:28px auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(15,118,110,.12);}
+  .header{background:#0f766e;padding:30px 34px;color:#fff;}
+  .brand{font-size:13px;letter-spacing:.18em;text-transform:uppercase;opacity:.82;margin:0 0 8px;}
+  .header h1{font-size:22px;line-height:1.35;margin:0;font-weight:800;}
+  .body{padding:34px;}
+  .lead{font-size:16px;font-weight:700;margin:0 0 14px;color:#102522;}
+  p{font-size:14px;margin:0 0 16px;color:#365a55;}
+  .notice{background:#ecfdf9;border:1px solid #c8eee5;border-radius:14px;padding:16px 18px;margin:22px 0;color:#234d47;font-size:14px;}
+  .panel{border:1px solid #e4eeeb;border-radius:14px;overflow:hidden;margin:22px 0;background:#fbfefd;}
+  .panel-title{margin:0;padding:13px 16px;background:#f2faf8;color:#0f766e;font-size:13px;font-weight:800;letter-spacing:.04em;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{font-size:14px;padding:12px 16px;border-top:1px solid #e4eeeb;vertical-align:top;}
+  th{width:34%;text-align:left;color:#6b817d;font-weight:700;background:#fbfefd;}
+  td{color:#122d29;font-weight:650;text-align:right;}
+  .steps{padding-left:18px;margin:10px 0 0;color:#365a55;font-size:14px;}
+  .steps li{margin:6px 0;}
+  .cta-wrap{text-align:center;margin:28px 0 20px;}
+  .btn{display:inline-block;background:#0f766e;color:#fff!important;text-decoration:none;border-radius:12px;padding:14px 28px;font-size:15px;font-weight:800;}
+  .url-note{font-size:12px;color:#78918d;margin-top:10px;word-break:break-all;}
+  .url-note span{color:#0f766e;}
+  .footer{background:#f7faf9;padding:22px 34px;text-align:center;font-size:12px;color:#6b817d;}
+  .footer a{color:#0f766e;text-decoration:none;font-weight:700;}
+  @media(max-width:680px){.wrap{margin:0;border-radius:0}.header,.body,.footer{padding-left:22px;padding-right:22px}th,td{display:block;width:auto;text-align:left}td{padding-top:0;border-top:none}th{padding-bottom:4px}}
 </style>
 </head>
-<body><div class="wrap">${content}</div></body>
+<body>
+<div class="preheader">${escapeHtml(preheader)}</div>
+<div class="wrap">${content}</div>
+</body>
 </html>`;
 }
 
+function footer() {
+    return `
+        <div class="footer">
+            Milkyway Japan / Mongolia Milky Way Travel<br>
+            <a href="${SITE_URL}">mongolryokou.com</a> · <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>
+        </div>
+    `;
+}
+
 function tplReservationRequested(data: any) {
-    return baseLayout(`
+    return baseLayout('ご予約リクエストを受け付けました。予約金のお支払い方法をご案内します。', `
 <div class="header">
-  <h1>🐴 Milkyway Japan</h1>
-  <p>モンゴル旅行専門</p>
+  <p class="brand">Milkyway Japan</p>
+  <h1>ご予約リクエストを受け付けました</h1>
 </div>
 <div class="body">
-  <p class="greeting">${data.customerName} 様</p>
-  <p>この度はご予約いただきありがとうございます。<br>以下の内容でご予約を承りました。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;font-weight:800;">${data.reservationId || '-'}</span></div>
-    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    <div class="card-row"><span class="label">① 予約金（PayPal）</span><span class="value" style="color:#1eb496;">${data.depositAmount || '-'}</span></div>
-    <div class="card-row"><span class="label">② 残金（現地・円現金）</span><span class="value">${data.localAmount || '-'}</span></div>
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>この度はMilkyway Japanへお申し込みいただき、誠にありがとうございます。担当者が内容を確認し、予約金のお支払い方法と今後の流れをご案内いたします。</p>
+  <div class="panel">
+    <p class="panel-title">予約内容</p>
+    <table>${fieldRows([
+        ['予約番号', data.reservationId || data.reservationNumber],
+        ['ツアー名', data.productName],
+        ['予約金', money(data.depositAmount)],
+        ['現地お支払い予定額', money(data.localAmount)],
+    ])}</table>
   </div>
-  <div class="highlight">
-    <strong>💳 ① 予約金のお支払い</strong><br><br>
-    <strong>PayPalインボイス</strong>をこのメールアドレス宛に別途お送りします。<br>
-    リンクからクレジットカードまたはPayPalで安全にお支払いください。<br><br>
-    <strong>💴 ② 残金のお支払い</strong><br><br>
-    残金は <strong>現地にて日本円（現金）</strong> でお支払いいただきます。<br><br>
-    ※ 予約金のお支払い確認後、ご予約が確定となります。<br>
-    ※ インボイスが届かない場合はお手数ですがご連絡ください。
+  <div class="notice">
+    <strong>今後の流れ</strong>
+    <ol class="steps">
+      <li>PayPalインボイスを別途メールでお送りします。</li>
+      <li>予約金のご入金確認後、手配を開始します。</li>
+      <li>確定日程表、契約書、ガイド情報を順番にご案内します。</li>
+    </ol>
   </div>
-  <a class="btn" href="https://mongolryokou.com/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}">予約確認はこちら</a>
+  ${cta('予約状況を確認する', `${SITE_URL}/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}`)}
 </div>
-<div class="footer">
-  <a href="https://mongolryokou.com">mongolryokou.com</a> |
-  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
-</div>`);
+${footer()}`);
 }
 
 function tplAdminNewReservation(data: any) {
-    return baseLayout(`
+    return baseLayout('新しい予約が入りました。管理画面で内容を確認してください。', `
 <div class="header">
-  <h1>🔔 新規予約が入りました</h1>
-  <p>Milkyway Japan 管理通知</p>
+  <p class="brand">Admin Notice</p>
+  <h1>新しい予約が入りました</h1>
 </div>
 <div class="body">
-  <p class="greeting">新しい予約が届きました。<br>下記メールアドレスへ <strong style="color:#1eb496;">PayPalインボイス</strong> を送付してください。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">予約番号</span><span class="value" style="color:#1eb496;font-size:18px;font-weight:800;">${data.reservationId || '-'}</span></div>
-    <div class="card-row"><span class="label">お客様名</span><span class="value">${data.customerName || '-'}</span></div>
-    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    <div class="card-row"><span class="label">📧 PayPal送付先</span><span class="value" style="color:#1eb496;font-weight:800;">${data.customerEmail || '-'}</span></div>
-    <div class="card-row"><span class="label">💴 予約金（PayPal）</span><span class="value">${data.depositAmount || '-'}</span></div>
-    <div class="card-row"><span class="label">電話</span><span class="value">${data.customerPhone || '-'}</span></div>
+  <p>管理画面で予約内容を確認し、PayPalインボイスと手配状況を更新してください。</p>
+  <div class="panel">
+    <p class="panel-title">予約情報</p>
+    <table>${fieldRows([
+        ['予約番号', data.reservationId || data.reservationNumber],
+        ['お客様名', data.customerName],
+        ['ツアー名', data.productName],
+        ['メール', data.customerEmail],
+        ['電話番号', data.customerPhone],
+        ['予約金', money(data.depositAmount)],
+    ])}</table>
   </div>
-  <a class="btn" href="https://mongolryokou.com/admin/reservations">管理画面で確認する</a>
+  ${cta('管理画面を開く', `${SITE_URL}/admin/reservations`)}
 </div>
-<div class="footer">Milkyway Japan 管理システム</div>`);
+${footer()}`);
 }
 
 function tplQuoteReceived(data: any) {
-    return baseLayout(`
+    return baseLayout('お見積りリクエストを受け付けました。担当者よりご連絡します。', `
 <div class="header">
-  <h1>🐴 Milkyway Japan</h1>
-  <p>オーダーメイド見積もり受付</p>
+  <p class="brand">Milkyway Japan</p>
+  <h1>お見積りリクエストを受け付けました</h1>
 </div>
 <div class="body">
-  <p class="greeting">${data.customerName} 様</p>
-  <p>オーダーメイドツアーのお見積もりリクエストを受け付けました。<br>通常 <strong>24時間以内</strong> に担当者よりご連絡いたします。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">プラン</span><span class="value">${data.productName || 'モンゴルオーダーメイド旅行'}</span></div>
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>ご希望内容を確認のうえ、担当者より通常24時間以内にご連絡いたします。日程、人数、ご予算に合わせて最適なプランをご提案します。</p>
+  <div class="panel">
+    <p class="panel-title">ご相談内容</p>
+    <table>${fieldRows([
+        ['内容', data.productName || data.destination || 'オーダーメイド旅行相談'],
+    ])}</table>
   </div>
-  <p style="font-size:14px;color:#4a6b64;">
-    お急ぎの場合は直接 <a href="mailto:info@mongolryokou.com" style="color:#1eb496;">info@mongolryokou.com</a> までご連絡ください。
-  </p>
-  <a class="btn" href="https://mongolryokou.com">サイトへ戻る</a>
+  ${cta('マイページを確認する', `${SITE_URL}/mypage/estimates`)}
 </div>
-<div class="footer">
-  <a href="https://mongolryokou.com">mongolryokou.com</a>
-</div>`);
+${footer()}`);
 }
 
 function tplAdminNewQuote(data: any) {
-    return baseLayout(`
+    return baseLayout('新しい見積り相談が入りました。', `
 <div class="header">
-  <h1>📋 新規お見積もりが届きました</h1>
-  <p>Milkyway Japan 管理通知</p>
+  <p class="brand">Admin Notice</p>
+  <h1>新しい見積り相談が入りました</h1>
 </div>
 <div class="body">
-  <p class="greeting">新しいオーダーメイド見積もりリクエストです。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">お客様名</span><span class="value">${data.customerName || '-'}</span></div>
-    <div class="card-row"><span class="label">メール</span><span class="value">${data.customerEmail || '-'}</span></div>
-    <div class="card-row"><span class="label">電話</span><span class="value">${data.customerPhone || '-'}</span></div>
-    <div class="card-row"><span class="label">プラン</span><span class="value">${data.productName || '-'}</span></div>
+  <div class="panel">
+    <p class="panel-title">相談者情報</p>
+    <table>${fieldRows([
+        ['お客様名', data.customerName],
+        ['メール', data.customerEmail],
+        ['電話番号', data.customerPhone],
+        ['内容', data.productName || data.destination],
+    ])}</table>
   </div>
-  <a class="btn" href="https://mongolryokou.com/admin/quotes">管理画面で確認する</a>
+  ${cta('見積り管理を開く', `${SITE_URL}/admin/quotes`)}
 </div>
-<div class="footer">Milkyway Japan 管理システム</div>`);
+${footer()}`);
 }
 
 function tplGuideAssigned(data: any) {
-    return baseLayout(`
+    return baseLayout('担当ガイドと宿泊情報をご案内します。', `
 <div class="header">
-  <h1>🐴 Milkyway Japan</h1>
-  <p>担当ガイドのご案内</p>
+  <p class="brand">Milkyway Japan</p>
+  <h1>担当ガイド・宿泊先のご案内</h1>
 </div>
 <div class="body">
-  <p class="greeting">${data.customerName} 様</p>
-  <p>担当ガイドが決定いたしました。旅行当日はガイドが現地でお出迎えいたします。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    <div class="card-row"><span class="label">担当ガイド</span><span class="value">${data.guideName || '-'}</span></div>
-    <div class="card-row"><span class="label">ガイド連絡先</span><span class="value">${data.guidePhone || '-'}</span></div>
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>ご旅行の担当ガイドおよび現地手配情報が決まりましたのでご案内いたします。出発前の確認事項がある場合は、担当者より追加でご連絡します。</p>
+  <div class="panel">
+    <p class="panel-title">担当情報</p>
+    <table>${fieldRows([
+        ['ツアー名', data.productName],
+        ['担当ガイド', data.guideName],
+        ['ガイド連絡先', data.guidePhone],
+    ])}</table>
   </div>
-  <p style="font-size:14px;color:#4a6b64;">ご不明な点はいつでもご連絡ください。素敵な旅をお楽しみください！</p>
-  <a class="btn" href="https://mongolryokou.com/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}">予約詳細を確認</a>
+  ${cta('予約詳細を確認する', `${SITE_URL}/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}`)}
 </div>
-<div class="footer">
-  <a href="https://mongolryokou.com">mongolryokou.com</a>
-</div>`);
+${footer()}`);
 }
 
 function tplEstimateCompleted(data: any) {
-    return baseLayout(`
+    return baseLayout('お見積りが完成しました。内容をご確認ください。', `
 <div class="header">
-  <h1>🐴 Milkyway Japan</h1>
-  <p>オーダーメイド見積もり完了</p>
+  <p class="brand">Milkyway Japan</p>
+  <h1>お見積りが完成しました</h1>
 </div>
 <div class="body">
-  <p class="greeting">${data.customerName} 様</p>
-  <p>お待たせいたしました。<br>モンゴル旅行のお見積もりが完成いたしました。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">目的地</span><span class="value">${data.destination || '-'}</span></div>
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>ご希望内容に合わせたモンゴル旅行プランのお見積りをご用意しました。内容をご確認のうえ、ご不明点や調整希望がございましたらお気軽にご返信ください。</p>
+  <div class="panel">
+    <p class="panel-title">お見積り概要</p>
+    <table>${fieldRows([
+        ['目的地', data.destination],
+        ['合計金額', money(data.totalAmount)],
+    ])}</table>
   </div>
-  ${data.adminNote ? `<div class="highlight"><strong>📝 担当者からのメッセージ</strong><br><br>${data.adminNote}</div>` : ''}
-  ${data.estimateUrl ? `<div style="text-align:center;margin:24px 0;">
-    <a class="btn" href="${data.estimateUrl}" style="font-size:16px;">📄 見積もりを確認する</a>
-    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">リンクが開かない場合: ${data.estimateUrl}</p>
-  </div>` : ''}
-  <p style="font-size:14px;color:#4a6b64;">ご不明な点はいつでもご連絡ください。</p>
+  ${data.adminNote ? `<div class="notice"><strong>担当者メモ</strong><br>${escapeHtml(data.adminNote).replace(/\n/g, '<br>')}</div>` : ''}
+  ${data.estimateUrl ? cta('お見積りを確認する', data.estimateUrl) : ''}
 </div>
-<div class="footer">
-  <a href="https://mongolryokou.com">mongolryokou.com</a> |
-  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
-</div>`);
+${footer()}`);
 }
 
 function tplContractReady(data: any) {
-    const url = data.contractUrl || `https://mongolryokou.com/documents/contract/${data.reservationId || ''}`;
-    return baseLayout(`
+    const url = data.contractUrl || `${SITE_URL}/documents/contract/${data.reservationId || ''}`;
+    return baseLayout('海外旅行契約書をご用意しました。内容をご確認ください。', `
 <div class="header">
-  <h1>🐴 Milkyway Japan</h1>
-  <p>海外旅行契約書のご案内</p>
+  <p class="brand">Milkyway Japan</p>
+  <h1>海外旅行契約書のご案内</h1>
 </div>
 <div class="body">
-  <p class="greeting">${data.customerName || ''} 様</p>
-  <p>この度はMilkyway Japanをお選びいただき、誠にありがとうございます。<br>海外旅行契約書が準備できましたのでご案内いたします。ご内容をご確認くださいませ。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    ${data.travelDates ? `<div class="card-row"><span class="label">旅行期間</span><span class="value">${data.travelDates}</span></div>` : ''}
-    ${data.reservationNumber ? `<div class="card-row"><span class="label">予約番号</span><span class="value">${data.reservationNumber}</span></div>` : ''}
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>海外旅行契約書をご用意しました。旅行条件、旅行者情報、お支払い内容をご確認ください。修正が必要な場合は、このメールへご返信ください。</p>
+  <div class="panel">
+    <p class="panel-title">契約書情報</p>
+    <table>${fieldRows([
+        ['ツアー名', data.productName],
+        ['旅行期間', data.travelDates],
+        ['予約番号', data.reservationNumber || data.reservationId],
+    ])}</table>
   </div>
-  <div style="text-align:center;margin:24px 0;">
-    <a class="btn" href="${url}" style="font-size:16px;">📄 契約書を確認する</a>
-    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">リンクが開かない場合: ${url}</p>
-  </div>
-  <p style="font-size:14px;color:#4a6b64;">予約金のご入金をもって本契約書は効力を生じます。ご不明な点はいつでもご連絡ください。</p>
+  <div class="notice">予約金のご入金確認後、契約内容に基づき現地手配を進めます。</div>
+  ${cta('契約書を確認する', url)}
 </div>
-<div class="footer">
-  <a href="https://mongolryokou.com">mongolryokou.com</a> |
-  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
-</div>`);
+${footer()}`);
 }
 
 function tplItineraryReady(data: any) {
-    const url = data.itineraryUrl || `https://mongolryokou.com/documents/itinerary/${data.reservationId || ''}`;
-    return baseLayout(`
+    const url = data.itineraryUrl || `${SITE_URL}/documents/itinerary/${data.reservationId || ''}`;
+    return baseLayout('確定日程表をご用意しました。集合時間、宿泊先、行程をご確認ください。', `
 <div class="header">
-  <h1>🐴 Milkyway Japan</h1>
-  <p>確定日程表のご案内</p>
+  <p class="brand">Milkyway Japan</p>
+  <h1>確定日程表のご案内</h1>
 </div>
 <div class="body">
-  <p class="greeting">${data.customerName || ''} 様</p>
-  <p>この度はMilkyway Japanをご利用いただき、誠にありがとうございます。<br>確定日程表が準備できましたのでご案内いたします。</p>
-  <div class="card">
-    <div class="card-row"><span class="label">ツアー名</span><span class="value">${data.productName || '-'}</span></div>
-    ${data.travelDates ? `<div class="card-row"><span class="label">旅行期間</span><span class="value">${data.travelDates}</span></div>` : ''}
-    ${data.reservationNumber ? `<div class="card-row"><span class="label">予約番号</span><span class="value">${data.reservationNumber}</span></div>` : ''}
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>ご旅行の確定日程表をご用意しました。日別行程、宿泊先、担当ガイド情報をご確認ください。</p>
+  <div class="panel">
+    <p class="panel-title">ご旅行情報</p>
+    <table>${fieldRows([
+        ['ツアー名', data.productName],
+        ['旅行期間', data.travelDates],
+        ['予約番号', data.reservationNumber || data.reservationId],
+    ])}</table>
   </div>
-  <div style="text-align:center;margin:24px 0;">
-    <a class="btn" href="${url}" style="font-size:16px;">📋 日程表を確認する</a>
-    <p style="font-size:12px;color:#6b8f88;margin-top:8px;">リンクが開かない場合: ${url}</p>
+  <div class="notice">
+    <strong>ご出発前にご確認ください</strong>
+    <ol class="steps">
+      <li>集合時間、フライト情報、宿泊先に誤りがないかご確認ください。</li>
+      <li>天候や道路状況により、現地で安全を優先して順序を調整する場合があります。</li>
+      <li>変更希望やご不明点は、出発前に担当者へご連絡ください。</li>
+    </ol>
   </div>
-  <p style="font-size:14px;color:#4a6b64;">行程・宿泊先・ガイド情報が更新されれば、同じリンクから最新の内容をご確認いただけます。</p>
+  ${cta('日程表を確認する', url)}
 </div>
-<div class="footer">
-  <a href="https://mongolryokou.com">mongolryokou.com</a> |
-  <a href="mailto:info@mongolryokou.com">info@mongolryokou.com</a>
-</div>`);
+${footer()}`);
 }
-
-// ─── Route Handler ───────────────────────────────────────────────────
 
 app.post('/', async (c) => {
     try {
-        const { to, type, data } = await c.req.json();
+        const { to, type, data = {} } = await c.req.json();
         const apiKey = c.env.RESEND_API_KEY;
         const adminEmail = c.env.ADMIN_EMAIL || 'agape_ibeel@hanpass.com';
 
@@ -276,36 +336,36 @@ app.post('/', async (c) => {
 
         switch (type) {
             case 'RESERVATION_REQUESTED':
-                subject = `【予約確認】${data.productName || 'ツアー'} | Milkyway Japan`;
+                subject = `【予約受付】${data.productName || 'モンゴル旅行'}のお申し込みありがとうございます | Milkyway Japan`;
                 html = tplReservationRequested(data);
-                adminSubject = `【新規予約】${data.customerName} 様 - ${data.productName}`;
+                adminSubject = `【新規予約】${data.customerName || 'お客様'} - ${data.productName || 'ツアー'}`;
                 adminHtml = tplAdminNewReservation({ ...data, customerEmail: to });
                 break;
 
             case 'QUOTE_RECEIVED':
-                subject = '【受付完了】オーダーメイド見積もりリクエスト | Milkyway Japan';
+                subject = '【見積り受付】ご相談ありがとうございます | Milkyway Japan';
                 html = tplQuoteReceived(data);
-                adminSubject = `【新規見積もり】${data.customerName} 様`;
+                adminSubject = `【新規見積り】${data.customerName || 'お客様'}`;
                 adminHtml = tplAdminNewQuote({ ...data, customerEmail: to });
                 break;
 
             case 'GUIDE_ASSIGNED':
-                subject = `【ガイド決定】${data.productName || 'ツアー'} 担当ガイドのご案内 | Milkyway Japan`;
+                subject = `【担当ガイド決定】${data.productName || 'ご旅行'}の現地手配情報 | Milkyway Japan`;
                 html = tplGuideAssigned(data);
                 break;
 
             case 'ESTIMATE_COMPLETED':
-                subject = '【見積もり完了】モンゴル旅行のお見積もりをお送りします | Milkyway Japan';
+                subject = '【お見積り完成】モンゴル旅行プランをご確認ください | Milkyway Japan';
                 html = tplEstimateCompleted(data);
                 break;
 
             case 'ITINERARY_READY':
-                subject = `【確定日程表】${data.productName || 'ご旅行'} のご案内 | Milkyway Japan`;
+                subject = `【確定日程表】${data.productName || 'ご旅行'}のご案内 | Milkyway Japan`;
                 html = tplItineraryReady(data);
                 break;
 
             case 'CONTRACT_READY':
-                subject = `【海外旅行契約書】${data.productName || 'ご旅行'} | Milkyway Japan`;
+                subject = `【海外旅行契約書】${data.productName || 'ご旅行'}のご案内 | Milkyway Japan`;
                 html = tplContractReady(data);
                 break;
 
@@ -313,27 +373,25 @@ app.post('/', async (c) => {
                 return c.json({ error: `Unknown email type: ${type}` }, 400);
         }
 
-        // Send to customer
         await sendEmail(apiKey, to, subject, html);
 
-        // Also create an in-app notification when we know the user's id.
-        // Caller passes data.userId or data.user_id when available.
         const targetUserId = data.userId || data.user_id;
         if (targetUserId && c.env.DB) {
             const inAppTitle = subject.replace(/\s*\|\s*Milkyway Japan\s*$/, '');
             const inAppMessage =
-                type === 'ITINERARY_READY' ? '確定日程表をご確認ください。' :
-                type === 'CONTRACT_READY' ? '海外旅行契約書をご確認ください。' :
-                type === 'GUIDE_ASSIGNED' ? '担当ガイドが決定しました。' :
-                type === 'RESERVATION_REQUESTED' ? 'ご予約を受け付けました。' :
+                type === 'ITINERARY_READY' ? '確定日程表をご用意しました。内容をご確認ください。' :
+                type === 'CONTRACT_READY' ? '海外旅行契約書をご用意しました。内容をご確認ください。' :
+                type === 'GUIDE_ASSIGNED' ? '担当ガイドと現地手配情報をご案内しました。' :
+                type === 'RESERVATION_REQUESTED' ? 'ご予約リクエストを受け付けました。' :
                 type === 'QUOTE_RECEIVED' ? 'お見積りリクエストを受け付けました。' :
-                type === 'ESTIMATE_COMPLETED' ? 'オーダーメイドお見積りが完成しました。' : '';
+                type === 'ESTIMATE_COMPLETED' ? 'お見積りが完成しました。内容をご確認ください。' : '';
             const link =
                 type === 'ITINERARY_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/itinerary/${data.reservationId || ''}`) :
                 type === 'CONTRACT_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/contract/${data.reservationId || ''}`) :
                 type === 'ESTIMATE_COMPLETED' ? `/estimate/${data.reservationId || ''}` :
                 type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : '/mypage/reservations') :
                 type === 'QUOTE_RECEIVED' ? '/mypage/estimates' : undefined;
+
             await createNotification(c.env.DB, {
                 userId: targetUserId,
                 type: 'reservation',
@@ -343,7 +401,6 @@ app.post('/', async (c) => {
             });
         }
 
-        // Send admin notification (reservation + quote)
         if (adminSubject && adminHtml) {
             await sendEmail(apiKey, adminEmail, adminSubject, adminHtml);
         }
