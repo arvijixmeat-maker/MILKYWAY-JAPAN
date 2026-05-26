@@ -320,7 +320,7 @@ export const DocumentItinerary: React.FC = () => {
                                                                                     <p className="font-bold text-slate-900">{activity.title}</p>
                                                                                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{ACTIVITY_LABEL[type] || ACTIVITY_LABEL.other}</span>
                                                                                 </div>
-                                                                                {activity.description && <p className="mt-1 text-sm leading-relaxed text-slate-500">{activity.description}</p>}
+                                                                                {activity.description && <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-500">{activity.description}</p>}
                                                                             </td>
                                                                         </tr>
                                                                     );

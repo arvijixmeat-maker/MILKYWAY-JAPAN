@@ -80,7 +80,7 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                                                         </span>
                                                         <div className="min-w-0 pb-3">
                                                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{a.title || '(활동 제목)'}</p>
-                                                            {a.description && <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{a.description}</p>}
+                                                            {a.description && <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed whitespace-pre-wrap">{a.description}</p>}
                                                         </div>
                                                     </li>
                                                 );
@@ -164,11 +164,23 @@ const TemplatesTab: React.FC = () => {
 
     const loadBulkSample = () => {
         setBulkText([
-            'Day 1 울란바토르 도착',
-            '10:00 공항 도착 - 가이드 미팅 후 전용차 이동',
-            '12:30 점심 식사',
-            '14:00 시내 관광 - 수흐바타르 광장, 국립역사박물관',
-            '숙박: 울란바토르 호텔',
+            'DAY 1｜ウランバートル到着',
+            'モンゴルの旅、はじまりの日。',
+            '',
+            'チンギスハーン国際空港に到着後、',
+            '「MILKYWAY」のサインボードを持った日本語ガイドがお出迎えいたします。',
+            '',
+            '長時間のフライト後も安心してご移動いただけるよう、',
+            '軽食（ハンバーガー・サンドイッチ）をご用意しております。',
+            '',
+            'スケジュール',
+            'チンギスハーン国際空港 到着',
+            '日本語ガイド・ドライバーと合流',
+            'SIMカード（USIM）購入・両替サポート可能',
+            '専用車にてホテルへ移動',
+            'ホテルチェックイン・休憩',
+            '宿泊',
+            'ウランバートル市内 4つ星ホテル（2名1室）',
             '',
             'Day 2 테를지 국립공원',
             '09:00 호텔 출발 - 테를지 국립공원 이동',
@@ -180,23 +192,53 @@ const TemplatesTab: React.FC = () => {
     };
 
     const importBulkText = () => {
-        const lines = bulkText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-        if (lines.length === 0) {
+        const rawLines = bulkText.split(/\r?\n/);
+        if (rawLines.every(line => !line.trim())) {
             alert('붙여넣을 일정표 내용을 입력해 주세요.');
             return;
         }
 
         const parsedDays: TemplateDay[] = [];
         let currentDay: TemplateDay | null = null;
-        const commitDay = () => {
-            if (currentDay) parsedDays.push(currentDay);
+        let section: 'intro' | 'schedule' | 'stay' = 'intro';
+        let introLines: string[] = [];
+
+        const flushIntro = () => {
+            if (!currentDay) return;
+            const cleaned = introLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+            if (cleaned) {
+                const [titleLine, ...rest] = cleaned.split('\n');
+                currentDay.activities.push({
+                    time: '',
+                    type: 'other',
+                    title: titleLine,
+                    description: rest.join('\n').trim(),
+                });
+            }
+            introLines = [];
         };
 
-        lines.forEach(line => {
-            const dayMatch = line.match(/^(?:day|d)[-\s]*(\d+)\s*[:.)-]?\s*(.*)$/i) || line.match(/^(\d+)\s*일차\s*[:.)-]?\s*(.*)$/);
+        const commitDay = () => {
+            flushIntro();
+            if (currentDay) parsedDays.push(currentDay);
+            currentDay = null;
+            section = 'intro';
+        };
+
+        rawLines.forEach(rawLine => {
+            const line = rawLine.trim();
+            if (!line) {
+                if (section === 'intro' && introLines.length > 0 && introLines[introLines.length - 1] !== '') {
+                    introLines.push('');
+                }
+                return;
+            }
+
+            const dayMatch = line.match(/^(?:day|d)\s*[-\s]*(\d+)\s*(?:[|｜:.)-]\s*)?(.*)$/i) || line.match(/^(\d+)\s*일차\s*[:.)-]?\s*(.*)$/);
             if (dayMatch) {
                 commitDay();
                 currentDay = { day: parsedDays.length + 1, title: dayMatch[2]?.trim() || '', region: '', activities: [] };
+                section = 'intro';
                 return;
             }
 
@@ -204,8 +246,21 @@ const TemplatesTab: React.FC = () => {
                 currentDay = { day: 1, title: '', region: '', activities: [] };
             }
 
+            if (/^(スケジュール|일정|schedule)$/i.test(line)) {
+                flushIntro();
+                section = 'schedule';
+                return;
+            }
+
+            if (/^(宿泊|숙박|hotel|stay)$/i.test(line)) {
+                flushIntro();
+                section = 'stay';
+                return;
+            }
+
             const stayMatch = line.match(/^(숙박|宿泊|hotel|stay)\s*[:：]\s*(.+)$/i);
             if (stayMatch) {
+                flushIntro();
                 const title = stayMatch[2].trim();
                 currentDay.activities.push({ time: '', type: 'checkin', title, description: '숙박' });
                 return;
@@ -213,6 +268,7 @@ const TemplatesTab: React.FC = () => {
 
             const activityMatch = line.match(/^(\d{1,2}:\d{2})\s+(.+?)(?:\s*[-–]\s*(.+))?$/);
             if (activityMatch) {
+                flushIntro();
                 const title = activityMatch[2].trim();
                 const description = activityMatch[3]?.trim() || '';
                 currentDay.activities.push({
@@ -224,10 +280,20 @@ const TemplatesTab: React.FC = () => {
                 return;
             }
 
+            if (section === 'stay') {
+                currentDay.activities.push({ time: '', type: 'checkin', title: line, description: '宿泊' });
+                return;
+            }
+
+            if (section === 'schedule') {
+                currentDay.activities.push({ time: '', type: inferActivityType(line), title: line, description: '' });
+                return;
+            }
+
             if (!currentDay.title) {
                 currentDay.title = line;
             } else {
-                currentDay.activities.push({ time: '', type: inferActivityType(line), title: line, description: '' });
+                introLines.push(line);
             }
         });
 
@@ -437,7 +503,7 @@ const TemplatesTab: React.FC = () => {
                                                 <span className="material-symbols-outlined text-teal-600">content_paste_go</span>
                                                 <div>
                                                     <h3 className="text-sm font-bold text-slate-800 dark:text-white">일정표 원문 붙여넣기</h3>
-                                                    <p className="text-xs text-slate-500 mt-0.5">Day 1, 1일차, 10:00 일정 - 상세내용 형식을 자동으로 읽습니다.</p>
+                                                    <p className="text-xs text-slate-500 mt-0.5">DAY 1｜제목, 소개 문장, スケジュール, 宿泊 형식을 그대로 읽습니다.</p>
                                                 </div>
                                             </div>
                                             <button onClick={loadBulkSample} className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 rounded-lg text-xs font-bold">
@@ -448,11 +514,11 @@ const TemplatesTab: React.FC = () => {
                                             value={bulkText}
                                             onChange={e => setBulkText(e.target.value)}
                                             rows={6}
-                                            placeholder={'Day 1 울란바토르 도착\n10:00 공항 도착 - 가이드 미팅\n12:30 점심 식사\n숙박: 울란바토르 호텔\n\nDay 2 테를지 국립공원'}
+                                            placeholder={'DAY 1｜ウランバートル到着\nモンゴルの旅、はじまりの日。\n\nチンギスハーン国際空港に到着後、\n日本語ガイドがお出迎えいたします。\n\nスケジュール\nチンギスハーン国際空港 到着\n日本語ガイド・ドライバーと合流\n専用車にてホテルへ移動\n宿泊\nウランバートル市内 4つ星ホテル'}
                                             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500"
                                         />
                                         <div className="mt-2 flex items-center justify-between gap-2">
-                                            <p className="text-[11px] text-slate-400">붙여넣기 후 자동 생성하고, 부족한 부분만 아래에서 수정하세요.</p>
+                                            <p className="text-[11px] text-slate-400">유형 선택 없이 원문을 붙여넣으면 모든 문구를 일정표 안에 보존합니다.</p>
                                             <button onClick={importBulkText} className="px-3 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 flex-shrink-0">
                                                 <span className="material-symbols-outlined text-sm">bolt</span>일정 자동 생성
                                             </button>
