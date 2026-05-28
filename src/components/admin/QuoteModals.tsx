@@ -229,6 +229,7 @@ export const QuoteDetailModal: React.FC<{
 }> = ({ request, onClose, onSendEstimate, onOpenConvert, onUpdateQuote }) => {
     const [estimateUrl, setEstimateUrl] = useState(request?.estimateUrl || '');
     const [adminNote, setAdminNote] = useState(request?.adminNote || '');
+    const [copiedEstimateUrl, setCopiedEstimateUrl] = useState(false);
 
     // --- Added for Centralized UI Integration ---
     const [priceDetail, setPriceDetail] = useState({
@@ -595,13 +596,40 @@ export const QuoteDetailModal: React.FC<{
                                         <span className="material-symbols-outlined text-base text-primary">link</span>
                                         3. 견적서 링크
                                     </h4>
-                                    <input
-                                        type="url"
-                                        value={estimateUrl}
-                                        onChange={(e) => setEstimateUrl(e.target.value)}
-                                        placeholder="https://docs.google.com/..."
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                                    />
+                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                        <input
+                                            type="url"
+                                            value={estimateUrl}
+                                            onChange={(e) => setEstimateUrl(e.target.value)}
+                                            placeholder="https://docs.google.com/..."
+                                            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => estimateUrl && window.open(estimateUrl, '_blank')}
+                                                disabled={!estimateUrl}
+                                                className={`h-[46px] px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors ${estimateUrl ? 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                                보기
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    if (!estimateUrl) return;
+                                                    await navigator.clipboard.writeText(estimateUrl);
+                                                    setCopiedEstimateUrl(true);
+                                                    setTimeout(() => setCopiedEstimateUrl(false), 1500);
+                                                }}
+                                                disabled={!estimateUrl}
+                                                className={`h-[46px] px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors ${estimateUrl ? 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">{copiedEstimateUrl ? 'check' : 'content_copy'}</span>
+                                                {copiedEstimateUrl ? '복사됨' : '복사'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>

@@ -302,6 +302,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [sendingItinerary, setSendingItinerary] = useState(false);
     const [contractEditorOpen, setContractEditorOpen] = useState(false);
     const [sendingContract, setSendingContract] = useState(false);
+    const [sendingAllDocs, setSendingAllDocs] = useState(false);
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -561,6 +562,90 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         } catch (e: any) {
             alert(`발송 실패: ${e.message || e}`);
         } finally {
+            setSendingContract(false);
+        }
+    };
+
+    const sendReadyDocumentsToCustomer = async () => {
+        if (!reservation.email) {
+            alert('고객 이메일이 없습니다.');
+            return;
+        }
+
+        const jobs: Array<{
+            key: 'itinerary' | 'contract';
+            title: string;
+            ready: boolean;
+            sent: boolean;
+            send: () => Promise<void>;
+            history: { type: string; description: string; detail: string };
+        }> = [
+            {
+                key: 'itinerary',
+                title: '일정표',
+                ready: itineraryReady,
+                sent: itinerarySent,
+                send: () => sendNotificationEmail(reservation.email!, 'ITINERARY_READY', {
+                    customerName: reservation.customerName,
+                    productName: reservation.productName,
+                    reservationId: reservationNumber,
+                    reservationDbId: reservation.id,
+                    reservationNumber,
+                    userId: reservation.userId,
+                    travelDates: reservation.date,
+                    itineraryUrl,
+                }),
+                history: { type: 'email', description: '確定日程表をお客様へ送信しました。', detail: itineraryUrl },
+            },
+            {
+                key: 'contract',
+                title: '계약서',
+                ready: contractReady,
+                sent: contractSent,
+                send: () => sendNotificationEmail(reservation.email!, 'CONTRACT_READY', {
+                    customerName: reservation.customerName,
+                    productName: reservation.productName,
+                    reservationId: reservationNumber,
+                    reservationDbId: reservation.id,
+                    reservationNumber,
+                    userId: reservation.userId,
+                    travelDates: reservation.date,
+                    contractUrl,
+                }),
+                history: { type: 'email', description: '海外旅行契約書をお客様へ送信しました。', detail: contractUrl },
+            },
+        ];
+
+        const readyJobs = jobs.filter((job) => job.ready && !job.sent);
+        if (readyJobs.length === 0) {
+            alert('새로 발송할 준비된 문서가 없습니다. 이미 발송했거나 필수 정보가 부족합니다.');
+            return;
+        }
+
+        setSendingAllDocs(true);
+        setSendingItinerary(readyJobs.some((job) => job.key === 'itinerary'));
+        setSendingContract(readyJobs.some((job) => job.key === 'contract'));
+
+        const sentHistories: Array<{ timestamp: string; type: string; description: string; detail: string }> = [];
+        try {
+            for (const job of readyJobs) {
+                await job.send();
+                sentHistories.push({ timestamp: new Date().toISOString(), ...job.history });
+            }
+
+            onUpdate({
+                ...reservation,
+                history: [
+                    ...(reservation.history || []),
+                    ...sentHistories,
+                ],
+            });
+            alert(`${readyJobs.map((job) => job.title).join(', ')} 안내를 고객에게 발송했습니다.`);
+        } catch (e: any) {
+            alert(`통합 발송 실패: ${e.message || e}`);
+        } finally {
+            setSendingAllDocs(false);
+            setSendingItinerary(false);
             setSendingContract(false);
         }
     };
@@ -1095,9 +1180,52 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                             <section>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="material-symbols-outlined text-base text-slate-500">folder_shared</span>
-                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">문서 발송</h3>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">문서 센터</h3>
                                 </div>
                                 <div className="flex flex-col gap-2">
+                                    <div className="bg-white dark:bg-slate-800 border border-teal-100 dark:border-teal-500/20 rounded-xl p-4 shadow-sm">
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-sm font-extrabold text-slate-900 dark:text-white">고객 발송 패키지</p>
+                                                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                                                        고객 마이페이지에서 열리는 문서를 예약 상세에서 바로 확인하고 발송합니다.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={sendReadyDocumentsToCustomer}
+                                                    disabled={sendingAllDocs || (!itineraryReady && !contractReady) || (itinerarySent && contractSent)}
+                                                    className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors flex-shrink-0 ${!sendingAllDocs && (itineraryReady || contractReady) && !(itinerarySent && contractSent)
+                                                        ? 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200'
+                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-default'
+                                                        }`}
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">{sendingAllDocs ? 'hourglass_top' : 'outgoing_mail'}</span>
+                                                    {sendingAllDocs ? '발송중' : '준비 문서 발송'}
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className={`rounded-lg border px-3 py-2 ${itinerarySent
+                                                    ? 'border-teal-100 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300'
+                                                    : itineraryReady
+                                                        ? 'border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300'
+                                                        : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'
+                                                    }`}>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">일정표</p>
+                                                    <p className="mt-0.5 text-xs font-extrabold">{itinerarySent ? '발송 완료' : itineraryReady ? '발송 가능' : '템플릿 필요'}</p>
+                                                </div>
+                                                <div className={`rounded-lg border px-3 py-2 ${contractSent
+                                                    ? 'border-teal-100 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300'
+                                                    : contractReady
+                                                        ? 'border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300'
+                                                        : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'
+                                                    }`}>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">계약서</p>
+                                                    <p className="mt-0.5 text-xs font-extrabold">{contractSent ? '발송 완료' : contractReady ? '발송 가능' : '여행자 필요'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     {/* Itinerary — template-based auto link */}
                                     {(() => {
