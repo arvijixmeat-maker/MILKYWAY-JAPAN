@@ -29,12 +29,14 @@ interface Reservation {
     itineraryTemplateId?: string; // selected itinerary template
 
     contractData?: {
-        travelers?: Array<{ name?: string; passportName?: string; age?: number | string; phone?: string; gender?: string }>;
+        travelers?: Array<{ name?: string; passportName?: string; age?: number | string; birthdate?: string; phone?: string; gender?: string }>;
         arrival?: { date?: string; time?: string; flight?: string };
         departure?: { date?: string; time?: string; flight?: string };
         region?: string;
         category?: string;
         issuedDate?: string;
+        agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+        customerSubmittedAt?: string;
     };
 
     // Assigned Guide & Accommodation
@@ -1368,6 +1370,18 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                         {contractEditorOpen ? '계약서 정보 닫기' : '계약서 정보 편집'}
                                                     </button>
 
+                                                    {(cd.customerSubmittedAt || cd.agreement?.agreed) && (
+                                                        <div className="mt-3 rounded-lg border border-teal-200 dark:border-teal-700 bg-teal-50 dark:bg-teal-900/20 px-3 py-2.5 text-xs">
+                                                            <p className="font-bold text-teal-700 dark:text-teal-300 inline-flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">task_alt</span>고객이 계약서를 작성했습니다
+                                                            </p>
+                                                            <p className="mt-1 text-slate-600 dark:text-slate-300">
+                                                                {cd.agreement?.agreed && <>동의: <b>{cd.agreement.name}</b>{cd.agreement.agreedAt ? ` (${cd.agreement.agreedAt.split('T')[0]})` : ''} · </>}
+                                                                여행자 {(cd.travelers || []).length}명 정보 입력됨
+                                                            </p>
+                                                        </div>
+                                                    )}
+
                                                     {contractEditorOpen && (
                                                         <div className="mt-3 space-y-3 border border-slate-100 dark:border-slate-700 rounded-lg p-3">
                                                             {/* Travelers */}
@@ -1395,7 +1409,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                             <div className="grid grid-cols-2 gap-1.5">
                                                                                 <input type="text" placeholder="氏名" value={t.name || ''} onChange={e => updateTraveler(i, { name: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
                                                                                 <input type="text" placeholder="パスポート氏名" value={t.passportName || ''} onChange={e => updateTraveler(i, { passportName: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                                <input type="number" placeholder="年齢" value={t.age || ''} onChange={e => updateTraveler(i, { age: e.target.value ? Number(e.target.value) : '' })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                                                                                <input type="date" title="生年月日" value={t.birthdate || ''} onChange={e => updateTraveler(i, { birthdate: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
                                                                                 <select value={t.gender || ''} onChange={e => updateTraveler(i, { gender: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500">
                                                                                     <option value="">性別</option>
                                                                                     <option value="男">男</option>
