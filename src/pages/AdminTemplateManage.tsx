@@ -147,6 +147,8 @@ const TemplatesTab: React.FC = () => {
     // UX 정리: 일정이 만들어지면 붙여넣기 박스를 접고, 항목 추가는 작은 메뉴로
     const [showPasteBox, setShowPasteBox] = useState(false);
     const [addMenuDay, setAddMenuDay] = useState<number | null>(null);
+    // 식사 종류(조식/중식/석식) 선택 메뉴 — 어느 일자에서 열렸는지
+    const [mealMenuDay, setMealMenuDay] = useState<number | null>(null);
     // 항목별 "상세 설명" 펼침 상태 (key: `${dayIdx}-${actIdx}`)
     const [openDesc, setOpenDesc] = useState<Set<string>>(new Set());
     const toggleDesc = (key: string) => setOpenDesc(prev => {
@@ -376,6 +378,12 @@ const TemplatesTab: React.FC = () => {
     const addActivityTyped = (dayIdx: number, type: ActivityType) => setForm(f => {
         const d = [...f.days];
         d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, { time: '', type, title: '', description: '' }] };
+        return { ...f, days: d };
+    });
+    // 식사 항목 추가 — 일본어 식사명(朝食/昼食/夕食)을 제목에 미리 넣고 뒤에 음식명 입력
+    const addMeal = (dayIdx: number, jp: string) => setForm(f => {
+        const d = [...f.days];
+        d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, { time: '', type: 'meal' as ActivityType, title: `${jp} ｜ `, description: '' }] };
         return { ...f, days: d };
     });
     // 관광지 마스터에서 선택 → 해당 항목(d,a)의 제목·설명을 채움
@@ -742,17 +750,29 @@ const TemplatesTab: React.FC = () => {
                                                     );
                                                 })}
                                                 </div>
-                                                <div className="ml-11 mt-1 flex flex-wrap items-center gap-1.5">
-                                                    <button onClick={() => addActivityTyped(dayIdx, 'meal')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
-                                                        <span className="material-symbols-outlined text-[16px]">restaurant</span>식사
-                                                    </button>
-                                                    <button onClick={() => addActivityTyped(dayIdx, 'sightseeing')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                                        <span className="material-symbols-outlined text-[16px]">add</span>항목 추가
-                                                    </button>
-                                                    {day.activities.length > 1 && (
-                                                        <button onClick={() => sortByTime(dayIdx)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600" title="시간 순으로 정렬">
-                                                            <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
+                                                <div className="ml-11 mt-1">
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        <button onClick={() => setMealMenuDay(mealMenuDay === dayIdx ? null : dayIdx)} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
+                                                            <span className="material-symbols-outlined text-[16px]">restaurant</span>식사
+                                                            <span className={`material-symbols-outlined text-[14px] transition-transform ${mealMenuDay === dayIdx ? 'rotate-180' : ''}`}>expand_more</span>
                                                         </button>
+                                                        <button onClick={() => addActivityTyped(dayIdx, 'sightseeing')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                            <span className="material-symbols-outlined text-[16px]">add</span>항목 추가
+                                                        </button>
+                                                        {day.activities.length > 1 && (
+                                                            <button onClick={() => sortByTime(dayIdx)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600" title="시간 순으로 정렬">
+                                                                <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {mealMenuDay === dayIdx && (
+                                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                                            {[{ jp: '朝食', kr: '조식' }, { jp: '昼食', kr: '중식' }, { jp: '夕食', kr: '석식' }].map(m => (
+                                                                <button key={m.jp} onClick={() => { addMeal(dayIdx, m.jp); setMealMenuDay(null); }} className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-[12px] font-bold transition-colors hover:bg-amber-50 dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
+                                                                    {m.jp}<span className="text-[10px] font-medium text-slate-400">{m.kr}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
