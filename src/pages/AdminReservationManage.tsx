@@ -494,7 +494,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const selectedTemplate = templatesList.find((t: any) => t.id === editForm.itineraryTemplateId);
     const itineraryReady = !!editForm.itineraryTemplateId;
     const contractTravelers = editForm.contractData?.travelers || [];
-    const contractReady = contractTravelers.length > 0 && !!contractTravelers[0]?.name;
+    const contractHasTravelers = contractTravelers.length > 0 && !!contractTravelers[0]?.name;
+    // 고객이 계약서에서 직접 여행자 정보를 작성하므로, 이메일만 있으면 발송 가능
+    const contractReady = !!reservation.email;
     const itinerarySent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === itineraryUrl || String(e.description || '').includes('日程')));
     const contractSent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === contractUrl || String(e.description || '').includes('契約')));
     const guideReady = !!reservation.assignedGuide || !!reservation.areAssignmentsVisibleToUser;
@@ -543,8 +545,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     };
 
     const sendContractToCustomer = async () => {
-        if (!contractReady || !reservation.email) {
-            alert(!reservation.email ? '고객 이메일이 없습니다.' : '여행자 정보를 먼저 입력해 주세요.');
+        if (!reservation.email) {
+            alert('고객 이메일이 없습니다.');
             return;
         }
         setSendingContract(true);
@@ -679,10 +681,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         },
         {
             title: '계약서',
-            description: contractSent ? '고객 발송 완료' : contractReady ? `${contractTravelers.length}명 여행자 정보 입력됨` : '여행자 정보 입력 필요',
+            description: contractSent ? '고객 발송 완료' : contractHasTravelers ? `${contractTravelers.length}명 입력됨 · 재발송 가능` : '발송하면 고객이 직접 작성',
             icon: 'description',
             done: contractSent,
-            actionLabel: contractReady ? (sendingContract ? '발송중' : '계약서 발송') : '계약정보 입력',
+            actionLabel: contractReady ? (sendingContract ? '발송중' : '계약서 발송') : '이메일 없음',
             onAction: contractReady ? sendContractToCustomer : () => setContractEditorOpen(true),
         },
         {
@@ -1223,7 +1225,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                         : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'
                                                     }`}>
                                                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">계약서</p>
-                                                    <p className="mt-0.5 text-xs font-extrabold">{contractSent ? '발송 완료' : contractReady ? '발송 가능' : '여행자 필요'}</p>
+                                                    <p className="mt-0.5 text-xs font-extrabold">{contractSent ? '발송 완료' : contractReady ? '발송 가능' : '이메일 없음'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1316,7 +1318,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                         const contractUrl = `${window.location.origin}/documents/contract/${(reservation as any).reservationNumber || reservation.id}`;
                                         const cd = editForm.contractData || {};
                                         const travelers = cd.travelers || [];
-                                        const ready = travelers.length > 0 && !!travelers[0]?.name;
+                                        // 고객이 직접 작성하므로 링크는 항상 발송 가능 (여행자 정보 없어도 OK)
+                                        const ready = true;
 
                                         const updateContract = (patch: any) => {
                                             const next = { ...(editForm.contractData || {}), ...patch };
@@ -1346,7 +1349,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-bold text-slate-900 dark:text-white">여행 계약서</p>
                                                         <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                                                            {ready ? `${travelers.length}명 · 자동 생성 링크` : '여행자 정보 입력 필요'}
+                                                            {travelers.length > 0 ? `${travelers.length}명 입력됨 · 자동 생성 링크` : '발송하면 고객이 직접 작성 · 자동 생성 링크'}
                                                         </p>
                                                     </div>
                                                     {ready ? (
