@@ -212,7 +212,10 @@ export const AdminQuoteManage: React.FC = () => {
                         customerName: selectedRequest.name,
                         destination: selectedRequest.destination,
                         estimateUrl: url,
-                        adminNote: note
+                        adminNote: note,
+                        quoteId: requestId,
+                        totalAmount: priceDetail.totalAmount,
+                        userId: selectedRequest.userId,
                     }
                 );
                 console.log('Notification email sent successfully');

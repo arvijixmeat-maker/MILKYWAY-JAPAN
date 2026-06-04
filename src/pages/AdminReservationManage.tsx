@@ -2341,7 +2341,10 @@ export const AdminReservationManage: React.FC = () => {
                                         customerName: selectedReservation.customerName,
                                         destination: selectedReservation.productName.replace(' 맞춤 견적', ''),
                                         estimateUrl: url,
-                                        adminNote: note
+                                        adminNote: note,
+                                        quoteId: selectedReservation.id,
+                                        totalAmount: priceDetail.totalAmount,
+                                        userId: selectedReservation.userId,
                                     }
                                 );
 
