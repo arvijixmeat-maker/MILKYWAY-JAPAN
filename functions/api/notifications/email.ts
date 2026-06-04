@@ -258,7 +258,8 @@ function tplEstimateCompleted(data: any) {
     ])}</table>
   </div>
   ${data.adminNote ? `<div class="notice"><strong>担当者メモ</strong><br>${escapeHtml(data.adminNote).replace(/\n/g, '<br>')}</div>` : ''}
-  ${data.estimateUrl ? cta('お見積りを確認する', data.estimateUrl) : ''}
+  ${cta('お見積り・旅行日程を確認する', `${SITE_URL}/estimate/${data.quoteId || data.reservationId || ''}`)}
+  ${data.estimateUrl ? `<p style="text-align:center;margin-top:8px"><a href="${data.estimateUrl}" style="color:#0f766e;font-size:13px">外部見積書(PDF/資料)はこちら</a></p>` : ''}
 </div>
 ${footer()}`);
 }
@@ -388,7 +389,7 @@ app.post('/', async (c) => {
             const link =
                 type === 'ITINERARY_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/itinerary/${data.reservationId || ''}`) :
                 type === 'CONTRACT_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/contract/${data.reservationId || ''}`) :
-                type === 'ESTIMATE_COMPLETED' ? `/estimate/${data.reservationId || ''}` :
+                type === 'ESTIMATE_COMPLETED' ? `/estimate/${data.quoteId || data.reservationId || ''}` :
                 type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : '/mypage/reservations') :
                 type === 'QUOTE_RECEIVED' ? '/mypage/estimates' : undefined;
 
