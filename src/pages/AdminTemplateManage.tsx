@@ -25,6 +25,17 @@ const ACTIVITY_TYPES: { id: ActivityType; label: string; icon: string }[] = [
 ];
 const TYPE_MAP = Object.fromEntries(ACTIVITY_TYPES.map(t => [t.id, t]));
 
+// 항목 유형별 액센트 색 (목업 디자인: 관광=teal, 숙박=violet, 이동=blue, 식사=amber)
+const typeAccent = (type?: ActivityType): { c: string; cb: string } => {
+    switch (type) {
+        case 'checkin': return { c: '#6a55d6', cb: '#efedfd' };
+        case 'pickup':
+        case 'transport': return { c: '#2767cf', cb: '#e8f0fd' };
+        case 'meal': return { c: '#c97a16', cb: '#fcf2e0' };
+        default: return { c: '#0e9c84', cb: '#e4f6f1' };
+    }
+};
+
 interface Guide {
     id: string; name: string; image: string; introduction: string;
     phone: string; languages: string[]; specialties: string[]; status: string; experienceYears: number;
@@ -39,67 +50,88 @@ const LANGUAGES = ['한국어', '영어', '몽골어', '중국어', '일본어']
 const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
 const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
 
-// ─── Live Preview (mini DocumentItinerary) ───────────────
-const TemplatePreview: React.FC<{ name: string; description: string; days: TemplateDay[] }> = ({ name, description, days }) => (
-    <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-4 h-full overflow-y-auto">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-5 py-5 text-white" style={{ background: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)' }}>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-1">고객 화면 미리보기</p>
-                <h3 className="font-bold text-base leading-tight tracking-tight">{name || '템플릿 이름'}</h3>
-                {description && <p className="text-xs text-white/80 mt-1.5">{description}</p>}
-            </div>
-            <div className="px-5 py-4">
-                <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-3">日程 ({days.length}日間)</p>
-                {days.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-6 text-center">일정이 비어있습니다</p>
-                ) : (
-                    <div className="space-y-4">
-                        {days.map(d => (
-                            <div key={d.day} className="grid grid-cols-[36px_1fr] gap-3">
-                                <div>
-                                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[10px] font-bold tracking-tight shadow-md shadow-teal-500/30"
-                                        style={{ background: 'linear-gradient(135deg, #0f766e, #14b8a6)' }}>
-                                        D-{d.day}
+// ─── Live Preview (목업: 히어로 + 가로 일자 탭 + 선택 일자 타임라인) ───
+const TemplatePreview: React.FC<{ name: string; description: string; days: TemplateDay[] }> = ({ name, description, days }) => {
+    const [active, setActive] = useState(0);
+    const total = days.length;
+    const safeActive = Math.min(active, Math.max(0, total - 1));
+    const day = days[safeActive];
+    return (
+        <div className="h-full overflow-y-auto rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
+            <p className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="material-symbols-outlined text-[15px]">person</span>고객 화면 미리보기
+            </p>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                {/* hero */}
+                <div className="px-5 py-5 text-white" style={{ background: 'linear-gradient(140deg,#0e9c84,#0a7d6a)' }}>
+                    <div className="text-[11px] font-bold tracking-wider opacity-80">MONGOLIA TRIP · 旅行日程</div>
+                    <div className="mt-1.5 text-[21px] font-extrabold leading-tight tracking-tight">{name || '템플릿 이름'}</div>
+                    {description && <div className="mt-2 text-xs leading-relaxed opacity-90">{description}</div>}
+                    <div className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold">
+                        <span className="material-symbols-outlined text-[14px]">calendar_today</span>日程 · 全{total}日間
+                    </div>
+                </div>
+                {/* body */}
+                <div className="px-4 pb-5 pt-4">
+                    {total === 0 ? (
+                        <p className="py-6 text-center text-xs text-slate-400">일정이 비어있습니다</p>
+                    ) : (
+                        <>
+                            <div className="mb-1 flex gap-1.5 overflow-x-auto pb-3">
+                                {days.map((d, i) => {
+                                    const on = i === safeActive;
+                                    return (
+                                        <button key={i} onClick={() => setActive(i)} className={`flex min-w-[46px] flex-shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-colors ${on ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-teal-50 hover:text-teal-700 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                            <span className="text-[13px] font-extrabold">D-{i + 1}</span>
+                                            <span className="text-[9.5px] font-semibold opacity-80">{d.activities.length ? d.activities.length + '件' : '—'}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {day && (
+                                <>
+                                    <div className="mx-0.5 mb-3.5 mt-2 flex items-baseline gap-2">
+                                        <span className="text-[13px] font-extrabold text-teal-600">DAY {safeActive + 1}</span>
+                                        <span className="text-[15px] font-extrabold text-slate-900 dark:text-white">{day.title || '일차 제목'}</span>
+                                        {day.region && <span className="text-[11.5px] font-semibold text-slate-400">· {day.region}</span>}
                                     </div>
-                                </div>
-                                <div className="min-w-0">
-                                    {(d.title || d.region) && (
-                                        <div className="mb-2">
-                                            {d.region && <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wide">{d.region}</p>}
-                                            {d.title && <p className="font-bold text-sm text-slate-900 dark:text-white">{d.title}</p>}
+                                    {day.activities.length === 0 ? (
+                                        <div className="flex items-center gap-2 px-1 py-4 text-xs text-slate-400">
+                                            <span className="material-symbols-outlined text-[16px]">location_on</span>활동이 비어있습니다
                                         </div>
-                                    )}
-                                    {d.activities.length === 0 ? (
-                                        <p className="text-[11px] text-slate-400 italic">활동이 비어있습니다</p>
                                     ) : (
-                                        <ul className="space-y-0">
-                                            {d.activities.map((a, i) => {
+                                        <div>
+                                            {day.activities.map((a, i) => {
                                                 const t = a.type ? TYPE_MAP[a.type] : null;
+                                                const acc = typeAccent(a.type);
+                                                const last = i === day.activities.length - 1;
                                                 return (
-                                                    <li key={i} className="grid grid-cols-[40px_24px_1fr] gap-1.5 items-start">
-                                                        <span className="text-[10px] font-bold text-slate-400 font-mono mt-0.5">{a.time || '--:--'}</span>
-                                                        <span className="relative flex justify-center">
-                                                            {i < d.activities.length - 1 && <span className="absolute top-5 bottom-[-18px] left-1/2 border-l border-dashed border-teal-200" />}
-                                                            <span className="material-symbols-outlined relative z-10 text-teal-600 text-base bg-white dark:bg-slate-800 rounded-full mt-0.5">{t?.icon || 'check_circle'}</span>
-                                                        </span>
-                                                        <div className="min-w-0 pb-3">
-                                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{a.title || '(활동 제목)'}</p>
-                                                            {a.description && <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed whitespace-pre-wrap">{a.description}</p>}
+                                                    <div key={i} className="flex gap-2.5">
+                                                        <div className="flex w-7 flex-shrink-0 flex-col items-center">
+                                                            <span className="flex h-7 w-7 items-center justify-center rounded-[9px]" style={{ color: acc.c, background: acc.cb }}>
+                                                                <span className="material-symbols-outlined text-[16px]">{t?.icon || 'place'}</span>
+                                                            </span>
+                                                            {!last && <span className="my-1 min-h-[8px] w-0 flex-1 border-l-2 border-dashed border-slate-200 dark:border-slate-600" />}
                                                         </div>
-                                                    </li>
+                                                        <div className="min-w-0 pb-3">
+                                                            {a.time && <div className="text-[11px] font-bold text-slate-400">{a.time}</div>}
+                                                            <div className="text-[13.5px] font-bold text-slate-900 dark:text-white">{a.title || t?.label || '(활동 제목)'}</div>
+                                                            {a.description && <div className="mt-0.5 whitespace-pre-wrap text-[11.5px] leading-relaxed text-slate-500">{a.description}</div>}
+                                                        </div>
+                                                    </div>
                                                 );
                                             })}
-                                        </ul>
+                                        </div>
                                     )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 // ─── Tab: Itinerary Templates ────────────────────────────
 const TemplatesTab: React.FC = () => {
@@ -608,23 +640,25 @@ const TemplatesTab: React.FC = () => {
                                     {form.days.map((day, dayIdx) => (
                                         <div key={dayIdx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                                             {/* Day header */}
-                                            <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 grid grid-cols-[auto_120px_1fr_auto] gap-2 items-center">
-                                                <span className="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm">
-                                                    <span className="text-base font-black leading-none">{day.day}</span>
-                                                    <span className="mt-0.5 text-[9px] font-bold leading-none">日目</span>
+                                            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-700" style={{ background: 'linear-gradient(180deg,#f7f9fb,#ffffff)' }}>
+                                                <span className="flex h-[46px] w-[46px] flex-shrink-0 flex-col items-center justify-center rounded-xl text-white shadow-sm" style={{ background: '#0e9c84' }}>
+                                                    <span className="text-[17px] font-extrabold leading-none">{day.day}</span>
+                                                    <span className="mt-0.5 text-[9px] font-bold leading-none tracking-wide opacity-90">日目</span>
                                                 </span>
-                                                <input
-                                                    value={day.region || ''}
-                                                    onChange={e => updateDay(dayIdx, 'region', e.target.value)}
-                                                    placeholder="지역"
-                                                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                                />
-                                                <input
-                                                    value={day.title}
-                                                    onChange={e => updateDay(dayIdx, 'title', e.target.value)}
-                                                    placeholder="일차 제목 (예: 울란바토르 도착 & 시내 투어)"
-                                                    className="px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                                />
+                                                <div className="grid min-w-0 flex-1 gap-2.5" style={{ gridTemplateColumns: '150px 1fr' }}>
+                                                    <input
+                                                        value={day.region || ''}
+                                                        onChange={e => updateDay(dayIdx, 'region', e.target.value)}
+                                                        placeholder="지역"
+                                                        className="min-w-0 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-[13.5px] font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10"
+                                                    />
+                                                    <input
+                                                        value={day.title}
+                                                        onChange={e => updateDay(dayIdx, 'title', e.target.value)}
+                                                        placeholder="일차 제목 (예: ウランバートル到着)"
+                                                        className="min-w-0 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-[13.5px] font-bold text-slate-800 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10"
+                                                    />
+                                                </div>
                                                 <div className="flex items-center gap-0.5">
                                                     <button onClick={() => moveDay(dayIdx, -1)} disabled={dayIdx === 0} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
                                                         <span className="material-symbols-outlined text-base">arrow_upward</span>
@@ -646,92 +680,72 @@ const TemplatesTab: React.FC = () => {
                                                 <div className="space-y-0">
                                                 {day.activities.map((act, actIdx) => {
                                                     const t = act.type ? TYPE_MAP[act.type] : null;
+                                                    const acc = typeAccent(act.type);
+                                                    const last = actIdx === day.activities.length - 1;
                                                     return (
-                                                        <div key={actIdx} className="grid grid-cols-[30px_1fr_auto] gap-3 items-start">
-                                                            <div className="relative flex justify-center">
-                                                                {actIdx < day.activities.length - 1 && <span className="absolute top-8 bottom-[-10px] left-1/2 border-l-2 border-dashed border-teal-200 dark:border-teal-800" />}
-                                                                <span className="relative z-10 w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700 flex items-center justify-center text-teal-600">
-                                                                    <span className="material-symbols-outlined text-base">{t?.icon || 'radio_button_checked'}</span>
+                                                        <div key={actIdx} className="group flex gap-3">
+                                                            <div className="flex w-8 flex-shrink-0 flex-col items-center">
+                                                                <span className="z-10 flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-[9px]" style={{ color: acc.c, background: acc.cb }}>
+                                                                    <span className="material-symbols-outlined text-[18px]">{t?.icon || 'radio_button_checked'}</span>
                                                                 </span>
+                                                                {!last && <span className="my-1 min-h-[8px] w-0 flex-1 border-l-2 border-dashed border-slate-300 dark:border-slate-600" />}
                                                             </div>
-                                                            <div className="pb-4">
-                                                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 p-3">
-                                                                    <div className="mb-2 flex items-center gap-1.5">
-                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700 rounded-full text-[10px] font-bold text-teal-700 dark:text-teal-300">
-                                                                            {t && <span className="material-symbols-outlined text-[13px]">{t.icon}</span>}{t?.label || '일정'}
-                                                                        </span>
-                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full">
-                                                                            <span className="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
-                                                                            <input
-                                                                                type="time"
-                                                                                value={act.time || ''}
-                                                                                onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
-                                                                                className="w-[58px] bg-transparent text-[11px] font-mono font-semibold text-slate-600 dark:text-slate-300 outline-none"
-                                                                            />
-                                                                        </span>
-                                                                    </div>
-                                                                    <input
-                                                                        value={act.title}
-                                                                        onChange={e => updateActivityText(dayIdx, actIdx, 'title', e.target.value)}
-                                                                        placeholder="항목 제목 (예: 亀石 観光)"
-                                                                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                                                    />
-                                                                    {(openDesc.has(`${dayIdx}-${actIdx}`) || act.description) ? (
-                                                                        <textarea
-                                                                            value={act.description}
-                                                                            onChange={e => updateActivityText(dayIdx, actIdx, 'description', e.target.value)}
-                                                                            placeholder="상세 설명"
-                                                                            rows={2}
-                                                                            className="mt-2 w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none"
+                                                            <div className="mb-2 min-w-0 flex-1 rounded-[11px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="rounded-md px-2 py-0.5 text-[11px] font-extrabold whitespace-nowrap" style={{ color: acc.c, background: acc.cb }}>{t?.label || '일정'}</span>
+                                                                    <span className="inline-flex items-center gap-1 text-[12px] font-bold text-slate-400">
+                                                                        <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                                                        <input
+                                                                            value={act.time || ''}
+                                                                            onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
+                                                                            placeholder="시간"
+                                                                            className="w-14 rounded bg-transparent px-1 text-[12px] font-bold text-slate-600 dark:text-slate-300 outline-none hover:bg-slate-100 dark:hover:bg-slate-800"
                                                                         />
-                                                                    ) : (
-                                                                        <button
-                                                                            onClick={() => toggleDesc(`${dayIdx}-${actIdx}`)}
-                                                                            className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-teal-600 dark:hover:text-teal-400"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-sm">add</span>상세 설명 (선택)
-                                                                        </button>
-                                                                    )}
+                                                                    </span>
+                                                                    <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                                                        <button onClick={() => moveActivity(dayIdx, actIdx, -1)} disabled={actIdx === 0} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30" title="위로"><span className="material-symbols-outlined text-[15px]">arrow_upward</span></button>
+                                                                        <button onClick={() => moveActivity(dayIdx, actIdx, 1)} disabled={last} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30" title="아래로"><span className="material-symbols-outlined text-[15px]">arrow_downward</span></button>
+                                                                        <button onClick={() => removeActivity(dayIdx, actIdx)} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[15px]">close</span></button>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="mt-1 flex items-center gap-0.5">
-                                                                <button onClick={() => moveActivity(dayIdx, actIdx, -1)} disabled={actIdx === 0} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
-                                                                    <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                                                                </button>
-                                                                <button onClick={() => moveActivity(dayIdx, actIdx, 1)} disabled={actIdx === day.activities.length - 1} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="아래로">
-                                                                    <span className="material-symbols-outlined text-sm">arrow_downward</span>
-                                                                </button>
-                                                                <button onClick={() => removeActivity(dayIdx, actIdx)} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50" title="삭제">
-                                                                    <span className="material-symbols-outlined text-sm">close</span>
-                                                                </button>
+                                                                <input
+                                                                    value={act.title}
+                                                                    onChange={e => updateActivityText(dayIdx, actIdx, 'title', e.target.value)}
+                                                                    placeholder="항목 제목 (예: 亀石 観光)"
+                                                                    className="mt-1.5 w-full border-none bg-transparent text-[13.5px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+                                                                />
+                                                                <input
+                                                                    value={act.description}
+                                                                    onChange={e => updateActivityText(dayIdx, actIdx, 'description', e.target.value)}
+                                                                    placeholder="+ 상세 설명 (선택)"
+                                                                    className="mt-0.5 w-full border-none bg-transparent text-[12.5px] text-slate-500 outline-none placeholder:text-slate-400 dark:text-slate-400"
+                                                                />
                                                             </div>
                                                         </div>
                                                     );
                                                 })}
                                                 </div>
-                                                <div className="pt-1">
-                                                    <div className="flex flex-wrap items-center gap-1.5">
-                                                        <button onClick={() => setSpotPickerDay(dayIdx)} className="inline-flex items-center gap-1 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors" title="관광지 마스터에서 골라 자동 입력">
-                                                            <span className="material-symbols-outlined text-base">photo_camera</span>관광지
+                                                <div className="ml-11 mt-1 flex flex-wrap items-center gap-1.5">
+                                                    <button onClick={() => setSpotPickerDay(dayIdx)} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#0e9c84', borderColor: '#9ad9cb' }} title="관광지 마스터에서 골라 자동 입력">
+                                                        <span className="material-symbols-outlined text-[16px]">location_on</span>관광지
+                                                    </button>
+                                                    <button onClick={() => setHotelPickerDay(dayIdx)} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#6a55d6', borderColor: '#c3b9f2' }} title="호텔 마스터에서 골라 자동 입력">
+                                                        <span className="material-symbols-outlined text-[16px]">hotel</span>호텔
+                                                    </button>
+                                                    <button onClick={() => addActivityTyped(dayIdx, 'transport')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#2767cf', borderColor: '#aac6f0' }}>
+                                                        <span className="material-symbols-outlined text-[16px]">directions_car</span>이동
+                                                    </button>
+                                                    <button onClick={() => addActivityTyped(dayIdx, 'meal')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
+                                                        <span className="material-symbols-outlined text-[16px]">restaurant</span>식사
+                                                    </button>
+                                                    <button onClick={() => addActivityTyped(dayIdx, 'sightseeing')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                        <span className="material-symbols-outlined text-[16px]">edit</span>직접 입력
+                                                    </button>
+                                                    {day.activities.length > 1 && (
+                                                        <button onClick={() => sortByTime(dayIdx)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600" title="시간 순으로 정렬">
+                                                            <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
                                                         </button>
-                                                        <button onClick={() => setHotelPickerDay(dayIdx)} className="inline-flex items-center gap-1 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors" title="호텔 마스터에서 골라 자동 입력">
-                                                            <span className="material-symbols-outlined text-base">hotel</span>호텔
-                                                        </button>
-                                                        <button onClick={() => addActivityTyped(dayIdx, 'transport')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                                            <span className="material-symbols-outlined text-base">directions_car</span>이동
-                                                        </button>
-                                                        <button onClick={() => addActivityTyped(dayIdx, 'meal')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                                            <span className="material-symbols-outlined text-base">restaurant</span>식사
-                                                        </button>
-                                                        <button onClick={() => addActivityTyped(dayIdx, 'sightseeing')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                                            <span className="material-symbols-outlined text-base">edit</span>직접 입력
-                                                        </button>
-                                                        {day.activities.length > 1 && (
-                                                            <button onClick={() => sortByTime(dayIdx)} className="ml-auto text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 font-semibold" title="시간 순으로 정렬">
-                                                                <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
