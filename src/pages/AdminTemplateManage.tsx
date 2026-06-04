@@ -108,9 +108,7 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                                                 return (
                                                     <div key={i} className="flex gap-2.5">
                                                         <div className="flex w-7 flex-shrink-0 flex-col items-center">
-                                                            <span className="flex h-7 w-7 items-center justify-center rounded-[9px]" style={{ color: acc.c, background: acc.cb }}>
-                                                                <span className="material-symbols-outlined text-[16px]">{t?.icon || 'place'}</span>
-                                                            </span>
+                                                            <span className="mt-1 flex h-3 w-3 items-center justify-center rounded-full" style={{ background: acc.c }} />
                                                             {!last && <span className="my-1 min-h-[8px] w-0 flex-1 border-l-2 border-dashed border-slate-200 dark:border-slate-600" />}
                                                         </div>
                                                         <div className="min-w-0 pb-3">
@@ -143,8 +141,9 @@ const TemplatesTab: React.FC = () => {
     const [bulkText, setBulkText] = useState('');
     const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
     // 마스터 picker — 어느 일자에 추가할지(day index) 저장
-    const [spotPickerDay, setSpotPickerDay] = useState<number | null>(null);
-    const [hotelPickerDay, setHotelPickerDay] = useState<number | null>(null);
+    // 마스터 picker — 특정 항목(일자 d, 항목 a)을 채움
+    const [spotPickerTarget, setSpotPickerTarget] = useState<{ d: number; a: number } | null>(null);
+    const [hotelPickerTarget, setHotelPickerTarget] = useState<{ d: number; a: number } | null>(null);
     // UX 정리: 일정이 만들어지면 붙여넣기 박스를 접고, 항목 추가는 작은 메뉴로
     const [showPasteBox, setShowPasteBox] = useState(false);
     const [addMenuDay, setAddMenuDay] = useState<number | null>(null);
@@ -379,31 +378,33 @@ const TemplatesTab: React.FC = () => {
         d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, { time: '', type, title: '', description: '' }] };
         return { ...f, days: d };
     });
-    // 관광지 마스터에서 선택 → 제목·설명이 채워진 일정 항목을 해당 일자에 추가
-    const addActivityFromSpot = (dayIdx: number, spot: TouristSpot) => setForm(f => {
+    // 관광지 마스터에서 선택 → 해당 항목(d,a)의 제목·설명을 채움
+    const fillItemFromSpot = (d: number, a: number, spot: TouristSpot) => setForm(f => {
         const desc = [spot.description, spot.address].filter(Boolean).join('\n\n');
-        const activity: Activity = {
-            time: '',
+        const days = [...f.days];
+        const acts = [...days[d].activities];
+        acts[a] = {
+            ...acts[a],
             type: inferActivityType(`${spot.name_kr} ${desc}`),
             title: spot.name_kr,
-            description: desc,
+            description: desc || acts[a].description,
         };
-        const d = [...f.days];
-        d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, activity] };
-        return { ...f, days: d };
+        days[d] = { ...days[d], activities: acts };
+        return { ...f, days };
     });
-    // 호텔 마스터에서 선택 → 체크인(숙박) 항목으로 추가
-    const addActivityFromHotel = (dayIdx: number, hotel: Hotel) => setForm(f => {
+    // 호텔 마스터에서 선택 → 해당 항목(d,a)을 숙박 정보로 채움
+    const fillItemFromHotel = (d: number, a: number, hotel: Hotel) => setForm(f => {
         const desc = [hotel.description, hotel.address].filter(Boolean).join('\n\n');
-        const activity: Activity = {
-            time: '',
+        const days = [...f.days];
+        const acts = [...days[d].activities];
+        acts[a] = {
+            ...acts[a],
             type: 'checkin',
             title: hotel.name_kr,
-            description: desc || '宿泊',
+            description: desc || acts[a].description || '宿泊',
         };
-        const d = [...f.days];
-        d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, activity] };
-        return { ...f, days: d };
+        days[d] = { ...days[d], activities: acts };
+        return { ...f, days };
     });
     const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
     const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: any) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
@@ -714,32 +715,39 @@ const TemplatesTab: React.FC = () => {
                                                                     placeholder="항목 제목 (예: 亀石 観光)"
                                                                     className="mt-1.5 w-full border-none bg-transparent text-[13.5px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
                                                                 />
-                                                                <input
-                                                                    value={act.description}
-                                                                    onChange={e => updateActivityText(dayIdx, actIdx, 'description', e.target.value)}
-                                                                    placeholder="+ 상세 설명 (선택)"
-                                                                    className="mt-0.5 w-full border-none bg-transparent text-[12.5px] text-slate-500 outline-none placeholder:text-slate-400 dark:text-slate-400"
-                                                                />
+                                                                {(openDesc.has(`${dayIdx}-${actIdx}`) || act.description) ? (
+                                                                    <div className="mt-1">
+                                                                        <input
+                                                                            value={act.description}
+                                                                            onChange={e => updateActivityText(dayIdx, actIdx, 'description', e.target.value)}
+                                                                            placeholder="상세 설명"
+                                                                            className="w-full border-none bg-transparent text-[12.5px] text-slate-500 outline-none placeholder:text-slate-400 dark:text-slate-400"
+                                                                        />
+                                                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                                                            <button onClick={() => setSpotPickerTarget({ d: dayIdx, a: actIdx })} className="inline-flex items-center gap-1 rounded-md border border-dashed bg-white px-2 py-1 text-[11px] font-bold dark:bg-slate-800" style={{ color: '#0e9c84', borderColor: '#9ad9cb' }}>
+                                                                                <span className="material-symbols-outlined text-[14px]">location_on</span>관광지 마스터에서
+                                                                            </button>
+                                                                            <button onClick={() => setHotelPickerTarget({ d: dayIdx, a: actIdx })} className="inline-flex items-center gap-1 rounded-md border border-dashed bg-white px-2 py-1 text-[11px] font-bold dark:bg-slate-800" style={{ color: '#6a55d6', borderColor: '#c3b9f2' }}>
+                                                                                <span className="material-symbols-outlined text-[14px]">hotel</span>호텔 마스터에서
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button onClick={() => toggleDesc(`${dayIdx}-${actIdx}`)} className="mt-0.5 text-[12.5px] font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400">
+                                                                        + 상세 설명 (선택)
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );
                                                 })}
                                                 </div>
                                                 <div className="ml-11 mt-1 flex flex-wrap items-center gap-1.5">
-                                                    <button onClick={() => setSpotPickerDay(dayIdx)} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#0e9c84', borderColor: '#9ad9cb' }} title="관광지 마스터에서 골라 자동 입력">
-                                                        <span className="material-symbols-outlined text-[16px]">location_on</span>관광지
-                                                    </button>
-                                                    <button onClick={() => setHotelPickerDay(dayIdx)} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#6a55d6', borderColor: '#c3b9f2' }} title="호텔 마스터에서 골라 자동 입력">
-                                                        <span className="material-symbols-outlined text-[16px]">hotel</span>호텔
-                                                    </button>
-                                                    <button onClick={() => addActivityTyped(dayIdx, 'transport')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#2767cf', borderColor: '#aac6f0' }}>
-                                                        <span className="material-symbols-outlined text-[16px]">directions_car</span>이동
-                                                    </button>
                                                     <button onClick={() => addActivityTyped(dayIdx, 'meal')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
                                                         <span className="material-symbols-outlined text-[16px]">restaurant</span>식사
                                                     </button>
                                                     <button onClick={() => addActivityTyped(dayIdx, 'sightseeing')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                                        <span className="material-symbols-outlined text-[16px]">edit</span>직접 입력
+                                                        <span className="material-symbols-outlined text-[16px]">add</span>항목 추가
                                                     </button>
                                                     {day.activities.length > 1 && (
                                                         <button onClick={() => sortByTime(dayIdx)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600" title="시간 순으로 정렬">
@@ -767,21 +775,21 @@ const TemplatesTab: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 마스터 picker — 선택 시 해당 일자에 일정 항목 자동 추가 */}
+                    {/* 마스터 picker — 선택 시 해당 항목의 제목·설명을 채움 */}
                     <TouristSpotPickerModal
-                        open={spotPickerDay !== null}
-                        onClose={() => setSpotPickerDay(null)}
+                        open={spotPickerTarget !== null}
+                        onClose={() => setSpotPickerTarget(null)}
                         onPick={(spot) => {
-                            if (spotPickerDay !== null) addActivityFromSpot(spotPickerDay, spot);
-                            setSpotPickerDay(null);
+                            if (spotPickerTarget) fillItemFromSpot(spotPickerTarget.d, spotPickerTarget.a, spot);
+                            setSpotPickerTarget(null);
                         }}
                     />
                     <HotelPickerModal
-                        open={hotelPickerDay !== null}
-                        onClose={() => setHotelPickerDay(null)}
+                        open={hotelPickerTarget !== null}
+                        onClose={() => setHotelPickerTarget(null)}
                         onPick={(hotel) => {
-                            if (hotelPickerDay !== null) addActivityFromHotel(hotelPickerDay, hotel);
-                            setHotelPickerDay(null);
+                            if (hotelPickerTarget) fillItemFromHotel(hotelPickerTarget.d, hotelPickerTarget.a, hotel);
+                            setHotelPickerTarget(null);
                         }}
                     />
                 </div>
