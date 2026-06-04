@@ -8,6 +8,7 @@ interface Activity {
     type?: string;
     title: string;
     description: string;
+    images?: string[] | string;
 }
 
 interface DayData {
@@ -321,6 +322,17 @@ export const DocumentItinerary: React.FC = () => {
                                                                                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{ACTIVITY_LABEL[type] || ACTIVITY_LABEL.other}</span>
                                                                                 </div>
                                                                                 {activity.description && <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-500">{activity.description}</p>}
+                                                                                {(() => {
+                                                                                    const imgs = parseMaybeJson(activity.images).filter(Boolean);
+                                                                                    if (imgs.length === 0) return null;
+                                                                                    return (
+                                                                                        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                                                                            {imgs.slice(0, 6).map((img: string, i: number) => (
+                                                                                                <img key={i} src={img} alt={activity.title} loading="lazy" className="h-24 w-full rounded-lg object-cover" />
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    );
+                                                                                })()}
                                                                             </td>
                                                                         </tr>
                                                                     );
