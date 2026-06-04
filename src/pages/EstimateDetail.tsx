@@ -162,6 +162,7 @@ export const EstimateDetail: React.FC = () => {
                     deposit: data.deposit,
                     confirmedStartDate: data.confirmed_start_date,
                     confirmedEndDate: data.confirmed_end_date,
+                    itinerary: data.itinerary || null,
                 });
             } catch (error) {
                 console.error('Error fetching estimate:', error);
@@ -384,6 +385,51 @@ export const EstimateDetail: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* 맞춤 일정표 (관리자가 첨부한 경우) */}
+                    {estimate.itinerary && Array.isArray(estimate.itinerary.days) && estimate.itinerary.days.length > 0 && (
+                        <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700">
+                            <div className="mb-4 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary">map</span>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white">旅行日程</h3>
+                                <span className="ml-auto text-xs font-bold text-slate-400">全{estimate.itinerary.days.length}日間</span>
+                            </div>
+                            <div className="space-y-5">
+                                {estimate.itinerary.days.map((day: any, di: number) => (
+                                    <div key={di} className="relative">
+                                        <div className="mb-2 flex items-baseline gap-2">
+                                            <span className="inline-flex h-7 items-center rounded-lg bg-primary px-2.5 text-xs font-bold text-white">DAY {day.day || di + 1}</span>
+                                            {day.title && <span className="text-sm font-bold text-slate-900 dark:text-white">{day.title}</span>}
+                                            {day.region && <span className="text-xs text-slate-400">· {day.region}</span>}
+                                        </div>
+                                        <div className="space-y-3 border-l-2 border-dashed border-gray-200 dark:border-zinc-700 pl-4">
+                                            {(day.activities || []).map((act: any, ai: number) => {
+                                                const imgs: string[] = Array.isArray(act.images) ? act.images : (typeof act.images === 'string' && act.images.startsWith('[') ? (() => { try { return JSON.parse(act.images); } catch { return []; } })() : []);
+                                                return (
+                                                    <div key={ai} className="relative">
+                                                        <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+                                                        <div className="flex items-baseline gap-2">
+                                                            {act.time && <span className="text-[11px] font-bold text-slate-400">{act.time}</span>}
+                                                            <p className="text-sm font-bold text-slate-900 dark:text-white">{act.title}</p>
+                                                        </div>
+                                                        {act.description && <p className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-slate-500 dark:text-slate-400">{act.description}</p>}
+                                                        {imgs.length > 0 && (
+                                                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                                                {imgs.slice(0, 4).map((img: string, k: number) => (
+                                                                    <img key={k} src={img} alt={act.title || ''} loading="lazy" className="h-24 w-full rounded-lg object-cover" />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            {(day.activities || []).length === 0 && <p className="text-xs text-slate-400">調整中</p>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Summary Info */}
                     <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700 flex flex-col gap-4">

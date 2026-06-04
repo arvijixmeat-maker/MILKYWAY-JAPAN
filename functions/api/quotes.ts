@@ -61,12 +61,29 @@ app.get('/:id', async (c) => {
     const id = c.req.param('id');
     const db = drizzle(c.env.DB);
 
-    const result = await db.select().from(quotes).where(eq(quotes.id, id)).get();
+    const result: any = await db.select().from(quotes).where(eq(quotes.id, id)).get();
     if (!result) {
         return c.json({ error: 'Not found' }, 404);
     }
 
-    return c.json(parseQuoteRow(result));
+    const parsed = parseQuoteRow(result);
+
+    // 맞춤 일정표가 연결돼 있으면 템플릿의 일정(사진 포함)을 함께 내려줌 (고객 견적 페이지용)
+    const tplId = result.itinerary_template_id ?? result.itineraryTemplateId;
+    if (tplId) {
+        try {
+            const tpl: any = await c.env.DB.prepare('SELECT * FROM itinerary_templates WHERE id = ?').bind(tplId).first();
+            if (tpl) {
+                let days: any[] = [];
+                try { days = tpl.days ? JSON.parse(tpl.days) : []; } catch { days = []; }
+                parsed.itinerary = { id: tpl.id, name: tpl.name, description: tpl.description || '', days };
+            }
+        } catch (e) {
+            console.error('[Quotes GET] itinerary template fetch failed', e);
+        }
+    }
+
+    return c.json(parsed);
 });
 
 // POST /api/quotes (Create new quote — no auth required, guests can submit)
@@ -126,9 +143,13 @@ app.put('/:id', async (c) => {
     const db = drizzle(c.env.DB);
     const body = await c.req.json();
 
+    // Explicitly map snake_case keys that must persist to their camelCase model props
+    const itineraryTemplateId = body.itinerary_template_id ?? body.itineraryTemplateId;
+
     // Update
     await db.update(quotes).set({
         ...body,
+        ...(itineraryTemplateId !== undefined ? { itineraryTemplateId } : {}),
         updatedAt: new Date().toISOString() // Ensure camelCase vs snake_case matches schema
     }).where(eq(quotes.id, id)).run();
 
