@@ -661,10 +661,6 @@ const TemplatesTab: React.FC = () => {
 
                                             {/* Activities */}
                                             <div className="p-4">
-                                                <div className="mb-3 flex items-center justify-between gap-2">
-                                                    <p className="text-xs font-bold text-slate-500">타임라인</p>
-                                                    <p className="text-[11px] text-slate-400">유형은 내용에 따라 자동 분류됩니다.</p>
-                                                </div>
                                                 <div className="space-y-0">
                                                 {day.activities.map((act, actIdx) => {
                                                     const t = act.type ? TYPE_MAP[act.type] : null;
@@ -720,7 +716,7 @@ const TemplatesTab: React.FC = () => {
                                                     );
                                                 })}
                                                 </div>
-                                                <div className="relative pt-1">
+                                                <div className="pt-1">
                                                     <div className="flex items-center gap-2">
                                                         <button onClick={() => setAddMenuDay(addMenuDay === dayIdx ? null : dayIdx)} className="inline-flex items-center gap-1 rounded-lg bg-teal-50 dark:bg-teal-900/30 px-3 py-2 text-sm font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors">
                                                             <span className="material-symbols-outlined text-base">add_circle</span>항목 추가
@@ -733,23 +729,17 @@ const TemplatesTab: React.FC = () => {
                                                         )}
                                                     </div>
                                                     {addMenuDay === dayIdx && (
-                                                        <>
-                                                            <button className="fixed inset-0 z-10 cursor-default" onClick={() => setAddMenuDay(null)} aria-label="메뉴 닫기" />
-                                                            <div className="absolute z-20 mt-1 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
-                                                                <button onClick={() => { setSpotPickerDay(dayIdx); setAddMenuDay(null); }} className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-teal-50 dark:hover:bg-teal-900/30">
-                                                                    <span className="material-symbols-outlined text-teal-600 text-lg">location_on</span>
-                                                                    <span>관광지 마스터에서<br /><span className="text-[11px] font-normal text-slate-400">제목·설명 자동 입력</span></span>
-                                                                </button>
-                                                                <button onClick={() => { setHotelPickerDay(dayIdx); setAddMenuDay(null); }} className="flex w-full items-center gap-2.5 border-t border-slate-100 dark:border-slate-700 px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-teal-50 dark:hover:bg-teal-900/30">
-                                                                    <span className="material-symbols-outlined text-teal-600 text-lg">hotel</span>
-                                                                    <span>호텔 마스터에서<br /><span className="text-[11px] font-normal text-slate-400">숙박 항목 자동 입력</span></span>
-                                                                </button>
-                                                                <button onClick={() => { addActivity(dayIdx); setAddMenuDay(null); }} className="flex w-full items-center gap-2.5 border-t border-slate-100 dark:border-slate-700 px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-                                                                    <span className="material-symbols-outlined text-slate-500 text-lg">edit</span>
-                                                                    <span>직접 입력<br /><span className="text-[11px] font-normal text-slate-400">빈 항목 추가 후 타이핑</span></span>
-                                                                </button>
-                                                            </div>
-                                                        </>
+                                                        <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                                                            <button onClick={() => { setSpotPickerDay(dayIdx); setAddMenuDay(null); }} className="flex items-center justify-center gap-1.5 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors">
+                                                                <span className="material-symbols-outlined text-base">location_on</span>관광지 마스터
+                                                            </button>
+                                                            <button onClick={() => { setHotelPickerDay(dayIdx); setAddMenuDay(null); }} className="flex items-center justify-center gap-1.5 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors">
+                                                                <span className="material-symbols-outlined text-base">hotel</span>호텔 마스터
+                                                            </button>
+                                                            <button onClick={() => { addActivity(dayIdx); setAddMenuDay(null); }} className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                                                <span className="material-symbols-outlined text-base">edit</span>직접 입력
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
