@@ -187,6 +187,11 @@ export const api = {
         },
         contract: {
             get: async (reservationId: string) => request(`${API_BASE}/documents/contract/${reservationId}`),
+            saveCustomer: async (reservationId: string, data: any) => request(`${API_BASE}/documents/contract/${reservationId}/customer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            }),
         },
     },
     tourGuides: {

@@ -133,4 +133,50 @@ app.get('/contract/:reservationId', async (c) => {
     });
 });
 
+// POST /api/documents/contract/:reservationId/customer — public (link-based)
+// 고객이 계약서에서 직접 입력한 여권정보 + 온라인 동의를 저장
+app.post('/contract/:reservationId/customer', async (c) => {
+    const reservationId = c.req.param('reservationId');
+    const db = c.env.DB;
+
+    const reservation: any = await db.prepare(
+        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
+    ).bind(reservationId, reservationId).first();
+
+    if (!reservation) {
+        return c.json({ error: 'Reservation not found' }, 404);
+    }
+
+    let body: any = {};
+    try { body = await c.req.json(); } catch { body = {}; }
+
+    let contractData: any = {};
+    try { contractData = reservation.contract_data ? JSON.parse(reservation.contract_data) : {}; } catch { contractData = {}; }
+
+    // 여행자 여권정보(고객 입력)와 동의 정보만 병합 — 관리자가 입력한 일정/항공편 등은 유지
+    if (Array.isArray(body.travelers)) {
+        contractData.travelers = body.travelers.map((t: any) => ({
+            name: t.name || '',
+            passportName: t.passportName || '',
+            birthdate: t.birthdate || '',
+            gender: t.gender || '',
+            phone: t.phone || '',
+        }));
+    }
+    if (body.agreement && body.agreement.agreed) {
+        contractData.agreement = {
+            agreed: true,
+            name: body.agreement.name || '',
+            agreedAt: body.agreement.agreedAt || new Date().toISOString(),
+        };
+    }
+    contractData.customerSubmittedAt = new Date().toISOString();
+
+    await db.prepare(
+        'UPDATE reservations SET contract_data = ? WHERE id = ?'
+    ).bind(JSON.stringify(contractData), reservation.id).run();
+
+    return c.json({ success: true, contract: contractData });
+});
+
 export default app;

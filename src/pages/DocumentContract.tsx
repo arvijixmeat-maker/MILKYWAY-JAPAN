@@ -7,6 +7,7 @@ interface Traveler {
     name?: string;
     passportName?: string;
     age?: number | string;
+    birthdate?: string;
     phone?: string;
     gender?: string;
 }
@@ -18,6 +19,8 @@ interface ContractData {
     region?: string;
     category?: string;
     issuedDate?: string;
+    agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+    customerSubmittedAt?: string;
 }
 
 interface ContractPageData {
@@ -68,6 +71,13 @@ export const DocumentContract: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // 고객 입력 폼 상태
+    const [formTravelers, setFormTravelers] = useState<Traveler[]>([]);
+    const [agreed, setAgreed] = useState(false);
+    const [signerName, setSignerName] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
     useEffect(() => {
         if (!reservationId) return;
         (async () => {
@@ -81,6 +91,46 @@ export const DocumentContract: React.FC = () => {
             }
         })();
     }, [reservationId]);
+
+    // 데이터 로드되면 입력 폼 초기화
+    useEffect(() => {
+        if (!data) return;
+        const c: any = data.contract || {};
+        const existing: Traveler[] = Array.isArray(c.travelers) ? c.travelers : [];
+        const count = existing.length > 0
+            ? existing.length
+            : Math.max(1, parseInt(String(data.reservation.travelers || '').replace(/[^0-9]/g, '')) || 1);
+        const base: Traveler[] = Array.from({ length: count }, (_, i) => ({
+            name: existing[i]?.name || (i === 0 ? data.reservation.customerName : '') || '',
+            passportName: existing[i]?.passportName || '',
+            birthdate: existing[i]?.birthdate || '',
+            gender: existing[i]?.gender || '',
+            phone: existing[i]?.phone || (i === 0 ? data.reservation.customerPhone : '') || '',
+        }));
+        setFormTravelers(base);
+        if (c.agreement?.agreed) { setAgreed(true); setSignerName(c.agreement.name || ''); setSaved(true); }
+    }, [data]);
+
+    const updTraveler = (i: number, field: keyof Traveler, val: string) =>
+        setFormTravelers(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: val } : t));
+
+    const handleCustomerSubmit = async () => {
+        if (!agreed) { alert('旅行条件・約款への同意が必要です。'); return; }
+        if (!signerName.trim()) { alert('代表者氏名をご入力ください。'); return; }
+        if (!reservationId) return;
+        setSaving(true);
+        try {
+            const agreement = { agreed: true, name: signerName.trim(), agreedAt: new Date().toISOString() };
+            await api.documents.contract.saveCustomer(reservationId, { travelers: formTravelers, agreement });
+            setSaved(true);
+            setData(prev => prev ? { ...prev, contract: { ...prev.contract, travelers: formTravelers, agreement } } as ContractPageData : prev);
+            alert('ご記入ありがとうございました。送信が完了しました。');
+        } catch (e: any) {
+            alert('送信に失敗しました。' + (e.message || ''));
+        } finally {
+            setSaving(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -144,6 +194,69 @@ export const DocumentContract: React.FC = () => {
                             旅行者は下記のとおり旅行契約を締結し、本契約書を交付いたします。
                         </p>
 
+                        {/* お客様ご記入欄 (入力UI — 印刷時は非表示) */}
+                        <div className="no-print mb-6 rounded-xl border-2 border-teal-300 bg-teal-50/50 p-5">
+                            <div className="mb-1 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-teal-600">edit_note</span>
+                                <h2 className="text-base font-bold text-teal-800">お客様ご記入欄</h2>
+                                {saved && <span className="ml-auto rounded-full bg-teal-600 px-2.5 py-0.5 text-[11px] font-bold text-white">記入済み</span>}
+                            </div>
+                            <p className="mb-4 text-xs text-slate-600">パスポート（旅券）に記載のとおりにご入力ください。航空券の手配に使用します。</p>
+
+                            <div className="space-y-3">
+                                {formTravelers.map((t, i) => (
+                                    <div key={i} className="rounded-lg border border-slate-200 bg-white p-4">
+                                        <p className="mb-2 text-xs font-bold text-slate-400">旅行者 {i + 1}</p>
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <label className="block">
+                                                <span className="mb-1 block text-[11px] font-bold text-slate-500">氏名</span>
+                                                <input value={t.name || ''} onChange={e => updTraveler(i, 'name', e.target.value)} placeholder="山田 太郎" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-1 block text-[11px] font-bold text-slate-500">パスポート氏名 (ローマ字)</span>
+                                                <input value={t.passportName || ''} onChange={e => updTraveler(i, 'passportName', e.target.value)} placeholder="YAMADA TARO" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm uppercase focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-1 block text-[11px] font-bold text-slate-500">生年月日</span>
+                                                <input type="date" value={t.birthdate || ''} onChange={e => updTraveler(i, 'birthdate', e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-1 block text-[11px] font-bold text-slate-500">性別</span>
+                                                <select value={t.gender || ''} onChange={e => updTraveler(i, 'gender', e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10">
+                                                    <option value="">選択</option>
+                                                    <option value="男性">男性</option>
+                                                    <option value="女性">女性</option>
+                                                </select>
+                                            </label>
+                                            <label className="block sm:col-span-2">
+                                                <span className="mb-1 block text-[11px] font-bold text-slate-500">連絡先</span>
+                                                <input value={t.phone || ''} onChange={e => updTraveler(i, 'phone', e.target.value)} placeholder="090-1234-5678" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => setFormTravelers(prev => [...prev, { name: '', passportName: '', birthdate: '', gender: '', phone: '' }])} className="text-xs font-bold text-teal-600 hover:text-teal-700">＋ 旅行者を追加</button>
+                                    {formTravelers.length > 1 && <button onClick={() => setFormTravelers(prev => prev.slice(0, -1))} className="text-xs font-bold text-slate-400 hover:text-slate-600">− 削除</button>}
+                                </div>
+                            </div>
+
+                            <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4">
+                                <label className="flex cursor-pointer items-start gap-2">
+                                    <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 h-4 w-4 accent-teal-600" />
+                                    <span className="text-sm text-slate-700">上記の旅行条件および旅行約款の内容を確認し、これに<b className="text-teal-700">同意します</b>。</span>
+                                </label>
+                                <div className="mt-3">
+                                    <span className="mb-1 block text-[11px] font-bold text-slate-500">代表者氏名（電子署名）</span>
+                                    <input value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="氏名をご入力ください" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                </div>
+                                <button onClick={handleCustomerSubmit} disabled={saving} className="mt-4 w-full rounded-xl bg-teal-600 py-3 text-sm font-bold text-white transition-colors hover:bg-teal-700 disabled:opacity-50">
+                                    {saving ? '送信中...' : saved ? '内容を更新して再送信' : '同意して送信する'}
+                                </button>
+                                {saved && <p className="mt-2 text-center text-xs font-bold text-teal-600">✓ ご記入内容を受け付けました。担当者が確認いたします。</p>}
+                            </div>
+                        </div>
+
                         {/* Traveler Info */}
                         <table className="contract-table mb-0">
                             <thead>
@@ -156,8 +269,8 @@ export const DocumentContract: React.FC = () => {
                                         <td className="value">{t.name || '—'}</td>
                                         <td className="label">パスポート氏名</td>
                                         <td className="value">{t.passportName || '—'}</td>
-                                        <td className="label">年齢</td>
-                                        <td className="value" style={{ width: 60 }}>{t.age || '—'}</td>
+                                        <td className="label">生年月日</td>
+                                        <td className="value" style={{ width: 90 }}>{t.birthdate || t.age || '—'}</td>
                                         <td className="value" style={{ width: 90 }}>
                                             <div className="text-xs text-slate-500">連絡先</div>
                                             <div>{t.phone || '—'}</div>
@@ -299,7 +412,14 @@ export const DocumentContract: React.FC = () => {
                                 </tr>
                                 <tr>
                                     <td className="label">旅行者氏名<br />（署名）</td>
-                                    <td className="value" colSpan={2} style={{ height: 60 }}>&nbsp;</td>
+                                    <td className="value" colSpan={2} style={{ height: 60 }}>
+                                        {contract.agreement?.agreed ? (
+                                            <div>
+                                                <span className="font-bold text-slate-800">{contract.agreement.name}</span>
+                                                <span className="ml-2 text-xs text-teal-600">（オンライン同意済み{contract.agreement.agreedAt ? ` ・ ${contract.agreement.agreedAt.split('T')[0]}` : ''}）</span>
+                                            </div>
+                                        ) : <span>&nbsp;</span>}
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
