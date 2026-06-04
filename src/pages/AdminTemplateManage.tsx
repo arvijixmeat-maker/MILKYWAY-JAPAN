@@ -9,7 +9,7 @@ import type { Hotel } from '../types/hotel';
 
 // ─── Types ───────────────────────────────────────────────
 type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
-interface Activity { time?: string; type?: ActivityType; title: string; description: string; }
+interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
 interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
 interface ItineraryTemplate { id: string; name: string; description: string; days: TemplateDay[]; createdAt: string; }
 
@@ -115,6 +115,13 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                                                             {a.time && <div className="text-[11px] font-bold text-slate-400">{a.time}</div>}
                                                             <div className="text-[13.5px] font-bold text-slate-900 dark:text-white">{a.title || t?.label || '(활동 제목)'}</div>
                                                             {a.description && <div className="mt-0.5 whitespace-pre-wrap text-[11.5px] leading-relaxed text-slate-500">{a.description}</div>}
+                                                            {a.images && a.images.length > 0 && (
+                                                                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                                                    {a.images.slice(0, 4).map((img, k) => (
+                                                                        <img key={k} src={img} alt="" loading="lazy" className="h-20 w-full rounded-lg object-cover" />
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
@@ -398,6 +405,7 @@ const TemplatesTab: React.FC = () => {
             title: keepTitle ? cur.title : spot.name_kr,
             description: desc || cur.description,
             type: keepTitle ? cur.type : inferActivityType(`${spot.name_kr} ${desc}`),
+            images: (spot.images && spot.images.length > 0) ? [...spot.images] : cur.images,
         };
         days[d] = { ...days[d], activities: acts };
         return { ...f, days };
@@ -414,11 +422,19 @@ const TemplatesTab: React.FC = () => {
             title: keepTitle ? cur.title : hotel.name_kr,
             description: desc || cur.description || '宿泊',
             type: keepTitle ? cur.type : 'checkin',
+            images: (hotel.images && hotel.images.length > 0) ? [...hotel.images] : cur.images,
         };
         days[d] = { ...days[d], activities: acts };
         return { ...f, days };
     });
     const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
+    const removeActivityImage = (dayIdx: number, actIdx: number, imgIdx: number) => setForm(f => {
+        const d = [...f.days];
+        const acts = [...d[dayIdx].activities];
+        acts[actIdx] = { ...acts[actIdx], images: (acts[actIdx].images || []).filter((_, i) => i !== imgIdx) };
+        d[dayIdx] = { ...d[dayIdx], activities: acts };
+        return { ...f, days: d };
+    });
     const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: any) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
     const updateActivityText = (dayIdx: number, actIdx: number, field: 'title' | 'description', value: string) => setForm(f => {
         const d = [...f.days];
@@ -748,6 +764,18 @@ const TemplatesTab: React.FC = () => {
                                                                     <button onClick={() => toggleDesc(`${dayIdx}-${actIdx}`)} className="mt-0.5 text-[12.5px] font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400">
                                                                         + 상세 설명 (선택)
                                                                     </button>
+                                                                )}
+                                                                {act.images && act.images.length > 0 && (
+                                                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                                                        {act.images.map((img, k) => (
+                                                                            <div key={k} className="group/img relative h-12 w-12 overflow-hidden rounded-md border border-slate-200 dark:border-slate-600">
+                                                                                <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                                                                <button onClick={() => removeActivityImage(dayIdx, actIdx, k)} className="absolute right-0 top-0 hidden h-4 w-4 items-center justify-center bg-black/60 text-white group-hover/img:flex" title="사진 삭제">
+                                                                                    <span className="material-symbols-outlined text-[12px]">close</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>
