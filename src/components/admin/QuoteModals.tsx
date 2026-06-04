@@ -369,10 +369,11 @@ export const QuoteDetailModal: React.FC<{
         { label: '여행 조건 확인', done: Boolean(request.destination && request.headcount && request.period) },
         { label: '확정 일정 입력', done: Boolean(confirmedStartDate && confirmedEndDate) },
         { label: '금액/예약금 입력', done: priceDetail.totalAmount > 0 && priceDetail.deposit >= 0 },
-        { label: '견적서 URL 입력', done: Boolean(estimateUrl) },
-        { label: '고객 안내문 입력', done: Boolean(adminNote.trim()) },
+        { label: '견적서 링크', done: Boolean(estimateUrl), optional: true },
+        { label: '고객 안내문', done: Boolean(adminNote.trim()), optional: true },
     ];
-    const canSendEstimate = checklistItems.every((item) => item.done) && priceDetail.totalAmount >= priceDetail.deposit;
+    // 발송 필수 = 일정·금액·예약금만. 견적서 링크/안내문은 선택(고객은 시스템 견적 페이지로 받음).
+    const canSendEstimate = checklistItems.filter((item) => !item.optional).every((item) => item.done) && priceDetail.totalAmount >= priceDetail.deposit;
     const quickNotes = [
         {
             label: '기본 안내',
@@ -486,8 +487,11 @@ export const QuoteDetailModal: React.FC<{
                             <div className="space-y-2">
                                 {checklistItems.map((item) => (
                                     <div key={item.label} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/60">
-                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
-                                        <span className={`material-symbols-outlined text-[18px] ${item.done ? 'text-teal-500' : 'text-slate-300'}`}>
+                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                            {item.label}
+                                            {item.optional && <span className="ml-1.5 text-[10px] font-bold text-slate-400">선택</span>}
+                                        </span>
+                                        <span className={`material-symbols-outlined text-[18px] ${item.done ? 'text-teal-500' : item.optional ? 'text-slate-200' : 'text-slate-300'}`}>
                                             {item.done ? 'check_circle' : 'radio_button_unchecked'}
                                         </span>
                                     </div>
@@ -505,7 +509,7 @@ export const QuoteDetailModal: React.FC<{
                                     견적 작성 워크스페이스
                                 </h3>
                                 <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    확정 일정, 금액, 견적서 링크, 고객 안내문을 한 번에 정리한 뒤 발송합니다.
+                                    확정 일정과 금액·예약금만 입력하면 발송할 수 있습니다. 외부 견적서 없이 시스템 견적 페이지로 전달됩니다.
                                 </p>
                             </div>
                             {request.status === 'reservation_requested' && (
@@ -560,7 +564,15 @@ export const QuoteDetailModal: React.FC<{
                                                 <input
                                                     type="text"
                                                     value={formatNumber(priceDetail.totalAmount)}
-                                                    onChange={(e) => setPriceDetail({ ...priceDetail, totalAmount: unformatNumber(e.target.value) })}
+                                                    onChange={(e) => {
+                                                        const total = unformatNumber(e.target.value);
+                                                        // 예약금이 비어 있으면 10% 자동 제안
+                                                        setPriceDetail(prev => ({
+                                                            ...prev,
+                                                            totalAmount: total,
+                                                            deposit: prev.deposit ? prev.deposit : Math.floor(total * 0.1),
+                                                        }));
+                                                    }}
                                                     className="w-full bg-transparent text-right text-2xl font-black text-slate-900 outline-none dark:text-white"
                                                     placeholder="0"
                                                 />
@@ -595,13 +607,17 @@ export const QuoteDetailModal: React.FC<{
                                     <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                         <span className="material-symbols-outlined text-base text-primary">link</span>
                                         3. 견적서 링크
+                                        <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-400 dark:bg-slate-800">선택</span>
                                     </h4>
+                                    <p className="mb-2 text-[11px] font-medium text-slate-400">
+                                        비워두면 고객은 시스템 견적 페이지로 받습니다. 외부 견적서를 첨부할 때만 입력하세요.
+                                    </p>
                                     <div className="flex flex-col gap-2 sm:flex-row">
                                         <input
                                             type="url"
                                             value={estimateUrl}
                                             onChange={(e) => setEstimateUrl(e.target.value)}
-                                            placeholder="https://docs.google.com/..."
+                                            placeholder="https://docs.google.com/... (선택)"
                                             className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                         />
                                         <div className="flex gap-2">
@@ -637,6 +653,7 @@ export const QuoteDetailModal: React.FC<{
                                         <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                             <span className="material-symbols-outlined text-base text-primary">chat</span>
                                             4. 고객 안내문
+                                            <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-400 dark:bg-slate-800">선택</span>
                                         </h4>
                                         <div className="flex gap-1.5">
                                             {quickNotes.map((note) => (
@@ -672,7 +689,7 @@ export const QuoteDetailModal: React.FC<{
                                     onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate)}
                                     disabled={!canSendEstimate}
                                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-dark px-5 py-4 text-sm font-black text-white shadow-lg shadow-primary-dark/20 transition-all hover:bg-primary active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-700"
-                                    title={!canSendEstimate ? '확정 일정, 금액, URL, 안내문을 모두 입력해야 발송할 수 있습니다.' : undefined}
+                                    title={!canSendEstimate ? '확정 일정과 금액·예약금을 입력하면 발송할 수 있습니다.' : undefined}
                                 >
                                     <span className="material-symbols-outlined text-[20px]">send</span>
                                     견적서 발송 처리

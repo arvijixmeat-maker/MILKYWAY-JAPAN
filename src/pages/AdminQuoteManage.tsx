@@ -219,7 +219,7 @@ export const AdminQuoteManage: React.FC = () => {
                 console.error('Failed to send notification email:', emailError);
             }
 
-            alert(`견적서 발송 완료!\nURL: ${url}\n확정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '원' : '미입력'}\n(고객에게 Gmail 알림이 발송되었습니다)`);
+            alert(`견적 발송 완료!\n확정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '엔' : '미입력'}${url ? `\n견적서 링크: ${url}` : ''}\n고객에게 시스템 견적 페이지와 알림 메일이 발송되었습니다.`);
 
             // Reflect in local state
             setRequests(prev => prev.map(req =>
