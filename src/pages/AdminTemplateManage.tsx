@@ -386,30 +386,34 @@ const TemplatesTab: React.FC = () => {
         d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, { time: '', type: 'meal' as ActivityType, title: `${jp} ｜ `, description: '' }] };
         return { ...f, days: d };
     });
-    // 관광지 마스터에서 선택 → 해당 항목(d,a)의 제목·설명을 채움
+    // 관광지 마스터에서 선택 → 상세 설명을 채움. 직접 쓴 제목은 보존(비어 있을 때만 마스터명 사용)
     const fillItemFromSpot = (d: number, a: number, spot: TouristSpot) => setForm(f => {
         const desc = [spot.description, spot.address].filter(Boolean).join('\n\n');
         const days = [...f.days];
         const acts = [...days[d].activities];
+        const cur = acts[a];
+        const keepTitle = (cur.title || '').trim().length > 0;
         acts[a] = {
-            ...acts[a],
-            type: inferActivityType(`${spot.name_kr} ${desc}`),
-            title: spot.name_kr,
-            description: desc || acts[a].description,
+            ...cur,
+            title: keepTitle ? cur.title : spot.name_kr,
+            description: desc || cur.description,
+            type: keepTitle ? cur.type : inferActivityType(`${spot.name_kr} ${desc}`),
         };
         days[d] = { ...days[d], activities: acts };
         return { ...f, days };
     });
-    // 호텔 마스터에서 선택 → 해당 항목(d,a)을 숙박 정보로 채움
+    // 호텔 마스터에서 선택 → 상세 설명을 채움. 직접 쓴 제목은 보존(비어 있을 때만 호텔명 사용)
     const fillItemFromHotel = (d: number, a: number, hotel: Hotel) => setForm(f => {
         const desc = [hotel.description, hotel.address].filter(Boolean).join('\n\n');
         const days = [...f.days];
         const acts = [...days[d].activities];
+        const cur = acts[a];
+        const keepTitle = (cur.title || '').trim().length > 0;
         acts[a] = {
-            ...acts[a],
-            type: 'checkin',
-            title: hotel.name_kr,
-            description: desc || acts[a].description || '宿泊',
+            ...cur,
+            title: keepTitle ? cur.title : hotel.name_kr,
+            description: desc || cur.description || '宿泊',
+            type: keepTitle ? cur.type : 'checkin',
         };
         days[d] = { ...days[d], activities: acts };
         return { ...f, days };
