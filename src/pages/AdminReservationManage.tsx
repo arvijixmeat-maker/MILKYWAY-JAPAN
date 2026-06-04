@@ -2344,6 +2344,7 @@ export const AdminReservationManage: React.FC = () => {
                                         adminNote: note,
                                         quoteId: selectedReservation.id,
                                         totalAmount: priceDetail.totalAmount,
+                                        userId: selectedReservation.userId,
                                     }
                                 );
 

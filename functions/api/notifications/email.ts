@@ -325,9 +325,9 @@ app.post('/', async (c) => {
         const apiKey = c.env.RESEND_API_KEY;
         const adminEmail = c.env.ADMIN_EMAIL || 'agape_ibeel@hanpass.com';
 
+        // 이메일 키가 없어도 인앱 알림은 계속 생성해야 하므로 여기서 중단하지 않음
         if (!apiKey) {
-            console.error('RESEND_API_KEY not set');
-            return c.json({ error: 'Email service not configured' }, 500);
+            console.error('RESEND_API_KEY not set — skipping email, in-app notification만 생성');
         }
 
         let subject = '';
@@ -374,7 +374,13 @@ app.post('/', async (c) => {
                 return c.json({ error: `Unknown email type: ${type}` }, 400);
         }
 
-        await sendEmail(apiKey, to, subject, html);
+        if (apiKey) {
+            try {
+                await sendEmail(apiKey, to, subject, html);
+            } catch (mailErr) {
+                console.error('Email send failed (continuing to create in-app notification):', mailErr);
+            }
+        }
 
         const targetUserId = data.userId || data.user_id;
         if (targetUserId && c.env.DB) {
