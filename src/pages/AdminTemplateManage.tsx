@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
+import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
+import { HotelPickerModal } from '../components/admin/HotelPickerModal';
+import type { TouristSpot } from '../types/touristSpot';
+import type { Hotel } from '../types/hotel';
 
 // ─── Types ───────────────────────────────────────────────
 type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
@@ -106,6 +110,9 @@ const TemplatesTab: React.FC = () => {
     const [quickDays, setQuickDays] = useState(4);
     const [bulkText, setBulkText] = useState('');
     const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
+    // 마스터 picker — 어느 일자에 추가할지(day index) 저장
+    const [spotPickerDay, setSpotPickerDay] = useState<number | null>(null);
+    const [hotelPickerDay, setHotelPickerDay] = useState<number | null>(null);
 
     const load = async () => {
         try {
@@ -324,6 +331,32 @@ const TemplatesTab: React.FC = () => {
 
     // Activity operations
     const addActivity = (dayIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = [...d[dayIdx].activities, { time: '', type: 'sightseeing', title: '', description: '' }]; return { ...f, days: d }; });
+    // 관광지 마스터에서 선택 → 제목·설명이 채워진 일정 항목을 해당 일자에 추가
+    const addActivityFromSpot = (dayIdx: number, spot: TouristSpot) => setForm(f => {
+        const desc = [spot.description, spot.address].filter(Boolean).join('\n\n');
+        const activity: Activity = {
+            time: '',
+            type: inferActivityType(`${spot.name_kr} ${desc}`),
+            title: spot.name_kr,
+            description: desc,
+        };
+        const d = [...f.days];
+        d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, activity] };
+        return { ...f, days: d };
+    });
+    // 호텔 마스터에서 선택 → 체크인(숙박) 항목으로 추가
+    const addActivityFromHotel = (dayIdx: number, hotel: Hotel) => setForm(f => {
+        const desc = [hotel.description, hotel.address].filter(Boolean).join('\n\n');
+        const activity: Activity = {
+            time: '',
+            type: 'checkin',
+            title: hotel.name_kr,
+            description: desc || '宿泊',
+        };
+        const d = [...f.days];
+        d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, activity] };
+        return { ...f, days: d };
+    });
     const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
     const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: any) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
     const updateActivityText = (dayIdx: number, actIdx: number, field: 'title' | 'description', value: string) => setForm(f => {
@@ -671,14 +704,24 @@ const TemplatesTab: React.FC = () => {
                                                     );
                                                 })}
                                                 </div>
-                                                <div className="flex items-center gap-2 pt-1">
-                                                    <button onClick={() => addActivity(dayIdx)} className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg text-sm font-bold text-blue-700 dark:text-blue-300 transition-colors flex items-center justify-center gap-2">
-                                                        <span className="material-symbols-outlined text-lg">add_circle</span>이 일자에 일정 항목 추가
-                                                    </button>
-                                                    {day.activities.length > 1 && (
-                                                        <button onClick={() => sortByTime(dayIdx)} className="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 font-semibold ml-auto" title="시간 순으로 정렬">
-                                                            <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
+                                                <div className="pt-1">
+                                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                                        <button onClick={() => setSpotPickerDay(dayIdx)} className="py-3 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 border-2 border-dashed border-teal-300 dark:border-teal-700 rounded-lg text-sm font-bold text-teal-700 dark:text-teal-300 transition-colors flex items-center justify-center gap-1.5" title="관광지 마스터에서 골라 제목·설명 자동 입력">
+                                                            <span className="material-symbols-outlined text-lg">location_on</span>관광지에서 추가
                                                         </button>
+                                                        <button onClick={() => setHotelPickerDay(dayIdx)} className="py-3 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 border-2 border-dashed border-teal-300 dark:border-teal-700 rounded-lg text-sm font-bold text-teal-700 dark:text-teal-300 transition-colors flex items-center justify-center gap-1.5" title="호텔 마스터에서 골라 숙박 항목 자동 입력">
+                                                            <span className="material-symbols-outlined text-lg">hotel</span>호텔에서 추가
+                                                        </button>
+                                                        <button onClick={() => addActivity(dayIdx)} className="py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg text-sm font-bold text-blue-700 dark:text-blue-300 transition-colors flex items-center justify-center gap-1.5">
+                                                            <span className="material-symbols-outlined text-lg">edit</span>직접 입력
+                                                        </button>
+                                                    </div>
+                                                    {day.activities.length > 1 && (
+                                                        <div className="mt-2 flex justify-end">
+                                                            <button onClick={() => sortByTime(dayIdx)} className="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1 font-semibold" title="시간 순으로 정렬">
+                                                                <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -702,6 +745,24 @@ const TemplatesTab: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* 마스터 picker — 선택 시 해당 일자에 일정 항목 자동 추가 */}
+                    <TouristSpotPickerModal
+                        open={spotPickerDay !== null}
+                        onClose={() => setSpotPickerDay(null)}
+                        onPick={(spot) => {
+                            if (spotPickerDay !== null) addActivityFromSpot(spotPickerDay, spot);
+                            setSpotPickerDay(null);
+                        }}
+                    />
+                    <HotelPickerModal
+                        open={hotelPickerDay !== null}
+                        onClose={() => setHotelPickerDay(null)}
+                        onPick={(hotel) => {
+                            if (hotelPickerDay !== null) addActivityFromHotel(hotelPickerDay, hotel);
+                            setHotelPickerDay(null);
+                        }}
+                    />
                 </div>
             )}
         </div>
