@@ -194,6 +194,7 @@ app.get('/', async (c) => {
         "deposit INTEGER",
         "deposit_status TEXT DEFAULT 'unpaid'",
         "balance_status TEXT DEFAULT 'unpaid'",
+        "itinerary_template_id TEXT",
         "created_at TEXT DEFAULT CURRENT_TIMESTAMP",
         "updated_at TEXT DEFAULT CURRENT_TIMESTAMP",
     ];

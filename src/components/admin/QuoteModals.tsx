@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { GuideSelectionModal, AccommodationSelectionModal } from './SelectionModals';
 import { sendNotificationEmail } from '../../lib/email';
+import { api } from '../../lib/api';
 
 export interface QuoteRequest {
     id: string;
@@ -31,6 +32,8 @@ export interface QuoteRequest {
     deposit?: number;
     deposit_status?: 'paid' | 'unpaid';
     balance_status?: 'paid' | 'unpaid';
+    itineraryTemplateId?: string;
+    itinerary_template_id?: string;
 }
 
 // Helper functions for currency formatting
@@ -223,13 +226,20 @@ export const ConvertSelectionModal: React.FC<{
 export const QuoteDetailModal: React.FC<{
     request: QuoteRequest | null;
     onClose: () => void;
-    onSendEstimate: (url: string, note: string, priceDetail: any, startDate: string, endDate: string) => void;
+    onSendEstimate: (url: string, note: string, priceDetail: any, startDate: string, endDate: string, itineraryTemplateId?: string) => void;
     onOpenConvert: () => void;
     onUpdateQuote: (id: string, updates: Partial<QuoteRequest>) => Promise<void>;
 }> = ({ request, onClose, onSendEstimate, onOpenConvert, onUpdateQuote }) => {
     const [estimateUrl, setEstimateUrl] = useState(request?.estimateUrl || '');
     const [adminNote, setAdminNote] = useState(request?.adminNote || '');
     const [copiedEstimateUrl, setCopiedEstimateUrl] = useState(false);
+
+    // 맞춤 일정표 — 고객 견적 페이지에 함께 보낼 일정표 템플릿
+    const [templatesList, setTemplatesList] = useState<any[]>([]);
+    const [itineraryTemplateId, setItineraryTemplateId] = useState<string>(request?.itineraryTemplateId || request?.itinerary_template_id || '');
+    useEffect(() => {
+        api.itineraryTemplates.list().then((d: any) => { if (Array.isArray(d)) setTemplatesList(d); }).catch(() => {});
+    }, []);
 
     // --- Added for Centralized UI Integration ---
     const [priceDetail, setPriceDetail] = useState({
@@ -291,6 +301,7 @@ export const QuoteDetailModal: React.FC<{
             });
             setConfirmedStartDate(request.confirmed_start_date || '');
             setConfirmedEndDate(request.confirmed_end_date || '');
+            setItineraryTemplateId(request.itineraryTemplateId || request.itinerary_template_id || '');
         }
     }, [request]);
 
@@ -676,17 +687,42 @@ export const QuoteDetailModal: React.FC<{
                                     />
                                 </div>
 
+                                <div>
+                                    <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        <span className="material-symbols-outlined text-base text-primary">event_note</span>
+                                        5. 맞춤 일정표
+                                        <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-400 dark:bg-slate-800">선택</span>
+                                    </h4>
+                                    <p className="mb-2 text-[11px] font-medium text-slate-400">
+                                        선택하면 고객 견적 화면에 <b>사진 포함 상세 일정표</b>가 비용과 함께 표시됩니다.
+                                    </p>
+                                    <select
+                                        value={itineraryTemplateId}
+                                        onChange={(e) => setItineraryTemplateId(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    >
+                                        <option value="">일정표 없음 (비용만 안내)</option>
+                                        {templatesList.map((t) => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </select>
+                                    {templatesList.length === 0 && (
+                                        <p className="mt-1.5 text-[11px] font-medium text-amber-600">등록된 일정표가 없습니다. [템플릿 관리]에서 먼저 만들어 주세요.</p>
+                                    )}
+                                </div>
+
                                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70">
                                     <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">고객 화면 미리보기</p>
                                     <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
                                         <p><b>見積金額:</b> {priceDetail.totalAmount ? `${priceDetail.totalAmount.toLocaleString()}円` : '未入力'}</p>
                                         <p><b>予約金:</b> {priceDetail.deposit ? `${priceDetail.deposit.toLocaleString()}円` : '未入力'}</p>
                                         <p><b>日程:</b> {confirmedStartDate && confirmedEndDate ? `${confirmedStartDate} ~ ${confirmedEndDate}` : '未入力'}</p>
+                                        <p><b>日程表:</b> {itineraryTemplateId ? (templatesList.find(t => t.id === itineraryTemplateId)?.name || '첨부됨') : '없음'}</p>
                                     </div>
                                 </div>
 
                                 <button
-                                    onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate)}
+                                    onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId)}
                                     disabled={!canSendEstimate}
                                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-dark px-5 py-4 text-sm font-black text-white shadow-lg shadow-primary-dark/20 transition-all hover:bg-primary active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-700"
                                     title={!canSendEstimate ? '확정 일정과 금액·예약금을 입력하면 발송할 수 있습니다.' : undefined}

@@ -185,7 +185,7 @@ export const AdminQuoteManage: React.FC = () => {
         }
     };
 
-    const handleSendEstimate = async (url: string, note: string, priceDetail: any, confirmedStartDate: string, confirmedEndDate: string) => {
+    const handleSendEstimate = async (url: string, note: string, priceDetail: any, confirmedStartDate: string, confirmedEndDate: string, itineraryTemplateId?: string) => {
         if (!selectedRequest) return;
         const requestId = selectedRequest.id;
 
@@ -199,6 +199,7 @@ export const AdminQuoteManage: React.FC = () => {
                 deposit: priceDetail.deposit || null,
                 confirmed_start_date: confirmedStartDate || null,
                 confirmed_end_date: confirmedEndDate || null,
+                itinerary_template_id: itineraryTemplateId || null,
                 updated_at: new Date().toISOString()
             });
 

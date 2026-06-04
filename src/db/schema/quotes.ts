@@ -29,6 +29,9 @@ export const quotes = sqliteTable('quotes', {
     depositStatus: text('deposit_status').default('unpaid'),
     balanceStatus: text('balance_status').default('unpaid'),
 
+    // 맞춤견적에 첨부할 일정표 템플릿 (고객 견적 페이지에 사진 포함 일정 표시)
+    itineraryTemplateId: text('itinerary_template_id'),
+
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });

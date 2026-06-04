@@ -1759,6 +1759,7 @@ export const AdminReservationManage: React.FC = () => {
                             deposit: q.deposit || 0,
                             deposit_status: q.deposit_status || q.depositStatus || 'unpaid',
                             balance_status: q.balance_status || q.balanceStatus || 'unpaid',
+                            itineraryTemplateId: q.itineraryTemplateId || q.itinerary_template_id || '',
                             date: createdAt ? new Date(createdAt).toLocaleDateString() : ''
                         }
                     };
@@ -2315,7 +2316,7 @@ export const AdminReservationManage: React.FC = () => {
                             alert('견적 수정 실패');
                         }
                     }}
-                    onSendEstimate={async (url, note, priceDetail, confirmedStartDate, confirmedEndDate) => {
+                    onSendEstimate={async (url, note, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId) => {
                         // Handle Send Estimate
                         try {
                             // 1. Update Database
@@ -2327,6 +2328,7 @@ export const AdminReservationManage: React.FC = () => {
                                 deposit: priceDetail.deposit || null,
                                 confirmed_start_date: confirmedStartDate || null,
                                 confirmed_end_date: confirmedEndDate || null,
+                                itinerary_template_id: itineraryTemplateId || null,
                                 updated_at: new Date().toISOString()
                             });
 
