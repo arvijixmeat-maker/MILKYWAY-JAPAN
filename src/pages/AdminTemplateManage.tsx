@@ -12,7 +12,120 @@ import mongoliaHero from '../assets/login_bg_3.jpg';
 type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
 interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
 interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
-interface ItineraryTemplate { id: string; name: string; description: string; days: TemplateDay[]; createdAt: string; }
+interface DocumentSettings {
+    overview: {
+        subtitle: string;
+        heroTagline: string;
+        intro: string;
+        included: { icon: string; label: string }[];
+        pricePerPerson: string;
+        paymentNote: string;
+    };
+    contract: {
+        intro: string;
+        paymentMethod: string;
+        paymentDeadline: string;
+        bankInfo: string;
+        includedText: string;
+        excludedText: string;
+        cancellationRows: { period: string; fee: string }[];
+        signatureNote: string;
+    };
+    detail: {
+        title: string;
+        note: string;
+        footerBadges: string[];
+    };
+    guide: {
+        notices: { title: string; body: string }[];
+        conditions: string;
+        paymentInfo: string;
+        emergencyPhone: string;
+        emergencyEmail: string;
+        closingMessage: string;
+        qrLabel: string;
+    };
+}
+interface ItineraryTemplate { id: string; name: string; description: string; days: TemplateDay[]; createdAt: string; documentSettings: DocumentSettings; }
+
+const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
+
+const defaultDocumentSettings = (): DocumentSettings => ({
+    overview: {
+        subtitle: '銀河の下で、大自然と文化を体験する特別な旅へ',
+        heroTagline: '伝統衣装体験・乗馬体験・ラクダ体験・ゲル体験 すべて込み',
+        intro: 'ご予約内容に基づき、旅行概要・日程・代金をまとめた確認用のご旅行日程表です。',
+        included: [
+            { icon: 'hiking', label: 'モンゴル伝統衣装体験' },
+            { icon: 'pets', label: '乗馬体験' },
+            { icon: 'local_taxi', label: '専用車・ドライバー' },
+            { icon: 'hotel', label: '宿泊' },
+            { icon: 'restaurant', label: '食事付き' },
+            { icon: 'support_agent', label: '日本語ガイド' },
+        ],
+        pricePerPerson: '128000',
+        paymentNote: '上記料金には、日程表に記載のサービスが含まれております。',
+    },
+    contract: {
+        intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
+        paymentMethod: '銀行振込',
+        paymentDeadline: 'ご案内メールに記載の期日まで',
+        bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル大自然ツアー（カ',
+        includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
+        excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
+        cancellationRows: [
+            { period: '30日〜15日前まで', fee: '旅行代金の10%' },
+            { period: '14日〜8日前まで', fee: '旅行代金の20%' },
+            { period: '7日〜3日前まで', fee: '旅行代金の30%' },
+            { period: '2日前〜当日', fee: '旅行代金の50%' },
+            { period: '無連絡不参加', fee: '旅行代金の100%' },
+        ],
+        signatureNote: '上記内容を確認し、同意の上、本契約を締結いたします。',
+    },
+    detail: {
+        title: 'ご旅行日程表（詳細）',
+        note: '天候・交通状況により、スケジュールは変更となる場合がございます。',
+        footerBadges: ['追加料金なしのすべて込みプラン', '日程調整可能', '貸切専用車で安心移動', '日本語ガイドが全日程サポート'],
+    },
+    guide: {
+        notices: [
+            { title: '服装について', body: '朝夕は冷え込む場合があるため、羽織れる上着をご用意ください。' },
+            { title: '宿泊について', body: 'ホテルおよびゲル宿泊は、現地事情により同等クラスへ変更となる場合があります。' },
+            { title: 'お食事について', body: 'アレルギーや食事制限がある場合は事前にお知らせください。' },
+            { title: '持ち物について', body: 'パスポート、保険証券、常備薬、充電器などをご準備ください。' },
+        ],
+        conditions: '本旅行は、当社旅行条件書および旅行業約款に基づいて実施いたします。',
+        paymentInfo: 'お支払い方法：銀行振込\nお支払い期限：ご案内メールに記載の期日まで',
+        emergencyPhone: '+976-80-1234-5678',
+        emergencyEmail: 'info@mongolia-naturetour.com',
+        closingMessage: 'モンゴルの大自然と文化を心ゆくまでお楽しみください。',
+        qrLabel: 'お客様専用ページ',
+    },
+});
+
+const mergeDocumentSettings = (value: any): DocumentSettings => {
+    const base = defaultDocumentSettings();
+    if (!value || typeof value !== 'object') return base;
+    return {
+        overview: { ...base.overview, ...(value.overview || {}), included: Array.isArray(value.overview?.included) ? value.overview.included : base.overview.included },
+        contract: { ...base.contract, ...(value.contract || {}), cancellationRows: Array.isArray(value.contract?.cancellationRows) ? value.contract.cancellationRows : base.contract.cancellationRows },
+        detail: { ...base.detail, ...(value.detail || {}), footerBadges: Array.isArray(value.detail?.footerBadges) ? value.detail.footerBadges : base.detail.footerBadges },
+        guide: { ...base.guide, ...(value.guide || {}), notices: Array.isArray(value.guide?.notices) ? value.guide.notices : base.guide.notices },
+    };
+};
+
+const decodeTemplateDescription = (raw = '') => {
+    const [description, encoded] = raw.split(DOC_SETTINGS_MARKER);
+    if (!encoded) return { description: raw, documentSettings: defaultDocumentSettings() };
+    try {
+        return { description, documentSettings: mergeDocumentSettings(JSON.parse(encoded)) };
+    } catch {
+        return { description, documentSettings: defaultDocumentSettings() };
+    }
+};
+
+const encodeTemplateDescription = (description: string, documentSettings: DocumentSettings) =>
+    `${description || ''}${DOC_SETTINGS_MARKER}${JSON.stringify(documentSettings)}`;
 
 const ACTIVITY_TYPES: { id: ActivityType; label: string; icon: string }[] = [
     { id: 'pickup', label: '픽업', icon: 'flight_land' },
@@ -52,19 +165,13 @@ const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화
 const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
 
 // ─── Live Preview (document package: overview + contract + detailed itinerary + guide) ───
-const TemplatePreview: React.FC<{ name: string; description: string; days: TemplateDay[] }> = ({ name, description, days }) => {
+const TemplatePreview: React.FC<{ name: string; description: string; days: TemplateDay[]; documentSettings: DocumentSettings }> = ({ name, description, days, documentSettings }) => {
     const totalDays = days.length;
     const nights = Math.max(0, totalDays - 1);
-    const samplePrice = 128000;
+    const settings = mergeDocumentSettings(documentSettings);
+    const samplePrice = Number(settings.overview.pricePerPerson || 0) || 128000;
     const sampleTotal = samplePrice * 2;
-    const sampleIncluded = [
-        { icon: 'hiking', label: '伝統衣装体験' },
-        { icon: 'pets', label: '乗馬体験' },
-        { icon: 'local_taxi', label: '専用車' },
-        { icon: 'hotel', label: '宿泊' },
-        { icon: 'restaurant', label: '全食事' },
-        { icon: 'support_agent', label: '日本語ガイド' },
-    ];
+    const sampleIncluded = settings.overview.included;
 
     return (
         <div className="h-full overflow-y-auto rounded-2xl bg-[#F7FAFA] p-4 dark:bg-slate-900">
@@ -85,7 +192,7 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                         </div>
                         <div className="text-right">
                             <p className="text-[20px] font-black tracking-[0.12em] text-[#0F8F84]">ご旅行日程表</p>
-                            <p className="text-[10px] font-semibold text-slate-400">銀河の下で、大自然と文化を体験する特別な旅へ</p>
+                            <p className="text-[10px] font-semibold text-slate-400">{settings.overview.subtitle}</p>
                         </div>
                     </div>
                     <div className="relative h-[150px] overflow-hidden">
@@ -94,13 +201,14 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                         <div className="absolute bottom-4 left-5 text-white">
                             <span className="rounded-xl bg-[#0F8F84] px-3 py-2 text-xs font-black">{nights}泊{totalDays || 0}日</span>
                             <h3 className="mt-3 text-[24px] font-black leading-tight">{name || '銀河・大自然パッケージ'}</h3>
-                            <p className="mt-1 text-xs font-semibold text-white/85">{description || '伝統衣装体験・乗馬体験・ラクダ体験・ゲル体験 すべて込み'}</p>
+                            <p className="mt-1 text-xs font-semibold text-white/85">{description || settings.overview.heroTagline}</p>
                         </div>
                     </div>
                     <div className="p-5">
                         <h4 className="mb-2 flex items-center gap-1.5 text-sm font-black text-[#0F8F84]">
                             <span className="material-symbols-outlined text-base">check_circle</span>ご旅行概要
                         </h4>
+                        <p className="mb-3 whitespace-pre-wrap text-[11px] font-semibold leading-relaxed text-slate-500">{settings.overview.intro}</p>
                         <div className="overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">
                             {[
                                 ['ご旅行番号', 'QT-20240604-001'],
@@ -188,7 +296,7 @@ const TemplatePreview: React.FC<{ name: string; description: string; days: Templ
                 {/* Page 3: detailed itinerary */}
                 <section className="rounded-[18px] border border-[#8FE7DE] bg-white p-5 shadow-sm">
                     <div className="mb-4 flex items-center justify-between">
-                        <h3 className="text-[22px] font-black tracking-[0.12em] text-[#0F8F84]">ご旅行日程表（詳細）</h3>
+                        <h3 className="text-[22px] font-black tracking-[0.12em] text-[#0F8F84]">{settings.detail.title}</h3>
                         <span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span>
                     </div>
                     {days.length === 0 ? (
@@ -267,7 +375,12 @@ const TemplatesTab: React.FC = () => {
     const [templates, setTemplates] = useState<ItineraryTemplate[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editing, setEditing] = useState<ItineraryTemplate | null>(null);
-    const [form, setForm] = useState<{ name: string; description: string; days: TemplateDay[] }>({ name: '', description: '', days: [] });
+    const [form, setForm] = useState<{ name: string; description: string; days: TemplateDay[]; documentSettings: DocumentSettings }>({
+        name: '',
+        description: '',
+        days: [],
+        documentSettings: defaultDocumentSettings(),
+    });
     const [quickDays, setQuickDays] = useState(4);
     const [bulkText, setBulkText] = useState('');
     const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
@@ -292,18 +405,24 @@ const TemplatesTab: React.FC = () => {
         try {
             const data = await api.itineraryTemplates.list();
             if (Array.isArray(data)) {
-                setTemplates(data.map((t: any) => ({
-                    id: t.id, name: t.name, description: t.description || '',
-                    days: typeof t.days === 'string' ? JSON.parse(t.days || '[]') : (t.days || []),
-                    createdAt: t.created_at || t.createdAt
-                })));
+                setTemplates(data.map((t: any) => {
+                    const decoded = decodeTemplateDescription(t.description || '');
+                    return {
+                        id: t.id,
+                        name: t.name,
+                        description: decoded.description,
+                        documentSettings: decoded.documentSettings,
+                        days: typeof t.days === 'string' ? JSON.parse(t.days || '[]') : (t.days || []),
+                        createdAt: t.created_at || t.createdAt
+                    };
+                }));
             }
         } catch (e) { console.error(e); }
     };
 
     useEffect(() => { load(); }, []);
 
-    const resetForm = () => { setForm({ name: '', description: '', days: [] }); setEditing(null); setBulkText(''); setQuickDays(4); setShowAdvancedEditor(false); setShowPasteBox(false); setAddMenuDay(null); };
+    const resetForm = () => { setForm({ name: '', description: '', days: [], documentSettings: defaultDocumentSettings() }); setEditing(null); setBulkText(''); setQuickDays(4); setShowAdvancedEditor(false); setShowPasteBox(false); setAddMenuDay(null); };
 
     const DAY_LABELS_JP = [
         '1日目', '2日目', '3日目', '4日目', '5日目',
@@ -584,22 +703,62 @@ const TemplatesTab: React.FC = () => {
         return { ...f, days: d };
     });
 
+    const updateDocSection = <K extends keyof DocumentSettings>(section: K, patch: Partial<DocumentSettings[K]>) => {
+        setForm(f => ({
+            ...f,
+            documentSettings: {
+                ...f.documentSettings,
+                [section]: { ...f.documentSettings[section], ...patch },
+            },
+        }));
+    };
+
+    const updateIncluded = (idx: number, field: 'icon' | 'label', value: string) => {
+        setForm(f => {
+            const included = [...f.documentSettings.overview.included];
+            included[idx] = { ...included[idx], [field]: value };
+            return { ...f, documentSettings: { ...f.documentSettings, overview: { ...f.documentSettings.overview, included } } };
+        });
+    };
+
+    const updateCancellation = (idx: number, field: 'period' | 'fee', value: string) => {
+        setForm(f => {
+            const cancellationRows = [...f.documentSettings.contract.cancellationRows];
+            cancellationRows[idx] = { ...cancellationRows[idx], [field]: value };
+            return { ...f, documentSettings: { ...f.documentSettings, contract: { ...f.documentSettings.contract, cancellationRows } } };
+        });
+    };
+
+    const updateGuideNotice = (idx: number, field: 'title' | 'body', value: string) => {
+        setForm(f => {
+            const notices = [...f.documentSettings.guide.notices];
+            notices[idx] = { ...notices[idx], [field]: value };
+            return { ...f, documentSettings: { ...f.documentSettings, guide: { ...f.documentSettings.guide, notices } } };
+        });
+    };
+
     const handleSubmit = async () => {
         if (!form.name.trim()) { alert('템플릿 이름을 입력하세요.'); return; }
         try {
-            if (editing) { await api.itineraryTemplates.update(editing.id, form); }
-            else { await api.itineraryTemplates.create(form); }
+            const payload = {
+                name: form.name,
+                description: encodeTemplateDescription(form.description, form.documentSettings),
+                days: form.days,
+            };
+            if (editing) { await api.itineraryTemplates.update(editing.id, payload); }
+            else { await api.itineraryTemplates.create(payload); }
             await load(); setIsModalOpen(false); resetForm();
         } catch (e: any) { alert('저장 실패: ' + e.message); }
     };
 
-    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days }); setShowAdvancedEditor(false); setIsModalOpen(true); };
+    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days, documentSettings: mergeDocumentSettings(t.documentSettings) }); setShowAdvancedEditor(false); setIsModalOpen(true); };
     const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.itineraryTemplates.delete(id); await load(); } catch (e: any) { alert('삭제 실패'); } };
     const handleDuplicate = (t: ItineraryTemplate) => {
         setEditing(null);
         setForm({
             name: `${t.name} (복사본)`,
             description: t.description,
+            documentSettings: mergeDocumentSettings(t.documentSettings),
             days: t.days.map(d => ({ ...d, activities: d.activities.map(a => ({ ...a })) })),
         });
         setShowAdvancedEditor(false);
@@ -738,6 +897,102 @@ const TemplatesTab: React.FC = () => {
                                         placeholder="이 템플릿이 어떤 일정인지 한 줄 설명"
                                         className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     />
+                                </div>
+
+                                <div className="mb-5 rounded-2xl border border-[#8FE7DE]/80 bg-white p-5 shadow-sm dark:border-teal-500/20 dark:bg-slate-800">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">문서 디자인 내용 편집</h3>
+                                            <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                                여행 일정표, 여행계약서, 상세일정표, 공통안내에 들어가는 문구와 조건을 직접 수정합니다.
+                                            </p>
+                                        </div>
+                                        <span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-[11px] font-black text-[#0F8F84]">고객용 문서</span>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <details open className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                                            <summary className="cursor-pointer text-sm font-black text-[#0F8F84]">1. 여행 일정표 / 개요 페이지</summary>
+                                            <div className="mt-4 grid gap-3">
+                                                <input value={form.documentSettings.overview.subtitle} onChange={e => updateDocSection('overview', { subtitle: e.target.value })} placeholder="상단 부제" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <input value={form.documentSettings.overview.heroTagline} onChange={e => updateDocSection('overview', { heroTagline: e.target.value })} placeholder="히어로 문구" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <textarea value={form.documentSettings.overview.intro} onChange={e => updateDocSection('overview', { intro: e.target.value })} rows={3} placeholder="여행 소개 문구" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    <input value={form.documentSettings.overview.pricePerPerson} onChange={e => updateDocSection('overview', { pricePerPerson: e.target.value.replace(/[^0-9]/g, '') })} placeholder="1인 여행대금 예시" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                    <input value={form.documentSettings.overview.paymentNote} onChange={e => updateDocSection('overview', { paymentNote: e.target.value })} placeholder="요금 안내 문구" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                </div>
+                                                <div>
+                                                    <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">포함 항목</p>
+                                                    <div className="grid gap-2 sm:grid-cols-2">
+                                                        {form.documentSettings.overview.included.map((item, idx) => (
+                                                            <div key={idx} className="grid grid-cols-[90px_1fr] gap-2">
+                                                                <input value={item.icon} onChange={e => updateIncluded(idx, 'icon', e.target.value)} placeholder="icon" className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                                <input value={item.label} onChange={e => updateIncluded(idx, 'label', e.target.value)} placeholder="항목명" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </details>
+
+                                        <details className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                                            <summary className="cursor-pointer text-sm font-black text-[#0F8F84]">2. 여행계약서</summary>
+                                            <div className="mt-4 grid gap-3">
+                                                <textarea value={form.documentSettings.contract.intro} onChange={e => updateDocSection('contract', { intro: e.target.value })} rows={3} placeholder="계약서 도입 문구" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <div className="grid gap-2 sm:grid-cols-3">
+                                                    <input value={form.documentSettings.contract.paymentMethod} onChange={e => updateDocSection('contract', { paymentMethod: e.target.value })} placeholder="결제 방법" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                    <input value={form.documentSettings.contract.paymentDeadline} onChange={e => updateDocSection('contract', { paymentDeadline: e.target.value })} placeholder="결제 기한" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                    <input value={form.documentSettings.contract.signatureNote} onChange={e => updateDocSection('contract', { signatureNote: e.target.value })} placeholder="서명 문구" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                </div>
+                                                <textarea value={form.documentSettings.contract.bankInfo} onChange={e => updateDocSection('contract', { bankInfo: e.target.value })} rows={2} placeholder="입금 계좌" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    <textarea value={form.documentSettings.contract.includedText} onChange={e => updateDocSection('contract', { includedText: e.target.value })} rows={3} placeholder="포함 사항" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                    <textarea value={form.documentSettings.contract.excludedText} onChange={e => updateDocSection('contract', { excludedText: e.target.value })} rows={3} placeholder="불포함 사항" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                </div>
+                                                <div>
+                                                    <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">취소 규정</p>
+                                                    <div className="space-y-2">
+                                                        {form.documentSettings.contract.cancellationRows.map((row, idx) => (
+                                                            <div key={idx} className="grid gap-2 sm:grid-cols-2">
+                                                                <input value={row.period} onChange={e => updateCancellation(idx, 'period', e.target.value)} placeholder="기간" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                                <input value={row.fee} onChange={e => updateCancellation(idx, 'fee', e.target.value)} placeholder="취소료" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </details>
+
+                                        <details className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                                            <summary className="cursor-pointer text-sm font-black text-[#0F8F84]">3. 상세일정표</summary>
+                                            <div className="mt-4 grid gap-3">
+                                                <input value={form.documentSettings.detail.title} onChange={e => updateDocSection('detail', { title: e.target.value })} placeholder="상세일정표 제목" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <textarea value={form.documentSettings.detail.note} onChange={e => updateDocSection('detail', { note: e.target.value })} rows={2} placeholder="일정 하단 안내문" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <input value={form.documentSettings.detail.footerBadges.join(' / ')} onChange={e => updateDocSection('detail', { footerBadges: e.target.value.split('/').map(v => v.trim()).filter(Boolean) })} placeholder="하단 배지 문구를 / 로 구분" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                            </div>
+                                        </details>
+
+                                        <details className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                                            <summary className="cursor-pointer text-sm font-black text-[#0F8F84]">4. 공통안내 / 고객 안내문</summary>
+                                            <div className="mt-4 grid gap-3">
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    <input value={form.documentSettings.guide.emergencyPhone} onChange={e => updateDocSection('guide', { emergencyPhone: e.target.value })} placeholder="긴급 연락처" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                    <input value={form.documentSettings.guide.emergencyEmail} onChange={e => updateDocSection('guide', { emergencyEmail: e.target.value })} placeholder="이메일" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                </div>
+                                                <textarea value={form.documentSettings.guide.conditions} onChange={e => updateDocSection('guide', { conditions: e.target.value })} rows={3} placeholder="여행 조건" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <textarea value={form.documentSettings.guide.paymentInfo} onChange={e => updateDocSection('guide', { paymentInfo: e.target.value })} rows={3} placeholder="결제 안내" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <input value={form.documentSettings.guide.closingMessage} onChange={e => updateDocSection('guide', { closingMessage: e.target.value })} placeholder="마무리 문구" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                <div className="space-y-2">
+                                                    {form.documentSettings.guide.notices.map((notice, idx) => (
+                                                        <div key={idx} className="grid gap-2 sm:grid-cols-[180px_1fr]">
+                                                            <input value={notice.title} onChange={e => updateGuideNotice(idx, 'title', e.target.value)} placeholder="안내 제목" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                            <input value={notice.body} onChange={e => updateGuideNotice(idx, 'body', e.target.value)} placeholder="안내 내용" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </details>
+                                    </div>
                                 </div>
 
                                 {/* Quick builder — 일정이 있으면 접고, 없으면 펼쳐서 시작 경로로 */}
@@ -979,7 +1234,7 @@ const TemplatesTab: React.FC = () => {
 
                             {/* Live preview */}
                             <div className="hidden lg:block border-l border-slate-200 dark:border-slate-800 overflow-hidden p-4 bg-white dark:bg-slate-900">
-                                <TemplatePreview name={form.name} description={form.description} days={form.days} />
+                                <TemplatePreview name={form.name} description={form.description} days={form.days} documentSettings={form.documentSettings} />
                             </div>
                         </div>
                     </div>
@@ -1277,3 +1532,4 @@ export const AdminTemplateManage: React.FC = () => {
         </div>
     );
 };
+

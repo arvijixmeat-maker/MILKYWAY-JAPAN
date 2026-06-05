@@ -6,6 +6,18 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
+
+const decodeTemplateDescription = (raw = '') => {
+    const [description, encoded] = String(raw || '').split(DOC_SETTINGS_MARKER);
+    if (!encoded) return { description: raw || '', documentSettings: null };
+    try {
+        return { description, documentSettings: JSON.parse(encoded) };
+    } catch {
+        return { description, documentSettings: null };
+    }
+};
+
 // GET /api/documents/itinerary/:reservationId
 // Public endpoint — no auth. Returns everything the itinerary page needs.
 app.get('/itinerary/:reservationId', async (c) => {
@@ -40,10 +52,12 @@ app.get('/itinerary/:reservationId', async (c) => {
         if (t) {
             let days: any[] = [];
             try { days = t.days ? JSON.parse(t.days) : []; } catch { days = []; }
+            const decoded = decodeTemplateDescription(t.description || '');
             template = {
                 id: t.id,
                 name: t.name,
-                description: t.description,
+                description: decoded.description,
+                documentSettings: decoded.documentSettings,
                 days,
             };
         }
@@ -110,6 +124,22 @@ app.get('/contract/:reservationId', async (c) => {
     let assignedGuide: any = null;
     try { assignedGuide = reservation.assigned_guide ? JSON.parse(reservation.assigned_guide) : null; } catch { assignedGuide = null; }
 
+    let template: any = null;
+    if (reservation.itinerary_template_id) {
+        const t: any = await db.prepare(
+            'SELECT * FROM itinerary_templates WHERE id = ?'
+        ).bind(reservation.itinerary_template_id).first();
+        if (t) {
+            const decoded = decodeTemplateDescription(t.description || '');
+            template = {
+                id: t.id,
+                name: t.name,
+                description: decoded.description,
+                documentSettings: decoded.documentSettings,
+            };
+        }
+    }
+
     return c.json({
         reservation: {
             id: reservation.id,
@@ -128,6 +158,7 @@ app.get('/contract/:reservationId', async (c) => {
             createdAt: reservation.created_at,
         },
         contract: contractData,
+        template,
         accommodations: dailyAccommodations,
         guide: assignedGuide,
     });
