@@ -168,6 +168,11 @@ const LANGUAGES = ['한국어', '영어', '몽골어', '중국어', '일본어']
 const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
 const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
 
+// 모듈 스코프 컴포넌트 — 컴포넌트 내부에 정의하면 입력마다 리마운트되어 포커스·스크롤이 튐
+const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div className="mx-auto max-w-[760px] rounded-[22px] border border-[#8FE7DE] bg-white shadow-sm">{children}</div>
+);
+
 // ─── Live Preview (editable PC document preview) ───
 type TemplatePreviewProps = {
     name: string;
@@ -211,7 +216,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, da
         ['旅行形態', '貸切プライベートツアー'],
     ];
     const fieldClass = 'w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 outline-none transition-colors hover:border-[#8FE7DE] hover:bg-white/80 focus:border-[#39C4B7] focus:bg-white focus:ring-2 focus:ring-[#39C4B7]/15';
-    const Frame = ({ children }: { children: React.ReactNode }) => <div className="mx-auto max-w-[760px] rounded-[22px] border border-[#8FE7DE] bg-white shadow-sm">{children}</div>;
+    // Frame은 모듈 스코프로 이동 (입력마다 리마운트되어 스크롤·포커스가 튀던 문제 수정)
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[#F7FAFA] dark:bg-slate-900">
