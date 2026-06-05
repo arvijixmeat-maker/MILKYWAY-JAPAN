@@ -3,6 +3,7 @@ import {
     TemplatePreview,
     mergeDocumentSettings,
     defaultDocumentSettings,
+    parseDayActivitiesText,
     type DocumentSettings,
     type TemplateDay,
     type ActivityType,
@@ -124,6 +125,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         onAddActivity={addActivity}
                         onRemoveDay={removeDay}
                         onRemoveActivity={removeActivity}
+                        onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
                     />
                 </div>
             </div>
