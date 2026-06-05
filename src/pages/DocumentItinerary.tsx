@@ -34,6 +34,8 @@ interface DocumentSettings {
         heroTagline?: string;
         intro?: string;
         included?: { icon: string; label: string }[];
+        includedText?: string;
+        excludedText?: string;
         pricePerPerson?: string;
         paymentNote?: string;
     };
@@ -212,6 +214,10 @@ export const DocumentItinerary: React.FC = () => {
     const documentNumber = reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase();
     const pricePerPerson = Number(overview.pricePerPerson || 0);
     const included = overview.included?.length ? overview.included : fallbackIncluded;
+    const splitItems = (t?: string) => (t || '').split(/\r?\n|、|,/).map(x => x.trim()).filter(Boolean);
+    const includedList = splitItems(overview.includedText);
+    const excludedList = splitItems(overview.excludedText);
+    const includedDisplay = includedList.length ? includedList : included.map(i => i.label);
 
     return (
         <>
@@ -285,14 +291,29 @@ export const DocumentItinerary: React.FC = () => {
                     </section>
 
                     <section className="border-b border-[#8FE7DE]/70 px-5 py-6 sm:px-8">
-                        <h3 className="mb-3 text-base font-black text-[#0F8F84]">含まれているもの</h3>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                            {included.map((item, index) => (
-                                <div key={`${item.label}-${index}`} className="rounded-xl border border-[#8FE7DE]/70 bg-white p-3 text-center text-[#0F8F84]">
-                                    <span className="material-symbols-outlined text-[26px]">{item.icon || 'check_circle'}</span>
-                                    <p className="mt-2 text-[11px] font-black leading-tight">{item.label}</p>
+                        <div className="grid gap-5 sm:grid-cols-2">
+                            <div>
+                                <h3 className="mb-3 text-base font-black text-[#0F8F84]">含まれているもの</h3>
+                                <ul className="space-y-1.5">
+                                    {includedDisplay.map((t, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm font-semibold text-slate-700">
+                                            <span className="material-symbols-outlined text-[18px] text-[#0F8F84]">check_circle</span>{t}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            {excludedList.length > 0 && (
+                                <div>
+                                    <h3 className="mb-3 text-base font-black text-slate-500">含まれないもの</h3>
+                                    <ul className="space-y-1.5">
+                                        {excludedList.map((t, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm font-semibold text-slate-500">
+                                                <span className="material-symbols-outlined text-[18px] text-slate-400">cancel</span>{t}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                            ))}
+                            )}
                         </div>
                         {pricePerPerson > 0 && (
                             <div className="mt-5 grid gap-3 sm:grid-cols-3">
