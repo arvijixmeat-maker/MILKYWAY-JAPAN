@@ -9,10 +9,10 @@ import type { Hotel } from '../types/hotel';
 import mongoliaHero from '../assets/login_bg_3.jpg';
 
 // ─── Types ───────────────────────────────────────────────
-type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
-interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
-interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
-interface DocumentSettings {
+export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
+export interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
+export interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
+export interface DocumentSettings {
     overview: {
         subtitle: string;
         heroTagline: string;
@@ -52,7 +52,7 @@ interface ItineraryTemplate { id: string; name: string; description: string; day
 
 const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
 
-const defaultDocumentSettings = (): DocumentSettings => ({
+export const defaultDocumentSettings = (): DocumentSettings => ({
     overview: {
         subtitle: '銀河の下で、大自然と文化を体験する特別な旅へ',
         heroTagline: '伝統衣装体験・乗馬体験・ラクダ体験・ゲル体験 すべて込み',
@@ -107,7 +107,7 @@ const defaultDocumentSettings = (): DocumentSettings => ({
     },
 });
 
-const mergeDocumentSettings = (value: any): DocumentSettings => {
+export const mergeDocumentSettings = (value: any): DocumentSettings => {
     const base = defaultDocumentSettings();
     if (!value || typeof value !== 'object') return base;
     return {
@@ -118,7 +118,7 @@ const mergeDocumentSettings = (value: any): DocumentSettings => {
     };
 };
 
-const decodeTemplateDescription = (raw = '') => {
+export const decodeTemplateDescription = (raw = '') => {
     const [description, encoded] = raw.split(DOC_SETTINGS_MARKER);
     if (!encoded) return { description: raw, documentSettings: defaultDocumentSettings() };
     try {
@@ -192,15 +192,30 @@ type TemplatePreviewProps = {
     onAddActivity: (dayIdx: number) => void;
     onRemoveDay: (dayIdx: number) => void;
     onRemoveActivity: (dayIdx: number, actIdx: number) => void;
+    // 예약/견적에서 열 때 실제 고객 데이터 자동 표시 (없으면 샘플)
+    customer?: {
+        tripNumber?: string;
+        period?: string;
+        headcount?: string;
+        name?: string;
+        tripType?: string;
+        totalAmount?: number;
+        deposit?: number;
+        localAmount?: number;
+        peopleCount?: number;
+    } | null;
 };
 
-const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity }) => {
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>('overview');
     const totalDays = days.length;
     const nights = Math.max(0, totalDays - 1);
     const settings = mergeDocumentSettings(documentSettings);
-    const samplePrice = Number(settings.overview.pricePerPerson || 0) || 128000;
-    const sampleTotal = samplePrice * 2;
+    const peopleCount = customer?.peopleCount || 2;
+    const samplePrice = (customer?.totalAmount && peopleCount) ? Math.round(customer.totalAmount / peopleCount) : (Number(settings.overview.pricePerPerson || 0) || 128000);
+    const sampleTotal = customer?.totalAmount ?? samplePrice * peopleCount;
+    const sampleDeposit = customer?.deposit ?? Math.floor(sampleTotal * 0.1);
+    const sampleLocal = customer?.localAmount ?? (sampleTotal - sampleDeposit);
     const tripLength = `${nights}泊${totalDays || 0}日`;
     const pages = [
         { id: 'overview' as const, label: '日程表', icon: 'article' },
@@ -209,11 +224,11 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, da
         { id: 'guide' as const, label: '案内', icon: 'info' },
     ];
     const rows = [
-        ['ご旅行番号', 'QT-20240604-001'],
-        ['ご旅行期間', `2026年6月10日（火）〜 2026年6月13日（金） ${tripLength}`],
-        ['参加人数', '大人 2名 / 子供 0名'],
-        ['お客様名', '山田 太郎 様'],
-        ['旅行形態', '貸切プライベートツアー'],
+        ['ご旅行番号', customer?.tripNumber || 'QT-20240604-001'],
+        ['ご旅行期間', `${customer?.period || '2026年6月10日（火）〜 2026年6月13日（金）'} ${tripLength}`],
+        ['参加人数', customer?.headcount || '大人 2名 / 子供 0名'],
+        ['お客様名', `${customer?.name || '山田 太郎'} 様`],
+        ['旅行形態', customer?.tripType || '貸切プライベートツアー'],
     ];
     const fieldClass = 'w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 outline-none transition-colors hover:border-[#8FE7DE] hover:bg-white/80 focus:border-[#39C4B7] focus:bg-white focus:ring-2 focus:ring-[#39C4B7]/15';
     // Frame은 모듈 스코프로 이동 (입력마다 리마운트되어 스크롤·포커스가 튀던 문제 수정)
@@ -243,7 +258,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, da
                     </div>
                     <div className="relative h-[220px] overflow-hidden"><img src={mongoliaHero} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-[#00796F]/90 via-[#0F8F84]/45 to-transparent" /><div className="absolute bottom-5 left-5 right-5 text-white"><span className="rounded-xl bg-[#0F8F84] px-3 py-2 text-xs font-black">{tripLength}</span><input value={name} onChange={e => onNameChange(e.target.value)} placeholder="銀河・大自然パッケージ" className={`${fieldClass} mt-3 block max-w-[520px] text-[28px] font-black leading-tight text-white placeholder:text-white/70`} /><input value={description || settings.overview.heroTagline} onChange={e => onDescriptionChange(e.target.value)} className={`${fieldClass} mt-1 max-w-[560px] text-xs font-semibold text-white/90`} /></div></div>
                     <div className="p-5"><h4 className="mb-2 flex items-center gap-1.5 text-sm font-black text-[#0F8F84]"><span className="material-symbols-outlined text-base">check_circle</span>ご旅行概要</h4><textarea value={settings.overview.intro} onChange={e => onDocSection('overview', { intro: e.target.value })} rows={3} className={`${fieldClass} mb-3 resize-none text-[11px] font-semibold leading-relaxed text-slate-500`} /><div className="overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">{rows.map(([label, value]) => <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#8FE7DE] last:border-b-0"><div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div><div className="px-3 py-2 font-semibold text-slate-700">{value}</div></div>)}</div>
-                    <div className="mt-4 grid grid-cols-2 gap-3"><div><h4 className="mb-1 text-sm font-black text-[#0F8F84]">含まれているもの</h4><textarea value={settings.overview.includedText} onChange={e => onDocSection('overview', { includedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div><div><h4 className="mb-1 text-sm font-black text-slate-500">含まれないもの</h4><textarea value={settings.overview.excludedText} onChange={e => onDocSection('overview', { excludedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div></div><div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-xl border border-amber-200 bg-white p-3 text-center"><p className="text-[9px] font-black text-[#0F8F84]">旅行代金</p><input value={settings.overview.pricePerPerson} onChange={e => onDocSection('overview', { pricePerPerson: e.target.value.replace(/[^0-9]/g, '') })} className={`${fieldClass} text-center text-lg font-black text-[#0F8F84]`} /></div><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">参加人数</p><p className="text-sm font-black text-slate-700">大人 2名</p></div><div className="rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] p-3 text-center text-white"><p className="text-[9px] font-black">ご請求金額</p><p className="text-lg font-black">{sampleTotal.toLocaleString()}円</p></div></div></div>
+                    <div className="mt-4 grid grid-cols-2 gap-3"><div><h4 className="mb-1 text-sm font-black text-[#0F8F84]">含まれているもの</h4><textarea value={settings.overview.includedText} onChange={e => onDocSection('overview', { includedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div><div><h4 className="mb-1 text-sm font-black text-slate-500">含まれないもの</h4><textarea value={settings.overview.excludedText} onChange={e => onDocSection('overview', { excludedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div></div><div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-xl border border-amber-200 bg-white p-3 text-center"><p className="text-[9px] font-black text-[#0F8F84]">旅行代金</p><input value={settings.overview.pricePerPerson} onChange={e => onDocSection('overview', { pricePerPerson: e.target.value.replace(/[^0-9]/g, '') })} className={`${fieldClass} text-center text-lg font-black text-[#0F8F84]`} /></div><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">参加人数</p><p className="text-sm font-black text-slate-700">{peopleCount}名</p></div><div className="rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] p-3 text-center text-white"><p className="text-[9px] font-black">ご請求金額</p><p className="text-lg font-black">{sampleTotal.toLocaleString()}円</p></div></div><div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#39C4B7] bg-[#EAF8F7] p-3 text-center"><p className="text-[9px] font-black text-[#0F8F84]">ご予約金（お申込時）</p><p className="text-base font-black text-[#0F8F84]">{sampleDeposit.toLocaleString()}円</p></div><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">現地払い残金</p><p className="text-base font-black text-slate-700">{sampleLocal.toLocaleString()}円</p></div></div></div>
                 </Frame>}
                 {activePage === 'contract' && <Frame><div className="p-5"><div className="mb-5 flex items-start justify-between"><div className="text-[#0F8F84]"><p className="text-[12px] font-black">モンゴル銀河旅行社</p><p className="text-[8px] font-bold tracking-widest">MILKYWAY JAPAN</p></div><div className="rounded-lg bg-[#39C4B7]/10 px-3 py-2 text-[9px] font-black text-[#0F8F84]">契約日：2026年6月4日</div></div><h3 className="text-center text-[30px] font-black tracking-[0.18em] text-[#0F8F84]">ご旅行契約書</h3><p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500">Travel Contract</p><textarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11px] font-semibold leading-relaxed text-slate-500`} /><div className="mt-5 overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">{[['ご旅行名', name || '銀河・大自然パッケージ'], ['ご旅行期間', tripLength], ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`], ['合計金額', `${sampleTotal.toLocaleString()}円`], ['ガイド', '日本語ガイドが全日程同行します']].map(([label, value]) => <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#8FE7DE] last:border-b-0"><div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div><div className="px-3 py-2 font-semibold text-slate-700">{value}</div></div>)}</div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">キャンセル規定</p><div className="mt-2 space-y-1">{settings.contract.cancellationRows.slice(0, 5).map((row, idx) => <div key={idx} className="grid grid-cols-[1fr_90px] gap-1"><input value={row.period} onChange={e => onCancellation(idx, 'period', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /><input value={row.fee} onChange={e => onCancellation(idx, 'fee', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div>)}</div></div><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">お支払い</p><input value={settings.contract.paymentMethod} onChange={e => onDocSection('contract', { paymentMethod: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.contract.paymentDeadline} onChange={e => onDocSection('contract', { paymentDeadline: e.target.value })} className={`${fieldClass} mt-1 text-[10px] font-semibold text-slate-500`} /><div className="mt-4 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div></div></div></div></Frame>}
                 {activePage === 'detail' && <Frame><div className="p-5"><div className="mb-5 flex items-center justify-between"><input value={settings.detail.title} onChange={e => onDocSection('detail', { title: e.target.value })} className={`${fieldClass} text-[24px] font-black tracking-[0.12em] text-[#0F8F84]`} /><span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span></div>

@@ -23,6 +23,7 @@ export const reservations = sqliteTable('reservations', {
     reservationNumber: text('reservation_number'),
     itineraryTemplateId: text('itinerary_template_id'),
     contractData: text('contract_data'),
+    documentContent: text('document_content'),
     assignedGuide: text('assigned_guide'),
     contractUrl: text('contract_url'),
     itineraryUrl: text('itinerary_url'),

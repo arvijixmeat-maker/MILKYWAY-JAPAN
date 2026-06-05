@@ -4,6 +4,8 @@ import { api } from '../lib/api';
 import { type QuoteRequest, ConvertSelectionModal, QuoteDetailModal } from '../components/admin/QuoteModals';
 import { sendNotificationEmail } from '../lib/email';
 import { sendNotification } from '../utils/notification';
+import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
+import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplateManage';
 
 // Reservation Interface
 interface Reservation {
@@ -27,6 +29,7 @@ interface Reservation {
     contractUrl?: string; // Excel Sheet URL
     itineraryUrl?: string; // Excel Sheet URL
     itineraryTemplateId?: string; // selected itinerary template
+    documentContent?: ReservationDocContent | null; // 고객별 편집·저장된 문서 내용
 
     contractData?: {
         travelers?: Array<{ name?: string; passportName?: string; age?: number | string; birthdate?: string; phone?: string; gender?: string }>;
@@ -306,6 +309,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [contractEditorOpen, setContractEditorOpen] = useState(false);
     const [sendingContract, setSendingContract] = useState(false);
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
+    const [docEditorOpen, setDocEditorOpen] = useState(false);
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -501,6 +505,40 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const itinerarySent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === itineraryUrl || String(e.description || '').includes('日程')));
     const contractSent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === contractUrl || String(e.description || '').includes('契約')));
     const guideReady = !!reservation.assignedGuide || !!reservation.areAssignmentsVisibleToUser;
+
+    // ── 문서 편집기(예약/견적 자동 채움) ──
+    const isQuoteRes = (reservation as any).type === 'quote';
+    const docPeopleCount = reservation.totalPeople || (reservation.headcount ? parseInt(String(reservation.headcount).replace(/[^0-9]/g, '')) : 0) || 0;
+    const docCustomer = {
+        tripNumber: reservationNumber,
+        period: reservation.date || '',
+        headcount: reservation.headcount || (docPeopleCount ? `${docPeopleCount}名` : ''),
+        name: reservation.customerName,
+        tripType: reservation.productName,
+        totalAmount: editForm.totalAmount || undefined,
+        deposit: editForm.deposit || undefined,
+        localAmount: editForm.totalAmount ? (editForm.totalAmount - (editForm.deposit || 0)) : undefined,
+        peopleCount: docPeopleCount || undefined,
+    };
+    const docInitialContent: ReservationDocContent | null = (() => {
+        const dc = reservation.documentContent;
+        if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
+            return { name: dc.name || '', description: dc.description || '', days: dc.days || [], documentSettings: mergeDocumentSettings(dc.documentSettings) };
+        }
+        if (selectedTemplate) {
+            const decoded = decodeTemplateDescription(selectedTemplate.description || '');
+            let tDays: any[] = [];
+            try { tDays = typeof selectedTemplate.days === 'string' ? JSON.parse(selectedTemplate.days || '[]') : (selectedTemplate.days || []); } catch { tDays = []; }
+            return { name: selectedTemplate.name || '', description: decoded.description || '', days: tDays, documentSettings: decoded.documentSettings };
+        }
+        return null;
+    })();
+    const saveDocContent = async (content: ReservationDocContent) => {
+        const payload = { document_content: JSON.stringify(content) };
+        if (isQuoteRes) await (api.quotes as any).update(reservation.id, payload);
+        else await (api.reservations as any).update(reservation.id, payload);
+        onUpdate({ ...reservation, documentContent: content });
+    };
 
     const addHistory = (entry: { type: string; description: string; detail?: string }) => ({
         ...reservation,
@@ -1278,6 +1316,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                 <option key={t.id} value={t.id}>{t.name}</option>
                                                             ))}
                                                         </select>
+                                                        <button onClick={() => setDocEditorOpen(true)} className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold py-2.5 transition-colors">
+                                                            <span className="material-symbols-outlined text-base">edit_document</span>
+                                                            {reservation.documentContent ? '문서 편집 (저장됨)' : '문서 편집 (고객·금액 자동 채움)'}
+                                                        </button>
                                                         {ready && (
                                                             <div className="text-[11px] text-slate-400 font-mono truncate px-1">
                                                                 {itineraryUrl}
@@ -1641,6 +1683,15 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 </div>
             </div>
         )}
+
+        <ReservationDocumentEditor
+            open={docEditorOpen}
+            onClose={() => setDocEditorOpen(false)}
+            title={`${reservation.customerName || '고객'} · ${isQuoteRes ? '見積提案書' : '確定日程表'}`}
+            customer={docCustomer}
+            initialContent={docInitialContent}
+            onSave={saveDocContent}
+        />
     </>);
 };
 
@@ -1723,6 +1774,12 @@ export const AdminReservationManage: React.FC = () => {
                         if (!raw) return undefined;
                         if (typeof raw === 'object') return raw;
                         try { return JSON.parse(raw); } catch { return undefined; }
+                    })(),
+                    documentContent: (() => {
+                        const raw = r.documentContent || r.document_content;
+                        if (!raw) return null;
+                        if (typeof raw === 'object') return raw;
+                        try { return JSON.parse(raw); } catch { return null; }
                     })(),
                     assignedGuide: r.assignedGuide || r.assigned_guide,
                     dailyAccommodations: r.dailyAccommodations || r.daily_accommodations,
