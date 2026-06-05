@@ -509,9 +509,14 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     // ── 문서 편집기(예약/견적 자동 채움) ──
     const isQuoteRes = (reservation as any).type === 'quote';
     const docPeopleCount = reservation.totalPeople || (reservation.headcount ? parseInt(String(reservation.headcount).replace(/[^0-9]/g, '')) : 0) || 0;
+    const _sd = (reservation as any).startDate;
+    const _ed = (reservation as any).endDate;
+    const _nights = (_sd && _ed) ? Math.round((new Date(_ed).getTime() - new Date(_sd).getTime()) / 86400000) : NaN;
+    const docTripLength = (!Number.isNaN(_nights) && _nights >= 0) ? `${_nights}泊${_nights + 1}日` : undefined;
     const docCustomer = {
         tripNumber: reservationNumber,
         period: reservation.date || '',
+        tripLength: docTripLength,
         headcount: reservation.headcount || (docPeopleCount ? `${docPeopleCount}名` : ''),
         name: reservation.customerName,
         tripType: reservation.productName,
