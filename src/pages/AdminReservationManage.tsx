@@ -1614,7 +1614,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
 
         {/* Guide Selection Modal */}
         {showGuideModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[220] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/50" onClick={() => setShowGuideModal(false)} />
                 <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
                     <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -1659,7 +1659,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
 
         {/* Accommodation Selection Modal */}
         {showAccommodationModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[220] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/50" onClick={() => setShowAccommodationModal(false)} />
                 <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
                     <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -1703,6 +1703,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             customer={docCustomer}
             initialContent={docInitialContent}
             onSave={saveDocContent}
+            assignedGuide={reservation.assignedGuide}
+            dailyAccommodations={reservation.dailyAccommodations}
+            onAssignGuide={() => setShowGuideModal(true)}
+            onAssignAccommodation={(day) => { setSelectedDay(day); setShowAccommodationModal(true); }}
         />
     </>);
 };

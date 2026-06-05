@@ -35,9 +35,14 @@ interface Props {
     /** 저장돼 있던 문서 내용(없으면 템플릿/기본값) */
     initialContent: ReservationDocContent | null;
     onSave: (content: ReservationDocContent) => Promise<void>;
+    /** 가이드·숙소 배정 (상세내역의 picker 재사용) */
+    assignedGuide?: { name?: string; phone?: string; image?: string } | null;
+    dailyAccommodations?: Array<{ day: number; accommodation: { name?: string } }>;
+    onAssignGuide?: () => void;
+    onAssignAccommodation?: (day: number) => void;
 }
 
-export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, customer, initialContent, onSave }) => {
+export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, customer, initialContent, onSave, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [days, setDays] = useState<TemplateDay[]>([]);
@@ -106,6 +111,33 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         </button>
                     </div>
                 </div>
+                {(onAssignGuide || onAssignAccommodation) && (
+                    <div className="flex flex-shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 px-6 py-2.5">
+                        {onAssignGuide && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-slate-400">담당 가이드</span>
+                                <button onClick={onAssignGuide} className="inline-flex items-center gap-1 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30">
+                                    <span className="material-symbols-outlined text-[15px]">{assignedGuide?.name ? 'badge' : 'person_add'}</span>
+                                    {assignedGuide?.name || '가이드 배정'}
+                                </button>
+                            </div>
+                        )}
+                        {onAssignAccommodation && (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-slate-400">숙소(일자별)</span>
+                                {Array.from({ length: Math.max(days.length, dailyAccommodations?.length || 0, 1) }).map((_, i) => {
+                                    const dayNum = i + 1;
+                                    const a = dailyAccommodations?.find(d => d.day === dayNum);
+                                    return (
+                                        <button key={i} onClick={() => onAssignAccommodation(dayNum)} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-bold hover:bg-teal-50 dark:hover:bg-teal-900/30 ${a ? 'border-teal-200 dark:border-teal-700 bg-white text-teal-700 dark:bg-slate-800 dark:text-teal-300' : 'border-dashed border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800'}`}>
+                                            <span className="material-symbols-outlined text-[15px]">hotel</span>{dayNum}日: {a?.accommodation?.name || '선택'}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
                 <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900">
                     <TemplatePreview
                         name={name}
