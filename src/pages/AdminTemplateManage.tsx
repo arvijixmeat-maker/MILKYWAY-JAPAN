@@ -6,6 +6,7 @@ import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerMod
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
 import type { TouristSpot } from '../types/touristSpot';
 import type { Hotel } from '../types/hotel';
+import mongoliaHero from '../assets/login_bg_3.jpg';
 
 // ─── Types ───────────────────────────────────────────────
 type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
@@ -50,89 +51,212 @@ const LANGUAGES = ['한국어', '영어', '몽골어', '중국어', '일본어']
 const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
 const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
 
-// ─── Live Preview (목업: 히어로 + 가로 일자 탭 + 선택 일자 타임라인) ───
+// ─── Live Preview (document package: overview + contract + detailed itinerary + guide) ───
 const TemplatePreview: React.FC<{ name: string; description: string; days: TemplateDay[] }> = ({ name, description, days }) => {
-    const [active, setActive] = useState(0);
-    const total = days.length;
-    const safeActive = Math.min(active, Math.max(0, total - 1));
-    const day = days[safeActive];
+    const totalDays = days.length;
+    const nights = Math.max(0, totalDays - 1);
+    const samplePrice = 128000;
+    const sampleTotal = samplePrice * 2;
+    const sampleIncluded = [
+        { icon: 'hiking', label: '伝統衣装体験' },
+        { icon: 'pets', label: '乗馬体験' },
+        { icon: 'local_taxi', label: '専用車' },
+        { icon: 'hotel', label: '宿泊' },
+        { icon: 'restaurant', label: '全食事' },
+        { icon: 'support_agent', label: '日本語ガイド' },
+    ];
+
     return (
-        <div className="h-full overflow-y-auto rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
-            <p className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                <span className="material-symbols-outlined text-[15px]">person</span>고객 화면 미리보기
+        <div className="h-full overflow-y-auto rounded-2xl bg-[#F7FAFA] p-4 dark:bg-slate-900">
+            <p className="mb-3 flex items-center gap-1.5 px-1 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <span className="material-symbols-outlined text-[15px]">docs</span>문서 디자인 전체 미리보기
             </p>
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                {/* hero */}
-                <div className="px-5 py-5 text-white" style={{ background: 'linear-gradient(140deg,#0e9c84,#0a7d6a)' }}>
-                    <div className="text-[11px] font-bold tracking-wider opacity-80">MONGOLIA TRIP · 旅行日程</div>
-                    <div className="mt-1.5 text-[21px] font-extrabold leading-tight tracking-tight">{name || '템플릿 이름'}</div>
-                    {description && <div className="mt-2 text-xs leading-relaxed opacity-90">{description}</div>}
-                    <div className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold">
-                        <span className="material-symbols-outlined text-[14px]">calendar_today</span>日程 · 全{total}日間
-                    </div>
-                </div>
-                {/* body */}
-                <div className="px-4 pb-5 pt-4">
-                    {total === 0 ? (
-                        <p className="py-6 text-center text-xs text-slate-400">일정이 비어있습니다</p>
-                    ) : (
-                        <>
-                            <div className="mb-1 flex gap-1.5 overflow-x-auto pb-3">
-                                {days.map((d, i) => {
-                                    const on = i === safeActive;
-                                    return (
-                                        <button key={i} onClick={() => setActive(i)} className={`flex min-w-[46px] flex-shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-colors ${on ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-teal-50 hover:text-teal-700 dark:bg-slate-700 dark:text-slate-300'}`}>
-                                            <span className="text-[13px] font-extrabold">D-{i + 1}</span>
-                                            <span className="text-[9.5px] font-semibold opacity-80">{d.activities.length ? d.activities.length + '件' : '—'}</span>
-                                        </button>
-                                    );
-                                })}
+
+            <div className="space-y-4">
+                {/* Page 1: overview */}
+                <section className="overflow-hidden rounded-[18px] border border-[#8FE7DE] bg-white shadow-sm">
+                    <div className="flex items-center justify-between px-5 py-3">
+                        <div className="flex items-center gap-2 text-[#0F8F84]">
+                            <span className="material-symbols-outlined text-[26px]">landscape</span>
+                            <div>
+                                <p className="text-[11px] font-black">モンゴル大自然ツアー</p>
+                                <p className="text-[8px] font-bold tracking-widest">MONGOLIA NATURE TOUR</p>
                             </div>
-                            {day && (
-                                <>
-                                    <div className="mx-0.5 mb-3.5 mt-2 flex items-baseline gap-2">
-                                        <span className="text-[13px] font-extrabold text-teal-600">DAY {safeActive + 1}</span>
-                                        <span className="text-[15px] font-extrabold text-slate-900 dark:text-white">{day.title || '일차 제목'}</span>
-                                        {day.region && <span className="text-[11.5px] font-semibold text-slate-400">· {day.region}</span>}
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[20px] font-black tracking-[0.12em] text-[#0F8F84]">ご旅行日程表</p>
+                            <p className="text-[10px] font-semibold text-slate-400">銀河の下で、大自然と文化を体験する特別な旅へ</p>
+                        </div>
+                    </div>
+                    <div className="relative h-[150px] overflow-hidden">
+                        <img src={mongoliaHero} alt="" className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#00796F]/85 via-[#0F8F84]/40 to-transparent" />
+                        <div className="absolute bottom-4 left-5 text-white">
+                            <span className="rounded-xl bg-[#0F8F84] px-3 py-2 text-xs font-black">{nights}泊{totalDays || 0}日</span>
+                            <h3 className="mt-3 text-[24px] font-black leading-tight">{name || '銀河・大自然パッケージ'}</h3>
+                            <p className="mt-1 text-xs font-semibold text-white/85">{description || '伝統衣装体験・乗馬体験・ラクダ体験・ゲル体験 すべて込み'}</p>
+                        </div>
+                    </div>
+                    <div className="p-5">
+                        <h4 className="mb-2 flex items-center gap-1.5 text-sm font-black text-[#0F8F84]">
+                            <span className="material-symbols-outlined text-base">check_circle</span>ご旅行概要
+                        </h4>
+                        <div className="overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">
+                            {[
+                                ['ご旅行番号', 'QT-20240604-001'],
+                                ['ご旅行期間', `2026年6月10日（火）〜 2026年6月13日（金） ${nights}泊${totalDays || 0}日`],
+                                ['参加人数', '大人 2名 / 子供 0名'],
+                                ['お客様名', '山田 太郎 様'],
+                                ['旅行形態', '貸切プライベートツアー'],
+                            ].map(([label, value]) => (
+                                <div key={label} className="grid grid-cols-[100px_1fr] border-b border-[#8FE7DE] last:border-b-0">
+                                    <div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div>
+                                    <div className="px-3 py-2 font-semibold text-slate-700">{value}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <h4 className="mb-2 mt-4 text-sm font-black text-[#0F8F84]">含まれているもの</h4>
+                        <div className="grid grid-cols-3 gap-1.5">
+                            {sampleIncluded.map(item => (
+                                <div key={item.label} className="rounded-lg border border-[#8FE7DE] bg-white p-2 text-center text-[#0F8F84]">
+                                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                                    <p className="mt-1 text-[9px] font-black leading-tight">{item.label}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-4 grid grid-cols-3 gap-2">
+                            <div className="rounded-xl border border-amber-200 bg-white p-3 text-center">
+                                <p className="text-[9px] font-black text-[#0F8F84]">旅行代金</p>
+                                <p className="text-lg font-black text-[#0F8F84]">{samplePrice.toLocaleString()}円</p>
+                            </div>
+                            <div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center">
+                                <p className="text-[9px] font-black text-slate-400">参加人数</p>
+                                <p className="text-sm font-black text-slate-700">大人 2名</p>
+                            </div>
+                            <div className="rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] p-3 text-center text-white">
+                                <p className="text-[9px] font-black">ご請求金額</p>
+                                <p className="text-lg font-black">{sampleTotal.toLocaleString()}円</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Page 2: contract */}
+                <section className="rounded-[18px] border border-[#8FE7DE] bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-start justify-between">
+                        <div className="text-[#0F8F84]">
+                            <p className="text-[11px] font-black">モンゴル大自然ツアー</p>
+                            <p className="text-[8px] font-bold tracking-widest">MONGOLIA NATURE TOUR</p>
+                        </div>
+                        <div className="rounded-lg bg-[#39C4B7]/10 px-3 py-2 text-[9px] font-black text-[#0F8F84]">
+                            契約日：2026年6月4日
+                        </div>
+                    </div>
+                    <h3 className="text-center text-[24px] font-black tracking-[0.18em] text-[#0F8F84]">ご旅行契約書</h3>
+                    <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-500">Travel Contract</p>
+                    <div className="overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">
+                        {[
+                            ['ご旅行名', name || '銀河・大自然パッケージ'],
+                            ['ご旅行期間', `${nights}泊${totalDays || 0}日`],
+                            ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`],
+                            ['合計金額', `${sampleTotal.toLocaleString()}円`],
+                            ['ガイド', '日本語ガイドが全日程同行します'],
+                        ].map(([label, value]) => (
+                            <div key={label} className="grid grid-cols-[100px_1fr] border-b border-[#8FE7DE] last:border-b-0">
+                                <div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div>
+                                <div className="px-3 py-2 font-semibold text-slate-700">{value}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-[#8FE7DE] p-3">
+                            <p className="text-xs font-black text-[#0F8F84]">キャンセル規定</p>
+                            <ul className="mt-2 space-y-1 text-[10px] font-semibold text-slate-500">
+                                <li>30日〜15日前まで：10%</li>
+                                <li>14日〜8日前まで：20%</li>
+                                <li>7日〜3日前まで：30%</li>
+                            </ul>
+                        </div>
+                        <div className="rounded-xl border border-[#8FE7DE] p-3">
+                            <p className="text-xs font-black text-[#0F8F84]">電子署名欄</p>
+                            <div className="mt-5 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div>
+                            <div className="mt-4 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行会社署名</div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Page 3: detailed itinerary */}
+                <section className="rounded-[18px] border border-[#8FE7DE] bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-[22px] font-black tracking-[0.12em] text-[#0F8F84]">ご旅行日程表（詳細）</h3>
+                        <span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span>
+                    </div>
+                    {days.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-[#8FE7DE] py-8 text-center text-xs font-bold text-slate-400">일정을 입력하면 상세 일정 페이지가 자동 구성됩니다.</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {days.slice(0, 5).map(day => (
+                                <div key={day.day} className="grid grid-cols-[58px_1fr] gap-3">
+                                    <div className="rounded-xl bg-gradient-to-b from-[#0F8F84] to-[#39C4B7] px-2 py-3 text-center text-white">
+                                        <p className="text-[10px] font-black">DAY {day.day}</p>
+                                        <p className="mt-1 text-[11px] font-bold">{day.day}日目</p>
                                     </div>
-                                    {day.activities.length === 0 ? (
-                                        <div className="flex items-center gap-2 px-1 py-4 text-xs text-slate-400">
-                                            <span className="material-symbols-outlined text-[16px]">location_on</span>활동이 비어있습니다
+                                    <div className="rounded-xl border border-[#8FE7DE] p-3">
+                                        <p className="text-sm font-black text-[#0F8F84]">{day.title || `${day.day}日目`}</p>
+                                        <div className="mt-2 space-y-1.5">
+                                            {day.activities.slice(0, 5).map((activity, index) => (
+                                                <div key={index} className="grid grid-cols-[42px_1fr] gap-2 text-[11px]">
+                                                    <span className="font-mono font-bold text-slate-400">{activity.time || '--:--'}</span>
+                                                    <span className="font-semibold text-slate-700">{activity.title || '予定'}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ) : (
-                                        <div>
-                                            {day.activities.map((a, i) => {
-                                                const t = a.type ? TYPE_MAP[a.type] : null;
-                                                const acc = typeAccent(a.type);
-                                                const last = i === day.activities.length - 1;
-                                                return (
-                                                    <div key={i} className="flex gap-2.5">
-                                                        <div className="flex w-7 flex-shrink-0 flex-col items-center">
-                                                            <span className="mt-1 flex h-3 w-3 items-center justify-center rounded-full" style={{ background: acc.c }} />
-                                                            {!last && <span className="my-1 min-h-[8px] w-0 flex-1 border-l-2 border-dashed border-slate-200 dark:border-slate-600" />}
-                                                        </div>
-                                                        <div className="min-w-0 pb-3">
-                                                            {a.time && <div className="text-[11px] font-bold text-slate-400">{a.time}</div>}
-                                                            <div className="text-[13.5px] font-bold text-slate-900 dark:text-white">{a.title || t?.label || '(활동 제목)'}</div>
-                                                            {a.description && <div className="mt-0.5 whitespace-pre-wrap text-[11.5px] leading-relaxed text-slate-500">{a.description}</div>}
-                                                            {a.images && a.images.length > 0 && (
-                                                                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                                                                    {a.images.slice(0, 4).map((img, k) => (
-                                                                        <img key={k} src={img} alt="" loading="lazy" className="h-20 w-full rounded-lg object-cover" />
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
-                </div>
+                </section>
+
+                {/* Page 4: guide */}
+                <section className="overflow-hidden rounded-[18px] border border-[#8FE7DE] bg-white shadow-sm">
+                    <div className="grid gap-3 p-5 sm:grid-cols-2">
+                        <div className="rounded-xl border border-[#8FE7DE] p-4">
+                            <h3 className="text-sm font-black text-[#0F8F84]">ご案内・ご注意事項</h3>
+                            {[
+                                ['現地ツアーについて', '本ツアーは現地発着のプライベートツアーです。'],
+                                ['宿泊について', '全日程の宿泊先は予約状況により調整されます。'],
+                                ['気候について', '朝晩は冷える場合があるため防寒着をご準備ください。'],
+                                ['緊急連絡先', '+976-80-1234-5678'],
+                            ].map(item => (
+                                <div key={item[0]} className="mt-3 flex gap-2">
+                                    <span className="material-symbols-outlined text-[20px] text-[#0F8F84]">info</span>
+                                    <div>
+                                        <p className="text-xs font-black text-[#0F8F84]">{item[0]}</p>
+                                        <p className="text-[10px] font-semibold leading-relaxed text-slate-500">{item[1]}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="rounded-xl border border-[#8FE7DE] p-4">
+                            <h3 className="text-sm font-black text-[#0F8F84]">旅行条件（要約）</h3>
+                            <p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-500">
+                                この旅行条件は、予約時点の内容に基づいて作成されます。天候、道路、現地事情により行程を調整する場合があります。
+                            </p>
+                            <h3 className="mt-5 text-sm font-black text-[#0F8F84]">旅行代金のお支払い</h3>
+                            <p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-500">お支払い方法：銀行振込 / お支払い期限：出発前指定日まで</p>
+                        </div>
+                    </div>
+                    <div className="relative h-[96px] overflow-hidden">
+                        <img src={mongoliaHero} alt="" className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-white via-white/70 to-transparent" />
+                        <p className="absolute left-5 top-7 text-sm font-black text-[#0F8F84]">モンゴルの大自然と文化を心ゆくまでお楽しみください。</p>
+                        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-[#0F8F84] px-5 py-2 text-[10px] font-bold text-white">
+                            <span>モンゴル大自然ツアー</span>
+                            <span>info@mongolia-naturetour.com</span>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     );
@@ -492,9 +616,12 @@ const TemplatesTab: React.FC = () => {
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
-                <p className="text-sm text-slate-500 dark:text-slate-400">예약에 적용할 일정 템플릿을 미리 작성합니다.</p>
+                <div>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">고객에게 발송할 여행 문서 디자인을 만듭니다.</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">일정 내용은 문서 안에 들어가고, 고객 화면은 여행 개요·계약서·상세 일정·공통 안내 패키지로 구성됩니다.</p>
+                </div>
                 <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
-                    <span className="material-symbols-outlined text-sm">add</span> 템플릿 추가
+                    <span className="material-symbols-outlined text-sm">add</span> 문서 템플릿 추가
                 </button>
             </div>
 
@@ -506,32 +633,62 @@ const TemplatesTab: React.FC = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {templates.map(t => (
-                        <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-                            <div className="flex items-start justify-between mb-2">
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-slate-800 dark:text-white truncate">{t.name}</h3>
-                                    {t.description && <p className="text-sm text-slate-500 mt-0.5 truncate">{t.description}</p>}
-                                </div>
-                                <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-xs font-bold rounded-lg flex-shrink-0 ml-2">{t.days.length}일</span>
-                            </div>
-                            <div className="space-y-1 mb-4">
-                                {t.days.slice(0, 3).map(d => (
-                                    <div key={d.day} className="flex items-center gap-2 text-xs text-slate-500">
-                                        <span className="w-10 px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900/30 text-teal-600 rounded font-bold text-center">{d.day}일차</span>
-                                        <span className="truncate">{d.region ? `${d.region} · ` : ''}{d.title || '제목 없음'}</span>
-                                        <span className="text-slate-300 flex-shrink-0">({d.activities.length})</span>
+                        <div key={t.id} className="overflow-hidden rounded-2xl border border-[#8FE7DE]/80 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-teal-500/20 dark:bg-slate-800">
+                            <div className="relative h-36 overflow-hidden">
+                                <img src={mongoliaHero} alt="" className="h-full w-full object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#0F8F84]/95 via-[#0F8F84]/65 to-transparent" />
+                                <div className="absolute left-5 top-4 text-white">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[24px]">landscape</span>
+                                        <div>
+                                            <p className="text-[11px] font-black">モンゴル大自然ツアー</p>
+                                            <p className="text-[8px] font-bold tracking-widest text-white/70">DOCUMENT PACKAGE</p>
+                                        </div>
                                     </div>
-                                ))}
-                                {t.days.length > 3 && <p className="text-xs text-slate-400 pl-12">+ {t.days.length - 3}일 더...</p>}
+                                    <h3 className="mt-4 max-w-[420px] truncate text-xl font-black tracking-tight">{t.name}</h3>
+                                    {t.description && <p className="mt-1 max-w-[420px] truncate text-xs font-semibold text-white/80">{t.description}</p>}
+                                </div>
+                                <span className="absolute right-4 top-4 rounded-xl bg-white/90 px-3 py-1 text-xs font-black text-[#0F8F84] shadow-sm">{Math.max(0, t.days.length - 1)}박{t.days.length}일</span>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => handleEdit(t)} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium">수정</button>
-                                <button onClick={() => handleDuplicate(t)} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium inline-flex items-center gap-1" title="이 템플릿 복제">
-                                    <span className="material-symbols-outlined text-sm">content_copy</span>복제
-                                </button>
-                                <button onClick={() => handleDelete(t.id)} className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-sm font-medium" title="삭제">
-                                    <span className="material-symbols-outlined text-sm">delete</span>
-                                </button>
+
+                            <div className="p-5">
+                                <div className="mb-4 grid grid-cols-4 gap-2">
+                                    {[
+                                        { icon: 'article', label: '개요' },
+                                        { icon: 'contract', label: '계약서' },
+                                        { icon: 'route', label: '상세일정' },
+                                        { icon: 'qr_code_2', label: '안내/QR' },
+                                    ].map(item => (
+                                        <div key={item.label} className="rounded-xl border border-[#8FE7DE]/80 bg-[#F7FAFA] px-2 py-2 text-center text-[#0F8F84]">
+                                            <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                                            <p className="mt-1 text-[10px] font-black">{item.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+                                    <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">문서에 들어갈 일정 내용</p>
+                                    <div className="space-y-1">
+                                        {t.days.slice(0, 3).map(d => (
+                                            <div key={d.day} className="flex items-center gap-2 text-xs text-slate-500">
+                                                <span className="flex h-7 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#39C4B7]/15 text-[11px] font-black text-[#0F8F84]">{d.day}일</span>
+                                                <span className="truncate font-semibold">{d.region ? `${d.region} · ` : ''}{d.title || '제목 없음'}</span>
+                                                <span className="flex-shrink-0 text-slate-300">({d.activities.length})</span>
+                                            </div>
+                                        ))}
+                                        {t.days.length > 3 && <p className="pl-11 text-xs text-slate-400">+ {t.days.length - 3}일 더...</p>}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleEdit(t)} className="flex-1 rounded-xl bg-[#39C4B7] py-2 text-sm font-black text-white transition-colors hover:bg-[#0F8F84]">문서 디자인 수정</button>
+                                    <button onClick={() => handleDuplicate(t)} className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600" title="이 템플릿 복제">
+                                        <span className="material-symbols-outlined text-sm">content_copy</span>
+                                    </button>
+                                    <button onClick={() => handleDelete(t.id)} className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-500 transition-colors hover:bg-red-100" title="삭제">
+                                        <span className="material-symbols-outlined text-sm">delete</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}
