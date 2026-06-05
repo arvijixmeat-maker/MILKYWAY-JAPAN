@@ -306,10 +306,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
     const [templatesList, setTemplatesList] = useState<any[]>([]);
     const [sendingItinerary, setSendingItinerary] = useState(false);
-    const [contractEditorOpen, setContractEditorOpen] = useState(false);
     const [sendingContract, setSendingContract] = useState(false);
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
     const [docEditorOpen, setDocEditorOpen] = useState(false);
+    const [activeDocument, setActiveDocument] = useState<'itinerary' | 'contract'>('itinerary');
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -720,16 +720,16 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             description: itinerarySent ? '고객 발송 완료' : itineraryReady ? `${selectedTemplate?.name || '선택한 템플릿'} 발송 가능` : '일정표 템플릿 선택 필요',
             icon: 'map',
             done: itinerarySent,
-            actionLabel: itineraryReady ? (sendingItinerary ? '발송중' : '일정표 발송') : '템플릿 선택',
-            onAction: itineraryReady ? sendItineraryToCustomer : undefined,
+            actionLabel: itineraryReady ? '문서 확인' : '템플릿 필요',
+            onAction: itineraryReady ? () => setActiveDocument('itinerary') : undefined,
         },
         {
             title: '계약서',
             description: contractSent ? '고객 발송 완료' : contractHasTravelers ? `${contractTravelers.length}명 입력됨 · 재발송 가능` : '발송하면 고객이 직접 작성',
             icon: 'description',
             done: contractSent,
-            actionLabel: contractReady ? (sendingContract ? '발송중' : '계약서 발송') : '이메일 없음',
-            onAction: contractReady ? sendContractToCustomer : () => setContractEditorOpen(true),
+            actionLabel: contractReady ? '문서 확인' : '이메일 없음',
+            onAction: contractReady ? () => setActiveDocument('contract') : undefined,
         },
         {
             title: '현지 안내',
@@ -807,74 +807,39 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto bg-slate-50/60 dark:bg-slate-950/40">
                     <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <section className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+                        <section className="lg:col-span-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                                 <div>
-                                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-2.5 py-1 text-[11px] font-bold text-teal-700 dark:bg-teal-500/10 dark:text-teal-300">
+                                    <div className="inline-flex items-center gap-1.5 rounded-full bg-[#39C4B7]/10 px-3 py-1 text-[11px] font-black text-[#0F8F84]">
                                         <span className="material-symbols-outlined text-[15px]">route</span>
-                                        여행사 처리 플로우
+                                        예약 처리 현황
                                     </div>
-                                    <h3 className="mt-2 text-base font-extrabold tracking-tight text-slate-900 dark:text-white">이 예약에서 다음에 할 일</h3>
-                                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">고객 회신, 일정표, 계약서, 현지 안내를 한 곳에서 순서대로 처리합니다.</p>
+                                    <h3 className="mt-2 text-base font-black tracking-tight text-slate-900 dark:text-white">필요한 일만 순서대로 확인합니다</h3>
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                    <button
-                                        onClick={() => setDocEditorOpen(true)}
-                                        className="h-9 px-3.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white shadow-sm shadow-teal-500/20 transition-colors"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">edit_document</span>
-                                        문서 편집 (고객·금액 자동)
-                                    </button>
-                                    <button
-                                        onClick={() => copyCustomerMessage('itinerary')}
-                                        disabled={!itineraryReady}
-                                        className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${itineraryReady ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">{copiedDocId === 'itinerary-message' ? 'check' : 'content_copy'}</span>
-                                        일정표 안내문
-                                    </button>
-                                    <button
-                                        onClick={() => copyCustomerMessage('contract')}
-                                        disabled={!contractReady}
-                                        className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${contractReady ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">{copiedDocId === 'contract-message' ? 'check' : 'content_copy'}</span>
-                                        계약서 안내문
-                                    </button>
-                                </div>
+                                <p className="text-xs font-semibold text-slate-400">문서 발송과 링크 복사는 아래 문서 작업창에서 처리합니다.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                            <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
                                 {operationSteps.map((step, index) => (
-                                    <div
+                                    <button
                                         key={step.title}
-                                        className={`rounded-xl border p-3 min-h-[132px] flex flex-col transition-colors ${step.done
-                                            ? 'border-teal-100 bg-teal-50/70 dark:border-teal-500/20 dark:bg-teal-500/10'
-                                            : 'border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/50'
-                                            }`}
+                                        type="button"
+                                        onClick={step.onAction}
+                                        disabled={!step.onAction}
+                                        className={`group flex min-h-[86px] items-start gap-3 rounded-2xl border p-3 text-left transition-colors ${step.done
+                                            ? 'border-[#8FE7DE] bg-[#39C4B7]/10'
+                                            : 'border-slate-100 bg-[#F7FAFA] dark:border-slate-800 dark:bg-slate-950/50'
+                                            } ${step.onAction ? 'hover:border-[#39C4B7] hover:bg-white dark:hover:bg-slate-900' : 'cursor-default'}`}
                                     >
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${step.done ? 'bg-teal-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700'}`}>
-                                                <span className="material-symbols-outlined text-[18px]">{step.done ? 'check' : step.icon}</span>
-                                            </div>
-                                            <span className="text-[10px] font-bold text-slate-400">STEP {index + 1}</span>
-                                        </div>
-                                        <div className="mt-3 flex-1">
-                                            <p className="text-sm font-extrabold text-slate-900 dark:text-white">{step.title}</p>
-                                            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{step.description}</p>
-                                        </div>
-                                        <button
-                                            onClick={step.onAction}
-                                            disabled={!step.onAction || (step.title === '일정표' && sendingItinerary) || (step.title === '계약서' && sendingContract)}
-                                            className={`mt-3 h-8 rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-1 transition-colors ${step.onAction
-                                                ? 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200'
-                                                : 'bg-white/70 text-slate-400 dark:bg-slate-800/60'
-                                                }`}
-                                        >
-                                            <span className="material-symbols-outlined text-[15px]">{step.done ? 'task_alt' : 'arrow_forward'}</span>
-                                            {step.actionLabel}
-                                        </button>
-                                    </div>
+                                        <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${step.done ? 'bg-[#14b8a6] text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700'}`}>
+                                            <span className="material-symbols-outlined text-[17px]">{step.done ? 'check' : step.icon}</span>
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[10px] font-black text-slate-400">STEP {index + 1}</span>
+                                            <span className="mt-0.5 block text-sm font-black text-slate-900 dark:text-white">{step.title}</span>
+                                            <span className="mt-1 block text-[11px] font-semibold leading-snug text-slate-500 dark:text-slate-400">{step.description}</span>
+                                        </span>
+                                    </button>
                                 ))}
                             </div>
                         </section>
@@ -1230,327 +1195,169 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     </button>
                                 </div>
                             </section>
-
                             {/* Documents */}
-                            <section>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="material-symbols-outlined text-base text-slate-500">folder_shared</span>
-                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">문서 센터</h3>
+                            <section className="lg:col-span-2">
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base text-slate-500">folder_shared</span>
+                                        <h3 className="text-sm font-black tracking-tight text-slate-800 dark:text-white">고객 문서 작업</h3>
+                                    </div>
+                                    <button
+                                        onClick={sendReadyDocumentsToCustomer}
+                                        disabled={sendingAllDocs || (!itineraryReady && !contractReady) || (itinerarySent && contractSent)}
+                                        className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-black transition-colors ${!sendingAllDocs && (itineraryReady || contractReady) && !(itinerarySent && contractSent)
+                                            ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]'
+                                            : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                                            }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{sendingAllDocs ? 'hourglass_top' : 'outgoing_mail'}</span>
+                                        {sendingAllDocs ? '발송중' : '준비 문서 일괄 발송'}
+                                    </button>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <div className="bg-white dark:bg-slate-800 border border-teal-100 dark:border-teal-500/20 rounded-xl p-4 shadow-sm">
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <p className="text-sm font-extrabold text-slate-900 dark:text-white">고객 발송 패키지</p>
-                                                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                                                        고객 마이페이지에서 열리는 문서를 예약 상세에서 바로 확인하고 발송합니다.
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={sendReadyDocumentsToCustomer}
-                                                    disabled={sendingAllDocs || (!itineraryReady && !contractReady) || (itinerarySent && contractSent)}
-                                                    className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors flex-shrink-0 ${!sendingAllDocs && (itineraryReady || contractReady) && !(itinerarySent && contractSent)
-                                                        ? 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200'
-                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-default'
-                                                        }`}
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">{sendingAllDocs ? 'hourglass_top' : 'outgoing_mail'}</span>
-                                                    {sendingAllDocs ? '발송중' : '준비 문서 발송'}
-                                                </button>
+
+                                <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="border-b border-slate-100 bg-[#F7FAFA] p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-black text-slate-950 dark:text-white">고객에게 보낼 문서를 실제 화면으로 확인합니다</p>
+                                                <p className="mt-1 text-xs font-semibold text-slate-400">템플릿 선택 후 미리보기, 링크 복사, 이메일 발송만 남겼습니다.</p>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className={`rounded-lg border px-3 py-2 ${itinerarySent
-                                                    ? 'border-teal-100 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300'
-                                                    : itineraryReady
-                                                        ? 'border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300'
-                                                        : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'
-                                                    }`}>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">일정표</p>
-                                                    <p className="mt-0.5 text-xs font-extrabold">{itinerarySent ? '발송 완료' : itineraryReady ? '발송 가능' : '템플릿 필요'}</p>
-                                                </div>
-                                                <div className={`rounded-lg border px-3 py-2 ${contractSent
-                                                    ? 'border-teal-100 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300'
-                                                    : contractReady
-                                                        ? 'border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300'
-                                                        : 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'
-                                                    }`}>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">계약서</p>
-                                                    <p className="mt-0.5 text-xs font-extrabold">{contractSent ? '발송 완료' : contractReady ? '발송 가능' : '이메일 없음'}</p>
-                                                </div>
+                                            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+                                                {[
+                                                    { key: 'itinerary' as const, label: '일정표', ready: itineraryReady, sent: itinerarySent, icon: 'map' },
+                                                    { key: 'contract' as const, label: '계약서', ready: contractReady, sent: contractSent, icon: 'contract' },
+                                                ].map(doc => (
+                                                    <button
+                                                        key={doc.key}
+                                                        onClick={() => setActiveDocument(doc.key)}
+                                                        className={`h-10 rounded-xl px-4 text-xs font-black transition-colors inline-flex items-center justify-center gap-1.5 ${activeDocument === doc.key
+                                                            ? 'bg-[#14b8a6] text-white shadow-sm'
+                                                            : 'text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
+                                                            }`}
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">{doc.sent ? 'check_circle' : doc.icon}</span>
+                                                        {doc.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-end">
+                                            <label className="block">
+                                                <span className="mb-1.5 block text-[11px] font-black text-slate-400">일정표 템플릿</span>
+                                                <select
+                                                    value={editForm.itineraryTemplateId || ''}
+                                                    onChange={e => {
+                                                        const newId = e.target.value || undefined;
+                                                        const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
+                                                        setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
+                                                        onUpdate(updated);
+                                                        setActiveDocument('itinerary');
+                                                    }}
+                                                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition-all focus:border-[#39C4B7] focus:ring-4 focus:ring-[#39C4B7]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                                                >
+                                                    <option value="">일정표 템플릿 선택</option>
+                                                    {templatesList.map((t: any) => (
+                                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <span className={`inline-flex h-11 items-center justify-center rounded-2xl px-3 text-[11px] font-black ${itinerarySent ? 'bg-teal-50 text-teal-700' : itineraryReady ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                    일정표 {itinerarySent ? '발송완료' : itineraryReady ? '준비됨' : '대기'}
+                                                </span>
+                                                <span className={`inline-flex h-11 items-center justify-center rounded-2xl px-3 text-[11px] font-black ${contractSent ? 'bg-teal-50 text-teal-700' : contractReady ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                    계약서 {contractSent ? '발송완료' : contractReady ? '준비됨' : '대기'}
+                                                </span>
+                                                <span className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-100 px-3 text-[11px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                                    고객 페이지 자동 연결
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Itinerary — template-based auto link */}
-                                    {(() => {
-                                        const itineraryUrl = `${window.location.origin}/documents/itinerary/${(reservation as any).reservationNumber || reservation.id}`;
-                                        const templateId = editForm.itineraryTemplateId || '';
-                                        const selectedTemplate = templatesList.find((t: any) => t.id === templateId);
-                                        const ready = !!templateId;
-                                        return (
-                                            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
-                                                <div className="grid grid-cols-[36px_1fr_auto] gap-3 items-center px-3.5 py-3">
-                                                    <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
-                                                        <span className="material-symbols-outlined text-lg">map</span>
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">확정 일정표</p>
-                                                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                                                            {ready ? `${selectedTemplate?.name || '템플릿'} · 자동 생성 링크` : '템플릿 선택 필요'}
-                                                        </p>
-                                                    </div>
-                                                    {ready ? (
-                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 text-teal-700">
-                                                            <span className="material-symbols-outlined text-xs">check_circle</span>준비됨
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-700">
-                                                            <span className="material-symbols-outlined text-xs">schedule</span>미설정
-                                                        </span>
-                                                    )}
+                                    <div className="grid min-h-[520px] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_230px]">
+                                        <div className="bg-slate-100/70 p-4 dark:bg-slate-950/50">
+                                            {activeDocument === 'itinerary' && !itineraryReady ? (
+                                                <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-center dark:border-slate-700 dark:bg-slate-900">
+                                                    <span className="material-symbols-outlined text-4xl text-slate-300">map</span>
+                                                    <p className="mt-3 text-sm font-black text-slate-700 dark:text-slate-200">일정표 템플릿을 먼저 선택하세요</p>
+                                                    <p className="mt-1 text-xs font-semibold text-slate-400">선택하면 고객에게 보이는 문서가 이 창에 바로 표시됩니다.</p>
                                                 </div>
-                                                <div className="px-3.5 pb-3.5 border-t border-slate-100 dark:border-slate-700">
-                                                    <div className="mt-3 space-y-2">
-                                                        <label className="text-[11px] font-semibold text-slate-500">일정 템플릿</label>
-                                                        <select
-                                                            value={templateId}
-                                                            onChange={e => {
-                                                                const newId = e.target.value || undefined;
-                                                                const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
-                                                                setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
-                                                                onUpdate(updated);
-                                                            }}
-                                                            className="w-full h-[38px] px-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                                        >
-                                                            <option value="">— 템플릿 선택 —</option>
-                                                            {templatesList.map((t: any) => (
-                                                                <option key={t.id} value={t.id}>{t.name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <button onClick={() => setDocEditorOpen(true)} className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold py-2.5 transition-colors">
-                                                            <span className="material-symbols-outlined text-base">edit_document</span>
-                                                            {reservation.documentContent ? '문서 편집 (저장됨)' : '문서 편집 (고객·금액 자동 채움)'}
-                                                        </button>
-                                                        {ready && (
-                                                            <div className="text-[11px] text-slate-400 font-mono truncate px-1">
-                                                                {itineraryUrl}
-                                                            </div>
-                                                        )}
-                                                        <div className="flex gap-2 pt-1">
-                                                            <button
-                                                                onClick={() => window.open(itineraryUrl, '_blank')}
-                                                                disabled={!ready}
-                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">open_in_new</span>미리보기
-                                                            </button>
-                                                            <button
-                                                                onClick={() => { if (!ready) return; navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}
-                                                                disabled={!ready}
-                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">{copiedDocId === 'itinerary' ? 'check' : 'content_copy'}</span>
-                                                                {copiedDocId === 'itinerary' ? '복사됨' : '복사'}
-                                                            </button>
-                                                            <button
-                                                                onClick={sendItineraryToCustomer}
-                                                                disabled={!ready || sendingItinerary}
-                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready && !sendingItinerary ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">send</span>
-                                                                {sendingItinerary ? '발송중' : '발송'}
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                            ) : (
+                                                <div className="mx-auto h-[620px] max-w-[820px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800">
+                                                    <iframe
+                                                        title={activeDocument === 'itinerary' ? '확정 일정표 미리보기' : '여행 계약서 미리보기'}
+                                                        src={activeDocument === 'itinerary' ? itineraryUrl : contractUrl}
+                                                        className="h-full w-full bg-white"
+                                                    />
                                                 </div>
+                                            )}
+                                        </div>
+
+                                        <aside className="border-t border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 xl:border-l xl:border-t-0">
+                                            <div className="rounded-2xl bg-[#F7FAFA] p-4 dark:bg-slate-950/50">
+                                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">현재 문서</p>
+                                                <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">
+                                                    {activeDocument === 'itinerary' ? '확정 일정표' : '여행 계약서'}
+                                                </p>
+                                                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
+                                                    {activeDocument === 'itinerary'
+                                                        ? (selectedTemplate?.name || '템플릿을 선택하면 자동 생성됩니다.')
+                                                        : '예약 정보와 고객 입력 정보를 바탕으로 자동 생성됩니다.'}
+                                                </p>
                                             </div>
-                                        );
-                                    })()}
 
-                                    {/* Contract — template-based auto link */}
-                                    {(() => {
-                                        const contractUrl = `${window.location.origin}/documents/contract/${(reservation as any).reservationNumber || reservation.id}`;
-                                        const cd = editForm.contractData || {};
-                                        const travelers = cd.travelers || [];
-                                        // 고객이 직접 작성하므로 링크는 항상 발송 가능 (여행자 정보 없어도 OK)
-                                        const ready = true;
-
-                                        const updateContract = (patch: any) => {
-                                            const next = { ...(editForm.contractData || {}), ...patch };
-                                            const updated = { ...reservation, contractData: next } as Reservation;
-                                            setEditForm(prev => prev ? { ...prev, contractData: next } : prev);
-                                            onUpdate(updated);
-                                        };
-
-                                        const updateTraveler = (idx: number, patch: any) => {
-                                            const arr = [...(cd.travelers || [])];
-                                            arr[idx] = { ...(arr[idx] || {}), ...patch };
-                                            updateContract({ travelers: arr });
-                                        };
-                                        const addTraveler = () => updateContract({ travelers: [...(cd.travelers || []), { name: '' }] });
-                                        const removeTraveler = (idx: number) => {
-                                            const arr = [...(cd.travelers || [])];
-                                            arr.splice(idx, 1);
-                                            updateContract({ travelers: arr });
-                                        };
-
-                                        return (
-                                            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
-                                                <div className="grid grid-cols-[36px_1fr_auto] gap-3 items-center px-3.5 py-3">
-                                                    <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
-                                                        <span className="material-symbols-outlined text-lg">description</span>
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-900 dark:text-white">여행 계약서</p>
-                                                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                                                            {travelers.length > 0 ? `${travelers.length}명 입력됨 · 자동 생성 링크` : '발송하면 고객이 직접 작성 · 자동 생성 링크'}
-                                                        </p>
-                                                    </div>
-                                                    {ready ? (
-                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 text-teal-700">
-                                                            <span className="material-symbols-outlined text-xs">check_circle</span>준비됨
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[11px] font-bold inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-700">
-                                                            <span className="material-symbols-outlined text-xs">schedule</span>미설정
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="px-3.5 pb-3.5 border-t border-slate-100 dark:border-slate-700">
-                                                    {/* Editor toggle */}
-                                                    <button
-                                                        onClick={() => setContractEditorOpen(!contractEditorOpen)}
-                                                        className="w-full mt-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg inline-flex items-center justify-center gap-1 transition-colors"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">{contractEditorOpen ? 'expand_less' : 'edit'}</span>
-                                                        {contractEditorOpen ? '계약서 정보 닫기' : '계약서 정보 편집'}
-                                                    </button>
-
-                                                    {(cd.customerSubmittedAt || cd.agreement?.agreed) && (
-                                                        <div className="mt-3 rounded-lg border border-teal-200 dark:border-teal-700 bg-teal-50 dark:bg-teal-900/20 px-3 py-2.5 text-xs">
-                                                            <p className="font-bold text-teal-700 dark:text-teal-300 inline-flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-sm">task_alt</span>고객이 계약서를 작성했습니다
-                                                            </p>
-                                                            <p className="mt-1 text-slate-600 dark:text-slate-300">
-                                                                {cd.agreement?.agreed && <>동의: <b>{cd.agreement.name}</b>{cd.agreement.agreedAt ? ` (${cd.agreement.agreedAt.split('T')[0]})` : ''} · </>}
-                                                                여행자 {(cd.travelers || []).length}명 정보 입력됨
-                                                            </p>
-                                                        </div>
-                                                    )}
-
-                                                    {contractEditorOpen && (
-                                                        <div className="mt-3 space-y-3 border border-slate-100 dark:border-slate-700 rounded-lg p-3">
-                                                            {/* Travelers */}
-                                                            <div>
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">여행자</p>
-                                                                    <button onClick={addTraveler} className="text-[11px] font-semibold text-teal-600 hover:text-teal-700 inline-flex items-center gap-0.5">
-                                                                        <span className="material-symbols-outlined text-xs">add</span>추가
-                                                                    </button>
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    {travelers.length === 0 && (
-                                                                        <button onClick={addTraveler} className="w-full py-2 text-[11px] font-semibold text-slate-500 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
-                                                                            여행자 추가
-                                                                        </button>
-                                                                    )}
-                                                                    {travelers.map((t, i) => (
-                                                                        <div key={i} className="bg-slate-50 dark:bg-slate-700/40 rounded-lg p-2.5 space-y-1.5">
-                                                                            <div className="flex items-center justify-between">
-                                                                                <span className="text-[11px] font-semibold text-slate-500">#{i + 1}</span>
-                                                                                <button onClick={() => removeTraveler(i)} className="text-[11px] text-slate-400 hover:text-red-500">
-                                                                                    <span className="material-symbols-outlined text-sm">close</span>
-                                                                                </button>
-                                                                            </div>
-                                                                            <div className="grid grid-cols-2 gap-1.5">
-                                                                                <input type="text" placeholder="氏名" value={t.name || ''} onChange={e => updateTraveler(i, { name: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                                <input type="text" placeholder="パスポート氏名" value={t.passportName || ''} onChange={e => updateTraveler(i, { passportName: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                                <input type="date" title="生年月日" value={t.birthdate || ''} onChange={e => updateTraveler(i, { birthdate: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                                <select value={t.gender || ''} onChange={e => updateTraveler(i, { gender: e.target.value })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500">
-                                                                                    <option value="">性別</option>
-                                                                                    <option value="男">男</option>
-                                                                                    <option value="女">女</option>
-                                                                                </select>
-                                                                                <input type="text" placeholder="連絡先" value={t.phone || ''} onChange={e => updateTraveler(i, { phone: e.target.value })} className="col-span-2 px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Arrival */}
-                                                            <div>
-                                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">モンゴル到着</p>
-                                                                <div className="grid grid-cols-3 gap-1.5">
-                                                                    <input type="date" value={cd.arrival?.date || ''} onChange={e => updateContract({ arrival: { ...(cd.arrival || {}), date: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                    <input type="time" value={cd.arrival?.time || ''} onChange={e => updateContract({ arrival: { ...(cd.arrival || {}), time: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                    <input type="text" placeholder="航空便" value={cd.arrival?.flight || ''} onChange={e => updateContract({ arrival: { ...(cd.arrival || {}), flight: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Departure */}
-                                                            <div>
-                                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">モンゴル出発</p>
-                                                                <div className="grid grid-cols-3 gap-1.5">
-                                                                    <input type="date" value={cd.departure?.date || ''} onChange={e => updateContract({ departure: { ...(cd.departure || {}), date: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                    <input type="time" value={cd.departure?.time || ''} onChange={e => updateContract({ departure: { ...(cd.departure || {}), time: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                    <input type="text" placeholder="航空便" value={cd.departure?.flight || ''} onChange={e => updateContract({ departure: { ...(cd.departure || {}), flight: e.target.value } })} className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Region & Category */}
-                                                            <div className="grid grid-cols-2 gap-1.5">
-                                                                <div>
-                                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">旅行地域</p>
-                                                                    <input type="text" placeholder="中央モンゴル" value={cd.region || ''} onChange={e => updateContract({ region: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">区分</p>
-                                                                    <input type="text" placeholder="フルパッケージ" value={cd.category || ''} onChange={e => updateContract({ category: e.target.value })} className="w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Link + buttons */}
-                                                    <div className="mt-3 space-y-2">
-                                                        {ready && (
-                                                            <div className="text-[11px] text-slate-400 font-mono truncate px-1">
-                                                                {contractUrl}
-                                                            </div>
-                                                        )}
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => window.open(contractUrl, '_blank')}
-                                                                disabled={!ready}
-                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">open_in_new</span>미리보기
-                                                            </button>
-                                                            <button
-                                                                onClick={() => { if (!ready) return; navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}
-                                                                disabled={!ready}
-                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">{copiedDocId === 'contract' ? 'check' : 'content_copy'}</span>
-                                                                {copiedDocId === 'contract' ? '복사됨' : '복사'}
-                                                            </button>
-                                                            <button
-                                                                onClick={sendContractToCustomer}
-                                                                disabled={!ready || sendingContract}
-                                                                className={`flex-1 h-[34px] text-xs font-bold rounded-lg inline-flex items-center justify-center gap-1 transition-colors ${ready && !sendingContract ? 'bg-teal-500 text-white hover:bg-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm">send</span>
-                                                                {sendingContract ? '발송중' : '발송'}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                            <div className="mt-4 space-y-2">
+                                                <button
+                                                    onClick={() => setDocEditorOpen(true)}
+                                                    className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#14b8a6] text-xs font-black text-white transition-colors hover:bg-[#0f8f84]"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">edit_document</span>
+                                                    {reservation.documentContent ? '저장된 문서 편집' : '문서 직접 편집'}
+                                                </button>
+                                                <button
+                                                    onClick={() => window.open(activeDocument === 'itinerary' ? itineraryUrl : contractUrl, '_blank')}
+                                                    disabled={activeDocument === 'itinerary' && !itineraryReady}
+                                                    className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-black transition-colors ${(activeDocument !== 'itinerary' || itineraryReady) ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                                    새 창에서 열기
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = activeDocument === 'itinerary' ? itineraryUrl : contractUrl;
+                                                        if (activeDocument === 'itinerary' && !itineraryReady) return;
+                                                        navigator.clipboard.writeText(url);
+                                                        setCopiedDocId(activeDocument);
+                                                        setTimeout(() => setCopiedDocId(null), 1500);
+                                                    }}
+                                                    disabled={activeDocument === 'itinerary' && !itineraryReady}
+                                                    className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-black transition-colors ${(activeDocument !== 'itinerary' || itineraryReady) ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">{copiedDocId === activeDocument ? 'check' : 'content_copy'}</span>
+                                                    {copiedDocId === activeDocument ? '복사됨' : '링크 복사'}
+                                                </button>
+                                                <button
+                                                    onClick={activeDocument === 'itinerary' ? sendItineraryToCustomer : sendContractToCustomer}
+                                                    disabled={activeDocument === 'itinerary' ? (!itineraryReady || sendingItinerary) : (!contractReady || sendingContract)}
+                                                    className={`flex h-11 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-black transition-colors ${activeDocument === 'itinerary'
+                                                        ? (itineraryReady && !sendingItinerary ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800')
+                                                        : (contractReady && !sendingContract ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800')
+                                                        }`}
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">send</span>
+                                                    {activeDocument === 'itinerary'
+                                                        ? (sendingItinerary ? '발송중' : '일정표 발송')
+                                                        : (sendingContract ? '발송중' : '계약서 발송')}
+                                                </button>
                                             </div>
-                                        );
-                                    })()}
+
+                                            <div className="mt-4 rounded-2xl border border-slate-100 p-3 text-xs font-semibold leading-relaxed text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                                                고객은 이메일 링크와 마이페이지에서 동일한 문서를 확인합니다. 관리자는 이 화면에서 실제 표시 상태만 확인하고 바로 발송하면 됩니다.
+                                            </div>
+                                        </aside>
+                                    </div>
                                 </div>
                             </section>
 
