@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { GuideDetailModal, AccommodationDetailModal } from '../components/common/DetailModals';
+import mongoliaHero from '../assets/login_bg_3.jpg';
 
 interface Activity {
     time?: string;
@@ -110,7 +111,7 @@ const parseImage = (value: any): string => {
 };
 
 const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="grid grid-cols-[110px_1fr] border-b border-slate-200 last:border-b-0">
+    <div className="grid grid-cols-[110px_1fr] border-b border-[#8FE7DE]/70 last:border-b-0">
         <div className="bg-slate-50 px-3 py-2.5 text-[12px] font-bold text-slate-500">{label}</div>
         <div className="px-3 py-2.5 text-[13px] font-bold text-slate-900">{value || '-'}</div>
     </div>
@@ -159,7 +160,7 @@ export const DocumentItinerary: React.FC = () => {
     if (error || !data) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
-                <div className="max-w-sm rounded-2xl bg-white p-6 text-center shadow-sm border border-slate-200">
+                <div className="max-w-sm rounded-2xl bg-white p-6 text-center shadow-sm border border-[#8FE7DE]/70">
                     <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
                     <p className="mt-3 text-lg font-bold text-slate-800">日程表が見つかりません</p>
                     <p className="mt-1 text-sm text-slate-500">{error || 'URLをご確認ください。'}</p>
@@ -186,27 +187,34 @@ export const DocumentItinerary: React.FC = () => {
                 @page { margin: 12mm; }
             `}</style>
 
-            <div className="min-h-screen bg-slate-100 px-3 py-4 sm:px-4 sm:py-8 print:bg-white print:p-0">
-                <main className="doc-shell mx-auto max-w-[900px] overflow-hidden rounded-2xl bg-white shadow-xl print:shadow-none">
-                    <section className="border-b-4 border-teal-700 px-5 py-6 sm:px-9">
-                        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <p className="text-[12px] font-black uppercase tracking-[0.22em] text-teal-700">Milkyway Japan</p>
-                                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">CONFIRMED ITINERARY</h1>
-                                <p className="mt-2 text-sm font-medium text-slate-500">モンゴル旅行 確定日程表</p>
-                            </div>
-                            <div className="rounded-xl border border-slate-200 text-left sm:w-[260px]">
+            <div className="min-h-screen bg-[#F7FAFA] px-3 py-4 sm:px-4 sm:py-8 print:bg-white print:p-0">
+                <main className="doc-shell mx-auto max-w-[900px] overflow-hidden rounded-[24px] border border-[#8FE7DE]/70 bg-white shadow-xl print:shadow-none">
+                    <section className="relative overflow-hidden border-b-4 border-[#0F8F84]">
+                        <div className="absolute inset-0">
+                            <img src={mongoliaHero} alt="Mongolia nature" className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#00796F]/95 via-[#0F8F84]/75 to-transparent" />
+                        </div>
+                        <div className="relative px-5 py-7 text-white sm:px-9 sm:py-10">
+                            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p className="text-[12px] font-black uppercase tracking-[0.22em] text-white/80">Milkyway Japan</p>
+                                    <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">ご旅行日程表</h1>
+                                    <p className="mt-2 text-sm font-semibold text-white/85">モンゴルの大自然と文化を体験する特別な旅へ</p>
+                                    <div className="mt-5 inline-flex rounded-2xl bg-white/15 px-4 py-2 text-sm font-black backdrop-blur">{duration ? `${duration.nights}泊${duration.days}日` : `${days.length}日間`} · {reservation.productName}</div>
+                                </div>
+                                <div className="rounded-xl border border-white/30 bg-white/95 text-left text-slate-900 shadow-lg backdrop-blur sm:w-[260px]">
                                 <InfoRow label="文書番号" value={`IT-${documentNumber}`} />
                                 <InfoRow label="予約番号" value={documentNumber} />
                                 <InfoRow label="発行日" value={issuedDate} />
                             </div>
                         </div>
+                        </div>
                     </section>
 
-                    <section className="grid gap-5 border-b border-slate-200 px-5 py-5 sm:grid-cols-[1.2fr_1fr] sm:px-9">
+                    <section className="grid gap-5 border-b border-[#8FE7DE]/70 px-5 py-5 sm:grid-cols-[1.2fr_1fr] sm:px-9">
                         <div>
                             <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">Bill To / Customer</p>
-                            <div className="mt-2 rounded-xl border border-slate-200">
+                            <div className="mt-2 rounded-xl border border-[#8FE7DE]/70">
                                 <InfoRow label="お客様名" value={`${reservation.customerName || 'お客様'} 様`} />
                                 <InfoRow label="商品名" value={reservation.productName} />
                                 <InfoRow label="人数" value={`${reservation.travelers || '-'}名`} />
@@ -214,7 +222,7 @@ export const DocumentItinerary: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">Trip Summary</p>
-                            <div className="mt-2 rounded-xl border border-slate-200">
+                            <div className="mt-2 rounded-xl border border-[#8FE7DE]/70">
                                 <InfoRow label="旅行期間" value={`${formatDate(reservation.startDate)} 〜 ${formatDate(reservation.endDate)}`} />
                                 <InfoRow label="日数" value={duration ? `${duration.days}日間 / ${duration.nights}泊` : `${days.length}日間`} />
                                 <InfoRow label="日程タイプ" value={template?.name || '確定日程表'} />
@@ -222,22 +230,22 @@ export const DocumentItinerary: React.FC = () => {
                         </div>
                     </section>
 
-                    <section className="border-b border-slate-200 px-5 py-5 sm:px-9">
-                        <div className="rounded-xl bg-teal-50 px-4 py-3 text-sm leading-relaxed text-teal-950">
+                    <section className="border-b border-[#8FE7DE]/70 px-5 py-5 sm:px-9">
+                        <div className="rounded-xl bg-[#39C4B7]/10 px-4 py-3 text-sm leading-relaxed text-[#064E48]">
                             この度はMilkyway Japanをご利用いただき、誠にありがとうございます。下記の通り、ご旅行の日程をご案内いたします。
                             天候・道路状況・安全上の判断により、現地で行程の順序や時間を調整する場合がございます。
                         </div>
                     </section>
 
                     {guide && (
-                        <section className="border-b border-slate-200 px-5 py-5 sm:px-9">
+                        <section className="border-b border-[#8FE7DE]/70 px-5 py-5 sm:px-9">
                             <div className="mb-3 flex items-center justify-between gap-3">
                                 <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">Guide Information</h2>
                                 <span className="rounded-full bg-teal-50 px-3 py-1 text-[11px] font-bold text-teal-700">担当ガイド</span>
                             </div>
                             <button
                                 onClick={() => setGuideModalOpen(true)}
-                                className="no-print w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition-colors hover:bg-slate-50"
+                                className="no-print w-full rounded-xl border border-[#8FE7DE]/70 bg-white p-4 text-left transition-colors hover:bg-slate-50"
                             >
                                 <div className="flex items-center gap-4">
                                     {guide.image ? (
@@ -270,8 +278,8 @@ export const DocumentItinerary: React.FC = () => {
                             <p className="text-sm font-bold text-slate-500">{days.length}日間</p>
                         </div>
 
-                        <div className="overflow-hidden rounded-xl border border-slate-200">
-                            <div className="hidden grid-cols-[90px_1fr_110px] bg-slate-900 text-[12px] font-black uppercase tracking-widest text-white sm:grid">
+                        <div className="overflow-hidden rounded-xl border border-[#8FE7DE]/70">
+                            <div className="hidden grid-cols-[90px_1fr_110px] bg-[#0F8F84] text-[12px] font-black uppercase tracking-widest text-white sm:grid">
                                 <div className="px-4 py-3">Day</div>
                                 <div className="px-4 py-3">Schedule</div>
                                 <div className="px-4 py-3 text-right">Stay</div>
@@ -386,7 +394,7 @@ export const DocumentItinerary: React.FC = () => {
                                     <li>現地では安全を最優先し、必要に応じて行程を調整します。</li>
                                 </ul>
                             </div>
-                            <div className="rounded-xl border border-slate-200 p-4">
+                            <div className="rounded-xl border border-[#8FE7DE]/70 p-4">
                                 <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">Contact</p>
                                 <p className="mt-2 font-black text-slate-950">Milkyway Japan</p>
                                 <p className="mt-1 text-sm text-slate-500">mongolryokou.com</p>

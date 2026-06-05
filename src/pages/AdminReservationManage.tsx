@@ -77,6 +77,7 @@ interface Reservation {
     totalPeople: number;
     phone: string;
     email: string;
+    manager?: string;
 
     // Quote Specific
     quoteDetail?: QuoteRequest;
@@ -1650,7 +1651,9 @@ export const AdminReservationManage: React.FC = () => {
     // Filter States
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('전체 상태');
+    const [filterPayment, setFilterPayment] = useState('전체 결제');
     const [filterType, setFilterType] = useState('전체 유형');
+    const [filterDeparture, setFilterDeparture] = useState('');
     const [convertTarget, setConvertTarget] = useState<QuoteRequest | null>(null);
 
     // Pagination State
@@ -1697,6 +1700,10 @@ export const AdminReservationManage: React.FC = () => {
                     type: r.type || 'product',
                     productName: r.productName || r.product_name,
                     customerName: r.customerName || r.customer_name || r.customer_info?.name || 'Unknown',
+                    country: r.country || r.customerCountry || r.customer_country || r.customer_info?.country || '일본',
+                    startDate,
+                    endDate,
+                    departureMs: toTime(startDate),
                     date: startDate
                         ? `${new Date(startDate).toLocaleDateString('ko-KR')} ~ ${endDate ? new Date(endDate).toLocaleDateString('ko-KR') : ''}`
                         : r.duration || '날짜 미정',
@@ -1725,6 +1732,7 @@ export const AdminReservationManage: React.FC = () => {
                     totalPeople: travelers,
                     phone: r.phone || r.customerPhone || r.customer_phone || r.customer_info?.phone || '',
                     email: r.email || r.customerEmail || r.customer_email || r.customer_info?.email || '',
+                    manager: r.manager || r.assignedAdmin || r.assigned_admin || 'Admin',
                     userId: r.userId || r.user_id,
                     };
                 });
@@ -1760,6 +1768,7 @@ export const AdminReservationManage: React.FC = () => {
                         totalPeople: 0,
                         phone: q.phone,
                         email: q.email,
+                        manager: q.manager || 'Admin',
                         userId: q.userId || q.user_id,
                         quoteDetail: {
                             ...q,
@@ -2009,8 +2018,19 @@ export const AdminReservationManage: React.FC = () => {
 
     // Filter Logic
     const filteredReservations = useMemo(() => {
+        const normalizedSearch = searchTerm.trim().toLowerCase();
         return reservations.filter(res => {
-            const matchesSearch = res.customerName.includes(searchTerm) || res.productName.includes(searchTerm);
+            const haystack = [
+                res.reservationNumber,
+                res.customerName,
+                res.email,
+                res.phone,
+                res.productName,
+                res.country,
+                res.headcount,
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch);
             const matchesStatus = filterStatus === '전체 상태' ||
                 (filterStatus === '입금 대기' && res.status === 'pending_payment') ||
                 (filterStatus === '결제 완료' && res.status === 'paid') ||
@@ -2023,10 +2043,16 @@ export const AdminReservationManage: React.FC = () => {
             const matchesType = filterType === '전체 유형' ||
                 (filterType === '맞춤 견적' && res.type === 'quote') ||
                 (filterType === '일반 상품' && res.type !== 'quote');
+            const matchesPayment = filterPayment === '전체 결제' ||
+                (filterPayment === '예약금 미입금' && res.depositStatus !== 'paid') ||
+                (filterPayment === '예약금 입금' && res.depositStatus === 'paid') ||
+                (filterPayment === '잔금 미입금' && res.balanceStatus !== 'paid') ||
+                (filterPayment === '잔금 입금' && res.balanceStatus === 'paid');
+            const matchesDeparture = !filterDeparture || res.startDate === filterDeparture;
 
-            return matchesSearch && matchesStatus && matchesType;
+            return matchesSearch && matchesStatus && matchesType && matchesPayment && matchesDeparture;
         });
-    }, [searchTerm, filterStatus, filterType, reservations]);
+    }, [searchTerm, filterStatus, filterPayment, filterType, filterDeparture, reservations]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredReservations.length / itemsPerPage);
@@ -2038,12 +2064,19 @@ export const AdminReservationManage: React.FC = () => {
     // Stats
     const stats = useMemo(() => {
         const activeQuoteStatuses = ['new', 'processing', 'reservation_requested'];
+        const now = Date.now();
+        const thirtyDays = now + 30 * 86400000;
+        const hasContractSent = (r: Reservation) => Boolean(r.history?.some((event: any) =>
+            event.type === 'email' && (String(event.description || '').includes('契約') || String(event.detail || '').includes('/documents/contract/'))
+        ));
+
         return {
             total: reservations.length,
-            pending: reservations.filter(r => r.status === 'pending_payment').length,
+            pending: reservations.filter(r => r.depositStatus !== 'paid' || r.status === 'pending_payment').length,
             confirmed: reservations.filter(r => r.status === 'confirmed' || r.status === 'paid').length,
             quoteTodo: reservations.filter(r => r.type === 'quote' && activeQuoteStatuses.includes(r.status)).length,
-            quoteRequested: reservations.filter(r => r.type === 'quote' && r.status === 'reservation_requested').length,
+            contractSent: reservations.filter(hasContractSent).length,
+            departingSoon: reservations.filter(r => r.type !== 'quote' && (r.departureMs || 0) >= now && (r.departureMs || 0) <= thirtyDays).length,
         };
     }, [reservations]);
 
@@ -2071,83 +2104,80 @@ export const AdminReservationManage: React.FC = () => {
                     </button>
                 }
             >
-                <div className="space-y-6">
+                <div className="space-y-6" style={{ fontFamily: 'Pretendard, system-ui, -apple-system, BlinkMacSystemFont, sans-serif' }}>
+                    <section className="rounded-3xl border border-[#8FE7DE]/60 bg-gradient-to-br from-white via-[#F7FAFA] to-[#EFFFFD] p-6 shadow-sm dark:border-teal-500/20 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/30">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">
+                                    <span className="material-symbols-outlined text-[16px]">travel_explore</span>
+                                    Travel CRM
+                                </span>
+                                <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">예약부터 계약서 발송까지 한 화면에서 처리합니다</h2>
+                                <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">견적, 예약, 입금, 문서 발송, 출발 예정 상태를 실시간으로 확인하세요.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={fetchReservations}
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#39C4B7] px-5 text-sm font-black text-white shadow-lg shadow-teal-500/20 transition-colors hover:bg-[#0F8F84]"
+                            >
+                                <span className="material-symbols-outlined text-[20px]">refresh</span>
+                                데이터 새로고침
+                            </button>
+                        </div>
+                    </section>
+
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">전체 예약</p>
-                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.total}건</h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+                        {[
+                            { label: '전체 예약 건수', value: stats.total, icon: 'folder_managed', tone: 'text-[#0F8F84] bg-[#39C4B7]/10' },
+                            { label: '입금 대기', value: stats.pending, icon: 'payments', tone: 'text-amber-600 bg-amber-50' },
+                            { label: '예약 확정', value: stats.confirmed, icon: 'verified', tone: 'text-[#0F8F84] bg-[#8FE7DE]/25' },
+                            { label: '맞춤 견적 진행중', value: stats.quoteTodo, icon: 'request_quote', tone: 'text-blue-600 bg-blue-50' },
+                            { label: '계약서 발송 완료', value: stats.contractSent, icon: 'contract', tone: 'text-violet-600 bg-violet-50' },
+                            { label: '여행 출발 예정', value: stats.departingSoon, icon: 'flight_takeoff', tone: 'text-rose-600 bg-rose-50' },
+                        ].map(card => (
+                            <div key={card.label} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                                <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${card.tone}`}>
+                                    <span className="material-symbols-outlined text-[22px]">{card.icon}</span>
+                                </div>
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-400">{card.label}</p>
+                                <p className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">{card.value}<span className="ml-1 text-sm font-bold text-slate-400">건</span></p>
                             </div>
-                            <div className="w-12 h-12 rounded-lg bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-300 flex items-center justify-center">
-                                <span className="material-symbols-outlined">list_alt</span>
-                            </div>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">입금 대기</p>
-                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.pending}건</h3>
-                            </div>
-                            <div className="w-12 h-12 rounded-lg bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center">
-                                <span className="material-symbols-outlined">payments</span>
-                            </div>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">예약 확정</p>
-                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.confirmed}건</h3>
-                            </div>
-                            <div className="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center">
-                                <span className="material-symbols-outlined">event_available</span>
-                            </div>
-                        </div>
-                        <div className="rounded-lg border border-purple-200 bg-purple-50/60 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-purple-500/30 dark:bg-purple-500/10 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-purple-700 dark:text-purple-300 font-semibold mb-1">처리할 견적</p>
-                                <h3 className="text-3xl font-black text-slate-950 dark:text-white">{stats.quoteTodo}건</h3>
-                                <p className="mt-1 text-xs font-medium text-purple-500 dark:text-purple-300">예약 요청 {stats.quoteRequested}건</p>
-                            </div>
-                            <div className="w-12 h-12 rounded-lg bg-white text-purple-600 flex items-center justify-center shadow-sm dark:bg-purple-500/15 dark:text-purple-300">
-                                <span className="material-symbols-outlined">request_quote</span>
-                            </div>
-                        </div>
+                        ))}
                     </div>
 
                     {/* Filter Section */}
-                    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                            <div className="md:col-span-4">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">예약자 / 상품명 검색</label>
+                    <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-900 dark:text-white">검색 및 필터</h3>
+                                <p className="mt-1 text-xs font-medium text-slate-400">고객명, 이메일, 전화번호, 예약번호, 여행상품으로 검색할 수 있습니다.</p>
+                            </div>
+                            <button
+                                onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setFilterPayment('전체 결제'); setFilterType('전체 유형'); setFilterDeparture(''); setCurrentPage(1); }}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-slate-100 px-3 text-xs font-black text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                                초기화
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            <label className="block xl:col-span-2">
+                                <span className="mb-1.5 block text-[11px] font-black text-slate-400">통합 검색</span>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
                                     <input
                                         type="text"
-                                        placeholder="이름 또는 투어명 검색"
+                                        placeholder="고객명 / 이메일 / 전화번호 / 예약번호 / 상품명"
                                         value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                        className="h-11 w-full rounded-2xl border border-slate-200 bg-[#F7FAFA] pl-10 pr-4 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-[#39C4B7] focus:bg-white focus:ring-4 focus:ring-[#39C4B7]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                                     />
                                 </div>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">예약 구분</label>
-                                <select
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
-                                >
-                                    <option>전체 유형</option>
-                                    <option value="product">일반 상품</option>
-                                    <option value="quote">맞춤 견적</option>
-                                </select>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">결제 상태</label>
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
-                                >
+                            </label>
+                            <label className="block">
+                                <span className="mb-1.5 block text-[11px] font-black text-slate-400">예약상태</span>
+                                <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="h-11 w-full rounded-2xl border border-slate-200 bg-[#F7FAFA] px-4 text-sm font-semibold text-slate-700 outline-none focus:border-[#39C4B7] focus:ring-4 focus:ring-[#39C4B7]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
                                     <option>전체 상태</option>
                                     <option value="입금 대기">입금 대기</option>
                                     <option value="결제 완료">결제 완료</option>
@@ -2158,139 +2188,135 @@ export const AdminReservationManage: React.FC = () => {
                                     <option value="예약 요청">예약 요청</option>
                                     <option value="취소됨">취소됨</option>
                                 </select>
-                            </div>
-                            <div className="md:col-span-2">
-                                <button onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setFilterType('전체 유형'); }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors flex items-center justify-center gap-2 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-                                    <span className="material-symbols-outlined text-lg">refresh</span>
-                                    초기화
+                            </label>
+                            <label className="block">
+                                <span className="mb-1.5 block text-[11px] font-black text-slate-400">결제상태</span>
+                                <select value={filterPayment} onChange={(e) => { setFilterPayment(e.target.value); setCurrentPage(1); }} className="h-11 w-full rounded-2xl border border-slate-200 bg-[#F7FAFA] px-4 text-sm font-semibold text-slate-700 outline-none focus:border-[#39C4B7] focus:ring-4 focus:ring-[#39C4B7]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                                    <option>전체 결제</option>
+                                    <option>예약금 미입금</option>
+                                    <option>예약금 입금</option>
+                                    <option>잔금 미입금</option>
+                                    <option>잔금 입금</option>
+                                </select>
+                            </label>
+                            <label className="block">
+                                <span className="mb-1.5 block text-[11px] font-black text-slate-400">출발일</span>
+                                <input type="date" value={filterDeparture} onChange={(e) => { setFilterDeparture(e.target.value); setCurrentPage(1); }} className="h-11 w-full rounded-2xl border border-slate-200 bg-[#F7FAFA] px-4 text-sm font-semibold text-slate-700 outline-none focus:border-[#39C4B7] focus:ring-4 focus:ring-[#39C4B7]/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200" />
+                            </label>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {['전체 유형', '일반 상품', '맞춤 견적'].map(type => (
+                                <button key={type} onClick={() => { setFilterType(type); setCurrentPage(1); }} className={`h-9 rounded-full px-4 text-xs font-black transition-colors ${filterType === type ? 'bg-[#0F8F84] text-white shadow-sm' : 'bg-[#F7FAFA] text-slate-500 hover:bg-[#8FE7DE]/25 dark:bg-slate-800 dark:text-slate-300'}`}>
+                                    {type}
                                 </button>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Reservation Table */}
-                    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                        <div className="overflow-x-auto min-h-[400px]">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-50 dark:bg-slate-800/70">
-                                    <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">구분</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">예약일</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">예약내용 (상품명/견적명)</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">예약자</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">여행일정</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">총 결제금액 (예약금)</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">다음 할 일</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">상태</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">관리</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {displayedReservations.length > 0 ? displayedReservations.map((res) => {
-                                        const workflow = getWorkflowMeta(res);
-                                        const nextAction = getQuoteAction(res);
-
-                                        return (
-                                            <tr key={res.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
-                                                <td className="px-6 py-5">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${res.type !== 'quote' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
-                                                        {res.type !== 'quote' ? '일반상품' : '맞춤견적'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-5 text-sm text-slate-500 dark:text-slate-400">{res.bookedAt}</td>
-                                                <td className="px-6 py-5">
-                                                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]" title={res.productName}>
-                                                        {res.productName}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">{res.headcount}</div>
-                                                </td>
-                                                <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">
-                                                    <div className="font-medium">{res.customerName}</div>
-                                                    <div className="text-xs text-slate-400">{res.phone}</div>
-                                                </td>
-                                                <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{res.date}</td>
-                                                <td className="px-6 py-5 text-right">
-                                                    <div className="text-sm font-bold text-slate-800 dark:text-white">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) ? res.totalAmount.toLocaleString() : 0}원</div>
-                                                    <div className="text-xs text-slate-400 dark:text-slate-500">(예약금: {typeof res.deposit === 'number' && !isNaN(res.deposit) ? res.deposit.toLocaleString() : 0}원)</div>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <div className={`mb-2 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${workflow.tone}`}>
-                                                        <span className="material-symbols-outlined text-[15px]">{workflow.icon}</span>
-                                                        {workflow.label}
-                                                    </div>
-                                                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{workflow.hint}</div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (nextAction.nextStatus) {
-                                                                handleStatusChange(res.id, nextAction.nextStatus, res.type);
-                                                            } else {
-                                                                setSelectedReservation(res);
-                                                            }
-                                                        }}
-                                                        className={`mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${nextAction.primary
-                                                            ? 'bg-teal-500 text-white hover:bg-teal-600'
-                                                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800'
-                                                            }`}
-                                                        title={nextAction.description}
-                                                    >
-                                                        <span className="material-symbols-outlined text-[16px]">{nextAction.icon}</span>
-                                                        {nextAction.label}
-                                                    </button>
-                                                </td>
-                                                <td className="px-6 py-5 text-center">
-                                                    <StatusDropdown
-                                                        status={res.status}
-                                                        onChange={(newStatus) => handleStatusChange(res.id, newStatus, res.type)}
-                                                    />
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            onClick={() => setSelectedReservation(res)}
-                                                            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                                                        >
-                                                            {res.type === 'quote' ? '견적 관리' : '상세'}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(res.id, res.type)}
-                                                            className="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-500 rounded-lg transition-colors"
-                                                            title="삭제"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    }) : (
-                                        <tr>
-                                            <td colSpan={9} className="px-6 py-10 text-center text-slate-400">
-                                                검색 결과가 없습니다.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    {/* Reservation List */}
+                    <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 className="text-base font-black text-slate-950 dark:text-white">예약 리스트</h3>
+                                <p className="mt-1 text-xs font-medium text-slate-400">카드형 요약과 테이블 정보를 결합해 빠르게 스캔할 수 있습니다.</p>
+                            </div>
+                            <span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">총 {filteredReservations.length}건</span>
                         </div>
+
+                        <div className="space-y-3">
+                            {displayedReservations.length > 0 ? displayedReservations.map((res) => {
+                                const workflow = getWorkflowMeta(res);
+                                const nextAction = getQuoteAction(res);
+                                const reservationNo = res.reservationNumber || res.id.slice(0, 8).toUpperCase();
+                                const paymentLabel = res.depositStatus === 'paid' ? (res.balanceStatus === 'paid' ? '완납' : '예약금 입금') : '입금 대기';
+                                const paymentTone = res.depositStatus === 'paid' ? 'bg-[#39C4B7]/10 text-[#0F8F84]' : 'bg-amber-50 text-amber-700';
+
+                                return (
+                                    <article key={res.id} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:border-[#8FE7DE] hover:shadow-md dark:border-slate-800 dark:bg-slate-950/40">
+                                        <div className="grid gap-4 xl:grid-cols-[1.1fr_1.6fr_1fr_1fr_auto] xl:items-center">
+                                            <div className="min-w-0">
+                                                <div className="mb-2 flex flex-wrap items-center gap-2">
+                                                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${res.type === 'quote' ? 'bg-blue-50 text-blue-700' : 'bg-[#39C4B7]/10 text-[#0F8F84]'}`}>
+                                                        {res.type === 'quote' ? '맞춤견적' : '일반상품'}
+                                                    </span>
+                                                    <span className="font-mono text-xs font-black text-slate-400">#{reservationNo}</span>
+                                                </div>
+                                                <p className="truncate text-base font-black text-slate-950 dark:text-white" title={res.customerName}>{res.customerName}</p>
+                                                <p className="mt-1 truncate text-xs font-semibold text-slate-400">{res.email || res.phone || '연락처 미입력'}</p>
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-black text-slate-900 dark:text-slate-100" title={res.productName}>{res.productName}</p>
+                                                <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-4">
+                                                    <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[15px] text-[#39C4B7]">public</span>{res.country || '일본'}</span>
+                                                    <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-[15px] text-[#39C4B7]">groups</span>{res.headcount || '미정'}</span>
+                                                    <span className="inline-flex items-center gap-1 sm:col-span-2"><span className="material-symbols-outlined text-[15px] text-[#39C4B7]">calendar_month</span>{res.date}</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">결제</p>
+                                                <p className="mt-1 text-sm font-black text-slate-950 dark:text-white">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) ? res.totalAmount.toLocaleString() : 0}원</p>
+                                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${paymentTone}`}>{paymentLabel}</span>
+                                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">예약금 {typeof res.deposit === 'number' && !isNaN(res.deposit) ? res.deposit.toLocaleString() : 0}원</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">진행 상태</p>
+                                                <div className={`mt-1 inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[11px] font-black ${workflow.tone}`}>
+                                                    <span className="material-symbols-outlined text-[15px]">{workflow.icon}</span>
+                                                    {workflow.label}
+                                                </div>
+                                                <p className="mt-1 text-xs font-semibold text-slate-400">담당자 {res.manager || 'Admin'}</p>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2 xl:justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (nextAction.nextStatus) {
+                                                            handleStatusChange(res.id, nextAction.nextStatus, res.type);
+                                                        } else {
+                                                            setSelectedReservation(res);
+                                                        }
+                                                    }}
+                                                    className={`h-10 rounded-2xl px-4 text-xs font-black transition-colors inline-flex items-center gap-1.5 ${nextAction.primary ? 'bg-[#39C4B7] text-white hover:bg-[#0F8F84]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200'}`}
+                                                    title={nextAction.description}
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">{nextAction.icon}</span>
+                                                    {nextAction.label}
+                                                </button>
+                                                <button onClick={() => setSelectedReservation(res)} className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-700 transition-colors hover:bg-[#F7FAFA] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                                    상세보기
+                                                </button>
+                                                <button onClick={() => handleDelete(res.id, res.type)} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500 transition-colors hover:bg-red-100" title="삭제">
+                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </article>
+                                );
+                            }) : (
+                                <div className="rounded-3xl border border-dashed border-slate-200 py-16 text-center text-slate-400 dark:border-slate-700">
+                                    <span className="material-symbols-outlined text-4xl">manage_search</span>
+                                    <p className="mt-2 text-sm font-bold">검색 결과가 없습니다.</p>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Pagination */}
-                        <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-slate-500 dark:text-slate-400">
-                            <span className="text-xs">
+                        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                            <span className="text-xs font-semibold">
                                 총 {filteredReservations.length}건 중 {filteredReservations.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredReservations.length)} 표시
                             </span>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                                >
+                                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 transition-colors hover:bg-slate-200 disabled:cursor-default disabled:opacity-40 dark:bg-slate-800">
                                     <span className="material-symbols-outlined text-sm">chevron_left</span>
                                 </button>
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                                >
+                                <span className="text-xs font-black text-slate-400">{Math.min(currentPage, Math.max(totalPages, 1))} / {Math.max(totalPages, 1)}</span>
+                                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(totalPages, 1)))} disabled={currentPage >= totalPages || totalPages === 0} className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 transition-colors hover:bg-slate-200 disabled:cursor-default disabled:opacity-40 dark:bg-slate-800">
                                     <span className="material-symbols-outlined text-sm">chevron_right</span>
                                 </button>
                             </div>

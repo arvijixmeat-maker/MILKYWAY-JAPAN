@@ -134,6 +134,7 @@ function App() {
 
             <Route path="/mypage/reservations" element={<AuthGuard><MyReservations /></AuthGuard>} />
             <Route path="/mypage/reservations/:id" element={<AuthGuard><MyReservationDetail /></AuthGuard>} />
+            <Route path="/my-booking/:id" element={<AuthGuard><MyReservationDetail /></AuthGuard>} />
             <Route path="/mypage/notifications" element={<AuthGuard><MyNotifications /></AuthGuard>} />
             <Route path="/mypage/reviews" element={<AuthGuard><MyReviews /></AuthGuard>} />
             <Route path="/mypage/recently-viewed" element={<AuthGuard><RecentlyViewed /></AuthGuard>} />

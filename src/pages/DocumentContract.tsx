@@ -172,20 +172,22 @@ export const DocumentContract: React.FC = () => {
                 .contract-table { width: 100%; border-collapse: collapse; font-size: 13px; }
                 .contract-table td, .contract-table th { border: 1px solid #c7d2d6; padding: 8px 10px; vertical-align: middle; }
                 .contract-table th {
-                    background: #d4f5ee; color: #0e1a18; font-weight: 700; text-align: center;
+                    background: #DDF8F5; color: #064E48; font-weight: 700; text-align: center;
                     font-size: 14px; padding: 10px;
                 }
                 .contract-table td.label { background: #f1f5f9; color: #334155; font-weight: 600; text-align: center; width: 140px; }
                 .contract-table td.value { background: #ffffff; color: #0e1a18; }
-                .contract-badge { display: inline-block; background: #0f766e; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+                .contract-badge { display: inline-block; background: #0F8F84; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
             `}</style>
 
-            <div className="min-h-screen bg-slate-100 py-8 px-4 print:bg-white print:py-0 print:px-0">
-                <div className="doc-shell max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden print:shadow-none print:rounded-none">
+            <div className="min-h-screen bg-[#F7FAFA] py-8 px-4 print:bg-white print:py-0 print:px-0">
+                <div className="doc-shell max-w-3xl mx-auto bg-white rounded-[24px] border border-[#8FE7DE]/70 shadow-xl overflow-hidden print:shadow-none print:rounded-none">
 
                     {/* Title */}
-                    <div className="px-8 py-5 bg-teal-50 border-b-2 border-teal-500">
-                        <h1 className="text-center text-xl font-bold text-teal-700 tracking-wider">海外旅行契約書（お客様控え）</h1>
+                    <div className="px-8 py-7 bg-gradient-to-r from-[#0F8F84] to-[#39C4B7] border-b-2 border-[#0F8F84] text-white">
+                        <p className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-white/75">Milkyway Japan</p>
+                        <h1 className="mt-2 text-center text-3xl font-black tracking-wider">ご旅行契約書</h1>
+                        <p className="mt-1 text-center text-sm font-semibold text-white/80">Travel Contract</p>
                     </div>
 
                     <div className="px-6 py-6">
@@ -489,7 +491,7 @@ export const DocumentContract: React.FC = () => {
                     <div className="no-print px-6 py-4 bg-white border-t border-slate-100 flex justify-center">
                         <button
                             onClick={() => window.print()}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition-colors"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#39C4B7] hover:bg-[#0F8F84] text-white text-sm font-bold transition-colors"
                         >
                             <span className="material-symbols-outlined text-base">print</span>
                             印刷 / PDF 保存
