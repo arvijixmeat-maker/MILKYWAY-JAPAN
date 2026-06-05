@@ -94,8 +94,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
 
     return (
         <div className="fixed inset-0 z-[210] bg-slate-900/50 backdrop-blur-sm p-3 sm:p-6">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full h-full flex flex-col overflow-hidden shadow-2xl">
-                <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-6 py-3">
+            <div className="bg-[#F7FAFA] dark:bg-slate-900 rounded-2xl w-full h-full flex flex-col overflow-hidden shadow-2xl">
+                <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-800 dark:bg-slate-900">
                     <div className="flex items-center gap-3 min-w-0">
                         <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
                             <span className="material-symbols-outlined">arrow_back</span>
@@ -112,40 +112,59 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         </button>
                     </div>
                 </div>
-                {(onAssignGuide || onAssignAccommodation) && (
-                    <div className="flex flex-shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 px-6 py-2.5">
+                <div className="flex flex-shrink-0 flex-col gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
+                        <div className="rounded-2xl border border-teal-100 bg-teal-50/70 px-4 py-3 dark:border-teal-900 dark:bg-teal-950/20">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">고객</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer.name || '고객명 없음'}</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">예약번호</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer.tripNumber || '-'}</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">여행기간</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer.period || customer.tripLength || '-'}</p>
+                        </div>
+                    </div>
+                    {(onAssignGuide || onAssignAccommodation) && (
+                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                         {onAssignGuide && (
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-slate-400">담당 가이드</span>
-                                <button onClick={onAssignGuide} className="inline-flex items-center gap-1 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30">
-                                    <span className="material-symbols-outlined text-[15px]">{assignedGuide?.name ? 'badge' : 'person_add'}</span>
-                                    {assignedGuide?.name || '가이드 배정'}
-                                </button>
-                            </div>
+                            <button onClick={onAssignGuide} className="inline-flex h-12 items-center gap-2 rounded-xl border border-teal-200 bg-white px-4 text-sm font-black text-teal-700 shadow-sm transition-colors hover:bg-teal-50 dark:border-teal-700 dark:bg-slate-800 dark:text-teal-300 dark:hover:bg-teal-900/30">
+                                <span className="material-symbols-outlined text-[20px]">{assignedGuide?.name ? 'badge' : 'person_add'}</span>
+                                <span>{assignedGuide?.name || '가이드 배정'}</span>
+                            </button>
                         )}
                         {onAssignAccommodation && (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-slate-400">숙소(일자별)</span>
+                            <div className="flex flex-wrap items-center gap-2">
                                 {Array.from({ length: Math.max(days.length, dailyAccommodations?.length || 0, 1) }).map((_, i) => {
                                     const dayNum = i + 1;
                                     const a = dailyAccommodations?.find(d => d.day === dayNum);
                                     return (
-                                        <button key={i} onClick={() => onAssignAccommodation(dayNum)} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-bold hover:bg-teal-50 dark:hover:bg-teal-900/30 ${a ? 'border-teal-200 dark:border-teal-700 bg-white text-teal-700 dark:bg-slate-800 dark:text-teal-300' : 'border-dashed border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800'}`}>
-                                            <span className="material-symbols-outlined text-[15px]">hotel</span>{dayNum}日: {a?.accommodation?.name || '선택'}
+                                        <button key={i} onClick={() => onAssignAccommodation(dayNum)} className={`inline-flex h-12 items-center gap-1.5 rounded-xl border px-3 text-xs font-black shadow-sm transition-colors hover:bg-teal-50 dark:hover:bg-teal-900/30 ${a ? 'border-teal-200 bg-white text-teal-700 dark:border-teal-700 dark:bg-slate-800 dark:text-teal-300' : 'border-dashed border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800'}`}>
+                                            <span className="material-symbols-outlined text-[18px]">hotel</span>
+                                            <span>{dayNum}日: {a?.accommodation?.name || '숙소 선택'}</span>
                                         </button>
                                     );
                                 })}
                             </div>
                         )}
-                    </div>
-                )}
-                <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900">
+                        </div>
+                    )}
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-2 border-b border-teal-200 bg-teal-50 px-6 py-2 text-xs font-bold text-[#0F8F84] dark:border-teal-800 dark:bg-teal-900/20">
+                    <span className="material-symbols-outlined text-[16px]">tips_and_updates</span>
+                    <span>문서를 클릭해서 수정하고, 상단에서 담당 가이드와 일자별 숙소를 배정하면 일정표·계약서에 함께 반영됩니다.</span>
+                </div>
+                <div className="flex-1 overflow-hidden bg-[#F7FAFA] dark:bg-slate-900">
                     <TemplatePreview
                         name={name}
                         description={description}
                         days={days}
                         documentSettings={docSettings}
                         customer={customer}
+                        assignedGuide={assignedGuide}
+                        dailyAccommodations={dailyAccommodations}
                         onNameChange={setName}
                         onDescriptionChange={setDescription}
                         onDocSection={updateDocSection}
