@@ -86,7 +86,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-[80] bg-slate-900/50 backdrop-blur-sm p-3 sm:p-6">
+        <div className="fixed inset-0 z-[210] bg-slate-900/50 backdrop-blur-sm p-3 sm:p-6">
             <div className="bg-white dark:bg-slate-900 rounded-2xl w-full h-full flex flex-col overflow-hidden shadow-2xl">
                 <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-6 py-3">
                     <div className="flex items-center gap-3 min-w-0">

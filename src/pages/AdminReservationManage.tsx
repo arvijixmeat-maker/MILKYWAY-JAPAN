@@ -814,6 +814,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <button
+                                        onClick={() => setDocEditorOpen(true)}
+                                        className="h-9 px-3.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white shadow-sm shadow-teal-500/20 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">edit_document</span>
+                                        문서 편집 (고객·금액 자동)
+                                    </button>
+                                    <button
                                         onClick={() => copyCustomerMessage('itinerary')}
                                         disabled={!itineraryReady}
                                         className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${itineraryReady ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default'}`}
