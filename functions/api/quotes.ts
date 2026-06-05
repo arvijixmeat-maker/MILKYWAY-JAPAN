@@ -83,6 +83,25 @@ app.get('/:id', async (c) => {
         }
     }
 
+    // 관리자가 문서 편집기로 저장한 내용이 있으면 그 일정을 우선 사용 (고객 견적 페이지에 편집본 노출)
+    const dc = result.document_content ?? result.documentContent;
+    if (dc) {
+        try {
+            const parsedDc = typeof dc === 'string' ? JSON.parse(dc) : dc;
+            if (parsedDc && Array.isArray(parsedDc.days) && parsedDc.days.length) {
+                parsed.itinerary = {
+                    id: 'doc',
+                    name: parsedDc.name || parsed.itinerary?.name || '',
+                    description: parsedDc.description || parsed.itinerary?.description || '',
+                    days: parsedDc.days,
+                };
+            }
+            parsed.documentContent = parsedDc;
+        } catch (e) {
+            console.error('[Quotes GET] document_content parse failed', e);
+        }
+    }
+
     return c.json(parsed);
 });
 
@@ -145,11 +164,13 @@ app.put('/:id', async (c) => {
 
     // Explicitly map snake_case keys that must persist to their camelCase model props
     const itineraryTemplateId = body.itinerary_template_id ?? body.itineraryTemplateId;
+    const documentContent = body.document_content ?? body.documentContent;
 
     // Update
     await db.update(quotes).set({
         ...body,
         ...(itineraryTemplateId !== undefined ? { itineraryTemplateId } : {}),
+        ...(documentContent !== undefined ? { documentContent } : {}),
         updatedAt: new Date().toISOString() // Ensure camelCase vs snake_case matches schema
     }).where(eq(quotes.id, id)).run();
 
