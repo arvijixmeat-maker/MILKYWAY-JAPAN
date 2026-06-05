@@ -176,6 +176,7 @@ app.put('/:id', async (c) => {
         deposit_amount: 'depositAmount',
         itinerary_template_id: 'itineraryTemplateId',
         contract_data: 'contractData',
+        document_content: 'documentContent',
         updated_at: 'updatedAt',
     };
     const normalized: any = {};
@@ -201,6 +202,7 @@ app.put('/:id', async (c) => {
         'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData',
         'assignedGuide', 'contractUrl', 'itineraryUrl',
         'depositStatus', 'balanceStatus', 'areAssignmentsVisibleToUser', 'priceBreakdown',
+        'documentContent',
         'createdAt', 'updatedAt',
     ]);
     const filtered: any = {};

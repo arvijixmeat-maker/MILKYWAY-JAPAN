@@ -63,6 +63,19 @@ app.get('/itinerary/:reservationId', async (c) => {
         }
     }
 
+    // 고객별로 편집·저장된 문서 내용이 있으면 템플릿보다 우선 사용
+    let dc: any = null;
+    try { dc = reservation.document_content ? JSON.parse(reservation.document_content) : null; } catch { dc = null; }
+    if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
+        template = {
+            id: template?.id || 'custom',
+            name: dc.name || template?.name || '',
+            description: dc.description || template?.description || '',
+            documentSettings: dc.documentSettings || template?.documentSettings || null,
+            days: Array.isArray(dc.days) ? dc.days : (template?.days || []),
+        };
+    }
+
     // Compute day-by-day merged view
     const mergedDays = (template?.days || []).map((tday: any, idx: number) => {
         const dayNumber = tday.day || idx + 1;
@@ -138,6 +151,18 @@ app.get('/contract/:reservationId', async (c) => {
                 documentSettings: decoded.documentSettings,
             };
         }
+    }
+
+    // 고객별 편집·저장된 문서 설정이 있으면 우선 사용
+    let dcc: any = null;
+    try { dcc = reservation.document_content ? JSON.parse(reservation.document_content) : null; } catch { dcc = null; }
+    if (dcc && dcc.documentSettings) {
+        template = {
+            id: template?.id || 'custom',
+            name: dcc.name || template?.name || '',
+            description: dcc.description || template?.description || '',
+            documentSettings: dcc.documentSettings,
+        };
     }
 
     return c.json({

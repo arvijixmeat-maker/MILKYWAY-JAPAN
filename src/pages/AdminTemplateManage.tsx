@@ -9,15 +9,17 @@ import type { Hotel } from '../types/hotel';
 import mongoliaHero from '../assets/login_bg_3.jpg';
 
 // ─── Types ───────────────────────────────────────────────
-type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
-interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
-interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
-interface DocumentSettings {
+export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
+export interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
+export interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
+export interface DocumentSettings {
     overview: {
         subtitle: string;
         heroTagline: string;
         intro: string;
         included: { icon: string; label: string }[];
+        includedText: string;
+        excludedText: string;
         pricePerPerson: string;
         paymentNote: string;
     };
@@ -40,6 +42,9 @@ interface DocumentSettings {
         notices: { title: string; body: string }[];
         conditions: string;
         paymentInfo: string;
+        guideName: string;
+        guidePhone: string;
+        accommodationInfo: string;
         emergencyPhone: string;
         emergencyEmail: string;
         closingMessage: string;
@@ -50,7 +55,7 @@ interface ItineraryTemplate { id: string; name: string; description: string; day
 
 const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
 
-const defaultDocumentSettings = (): DocumentSettings => ({
+export const defaultDocumentSettings = (): DocumentSettings => ({
     overview: {
         subtitle: '銀河の下で、大自然と文化を体験する特別な旅へ',
         heroTagline: '伝統衣装体験・乗馬体験・ラクダ体験・ゲル体験 すべて込み',
@@ -63,6 +68,8 @@ const defaultDocumentSettings = (): DocumentSettings => ({
             { icon: 'restaurant', label: '食事付き' },
             { icon: 'support_agent', label: '日本語ガイド' },
         ],
+        includedText: '専用車・ドライバー\n宿泊（ホテル・ゲル）\n食事付き\n日本語ガイド\n伝統衣装・乗馬・ラクダ体験',
+        excludedText: '国際航空券\n海外旅行保険\n個人的費用\n日程表に記載のない食事',
         pricePerPerson: '128000',
         paymentNote: '上記料金には、日程表に記載のサービスが含まれております。',
     },
@@ -70,7 +77,7 @@ const defaultDocumentSettings = (): DocumentSettings => ({
         intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
         paymentMethod: '銀行振込',
         paymentDeadline: 'ご案内メールに記載の期日まで',
-        bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル大自然ツアー（カ',
+        bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル銀河旅行社（カ',
         includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
         excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
         cancellationRows: [
@@ -96,14 +103,17 @@ const defaultDocumentSettings = (): DocumentSettings => ({
         ],
         conditions: '本旅行は、当社旅行条件書および旅行業約款に基づいて実施いたします。',
         paymentInfo: 'お支払い方法：銀行振込\nお支払い期限：ご案内メールに記載の期日まで',
+        guideName: '',
+        guidePhone: '',
+        accommodationInfo: '',
         emergencyPhone: '+976-80-1234-5678',
-        emergencyEmail: 'info@mongolia-naturetour.com',
+        emergencyEmail: 'info@mongolryokou.com',
         closingMessage: 'モンゴルの大自然と文化を心ゆくまでお楽しみください。',
         qrLabel: 'お客様専用ページ',
     },
 });
 
-const mergeDocumentSettings = (value: any): DocumentSettings => {
+export const mergeDocumentSettings = (value: any): DocumentSettings => {
     const base = defaultDocumentSettings();
     if (!value || typeof value !== 'object') return base;
     return {
@@ -114,7 +124,7 @@ const mergeDocumentSettings = (value: any): DocumentSettings => {
     };
 };
 
-const decodeTemplateDescription = (raw = '') => {
+export const decodeTemplateDescription = (raw = '') => {
     const [description, encoded] = raw.split(DOC_SETTINGS_MARKER);
     if (!encoded) return { description: raw, documentSettings: defaultDocumentSettings() };
     try {
@@ -123,6 +133,24 @@ const decodeTemplateDescription = (raw = '') => {
         return { description, documentSettings: defaultDocumentSettings() };
     }
 };
+
+// 줄 단위 텍스트 → 일정 항목 배열 (전체 텍스트 편집용)
+const inferTypeForText = (text: string): ActivityType => {
+    const v = (text || '').toLowerCase();
+    if (/(공항|픽업|도착|미팅|空港|到着|arrival|airport)/i.test(v)) return 'pickup';
+    if (/(이동|출발|전용차|차량|버스|移動|出発|専用車|transfer|drive)/i.test(v)) return 'transport';
+    if (/(식사|조식|중식|석식|점심|저녁|아침|食事|朝食|昼食|夕食|meal|lunch|dinner|breakfast)/i.test(v)) return 'meal';
+    if (/(숙박|호텔|게르|체크인|宿泊|ホテル|ゲル|hotel|stay|check[-\s]?in)/i.test(v)) return 'checkin';
+    if (/(체험|승마|낙타|트레킹|공연|乗馬|ラクダ|activity|experience)/i.test(v)) return 'activity';
+    if (/(자유|휴식|自由|free)/i.test(v)) return 'free';
+    return 'sightseeing';
+};
+export const parseDayActivitiesText = (text: string): Activity[] =>
+    (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+        const m = line.match(/^(\d{1,2}:\d{2})\s+(.*)$/);
+        const title = m ? m[2] : line;
+        return { time: m ? m[1] : '', type: inferTypeForText(title), title, description: '' };
+    });
 
 const encodeTemplateDescription = (description: string, documentSettings: DocumentSettings) =>
     `${description || ''}${DOC_SETTINGS_MARKER}${JSON.stringify(documentSettings)}`;
@@ -164,6 +192,11 @@ const LANGUAGES = ['한국어', '영어', '몽골어', '중국어', '일본어']
 const SPECIALTIES = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
 const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 호텔', '5성급 호텔'], '게르': ['일반 게르', '고급 게르', '럭셔리 게르'], '게스트하우스': ['게스트하우스'] };
 
+// 모듈 스코프 컴포넌트 — 컴포넌트 내부에 정의하면 입력마다 리마운트되어 포커스·스크롤이 튐
+const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div className="mx-auto max-w-[960px] rounded-[22px] border border-[#8FE7DE] bg-white shadow-sm">{children}</div>
+);
+
 // ─── Live Preview (editable PC document preview) ───
 type TemplatePreviewProps = {
     name: string;
@@ -176,16 +209,42 @@ type TemplatePreviewProps = {
     onIncluded: (idx: number, field: 'icon' | 'label', value: string) => void;
     onCancellation: (idx: number, field: 'period' | 'fee', value: string) => void;
     onGuideNotice: (idx: number, field: 'title' | 'body', value: string) => void;
+    // 일정(日程) 직접 편집
+    onDayChange: (dayIdx: number, field: 'title' | 'region', value: string) => void;
+    onActivityChange: (dayIdx: number, actIdx: number, field: 'time' | 'title' | 'description', value: string) => void;
+    onAddDay: () => void;
+    onAddActivity: (dayIdx: number) => void;
+    onRemoveDay: (dayIdx: number) => void;
+    onRemoveActivity: (dayIdx: number, actIdx: number) => void;
+    onDayActivitiesText?: (dayIdx: number, text: string) => void;
+    // 예약/견적에서 열 때 실제 고객 데이터 자동 표시 (없으면 샘플)
+    customer?: {
+        tripNumber?: string;
+        period?: string;
+        tripLength?: string;
+        headcount?: string;
+        name?: string;
+        tripType?: string;
+        totalAmount?: number;
+        deposit?: number;
+        localAmount?: number;
+        peopleCount?: number;
+    } | null;
 };
 
-const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice }) => {
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>('overview');
+    const [textDays, setTextDays] = useState<Set<number>>(new Set());
+    const toggleTextDay = (i: number) => setTextDays(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n; });
     const totalDays = days.length;
     const nights = Math.max(0, totalDays - 1);
     const settings = mergeDocumentSettings(documentSettings);
-    const samplePrice = Number(settings.overview.pricePerPerson || 0) || 128000;
-    const sampleTotal = samplePrice * 2;
-    const tripLength = `${nights}泊${totalDays || 0}日`;
+    const peopleCount = customer?.peopleCount || 2;
+    const samplePrice = (customer?.totalAmount && peopleCount) ? Math.round(customer.totalAmount / peopleCount) : (Number(settings.overview.pricePerPerson || 0) || 128000);
+    const sampleTotal = customer?.totalAmount ?? samplePrice * peopleCount;
+    const sampleDeposit = customer?.deposit ?? Math.floor(sampleTotal * 0.1);
+    const sampleLocal = customer?.localAmount ?? (sampleTotal - sampleDeposit);
+    const tripLength = customer?.tripLength || `${nights}泊${totalDays || 0}日`;
     const pages = [
         { id: 'overview' as const, label: '日程表', icon: 'article' },
         { id: 'contract' as const, label: '契約書', icon: 'contract' },
@@ -193,14 +252,14 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, da
         { id: 'guide' as const, label: '案内', icon: 'info' },
     ];
     const rows = [
-        ['ご旅行番号', 'QT-20240604-001'],
-        ['ご旅行期間', `2026年6月10日（火）〜 2026年6月13日（金） ${tripLength}`],
-        ['参加人数', '大人 2名 / 子供 0名'],
-        ['お客様名', '山田 太郎 様'],
-        ['旅行形態', '貸切プライベートツアー'],
+        ['ご旅行番号', customer?.tripNumber || 'QT-20240604-001'],
+        ['ご旅行期間', `${customer?.period || '2026年6月10日（火）〜 2026年6月13日（金）'} ${tripLength}`],
+        ['参加人数', customer?.headcount || '大人 2名 / 子供 0名'],
+        ['お客様名', `${customer?.name || '山田 太郎'} 様`],
+        ['旅行形態', customer?.tripType || '貸切プライベートツアー'],
     ];
     const fieldClass = 'w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 outline-none transition-colors hover:border-[#8FE7DE] hover:bg-white/80 focus:border-[#39C4B7] focus:bg-white focus:ring-2 focus:ring-[#39C4B7]/15';
-    const Frame = ({ children }: { children: React.ReactNode }) => <div className="mx-auto max-w-[760px] rounded-[22px] border border-[#8FE7DE] bg-white shadow-sm">{children}</div>;
+    // Frame은 모듈 스코프로 이동 (입력마다 리마운트되어 스크롤·포커스가 튀던 문제 수정)
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[#F7FAFA] dark:bg-slate-900">
@@ -219,20 +278,49 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, da
                     ))}
                 </div>
             </div>
+            {customer ? (
+                <div className="flex items-center gap-1.5 border-b border-teal-200 bg-teal-50 px-4 py-2 text-[11px] font-bold text-[#0F8F84] dark:border-teal-800 dark:bg-teal-900/20">
+                    <span className="material-symbols-outlined text-[15px]">person</span>
+                    {customer.name || '고객'}님 문서 — 고객 정보·금액이 자동 반영되었습니다
+                </div>
+            ) : (
+                <div className="flex items-start gap-1.5 border-b border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                    <span className="material-symbols-outlined text-[15px]">info</span>
+                    <span>샘플(예시) 표시입니다. 실제 고객 정보는 <b>통합 예약 관리 → 예약/견적 → 「문서 편집」</b>으로 열면 자동으로 채워집니다.</span>
+                </div>
+            )}
             <div className="flex-1 overflow-y-auto p-4">
                 {activePage === 'overview' && <Frame>
                     <div className="flex items-center justify-between px-5 py-4">
-                        <div className="flex items-center gap-2 text-[#0F8F84]"><span className="material-symbols-outlined text-[28px]">landscape</span><div><p className="text-[12px] font-black">モンゴル大自然ツアー</p><p className="text-[8px] font-bold tracking-widest">MONGOLIA NATURE TOUR</p></div></div>
+                        <div className="flex items-center gap-2 text-[#0F8F84]"><span className="material-symbols-outlined text-[28px]">landscape</span><div><p className="text-[12px] font-black">モンゴル銀河旅行社</p><p className="text-[8px] font-bold tracking-widest">MILKYWAY JAPAN</p></div></div>
                         <div className="text-right"><p className="text-[22px] font-black tracking-[0.12em] text-[#0F8F84]">ご旅行日程表</p><input value={settings.overview.subtitle} onChange={e => onDocSection('overview', { subtitle: e.target.value })} className={`${fieldClass} max-w-[260px] text-right text-[10px] font-semibold leading-snug text-slate-400`} /></div>
                     </div>
                     <div className="relative h-[220px] overflow-hidden"><img src={mongoliaHero} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-[#00796F]/90 via-[#0F8F84]/45 to-transparent" /><div className="absolute bottom-5 left-5 right-5 text-white"><span className="rounded-xl bg-[#0F8F84] px-3 py-2 text-xs font-black">{tripLength}</span><input value={name} onChange={e => onNameChange(e.target.value)} placeholder="銀河・大自然パッケージ" className={`${fieldClass} mt-3 block max-w-[520px] text-[28px] font-black leading-tight text-white placeholder:text-white/70`} /><input value={description || settings.overview.heroTagline} onChange={e => onDescriptionChange(e.target.value)} className={`${fieldClass} mt-1 max-w-[560px] text-xs font-semibold text-white/90`} /></div></div>
                     <div className="p-5"><h4 className="mb-2 flex items-center gap-1.5 text-sm font-black text-[#0F8F84]"><span className="material-symbols-outlined text-base">check_circle</span>ご旅行概要</h4><textarea value={settings.overview.intro} onChange={e => onDocSection('overview', { intro: e.target.value })} rows={3} className={`${fieldClass} mb-3 resize-none text-[11px] font-semibold leading-relaxed text-slate-500`} /><div className="overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">{rows.map(([label, value]) => <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#8FE7DE] last:border-b-0"><div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div><div className="px-3 py-2 font-semibold text-slate-700">{value}</div></div>)}</div>
-                    <h4 className="mb-2 mt-4 text-sm font-black text-[#0F8F84]">含まれているもの</h4><div className="grid grid-cols-3 gap-2">{settings.overview.included.slice(0, 6).map((item, idx) => <div key={idx} className="min-h-[76px] rounded-xl border border-[#8FE7DE] bg-white p-2 text-center text-[#0F8F84]"><input value={item.icon} onChange={e => onIncluded(idx, 'icon', e.target.value)} className={`${fieldClass} mx-auto w-[78px] text-center text-[9px] font-bold text-slate-400`} /><span className="material-symbols-outlined block text-[22px]">{item.icon || 'check_circle'}</span><input value={item.label} onChange={e => onIncluded(idx, 'label', e.target.value)} className={`${fieldClass} mt-1 text-center text-[9px] font-black leading-tight text-[#0F8F84]`} /></div>)}</div>
-                    <div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-xl border border-amber-200 bg-white p-3 text-center"><p className="text-[9px] font-black text-[#0F8F84]">旅行代金</p><input value={settings.overview.pricePerPerson} onChange={e => onDocSection('overview', { pricePerPerson: e.target.value.replace(/[^0-9]/g, '') })} className={`${fieldClass} text-center text-lg font-black text-[#0F8F84]`} /></div><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">参加人数</p><p className="text-sm font-black text-slate-700">大人 2名</p></div><div className="rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] p-3 text-center text-white"><p className="text-[9px] font-black">ご請求金額</p><p className="text-lg font-black">{sampleTotal.toLocaleString()}円</p></div></div></div>
+                    <div className="mt-4 grid grid-cols-2 gap-3"><div><h4 className="mb-1 text-sm font-black text-[#0F8F84]">含まれているもの</h4><textarea value={settings.overview.includedText} onChange={e => onDocSection('overview', { includedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div><div><h4 className="mb-1 text-sm font-black text-slate-500">含まれないもの</h4><textarea value={settings.overview.excludedText} onChange={e => onDocSection('overview', { excludedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">参加人数</p><p className="text-base font-black text-slate-700">{peopleCount}名</p></div><div className="rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] p-3 text-center text-white"><p className="text-[9px] font-black">ご請求金額（合計）</p><p className="text-xl font-black">{sampleTotal.toLocaleString()}円</p></div></div><div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#39C4B7] bg-[#EAF8F7] p-3 text-center"><p className="text-[9px] font-black text-[#0F8F84]">ご予約金（お申込時にお支払い）</p><p className="text-lg font-black text-[#0F8F84]">{sampleDeposit.toLocaleString()}円</p></div><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">現地払い残金</p><p className="text-lg font-black text-slate-700">{sampleLocal.toLocaleString()}円</p></div></div></div>
                 </Frame>}
-                {activePage === 'contract' && <Frame><div className="p-5"><div className="mb-5 flex items-start justify-between"><div className="text-[#0F8F84]"><p className="text-[12px] font-black">モンゴル大自然ツアー</p><p className="text-[8px] font-bold tracking-widest">MONGOLIA NATURE TOUR</p></div><div className="rounded-lg bg-[#39C4B7]/10 px-3 py-2 text-[9px] font-black text-[#0F8F84]">契約日：2026年6月4日</div></div><h3 className="text-center text-[30px] font-black tracking-[0.18em] text-[#0F8F84]">ご旅行契約書</h3><p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500">Travel Contract</p><textarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11px] font-semibold leading-relaxed text-slate-500`} /><div className="mt-5 overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">{[['ご旅行名', name || '銀河・大自然パッケージ'], ['ご旅行期間', tripLength], ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`], ['合計金額', `${sampleTotal.toLocaleString()}円`], ['ガイド', '日本語ガイドが全日程同行します']].map(([label, value]) => <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#8FE7DE] last:border-b-0"><div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div><div className="px-3 py-2 font-semibold text-slate-700">{value}</div></div>)}</div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">キャンセル規定</p><div className="mt-2 space-y-1">{settings.contract.cancellationRows.slice(0, 5).map((row, idx) => <div key={idx} className="grid grid-cols-[1fr_90px] gap-1"><input value={row.period} onChange={e => onCancellation(idx, 'period', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /><input value={row.fee} onChange={e => onCancellation(idx, 'fee', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div>)}</div></div><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">お支払い</p><input value={settings.contract.paymentMethod} onChange={e => onDocSection('contract', { paymentMethod: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.contract.paymentDeadline} onChange={e => onDocSection('contract', { paymentDeadline: e.target.value })} className={`${fieldClass} mt-1 text-[10px] font-semibold text-slate-500`} /><div className="mt-4 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div></div></div></div></Frame>}
-                {activePage === 'detail' && <Frame><div className="p-5"><div className="mb-5 flex items-center justify-between"><input value={settings.detail.title} onChange={e => onDocSection('detail', { title: e.target.value })} className={`${fieldClass} text-[24px] font-black tracking-[0.12em] text-[#0F8F84]`} /><span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span></div>{days.length === 0 ? <div className="rounded-xl border border-dashed border-[#8FE7DE] py-12 text-center text-xs font-bold text-slate-400">일정을 입력하면 상세 일정이 표시됩니다.</div> : <div className="space-y-3">{days.slice(0, 5).map(day => <div key={day.day} className="grid grid-cols-[72px_1fr] gap-3"><div className="rounded-xl bg-gradient-to-b from-[#0F8F84] to-[#39C4B7] px-2 py-4 text-center text-white"><p className="text-[10px] font-black">DAY {day.day}</p><p className="mt-1 text-[11px] font-bold">{day.day}日目</p></div><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-sm font-black text-[#0F8F84]">{day.title || `${day.day}日目`}</p><div className="relative mt-3 border-l-2 border-dashed border-[#8FE7DE] pl-4">{day.activities.slice(0, 5).map((activity, index) => <div key={index} className="relative pb-2 last:pb-0 text-[11px]"><span className="absolute -left-[23px] top-1 h-3 w-3 rounded-full bg-[#0F8F84] ring-2 ring-white" /><span className="font-mono font-bold text-slate-400">{activity.time || '--:--'}</span><span className="ml-3 font-semibold text-slate-700">{activity.title || 'ご案内'}</span></div>)}</div></div></div>)}</div>}<textarea value={settings.detail.note} onChange={e => onDocSection('detail', { note: e.target.value })} rows={2} className={`${fieldClass} mt-4 resize-none text-[11px] font-semibold leading-relaxed text-slate-500`} /></div></Frame>}
-                {activePage === 'guide' && <Frame><div className="grid gap-4 p-5 sm:grid-cols-2"><div className="rounded-xl border border-[#8FE7DE] p-4"><h3 className="text-sm font-black text-[#0F8F84]">ご案内・ご注意事項</h3>{settings.guide.notices.slice(0, 5).map((item, idx) => <div key={idx} className="mt-3 flex gap-2"><span className="material-symbols-outlined text-[20px] text-[#0F8F84]">info</span><div className="flex-1"><input value={item.title} onChange={e => onGuideNotice(idx, 'title', e.target.value)} className={`${fieldClass} text-xs font-black text-[#0F8F84]`} /><textarea value={item.body} onChange={e => onGuideNotice(idx, 'body', e.target.value)} rows={2} className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /></div></div>)}</div><div className="rounded-xl border border-[#8FE7DE] p-4"><h3 className="text-sm font-black text-[#0F8F84]">旅行条件（要約）</h3><textarea value={settings.guide.conditions} onChange={e => onDocSection('guide', { conditions: e.target.value })} rows={4} className={`${fieldClass} mt-2 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><h3 className="mt-5 text-sm font-black text-[#0F8F84]">旅行代金のお支払い</h3><textarea value={settings.guide.paymentInfo} onChange={e => onDocSection('guide', { paymentInfo: e.target.value })} rows={3} className={`${fieldClass} mt-2 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><h3 className="mt-5 text-sm font-black text-[#0F8F84]">緊急連絡先</h3><input value={settings.guide.emergencyPhone} onChange={e => onDocSection('guide', { emergencyPhone: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.guide.emergencyEmail} onChange={e => onDocSection('guide', { emergencyEmail: e.target.value })} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div></div><div className="relative h-[104px] overflow-hidden"><img src={mongoliaHero} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-white via-white/75 to-transparent" /><input value={settings.guide.closingMessage} onChange={e => onDocSection('guide', { closingMessage: e.target.value })} className={`${fieldClass} absolute left-5 top-7 max-w-[360px] text-sm font-black text-[#0F8F84]`} /><div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-[#0F8F84] px-5 py-2 text-[10px] font-bold text-white"><span>モンゴル大自然ツアー</span><span>{settings.guide.emergencyEmail}</span></div></div></Frame>}
+                {activePage === 'contract' && <Frame><div className="p-5"><div className="mb-5 flex items-start justify-between"><div className="text-[#0F8F84]"><p className="text-[12px] font-black">モンゴル銀河旅行社</p><p className="text-[8px] font-bold tracking-widest">MILKYWAY JAPAN</p></div><div className="rounded-lg bg-[#39C4B7]/10 px-3 py-2 text-[9px] font-black text-[#0F8F84]">契約日：2026年6月4日</div></div><h3 className="text-center text-[30px] font-black tracking-[0.18em] text-[#0F8F84]">ご旅行契約書</h3><p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500">Travel Contract</p><textarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11px] font-semibold leading-relaxed text-slate-500`} /><div className="mt-5 overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">{[['ご旅行名', name || '銀河・大自然パッケージ'], ['ご旅行期間', tripLength], ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`], ['合計金額', `${sampleTotal.toLocaleString()}円`], ['ガイド', '日本語ガイドが全日程同行します']].map(([label, value]) => <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#8FE7DE] last:border-b-0"><div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div><div className="px-3 py-2 font-semibold text-slate-700">{value}</div></div>)}</div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">キャンセル規定</p><div className="mt-2 space-y-1">{settings.contract.cancellationRows.slice(0, 5).map((row, idx) => <div key={idx} className="grid grid-cols-[1fr_90px] gap-1"><input value={row.period} onChange={e => onCancellation(idx, 'period', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /><input value={row.fee} onChange={e => onCancellation(idx, 'fee', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div>)}</div></div><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">お支払い</p><input value={settings.contract.paymentMethod} onChange={e => onDocSection('contract', { paymentMethod: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.contract.paymentDeadline} onChange={e => onDocSection('contract', { paymentDeadline: e.target.value })} className={`${fieldClass} mt-1 text-[10px] font-semibold text-slate-500`} /><textarea value={settings.contract.bankInfo} onChange={e => onDocSection('contract', { bankInfo: e.target.value })} rows={3} placeholder="振込先・お支払い案内（自由入力）" className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><div className="mt-4 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div></div></div></div></Frame>}
+                {activePage === 'detail' && <Frame><div className="p-5"><div className="mb-5 flex items-center justify-between"><input value={settings.detail.title} onChange={e => onDocSection('detail', { title: e.target.value })} className={`${fieldClass} text-[24px] font-black tracking-[0.12em] text-[#0F8F84]`} /><span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span></div>
+                    <div className="space-y-3">{days.map((day, dayIdx) => { const inText = textDays.has(dayIdx); return (<div key={dayIdx} className="grid grid-cols-[64px_1fr] gap-3">
+                        <div className="flex flex-col items-center rounded-xl bg-gradient-to-b from-[#0F8F84] to-[#39C4B7] px-2 py-4 text-center text-white"><p className="text-[10px] font-black">DAY {day.day}</p><p className="mt-1 text-[11px] font-bold">{day.day}日目</p><button onClick={() => onRemoveDay(dayIdx)} className="mt-2 text-white/60 hover:text-white" title="이 일차 삭제"><span className="material-symbols-outlined text-[15px]">delete</span></button></div>
+                        <div className="rounded-xl border border-[#8FE7DE] p-3">
+                            <input value={day.title} onChange={e => onDayChange(dayIdx, 'title', e.target.value)} placeholder={`${day.day}日目のタイトル`} className={`${fieldClass} text-sm font-black text-[#0F8F84]`} />
+                            <input value={day.region || ''} onChange={e => onDayChange(dayIdx, 'region', e.target.value)} placeholder="地域（例：ウランバートル）" className={`${fieldClass} mt-0.5 text-[10px] font-semibold text-slate-400`} />
+                            <div className="mt-2 flex items-center justify-between"><span className="text-[10px] font-bold text-slate-400">スケジュール</span>{onDayActivitiesText && <button onClick={() => toggleTextDay(dayIdx)} className="text-[10px] font-bold text-[#0F8F84] hover:text-[#0a7d6a]">{inText ? '↩ 칸별 편집' : '✎ 텍스트로 한번에'}</button>}</div>
+                            {inText && onDayActivitiesText ? (
+                                <textarea value={day.activities.map(a => `${a.time ? a.time + ' ' : ''}${a.title}`).join('\n')} onChange={e => onDayActivitiesText(dayIdx, e.target.value)} rows={Math.max(4, day.activities.length + 1)} placeholder={'09:00 ウランバートル到着\n12:00 昼食\n宿泊：ホテル\n(한 줄에 한 항목, 맨 앞에 시간 선택)'} className={`${fieldClass} mt-1 resize-y text-[11px] font-semibold leading-relaxed text-slate-700`} />
+                            ) : (
+                                <div className="relative mt-1 border-l-2 border-dashed border-[#8FE7DE] pl-4">{day.activities.map((activity, index) => <div key={index} className="relative pb-1.5 last:pb-0"><span className="absolute -left-[23px] top-2 h-3 w-3 rounded-full bg-[#0F8F84] ring-2 ring-white" /><div className="flex items-center gap-1"><input value={activity.time || ''} onChange={e => onActivityChange(dayIdx, index, 'time', e.target.value)} placeholder="--:--" className={`${fieldClass} w-[58px] font-mono text-[11px] font-bold text-slate-400`} /><input value={activity.title} onChange={e => onActivityChange(dayIdx, index, 'title', e.target.value)} placeholder="項目名（例：亀石 観光）" className={`${fieldClass} flex-1 text-[11px] font-semibold text-slate-700`} /><button onClick={() => onRemoveActivity(dayIdx, index)} className="shrink-0 text-slate-300 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[15px]">close</span></button></div></div>)}
+                                    <button onClick={() => onAddActivity(dayIdx)} className="mt-1 inline-flex items-center gap-0.5 text-[11px] font-black text-[#0F8F84] hover:text-[#0a7d6a]"><span className="material-symbols-outlined text-[14px]">add</span>項目を追加</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>); })}
+                        {days.length === 0 && <p className="rounded-xl border border-dashed border-[#8FE7DE] py-6 text-center text-[11px] font-bold text-slate-400">아래 「日程（DAY）を追加」로 일정을 시작하세요.</p>}
+                        <button onClick={onAddDay} className="w-full rounded-xl border-2 border-dashed border-[#8FE7DE] py-3 text-xs font-black text-[#0F8F84] transition-colors hover:bg-[#EAF8F7]"><span className="material-symbols-outlined align-middle text-[16px]">add</span> 日程（DAY）を追加</button>
+                    </div>
+                    <textarea value={settings.detail.note} onChange={e => onDocSection('detail', { note: e.target.value })} rows={2} className={`${fieldClass} mt-4 resize-none text-[11px] font-semibold leading-relaxed text-slate-500`} /></div></Frame>}
+                {activePage === 'guide' && <Frame><div className="grid gap-4 p-5 sm:grid-cols-2"><div className="rounded-xl border border-[#8FE7DE] p-4"><h3 className="text-sm font-black text-[#0F8F84]">ご案内・ご注意事項</h3>{settings.guide.notices.slice(0, 5).map((item, idx) => <div key={idx} className="mt-3 flex gap-2"><span className="material-symbols-outlined text-[20px] text-[#0F8F84]">info</span><div className="flex-1"><input value={item.title} onChange={e => onGuideNotice(idx, 'title', e.target.value)} className={`${fieldClass} text-xs font-black text-[#0F8F84]`} /><textarea value={item.body} onChange={e => onGuideNotice(idx, 'body', e.target.value)} rows={2} className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /></div></div>)}</div><div className="rounded-xl border border-[#8FE7DE] p-4"><h3 className="text-sm font-black text-[#0F8F84]">旅行条件（要約）</h3><textarea value={settings.guide.conditions} onChange={e => onDocSection('guide', { conditions: e.target.value })} rows={4} className={`${fieldClass} mt-2 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><h3 className="mt-5 text-sm font-black text-[#0F8F84]">旅行代金のお支払い</h3><textarea value={settings.guide.paymentInfo} onChange={e => onDocSection('guide', { paymentInfo: e.target.value })} rows={3} className={`${fieldClass} mt-2 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><h3 className="mt-5 text-sm font-black text-[#0F8F84]">緊急連絡先</h3><input value={settings.guide.emergencyPhone} onChange={e => onDocSection('guide', { emergencyPhone: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.guide.emergencyEmail} onChange={e => onDocSection('guide', { emergencyEmail: e.target.value })} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div></div><div className="relative h-[104px] overflow-hidden"><img src={mongoliaHero} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-white via-white/75 to-transparent" /><input value={settings.guide.closingMessage} onChange={e => onDocSection('guide', { closingMessage: e.target.value })} className={`${fieldClass} absolute left-5 top-7 max-w-[360px] text-sm font-black text-[#0F8F84]`} /><div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-[#0F8F84] px-5 py-2 text-[10px] font-bold text-white"><span>モンゴル銀河旅行社</span><span>{settings.guide.emergencyEmail}</span></div></div></Frame>}
             </div>
         </div>
     );
@@ -668,7 +756,7 @@ const TemplatesTab: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <span className="material-symbols-outlined text-[24px]">landscape</span>
                                         <div>
-                                            <p className="text-[11px] font-black">モンゴル大自然ツアー</p>
+                                            <p className="text-[11px] font-black">モンゴル銀河旅行社</p>
                                             <p className="text-[8px] font-bold tracking-widest text-white/70">DOCUMENT PACKAGE</p>
                                         </div>
                                     </div>
@@ -751,262 +839,11 @@ const TemplatesTab: React.FC = () => {
                         </div>
 
                         {/* Body: editor + preview */}
-                        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] overflow-hidden">
+                        <div className="flex-1 overflow-hidden">
 
-                            {/* Editor */}
-                            <div className="overflow-y-auto px-6 py-5 bg-slate-50/50 dark:bg-slate-950/30">
-
-                                {/* Description */}
-                                <div className="mb-5">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">설명 (선택)</label>
-                                    <input
-                                        value={form.description}
-                                        onChange={e => setForm({ ...form, description: e.target.value })}
-                                        placeholder="이 템플릿이 어떤 일정인지 한 줄 설명"
-                                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    />
-                                </div>
-
-                                {/* Quick builder — 일정이 있으면 접고, 없으면 펼쳐서 시작 경로로 */}
-                                {(form.days.length === 0 || showPasteBox) ? (
-                                <div className="mb-5 rounded-2xl border border-teal-100 bg-white p-5 shadow-sm dark:border-teal-500/20 dark:bg-slate-800">
-                                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300">
-                                                <span className="material-symbols-outlined">content_paste_go</span>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">일정표 원문 붙여넣기</h3>
-                                                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                                    DAY 1, スケジュール, 宿泊 형식을 그대로 붙여넣으면 고객용 타임라인으로 정리됩니다.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={loadBulkSample} className="h-9 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">
-                                                예시 넣기
-                                            </button>
-                                            {form.days.length > 0 && (
-                                                <button onClick={() => setShowPasteBox(false)} className="h-9 rounded-lg px-2 text-xs font-bold text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 inline-flex items-center gap-1" title="붙여넣기 영역 접기">
-                                                    <span className="material-symbols-outlined text-base">expand_less</span>접기
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <textarea
-                                        value={bulkText}
-                                        onChange={e => setBulkText(e.target.value)}
-                                        rows={10}
-                                        placeholder={'DAY 1｜ウランバートル到着\nモンゴルの旅、はじまりの日。\n\nチンギスハーン国際空港に到着後、\n日本語ガイドがお出迎えいたします。\n\nスケジュール\nチンギスハーン国際空港 到着\n日本語ガイド・ドライバーと合流\n専用車にてホテルへ移動\n宿泊\nウランバートル市内 4つ星ホテル'}
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700 outline-none transition-all focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                                    />
-                                    <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                        <p className="text-[11px] leading-relaxed text-slate-400">
-                                            유형 선택은 필요 없습니다. 붙여넣은 문장은 일정표 안에 보존되고, 시간/숙박/이동만 자동 분류됩니다.
-                                        </p>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-900">
-                                                <span className="text-xs font-semibold text-slate-500">빈 일정</span>
-                                                <select
-                                                    value={quickDays}
-                                                    onChange={e => setQuickDays(Number(e.target.value))}
-                                                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                                                >
-                                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n}>{n}일</option>)}
-                                                </select>
-                                                <button onClick={() => { createBlankDays(quickDays); setShowAdvancedEditor(true); }} className="rounded-md px-2 py-1 text-xs font-bold text-slate-500 hover:bg-white hover:text-teal-600 dark:hover:bg-slate-800">
-                                                    만들기
-                                                </button>
-                                            </div>
-                                            <button onClick={importBulkText} className="h-10 rounded-xl bg-teal-500 px-4 text-sm font-black text-white shadow-md shadow-teal-500/20 transition-colors hover:bg-teal-600 inline-flex items-center gap-1.5">
-                                                <span className="material-symbols-outlined text-base">bolt</span>일정표 만들기
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                ) : (
-                                    <button onClick={() => setShowPasteBox(true)} className="mb-5 w-full rounded-xl border border-dashed border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-500 transition-colors hover:border-teal-400 hover:text-teal-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center justify-center gap-1.5">
-                                        <span className="material-symbols-outlined text-base">content_paste_go</span>원문 붙여넣기로 다시 만들기
-                                    </button>
-                                )}
-
-                                {/* Days */}
-                                <div className="mb-3 flex items-center justify-between">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                        정리 결과 <span className="ml-1 normal-case text-teal-600 dark:text-teal-400">{form.days.length}일 · {form.days.reduce((s, d) => s + d.activities.length, 0)}개 항목</span>
-                                    </label>
-                                    {form.days.length > 0 && (
-                                        <button onClick={addDay} className="text-xs px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold inline-flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-sm">add</span>일차 추가
-                                        </button>
-                                    )}
-                                </div>
-
-                                {form.days.length === 0 && (
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 py-10 text-center text-slate-400">
-                                        <span className="material-symbols-outlined mb-2 text-3xl">content_paste</span>
-                                        <p className="text-sm font-semibold">위에 일정표 원문을 붙여넣거나, "빈 일정 만들기"로 시작하세요.</p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-3">
-                                    {form.days.map((day, dayIdx) => (
-                                        <div key={dayIdx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                                            {/* Day header */}
-                                            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-700" style={{ background: 'linear-gradient(180deg,#f7f9fb,#ffffff)' }}>
-                                                <span className="flex h-[46px] w-[46px] flex-shrink-0 flex-col items-center justify-center rounded-xl text-white shadow-sm" style={{ background: '#0e9c84' }}>
-                                                    <span className="text-[17px] font-extrabold leading-none">{day.day}</span>
-                                                    <span className="mt-0.5 text-[9px] font-bold leading-none tracking-wide opacity-90">日目</span>
-                                                </span>
-                                                <div className="grid min-w-0 flex-1 gap-2.5" style={{ gridTemplateColumns: '150px 1fr' }}>
-                                                    <input
-                                                        value={day.region || ''}
-                                                        onChange={e => updateDay(dayIdx, 'region', e.target.value)}
-                                                        placeholder="지역"
-                                                        className="min-w-0 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-[13.5px] font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10"
-                                                    />
-                                                    <input
-                                                        value={day.title}
-                                                        onChange={e => updateDay(dayIdx, 'title', e.target.value)}
-                                                        placeholder="일차 제목 (예: ウランバートル到着)"
-                                                        className="min-w-0 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-[13.5px] font-bold text-slate-800 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10"
-                                                    />
-                                                </div>
-                                                <div className="flex items-center gap-0.5">
-                                                    <button onClick={() => moveDay(dayIdx, -1)} disabled={dayIdx === 0} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="위로">
-                                                        <span className="material-symbols-outlined text-base">arrow_upward</span>
-                                                    </button>
-                                                    <button onClick={() => moveDay(dayIdx, 1)} disabled={dayIdx === form.days.length - 1} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-30 disabled:cursor-default" title="아래로">
-                                                        <span className="material-symbols-outlined text-base">arrow_downward</span>
-                                                    </button>
-                                                    <button onClick={() => duplicateDay(dayIdx)} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/30" title="이 일차 복제">
-                                                        <span className="material-symbols-outlined text-base">content_copy</span>
-                                                    </button>
-                                                    <button onClick={() => removeDay(dayIdx)} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50" title="삭제">
-                                                        <span className="material-symbols-outlined text-base">delete</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Activities */}
-                                            <div className="p-4">
-                                                <div className="space-y-0">
-                                                {day.activities.map((act, actIdx) => {
-                                                    const t = act.type ? TYPE_MAP[act.type] : null;
-                                                    const acc = typeAccent(act.type);
-                                                    const last = actIdx === day.activities.length - 1;
-                                                    return (
-                                                        <div key={actIdx} className="group flex gap-3">
-                                                            <div className="flex w-8 flex-shrink-0 flex-col items-center">
-                                                                <span className="z-10 flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-[9px]" style={{ color: acc.c, background: acc.cb }}>
-                                                                    <span className="material-symbols-outlined text-[18px]">{t?.icon || 'radio_button_checked'}</span>
-                                                                </span>
-                                                                {!last && <span className="my-1 min-h-[8px] w-0 flex-1 border-l-2 border-dashed border-slate-300 dark:border-slate-600" />}
-                                                            </div>
-                                                            <div className="mb-2 min-w-0 flex-1 rounded-[11px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="rounded-md px-2 py-0.5 text-[11px] font-extrabold whitespace-nowrap" style={{ color: acc.c, background: acc.cb }}>{t?.label || '일정'}</span>
-                                                                    <span className="inline-flex items-center gap-1 text-[12px] font-bold text-slate-400">
-                                                                        <span className="material-symbols-outlined text-[14px]">schedule</span>
-                                                                        <input
-                                                                            value={act.time || ''}
-                                                                            onChange={e => updateActivity(dayIdx, actIdx, 'time', e.target.value)}
-                                                                            placeholder="시간"
-                                                                            className="w-14 rounded bg-transparent px-1 text-[12px] font-bold text-slate-600 dark:text-slate-300 outline-none hover:bg-slate-100 dark:hover:bg-slate-800"
-                                                                        />
-                                                                    </span>
-                                                                    <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                                                                        <button onClick={() => moveActivity(dayIdx, actIdx, -1)} disabled={actIdx === 0} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30" title="위로"><span className="material-symbols-outlined text-[15px]">arrow_upward</span></button>
-                                                                        <button onClick={() => moveActivity(dayIdx, actIdx, 1)} disabled={last} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30" title="아래로"><span className="material-symbols-outlined text-[15px]">arrow_downward</span></button>
-                                                                        <button onClick={() => removeActivity(dayIdx, actIdx)} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[15px]">close</span></button>
-                                                                    </div>
-                                                                </div>
-                                                                <input
-                                                                    value={act.title}
-                                                                    onChange={e => updateActivityText(dayIdx, actIdx, 'title', e.target.value)}
-                                                                    placeholder="항목 제목 (예: 亀石 観光)"
-                                                                    className="mt-1.5 w-full border-none bg-transparent text-[13.5px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
-                                                                />
-                                                                {(openDesc.has(`${dayIdx}-${actIdx}`) || act.description) ? (
-                                                                    <div className="mt-1">
-                                                                        <input
-                                                                            value={act.description}
-                                                                            onChange={e => updateActivityText(dayIdx, actIdx, 'description', e.target.value)}
-                                                                            placeholder="상세 설명"
-                                                                            className="w-full border-none bg-transparent text-[12.5px] text-slate-500 outline-none placeholder:text-slate-400 dark:text-slate-400"
-                                                                        />
-                                                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                                                            <button onClick={() => setSpotPickerTarget({ d: dayIdx, a: actIdx })} className="inline-flex items-center gap-1 rounded-md border border-dashed bg-white px-2 py-1 text-[11px] font-bold dark:bg-slate-800" style={{ color: '#0e9c84', borderColor: '#9ad9cb' }}>
-                                                                                <span className="material-symbols-outlined text-[14px]">location_on</span>관광지 마스터에서
-                                                                            </button>
-                                                                            <button onClick={() => setHotelPickerTarget({ d: dayIdx, a: actIdx })} className="inline-flex items-center gap-1 rounded-md border border-dashed bg-white px-2 py-1 text-[11px] font-bold dark:bg-slate-800" style={{ color: '#6a55d6', borderColor: '#c3b9f2' }}>
-                                                                                <span className="material-symbols-outlined text-[14px]">hotel</span>호텔 마스터에서
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <button onClick={() => toggleDesc(`${dayIdx}-${actIdx}`)} className="mt-0.5 text-[12.5px] font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400">
-                                                                        + 상세 설명 (선택)
-                                                                    </button>
-                                                                )}
-                                                                {act.images && act.images.length > 0 && (
-                                                                    <div className="mt-2 flex flex-wrap gap-1.5">
-                                                                        {act.images.map((img, k) => (
-                                                                            <div key={k} className="group/img relative h-12 w-12 overflow-hidden rounded-md border border-slate-200 dark:border-slate-600">
-                                                                                <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
-                                                                                <button onClick={() => removeActivityImage(dayIdx, actIdx, k)} className="absolute right-0 top-0 hidden h-4 w-4 items-center justify-center bg-black/60 text-white group-hover/img:flex" title="사진 삭제">
-                                                                                    <span className="material-symbols-outlined text-[12px]">close</span>
-                                                                                </button>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                                </div>
-                                                <div className="ml-11 mt-1">
-                                                    <div className="flex flex-wrap items-center gap-1.5">
-                                                        <button onClick={() => setMealMenuDay(mealMenuDay === dayIdx ? null : dayIdx)} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed bg-white px-3 py-1.5 text-[12.5px] font-bold transition-colors dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
-                                                            <span className="material-symbols-outlined text-[16px]">restaurant</span>식사
-                                                            <span className={`material-symbols-outlined text-[14px] transition-transform ${mealMenuDay === dayIdx ? 'rotate-180' : ''}`}>expand_more</span>
-                                                        </button>
-                                                        <button onClick={() => addActivityTyped(dayIdx, 'sightseeing')} className="inline-flex items-center gap-1.5 rounded-[9px] border border-dashed border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                                            <span className="material-symbols-outlined text-[16px]">add</span>항목 추가
-                                                        </button>
-                                                        {day.activities.length > 1 && (
-                                                            <button onClick={() => sortByTime(dayIdx)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600" title="시간 순으로 정렬">
-                                                                <span className="material-symbols-outlined text-sm">sort</span>시간순 정렬
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {mealMenuDay === dayIdx && (
-                                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                                            {[{ jp: '朝食', kr: '조식' }, { jp: '昼食', kr: '중식' }, { jp: '夕食', kr: '석식' }].map(m => (
-                                                                <button key={m.jp} onClick={() => { addMeal(dayIdx, m.jp); setMealMenuDay(null); }} className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-[12px] font-bold transition-colors hover:bg-amber-50 dark:bg-slate-800" style={{ color: '#c97a16', borderColor: '#ecca8e' }}>
-                                                                    {m.jp}<span className="text-[10px] font-medium text-slate-400">{m.kr}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {form.days.length === 0 && (
-                                        <button onClick={addDay} className="w-full py-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-slate-400 hover:text-teal-500 hover:border-teal-400 hover:bg-teal-50/30 transition-colors flex flex-col items-center gap-2">
-                                            <span className="material-symbols-outlined text-2xl">add_circle</span>
-                                            <span className="text-sm font-semibold">첫 번째 일차 추가</span>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Live preview */}
-                            <div className="hidden lg:block border-l border-slate-200 dark:border-slate-800 overflow-hidden p-4 bg-white dark:bg-slate-900">
-                                <TemplatePreview name={form.name} description={form.description} days={form.days} documentSettings={form.documentSettings} onNameChange={(value) => setForm(f => ({ ...f, name: value }))} onDescriptionChange={(value) => setForm(f => ({ ...f, description: value }))} onDocSection={updateDocSection} onIncluded={updateIncluded} onCancellation={updateCancellation} onGuideNotice={updateGuideNotice} />
+{/* Live preview */}
+                            <div className="h-full overflow-hidden bg-white dark:bg-slate-900">
+                                <TemplatePreview name={form.name} description={form.description} days={form.days} documentSettings={form.documentSettings} onNameChange={(value) => setForm(f => ({ ...f, name: value }))} onDescriptionChange={(value) => setForm(f => ({ ...f, description: value }))} onDocSection={updateDocSection} onIncluded={updateIncluded} onCancellation={updateCancellation} onGuideNotice={updateGuideNotice} onDayChange={(d, field, v) => updateDay(d, field, v)} onActivityChange={(d, a, field, v) => field === 'time' ? updateActivity(d, a, 'time', v) : updateActivityText(d, a, field, v)} onAddDay={addDay} onAddActivity={(d) => addActivity(d)} onRemoveDay={removeDay} onRemoveActivity={removeActivity} onDayActivitiesText={(d, text) => setForm(f => { const days = [...f.days]; days[d] = { ...days[d], activities: parseDayActivitiesText(text) }; return { ...f, days }; })} />
                             </div>
                         </div>
                     </div>

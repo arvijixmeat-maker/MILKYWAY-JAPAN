@@ -4,6 +4,8 @@ import { api } from '../lib/api';
 import { type QuoteRequest, ConvertSelectionModal, QuoteDetailModal } from '../components/admin/QuoteModals';
 import { sendNotificationEmail } from '../lib/email';
 import { sendNotification } from '../utils/notification';
+import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
+import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplateManage';
 
 // Reservation Interface
 interface Reservation {
@@ -27,6 +29,7 @@ interface Reservation {
     contractUrl?: string; // Excel Sheet URL
     itineraryUrl?: string; // Excel Sheet URL
     itineraryTemplateId?: string; // selected itinerary template
+    documentContent?: ReservationDocContent | null; // 고객별 편집·저장된 문서 내용
 
     contractData?: {
         travelers?: Array<{ name?: string; passportName?: string; age?: number | string; birthdate?: string; phone?: string; gender?: string }>;
@@ -306,6 +309,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [contractEditorOpen, setContractEditorOpen] = useState(false);
     const [sendingContract, setSendingContract] = useState(false);
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
+    const [docEditorOpen, setDocEditorOpen] = useState(false);
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -501,6 +505,45 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const itinerarySent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === itineraryUrl || String(e.description || '').includes('日程')));
     const contractSent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === contractUrl || String(e.description || '').includes('契約')));
     const guideReady = !!reservation.assignedGuide || !!reservation.areAssignmentsVisibleToUser;
+
+    // ── 문서 편집기(예약/견적 자동 채움) ──
+    const isQuoteRes = (reservation as any).type === 'quote';
+    const docPeopleCount = reservation.totalPeople || (reservation.headcount ? parseInt(String(reservation.headcount).replace(/[^0-9]/g, '')) : 0) || 0;
+    const _sd = (reservation as any).startDate;
+    const _ed = (reservation as any).endDate;
+    const _nights = (_sd && _ed) ? Math.round((new Date(_ed).getTime() - new Date(_sd).getTime()) / 86400000) : NaN;
+    const docTripLength = (!Number.isNaN(_nights) && _nights >= 0) ? `${_nights}泊${_nights + 1}日` : undefined;
+    const docCustomer = {
+        tripNumber: reservationNumber,
+        period: reservation.date || '',
+        tripLength: docTripLength,
+        headcount: reservation.headcount || (docPeopleCount ? `${docPeopleCount}名` : ''),
+        name: reservation.customerName,
+        tripType: reservation.productName,
+        totalAmount: editForm.totalAmount || undefined,
+        deposit: editForm.deposit || undefined,
+        localAmount: editForm.totalAmount ? (editForm.totalAmount - (editForm.deposit || 0)) : undefined,
+        peopleCount: docPeopleCount || undefined,
+    };
+    const docInitialContent: ReservationDocContent | null = (() => {
+        const dc = reservation.documentContent;
+        if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
+            return { name: dc.name || '', description: dc.description || '', days: dc.days || [], documentSettings: mergeDocumentSettings(dc.documentSettings) };
+        }
+        if (selectedTemplate) {
+            const decoded = decodeTemplateDescription(selectedTemplate.description || '');
+            let tDays: any[] = [];
+            try { tDays = typeof selectedTemplate.days === 'string' ? JSON.parse(selectedTemplate.days || '[]') : (selectedTemplate.days || []); } catch { tDays = []; }
+            return { name: selectedTemplate.name || '', description: decoded.description || '', days: tDays, documentSettings: decoded.documentSettings };
+        }
+        return null;
+    })();
+    const saveDocContent = async (content: ReservationDocContent) => {
+        const payload = { document_content: JSON.stringify(content) };
+        if (isQuoteRes) await (api.quotes as any).update(reservation.id, payload);
+        else await (api.reservations as any).update(reservation.id, payload);
+        onUpdate({ ...reservation, documentContent: content });
+    };
 
     const addHistory = (entry: { type: string; description: string; detail?: string }) => ({
         ...reservation,
@@ -775,6 +818,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">고객 회신, 일정표, 계약서, 현지 안내를 한 곳에서 순서대로 처리합니다.</p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => setDocEditorOpen(true)}
+                                        className="h-9 px-3.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white shadow-sm shadow-teal-500/20 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">edit_document</span>
+                                        문서 편집 (고객·금액 자동)
+                                    </button>
                                     <button
                                         onClick={() => copyCustomerMessage('itinerary')}
                                         disabled={!itineraryReady}
@@ -1278,6 +1328,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                 <option key={t.id} value={t.id}>{t.name}</option>
                                                             ))}
                                                         </select>
+                                                        <button onClick={() => setDocEditorOpen(true)} className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold py-2.5 transition-colors">
+                                                            <span className="material-symbols-outlined text-base">edit_document</span>
+                                                            {reservation.documentContent ? '문서 편집 (저장됨)' : '문서 편집 (고객·금액 자동 채움)'}
+                                                        </button>
                                                         {ready && (
                                                             <div className="text-[11px] text-slate-400 font-mono truncate px-1">
                                                                 {itineraryUrl}
@@ -1560,7 +1614,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
 
         {/* Guide Selection Modal */}
         {showGuideModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[220] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/50" onClick={() => setShowGuideModal(false)} />
                 <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
                     <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -1605,7 +1659,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
 
         {/* Accommodation Selection Modal */}
         {showAccommodationModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[220] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/50" onClick={() => setShowAccommodationModal(false)} />
                 <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
                     <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -1641,6 +1695,19 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 </div>
             </div>
         )}
+
+        <ReservationDocumentEditor
+            open={docEditorOpen}
+            onClose={() => setDocEditorOpen(false)}
+            title={`${reservation.customerName || '고객'} · ${isQuoteRes ? '見積提案書' : '確定日程表'}`}
+            customer={docCustomer}
+            initialContent={docInitialContent}
+            onSave={saveDocContent}
+            assignedGuide={reservation.assignedGuide}
+            dailyAccommodations={reservation.dailyAccommodations}
+            onAssignGuide={() => setShowGuideModal(true)}
+            onAssignAccommodation={(day) => { setSelectedDay(day); setShowAccommodationModal(true); }}
+        />
     </>);
 };
 
@@ -1723,6 +1790,12 @@ export const AdminReservationManage: React.FC = () => {
                         if (!raw) return undefined;
                         if (typeof raw === 'object') return raw;
                         try { return JSON.parse(raw); } catch { return undefined; }
+                    })(),
+                    documentContent: (() => {
+                        const raw = r.documentContent || r.document_content;
+                        if (!raw) return null;
+                        if (typeof raw === 'object') return raw;
+                        try { return JSON.parse(raw); } catch { return null; }
                     })(),
                     assignedGuide: r.assignedGuide || r.assigned_guide,
                     dailyAccommodations: r.dailyAccommodations || r.daily_accommodations,

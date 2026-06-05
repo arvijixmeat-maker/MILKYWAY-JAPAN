@@ -42,6 +42,7 @@ app.get('/', async (c) => {
         "balance_status TEXT DEFAULT 'unpaid'",
         "are_assignments_visible_to_user INTEGER DEFAULT 0",
         "price_breakdown TEXT",                         // JSON: { total, deposit, local }
+        "document_content TEXT",                         // JSON: 고객별 편집한 문서(일정·문서설정) { days, documentSettings }
     ];
     for (const colDef of reservationColumns) {
         try {
@@ -195,6 +196,7 @@ app.get('/', async (c) => {
         "deposit_status TEXT DEFAULT 'unpaid'",
         "balance_status TEXT DEFAULT 'unpaid'",
         "itinerary_template_id TEXT",
+        "document_content TEXT",
         "created_at TEXT DEFAULT CURRENT_TIMESTAMP",
         "updated_at TEXT DEFAULT CURRENT_TIMESTAMP",
     ];
