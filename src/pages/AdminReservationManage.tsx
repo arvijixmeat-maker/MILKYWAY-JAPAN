@@ -1302,87 +1302,61 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                         </div>
                                     </div>
 
-                                    <div className="grid min-h-[520px] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_230px]">
-                                        <div className="bg-slate-100/70 p-4 dark:bg-slate-950/50">
-                                            {activeDocument === 'itinerary' && !itineraryReady ? (
-                                                <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-center dark:border-slate-700 dark:bg-slate-900">
-                                                    <span className="material-symbols-outlined text-4xl text-slate-300">map</span>
-                                                    <p className="mt-3 text-sm font-black text-slate-700 dark:text-slate-200">일정표 템플릿을 먼저 선택하세요</p>
-                                                    <p className="mt-1 text-xs font-semibold text-slate-400">선택하면 고객에게 보이는 문서가 이 창에 바로 표시됩니다.</p>
-                                                </div>
-                                            ) : (
-                                                <div className="mx-auto h-[620px] max-w-[820px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800">
-                                                    <iframe
-                                                        title={activeDocument === 'itinerary' ? '확정 일정표 미리보기' : '여행 계약서 미리보기'}
-                                                        src={activeDocument === 'itinerary' ? itineraryUrl : contractUrl}
-                                                        className="h-full w-full bg-white"
-                                                    />
-                                                </div>
-                                            )}
+                                    <div className="grid gap-3 border-t border-slate-100 p-4 dark:border-slate-800 lg:grid-cols-[1fr_auto] lg:items-center">
+                                        <div className="rounded-2xl bg-[#F7FAFA] p-4 dark:bg-slate-950/50">
+                                            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">현재 문서</p>
+                                            <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">
+                                                {activeDocument === 'itinerary' ? '확정 일정표' : '여행 계약서'}
+                                            </p>
+                                            <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
+                                                이곳에서는 문서 상태만 확인합니다. 실제 수정은 전용 편집 화면에서 진행합니다.
+                                            </p>
                                         </div>
 
-                                        <aside className="border-t border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 xl:border-l xl:border-t-0">
-                                            <div className="rounded-2xl bg-[#F7FAFA] p-4 dark:bg-slate-950/50">
-                                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">현재 문서</p>
-                                                <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">
-                                                    {activeDocument === 'itinerary' ? '확정 일정표' : '여행 계약서'}
-                                                </p>
-                                                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
-                                                    {activeDocument === 'itinerary'
-                                                        ? (selectedTemplate?.name || '템플릿을 선택하면 자동 생성됩니다.')
-                                                        : '예약 정보와 고객 입력 정보를 바탕으로 자동 생성됩니다.'}
-                                                </p>
-                                            </div>
-
-                                            <div className="mt-4 space-y-2">
-                                                <button
-                                                    onClick={() => setDocEditorOpen(true)}
-                                                    className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#14b8a6] text-xs font-black text-white transition-colors hover:bg-[#0f8f84]"
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">edit_document</span>
-                                                    {reservation.documentContent ? '저장된 문서 편집' : '문서 직접 편집'}
-                                                </button>
-                                                <button
-                                                    onClick={() => window.open(activeDocument === 'itinerary' ? itineraryUrl : contractUrl, '_blank')}
-                                                    disabled={activeDocument === 'itinerary' && !itineraryReady}
-                                                    className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-black transition-colors ${(activeDocument !== 'itinerary' || itineraryReady) ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                                                    새 창에서 열기
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const url = activeDocument === 'itinerary' ? itineraryUrl : contractUrl;
-                                                        if (activeDocument === 'itinerary' && !itineraryReady) return;
-                                                        navigator.clipboard.writeText(url);
-                                                        setCopiedDocId(activeDocument);
-                                                        setTimeout(() => setCopiedDocId(null), 1500);
-                                                    }}
-                                                    disabled={activeDocument === 'itinerary' && !itineraryReady}
-                                                    className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-black transition-colors ${(activeDocument !== 'itinerary' || itineraryReady) ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">{copiedDocId === activeDocument ? 'check' : 'content_copy'}</span>
-                                                    {copiedDocId === activeDocument ? '복사됨' : '링크 복사'}
-                                                </button>
-                                                <button
-                                                    onClick={activeDocument === 'itinerary' ? sendItineraryToCustomer : sendContractToCustomer}
-                                                    disabled={activeDocument === 'itinerary' ? (!itineraryReady || sendingItinerary) : (!contractReady || sendingContract)}
-                                                    className={`flex h-11 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-black transition-colors ${activeDocument === 'itinerary'
-                                                        ? (itineraryReady && !sendingItinerary ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800')
-                                                        : (contractReady && !sendingContract ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800')
-                                                        }`}
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">send</span>
-                                                    {activeDocument === 'itinerary'
-                                                        ? (sendingItinerary ? '발송중' : '일정표 발송')
-                                                        : (sendingContract ? '발송중' : '계약서 발송')}
-                                                </button>
-                                            </div>
-
-                                            <div className="mt-4 rounded-2xl border border-slate-100 p-3 text-xs font-semibold leading-relaxed text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                                                고객은 이메일 링크와 마이페이지에서 동일한 문서를 확인합니다. 관리자는 이 화면에서 실제 표시 상태만 확인하고 바로 발송하면 됩니다.
-                                            </div>
-                                        </aside>
+                                        <div className="grid gap-2 sm:grid-cols-2 lg:w-[420px]">
+                                            <button
+                                                onClick={() => setDocEditorOpen(true)}
+                                                className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#14b8a6] px-4 text-xs font-black text-white transition-colors hover:bg-[#0f8f84]"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">edit_document</span>
+                                                {reservation.documentContent ? '저장된 문서 편집' : '문서 직접 편집'}
+                                            </button>
+                                            <button
+                                                onClick={() => window.open(activeDocument === 'itinerary' ? itineraryUrl : contractUrl, '_blank')}
+                                                disabled={activeDocument === 'itinerary' && !itineraryReady}
+                                                className={`flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-black transition-colors ${(activeDocument !== 'itinerary' || itineraryReady) ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                                새 창에서 열기
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const url = activeDocument === 'itinerary' ? itineraryUrl : contractUrl;
+                                                    if (activeDocument === 'itinerary' && !itineraryReady) return;
+                                                    navigator.clipboard.writeText(url);
+                                                    setCopiedDocId(activeDocument);
+                                                    setTimeout(() => setCopiedDocId(null), 1500);
+                                                }}
+                                                disabled={activeDocument === 'itinerary' && !itineraryReady}
+                                                className={`flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-black transition-colors ${(activeDocument !== 'itinerary' || itineraryReady) ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">{copiedDocId === activeDocument ? 'check' : 'content_copy'}</span>
+                                                {copiedDocId === activeDocument ? '복사됨' : '링크 복사'}
+                                            </button>
+                                            <button
+                                                onClick={activeDocument === 'itinerary' ? sendItineraryToCustomer : sendContractToCustomer}
+                                                disabled={activeDocument === 'itinerary' ? (!itineraryReady || sendingItinerary) : (!contractReady || sendingContract)}
+                                                className={`flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-black transition-colors ${activeDocument === 'itinerary'
+                                                    ? (itineraryReady && !sendingItinerary ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800')
+                                                    : (contractReady && !sendingContract ? 'bg-[#14b8a6] text-white hover:bg-[#0f8f84]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800')
+                                                    }`}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">send</span>
+                                                {activeDocument === 'itinerary'
+                                                    ? (sendingItinerary ? '발송중' : '일정표 발송')
+                                                    : (sendingContract ? '발송중' : '계약서 발송')}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </section>
