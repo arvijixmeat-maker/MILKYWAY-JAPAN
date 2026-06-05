@@ -46,6 +46,9 @@ interface DocumentSettings {
     };
     guide?: {
         notices?: { title: string; body: string }[];
+        guideName?: string;
+        guidePhone?: string;
+        accommodationInfo?: string;
         emergencyPhone?: string;
         emergencyEmail?: string;
         closingMessage?: string;
@@ -447,6 +450,19 @@ export const DocumentItinerary: React.FC = () => {
                                 <p className="mt-2 font-black text-slate-950">Milkyway Japan</p>
                                 <p className="mt-1 text-sm text-slate-500">{guideSettings.emergencyPhone || guide?.phone || '+976-80-1234-5678'}</p>
                                 <p className="text-sm text-slate-500">{guideSettings.emergencyEmail || 'info@mongolryokou.com'}</p>
+                                {guideSettings.guideName && (
+                                    <div className="mt-3 border-t border-[#8FE7DE]/50 pt-3">
+                                        <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">担当ガイド</p>
+                                        <p className="mt-1 font-bold text-slate-800">{guideSettings.guideName}</p>
+                                        {guideSettings.guidePhone && <p className="text-sm text-slate-500">{guideSettings.guidePhone}</p>}
+                                    </div>
+                                )}
+                                {guideSettings.accommodationInfo && (
+                                    <div className="mt-3 border-t border-[#8FE7DE]/50 pt-3">
+                                        <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">宿泊先</p>
+                                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{guideSettings.accommodationInfo}</p>
+                                    </div>
+                                )}
                                 {guideSettings.closingMessage && <p className="mt-4 text-sm font-bold leading-relaxed text-[#0F8F84]">{guideSettings.closingMessage}</p>}
                             </div>
                         </div>
