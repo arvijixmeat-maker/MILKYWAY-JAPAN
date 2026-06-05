@@ -1195,6 +1195,32 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     </button>
                                 </div>
                             </section>
+                            {/* History Timeline */}
+                            {timelineEvents.length > 0 && (
+                                <section>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="material-symbols-outlined text-base text-slate-500">history</span>
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">이력</h3>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2">
+                                        {[...timelineEvents].reverse().map((e: any, i: number, arr: any[]) => (
+                                            <div key={i} className={`grid grid-cols-[20px_1fr_auto] gap-3 py-2 ${i < arr.length - 1 ? 'border-b border-dashed border-slate-100 dark:border-slate-700' : ''}`}>
+                                                <span className="material-symbols-outlined text-teal-600 text-base mt-0.5">{timelineIcon[e.type] || 'radio_button_checked'}</span>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-slate-700 dark:text-slate-200 font-medium">{e.description}</p>
+                                                    {e.detail && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{e.detail}</p>}
+                                                </div>
+                                                <span className="text-[11px] text-slate-400 whitespace-nowrap font-mono self-start">
+                                                    {e.timestamp ? new Date(e.timestamp).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+                        </div>
+
+
                             {/* Documents */}
                             <section className="lg:col-span-2">
                                 <div className="mb-3 flex items-center justify-between gap-3">
@@ -1360,31 +1386,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     </div>
                                 </div>
                             </section>
-
-                            {/* History Timeline */}
-                            {timelineEvents.length > 0 && (
-                                <section>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="material-symbols-outlined text-base text-slate-500">history</span>
-                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm tracking-tight">이력</h3>
-                                    </div>
-                                    <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2">
-                                        {[...timelineEvents].reverse().map((e: any, i: number, arr: any[]) => (
-                                            <div key={i} className={`grid grid-cols-[20px_1fr_auto] gap-3 py-2 ${i < arr.length - 1 ? 'border-b border-dashed border-slate-100 dark:border-slate-700' : ''}`}>
-                                                <span className="material-symbols-outlined text-teal-600 text-base mt-0.5">{timelineIcon[e.type] || 'radio_button_checked'}</span>
-                                                <div className="min-w-0">
-                                                    <p className="text-xs text-slate-700 dark:text-slate-200 font-medium">{e.description}</p>
-                                                    {e.detail && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{e.detail}</p>}
-                                                </div>
-                                                <span className="text-[11px] text-slate-400 whitespace-nowrap font-mono self-start">
-                                                    {e.timestamp ? new Date(e.timestamp).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-                        </div>
                     </div>
                 </div>
 
