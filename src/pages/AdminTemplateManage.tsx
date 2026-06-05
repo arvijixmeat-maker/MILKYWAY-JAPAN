@@ -250,6 +250,17 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                     ))}
                 </div>
             </div>
+            {customer ? (
+                <div className="flex items-center gap-1.5 border-b border-teal-200 bg-teal-50 px-4 py-2 text-[11px] font-bold text-[#0F8F84] dark:border-teal-800 dark:bg-teal-900/20">
+                    <span className="material-symbols-outlined text-[15px]">person</span>
+                    {customer.name || '고객'}님 문서 — 고객 정보·금액이 자동 반영되었습니다
+                </div>
+            ) : (
+                <div className="flex items-start gap-1.5 border-b border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                    <span className="material-symbols-outlined text-[15px]">info</span>
+                    <span>샘플(예시) 표시입니다. 실제 고객 정보는 <b>통합 예약 관리 → 예약/견적 → 「문서 편집」</b>으로 열면 자동으로 채워집니다.</span>
+                </div>
+            )}
             <div className="flex-1 overflow-y-auto p-4">
                 {activePage === 'overview' && <Frame>
                     <div className="flex items-center justify-between px-5 py-4">
