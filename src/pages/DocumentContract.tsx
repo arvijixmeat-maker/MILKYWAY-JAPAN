@@ -59,7 +59,7 @@ const fallbackContract: Required<ContractSettings> = {
     intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
     paymentMethod: '銀行振込',
     paymentDeadline: 'ご案内メールに記載の期日まで',
-    bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル大自然ツアー（カ',
+    bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル銀河旅行社（カ',
     includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
     excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
     cancellationRows: [
@@ -221,8 +221,8 @@ export const DocumentContract: React.FC = () => {
                             <div className="flex items-center gap-3 text-[#0F8F84]">
                                 <span className="material-symbols-outlined text-[34px]">landscape</span>
                                 <div>
-                                    <p className="text-base font-black">モンゴル大自然ツアー</p>
-                                    <p className="text-[10px] font-bold tracking-[0.2em]">MONGOLIA NATURE TOUR</p>
+                                    <p className="text-base font-black">モンゴル銀河旅行社</p>
+                                    <p className="text-[10px] font-bold tracking-[0.2em]">MILKYWAY JAPAN</p>
                                 </div>
                             </div>
                             <div className="rounded-xl bg-[#39C4B7]/10 px-4 py-3 text-right text-xs font-bold text-[#0F8F84]">

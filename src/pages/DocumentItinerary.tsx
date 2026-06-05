@@ -238,8 +238,8 @@ export const DocumentItinerary: React.FC = () => {
                             <div className="flex items-center gap-3 text-[#0F8F84]">
                                 <span className="material-symbols-outlined text-[34px]">landscape</span>
                                 <div>
-                                    <p className="text-base font-black">モンゴル大自然ツアー</p>
-                                    <p className="text-[10px] font-bold tracking-[0.2em]">MONGOLIA NATURE TOUR</p>
+                                    <p className="text-base font-black">モンゴル銀河旅行社</p>
+                                    <p className="text-[10px] font-bold tracking-[0.2em]">MILKYWAY JAPAN</p>
                                 </div>
                             </div>
                             <div className="text-left sm:text-right">
