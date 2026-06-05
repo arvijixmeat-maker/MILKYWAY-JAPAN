@@ -24,6 +24,7 @@ interface Props {
     customer: {
         tripNumber?: string;
         period?: string;
+        tripLength?: string;
         headcount?: string;
         name?: string;
         tripType?: string;

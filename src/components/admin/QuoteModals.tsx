@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { GuideSelectionModal, AccommodationSelectionModal } from './SelectionModals';
 import { sendNotificationEmail } from '../../lib/email';
 import { api } from '../../lib/api';
+import { ReservationDocumentEditor, type ReservationDocContent } from './ReservationDocumentEditor';
+import { decodeTemplateDescription, mergeDocumentSettings } from '../../pages/AdminTemplateManage';
 
 export interface QuoteRequest {
     id: string;
@@ -34,6 +36,8 @@ export interface QuoteRequest {
     balance_status?: 'paid' | 'unpaid';
     itineraryTemplateId?: string;
     itinerary_template_id?: string;
+    documentContent?: ReservationDocContent | null;
+    document_content?: any;
 }
 
 // Helper functions for currency formatting
@@ -237,6 +241,7 @@ export const QuoteDetailModal: React.FC<{
     // 맞춤 일정표 — 고객 견적 페이지에 함께 보낼 일정표 템플릿
     const [templatesList, setTemplatesList] = useState<any[]>([]);
     const [itineraryTemplateId, setItineraryTemplateId] = useState<string>(request?.itineraryTemplateId || request?.itinerary_template_id || '');
+    const [docEditorOpen, setDocEditorOpen] = useState(false);
     useEffect(() => {
         api.itineraryTemplates.list().then((d: any) => { if (Array.isArray(d)) setTemplatesList(d); }).catch(() => {});
     }, []);
@@ -356,6 +361,47 @@ export const QuoteDetailModal: React.FC<{
     };
 
     if (!request) return null;
+
+    // 문서 편집기 (견적용) — 고객 데이터 자동 채움, document_content 저장
+    const quotePeople = parseInt(String(request.headcount || '').replace(/[^0-9]/g, '')) || 0;
+    const docTripLength = (() => {
+        if (!confirmedStartDate || !confirmedEndDate) return '';
+        const s = new Date(confirmedStartDate); const e = new Date(confirmedEndDate);
+        const ms = e.getTime() - s.getTime();
+        if (isNaN(ms) || ms < 0) return '';
+        const nights = Math.round(ms / 86400000);
+        return `${nights}泊${nights + 1}日`;
+    })();
+    const docCustomer = {
+        tripNumber: request.id.slice(0, 8).toUpperCase(),
+        period: request.period || '',
+        tripLength: docTripLength || undefined,
+        headcount: request.headcount || '',
+        name: request.name,
+        tripType: request.destination,
+        totalAmount: priceDetail.totalAmount || undefined,
+        deposit: priceDetail.deposit || undefined,
+        localAmount: priceDetail.totalAmount ? (priceDetail.totalAmount - (priceDetail.deposit || 0)) : undefined,
+        peopleCount: quotePeople || undefined,
+    };
+    const docInitialContent: ReservationDocContent | null = (() => {
+        const dc = request.documentContent || request.document_content;
+        if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
+            return { name: dc.name || '', description: dc.description || '', days: dc.days || [], documentSettings: mergeDocumentSettings(dc.documentSettings) };
+        }
+        const tpl = templatesList.find((t: any) => t.id === itineraryTemplateId);
+        if (tpl) {
+            const decoded = decodeTemplateDescription(tpl.description || '');
+            let tDays: any[] = [];
+            try { tDays = typeof tpl.days === 'string' ? JSON.parse(tpl.days || '[]') : (tpl.days || []); } catch { tDays = []; }
+            return { name: tpl.name || '', description: decoded.description || '', days: tDays, documentSettings: decoded.documentSettings };
+        }
+        return null;
+    })();
+    const saveQuoteDoc = async (content: ReservationDocContent) => {
+        await (api.quotes as any).update(request.id, { document_content: JSON.stringify(content) });
+        await onUpdateQuote(request.id, { documentContent: content } as any);
+    };
 
     const quoteStatusMeta: Record<string, { label: string; tone: string }> = {
         new: { label: '신규 요청', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
@@ -722,6 +768,13 @@ export const QuoteDetailModal: React.FC<{
                                 </div>
 
                                 <button
+                                    onClick={() => setDocEditorOpen(true)}
+                                    className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-teal-300 bg-white px-5 py-3 text-sm font-black text-teal-700 transition-colors hover:bg-teal-50 dark:border-teal-700 dark:bg-slate-800 dark:text-teal-300"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">edit_document</span>
+                                    문서 편집 (고객·금액 자동)
+                                </button>
+                                <button
                                     onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId)}
                                     disabled={!canSendEstimate}
                                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-dark px-5 py-4 text-sm font-black text-white shadow-lg shadow-primary-dark/20 transition-all hover:bg-primary active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-700"
@@ -1019,6 +1072,15 @@ export const QuoteDetailModal: React.FC<{
                     </div>
                 </div>
             </div>
+
+            <ReservationDocumentEditor
+                open={docEditorOpen}
+                onClose={() => setDocEditorOpen(false)}
+                title={`${request.name || '고객'} · 見積提案書`}
+                customer={docCustomer}
+                initialContent={docInitialContent}
+                onSave={saveQuoteDoc}
+            />
 
             {/* Selection Modals */}
             {showGuideModal && (
