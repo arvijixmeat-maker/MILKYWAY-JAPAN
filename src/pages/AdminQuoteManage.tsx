@@ -2,11 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { keysToCamel, keysToSnake } from '../utils/mapKeys';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { sendNotificationEmail } from '../lib/email';
 import type { QuoteRequest } from '../components/admin/QuoteModals';
 import { QuoteDetailModal, ConvertSelectionModal } from '../components/admin/QuoteModals';
-import { GuideSelectionModal, AccommodationSelectionModal } from '../components/admin/SelectionModals';
 
 
 
@@ -15,7 +15,6 @@ import { GuideSelectionModal, AccommodationSelectionModal } from '../components/
 
 export const AdminQuoteManage: React.FC = () => {
     const navigate = useNavigate();
-    const [isDarkMode, setIsDarkMode] = useState(false);
     // Filter States
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('전체 상태');
@@ -271,6 +270,17 @@ export const AdminQuoteManage: React.FC = () => {
         }
     };
 
+    // Map a quote status to a badge tone + label
+    const STATUS_META: Record<string, { tone: string; label: string }> = {
+        new: { tone: 'b-purple', label: '신규' },
+        reservation_requested: { tone: 'b-purple', label: '예약 요청' },
+        processing: { tone: 'b-amber', label: '작성중' },
+        answered: { tone: 'b-blue', label: '발송됨' },
+        converted: { tone: 'b-gray', label: '전환됨' },
+        completed: { tone: 'b-gray', label: '답변완료' },
+    };
+    const statusMeta = (status: string) => STATUS_META[status] || { tone: 'b-gray', label: status };
+
     const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: QuoteRequest['status']) => void }) => {
         const [isOpen, setIsOpen] = useState(false);
         const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -286,55 +296,47 @@ export const AdminQuoteManage: React.FC = () => {
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }, []);
 
-        const styles = {
-            pending_payment: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
-            paid: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
-            confirmed: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100',
-            cancelled: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
-            converted: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
-            reservation_requested: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
-        };
+        // status options shown in the dropdown menu (preserves original keys)
+        const OPTIONS: Array<{ key: string; tone: string; label: string }> = [
+            { key: 'pending_payment', tone: 'b-amber', label: '입금 대기' },
+            { key: 'paid', tone: 'b-blue', label: '결제 완료' },
+            { key: 'confirmed', tone: 'b-green', label: '예약 확정' },
+            { key: 'cancelled', tone: 'b-red', label: '취소됨' },
+            { key: 'converted', tone: 'b-gray', label: '예약 전환' },
+            { key: 'reservation_requested', tone: 'b-purple', label: '예약 요청' },
+        ];
 
-        const labels: Record<string, string> = {
-            pending_payment: '입금 대기',
-            paid: '결제 완료',
-            confirmed: '예약 확정',
-            cancelled: '취소됨',
-            converted: '예약 전환',
-            reservation_requested: '예약 요청'
-        };
+        const current = OPTIONS.find(o => o.key === status) || statusMeta(status);
 
-        const statusKey = status as keyof typeof styles;
-
-        const handleSelect = (newStatus: QuoteRequest['status'] | 'pending_payment' | 'paid' | 'confirmed' | 'cancelled') => {
+        const handleSelect = (newStatus: string) => {
             onChange(newStatus as any);
             setIsOpen(false);
         };
 
         return (
-            <div className="relative" ref={dropdownRef}>
+            <div className="statusdd" ref={dropdownRef}>
                 <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${styles[statusKey] || 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                    className={`badge ${current.tone} statusdd-btn`}
                 >
-                    <div className={`w-1.5 h-1.5 rounded-full ${statusKey === 'confirmed' ? 'bg-teal-500' : statusKey === 'paid' ? 'bg-blue-500' : statusKey === 'pending_payment' ? 'bg-amber-500' : 'bg-slate-400'}`}></div>
-                    {labels[statusKey as keyof typeof labels] || status}
-                    <span className="material-symbols-outlined text-[14px]">expand_more</span>
+                    <span className="pulse" />
+                    {current.label}
+                    <Icon name="expand_more" />
                 </button>
 
                 {isOpen && (
-                    <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200">
-                        {(Object.keys(labels) as Array<keyof typeof labels>).map((key) => (
+                    <div className="statusdd-menu" onClick={(e) => e.stopPropagation()}>
+                        {OPTIONS.map((opt) => (
                             <button
-                                key={key}
-                                onClick={() => handleSelect(key as any)}
-                                className="w-full text-left px-4 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between group"
+                                key={opt.key}
+                                type="button"
+                                onClick={() => handleSelect(opt.key)}
+                                className={`statusdd-item${status === opt.key ? ' on' : ''}`}
                             >
-                                <span className="flex items-center gap-2">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${key === 'confirmed' ? 'bg-teal-500' : key === 'paid' ? 'bg-blue-500' : key === 'pending_payment' ? 'bg-amber-500' : 'bg-red-400'}`}></div>
-                                    {labels[key]}
-                                </span>
-                                {status === key && <span className="material-symbols-outlined text-teal-500 text-[14px]">check</span>}
+                                <span className={`sd-dot ${opt.tone}`} />
+                                {opt.label}
+                                {status === opt.key && <Icon name="check" style={{ marginLeft: 'auto', fontSize: 16 }} />}
                             </button>
                         ))}
                     </div>
@@ -343,44 +345,15 @@ export const AdminQuoteManage: React.FC = () => {
         );
     };
 
-
-
-
-
-    const getActionButton = (status: string, request: QuoteRequest) => {
-        if (status === 'converted') {
-            return (
-                <button
-                    onClick={() => setSelectedRequest(request)}
-                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold rounded-lg transition-colors"
-                >
-                    예약확인
-                </button>
-            );
-        } else if (status === 'completed') {
-            return (
-                <button
-                    onClick={() => setSelectedRequest(request)}
-                    className="px-4 py-2 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors"
-                >
-                    답변완료
-                </button>
-            );
-        }
-        return (
-            <button
-                onClick={() => setSelectedRequest(request)}
-                className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg transition-colors"
-            >
-                답변하기
-            </button>
-        );
-    };
-
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
+    // Status filter chips (mirrors original select options + counts)
+    const filters = useMemo(() => ([
+        { id: '전체 상태', label: '전체', count: requests.length },
+        { id: '답변 대기', label: '답변 대기', count: requests.filter(r => r.status === 'new').length },
+        { id: '상담 중', label: '상담 중', count: requests.filter(r => r.status === 'processing').length },
+        { id: '답변 완료', label: '답변 완료', count: requests.filter(r => r.status === 'answered').length },
+        { id: '예약 요청', label: '예약 요청', count: requests.filter(r => r.status === 'reservation_requested').length },
+        { id: '예약 전환', label: '예약 전환', count: requests.filter(r => r.status === 'converted').length },
+    ]), [requests]);
 
     // Pagination helper to generate page numbers
     const getPageNumbers = () => {
@@ -399,228 +372,208 @@ export const AdminQuoteManage: React.FC = () => {
         return pages;
     };
 
+    const headerActions = (
+        <button type="button" className="btn btn-ghost" onClick={fetchQuotes}>
+            <Icon name="refresh" />새로고침
+        </button>
+    );
+
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-            {/* Sidebar */}
-            <AdminSidebar
-                activePage="quotes"
-                isDarkMode={isDarkMode}
-                toggleTheme={toggleTheme}
-            />
-
-            {/* Main Content */}
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">견적 관리 리스트</h1>
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <button className="p-2 text-slate-400 hover:text-teal-500 transition-colors">
-                                <span className="material-symbols-outlined">notifications</span>
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">관리자님, 환영합니다</span>
-                            <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-500">
-                                <span className="material-symbols-outlined">person</span>
-                            </div>
-                        </div>
+        <AdminLayout activePage="reservations" title="맞춤견적 관리" actions={headerActions}>
+            {/* Summary metrics */}
+            <section className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 18 }}>
+                <div className="metric">
+                    <div className="metric-top">
+                        <span className="metric-ico tint-purple"><Icon name="list_alt" fill /></span>
                     </div>
-                </header>
-
-                <div className="p-8 space-y-6 bg-slate-50 dark:bg-slate-900">
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">전체 요청</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.total}건</h3>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center">
-                                <span className="material-symbols-outlined">list_alt</span>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">답변 대기</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.new}건</h3>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center">
-                                <span className="material-symbols-outlined">pending_actions</span>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">완료된 견적</p>
-                                <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.completed}건</h3>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center">
-                                <span className="material-symbols-outlined">check_circle</span>
-                            </div>
-                        </div>
+                    <div className="metric-label">전체 요청</div>
+                    <div className="metric-value">{stats.total}<small>건</small></div>
+                </div>
+                <div className="metric">
+                    <div className="metric-top">
+                        <span className="metric-ico tint-amber"><Icon name="pending_actions" fill /></span>
                     </div>
-
-                    {/* Filter Section */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                            <div className="md:col-span-4">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">날짜 범위</label>
-                                <div className="relative">
-                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">calendar_today</span>
-                                    <input
-                                        type="text"
-                                        value="2024.01.01 - 2024.12.31"
-                                        readOnly
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    />
-                                </div>
-                            </div>
-                            <div className="md:col-span-4">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">고객명 검색</label>
-                                <div className="relative">
-                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-                                    <input
-                                        type="text"
-                                        placeholder="고객 이름 또는 여행지 검색"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    />
-                                </div>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-slate-400 mb-2">상태</label>
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
-                                >
-                                    <option>전체 상태</option>
-                                    <option>답변 대기</option>
-                                    <option>상담 중</option>
-                                    <option>답변 완료</option>
-                                    <option>예약 요청</option>
-                                    <option>예약 전환</option>
-                                </select>
-                            </div>
-                            <div className="md:col-span-2">
-                                <button onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
-                                    <span className="material-symbols-outlined text-lg">refresh</span>
-                                    초기화
-                                </button>
-                            </div>
-                        </div>
+                    <div className="metric-label">답변 대기</div>
+                    <div className="metric-value">{stats.new}<small>건</small></div>
+                </div>
+                <div className="metric">
+                    <div className="metric-top">
+                        <span className="metric-ico tint-green"><Icon name="check_circle" fill /></span>
                     </div>
+                    <div className="metric-label">완료된 견적</div>
+                    <div className="metric-value">{stats.completed}<small>건</small></div>
+                </div>
+            </section>
 
-                    {/* Check List Table */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto min-h-[400px]">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-50 dark:bg-slate-700/50">
-                                    <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">요청일</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">고객명</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">희망 여행지</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">인원</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">희망 일정</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">상태</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">관리</th>
+            {/* Toolbar: search */}
+            <div className="toolbar">
+                <label className="tb-search">
+                    <Icon name="search" />
+                    <input
+                        type="text"
+                        placeholder="고객 이름 또는 여행지 검색"
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                    />
+                </label>
+                <div className="spacer" />
+                <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setCurrentPage(1); }}
+                >
+                    <Icon name="refresh" />초기화
+                </button>
+            </div>
+
+            {/* Status filter chips */}
+            <div className="chip-row" style={{ marginBottom: 18 }}>
+                {filters.map(f => (
+                    <button
+                        key={f.id}
+                        type="button"
+                        className={`chip${filterStatus === f.id ? ' active' : ''}`}
+                        onClick={() => { setFilterStatus(f.id); setCurrentPage(1); }}
+                    >
+                        {f.label}{f.count ? <span className="ct">{f.count}</span> : null}
+                    </button>
+                ))}
+            </div>
+
+            {/* Quote list card */}
+            <div className="card">
+                <div className="card-head">
+                    <h2>견적 목록</h2>
+                    <span className="cell-muted" style={{ fontSize: 13 }}>{filteredRequests.length}건</span>
+                    <div className="spacer" />
+                </div>
+                <div className="tbl-wrap">
+                    <table className="tbl">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>고객 / 연락처</th>
+                                <th>요청 내용</th>
+                                <th className="c">인원</th>
+                                <th>희망일</th>
+                                <th>상태</th>
+                                <th className="r">금액</th>
+                                <th className="r">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {displayedRequests.map((request) => {
+                                const price = request.confirmed_price ?? request.confirmedPrice;
+                                return (
+                                    <tr key={request.id} onClick={() => setSelectedRequest(request)}>
+                                        <td>
+                                            <div className="cell-mono">#{String(request.id).slice(0, 6)}</div>
+                                            <div style={{ fontSize: 11, marginTop: 3 }}>
+                                                <span className="tag-type quote">맞춤견적</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div className="cell-strong">{request.name}</div>
+                                                <div className="cell-muted" style={{ fontSize: 12 }}>{request.phone}</div>
+                                            </div>
+                                        </td>
+                                        <td className="cell-muted" style={{ maxWidth: 240 }}>
+                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.destination}</div>
+                                        </td>
+                                        <td className="c cell-mono">{request.headcount}</td>
+                                        <td className="cell-muted">{request.period}</td>
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                            <StatusDropdown
+                                                status={request.status}
+                                                onChange={(newStatus) => handleStatusChange(request.id, newStatus)}
+                                            />
+                                        </td>
+                                        <td className="r cell-price">{price ? `¥${Number(price).toLocaleString()}` : '–'}</td>
+                                        <td className="r" onClick={(e) => e.stopPropagation()}>
+                                            <span className="row-actions">
+                                                <button
+                                                    type="button"
+                                                    className="act-btn"
+                                                    title="상세"
+                                                    onClick={() => setSelectedRequest(request)}
+                                                >
+                                                    <Icon name="visibility" />
+                                                </button>
+                                            </span>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {displayedRequests.length > 0 ? displayedRequests.map((request) => (
-                                        <tr key={request.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                            <td className="px-6 py-5 text-sm text-slate-500 dark:text-slate-400">{request.date}</td>
-                                            <td className="px-6 py-5 text-sm font-bold text-slate-800 dark:text-slate-200">{request.name}</td>
-                                            <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{request.destination}</td>
-                                            <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{request.headcount}</td>
-                                            <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-300">{request.period}</td>
-                                            <td className="px-6 py-5 text-center">
-                                                <StatusDropdown
-                                                    status={request.status}
-                                                    onChange={(newStatus) => handleStatusChange(request.id, newStatus)}
-                                                />
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {getActionButton(request.status, request)}
-                                                    <button
-                                                        onClick={() => setSelectedRequest(request)}
-                                                        className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-lg transition-colors"
-                                                    >
-                                                        상세 보기
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )) : (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-10 text-center text-slate-400">
-                                                검색 결과가 없습니다.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                    {displayedRequests.length === 0 && (
+                        <div className="empty">
+                            <Icon name="request_quote" />
+                            <p>{loading ? '견적을 불러오는 중입니다…' : '해당 조건의 견적이 없습니다.'}</p>
                         </div>
-                        {/* Pagination */}
-                        <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-slate-500 dark:text-slate-400">
-                            <span className="text-xs">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length} entries
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                                >
-                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
-                                </button>
-                                {getPageNumbers().map(pageNum => (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => setCurrentPage(pageNum)}
-                                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${currentPage === pageNum
-                                            ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20'
-                                            : 'hover:bg-slate-100 dark:hover:bg-slate-700'
-                                            }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                                >
-                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Detail Modal */}
-                {selectedRequest && (
-                    <QuoteDetailModal
-                        request={selectedRequest}
-                        onClose={() => setSelectedRequest(null)}
-                        onSendEstimate={handleSendEstimate}
-                        onOpenConvert={() => setIsConvertModalOpen(true)}
-                        onUpdateQuote={handleUpdateQuote}
-                    />
+                {/* Pagination */}
+                {filteredRequests.length > 0 && (
+                    <div className="card-head" style={{ borderBottom: 'none', borderTop: '1px solid var(--border-subtle)', justifyContent: 'space-between' }}>
+                        <span className="cell-muted" style={{ fontSize: 12 }}>
+                            {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredRequests.length)} / {filteredRequests.length}건
+                        </span>
+                        <div className="spacer" />
+                        <div className="row" style={{ gap: 6 }}>
+                            <button
+                                type="button"
+                                className="act-btn"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                <Icon name="chevron_left" />
+                            </button>
+                            {getPageNumbers().map(pageNum => (
+                                <button
+                                    key={pageNum}
+                                    type="button"
+                                    className={`btn btn-sm ${currentPage === pageNum ? 'btn-ink' : 'btn-ghost'}`}
+                                    style={{ minWidth: 34, padding: '0 10px' }}
+                                    onClick={() => setCurrentPage(pageNum)}
+                                >
+                                    {pageNum}
+                                </button>
+                            ))}
+                            <button
+                                type="button"
+                                className="act-btn"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                            >
+                                <Icon name="chevron_right" />
+                            </button>
+                        </div>
+                    </div>
                 )}
+            </div>
 
-                {/* Convert Logic Modal */}
-                {isConvertModalOpen && selectedRequest && (
-                    <ConvertSelectionModal
-                        request={selectedRequest}
-                        onClose={() => setIsConvertModalOpen(false)}
-                        onConvert={handleConvertToReservation}
-                    />
-                )}
-            </main>
-        </div>
+            {/* Detail Modal */}
+            {selectedRequest && (
+                <QuoteDetailModal
+                    request={selectedRequest}
+                    onClose={() => setSelectedRequest(null)}
+                    onSendEstimate={handleSendEstimate}
+                    onOpenConvert={() => setIsConvertModalOpen(true)}
+                    onUpdateQuote={handleUpdateQuote}
+                />
+            )}
+
+            {/* Convert Logic Modal */}
+            {isConvertModalOpen && selectedRequest && (
+                <ConvertSelectionModal
+                    request={selectedRequest}
+                    onClose={() => setIsConvertModalOpen(false)}
+                    onConvert={handleConvertToReservation}
+                />
+            )}
+        </AdminLayout>
     );
 };

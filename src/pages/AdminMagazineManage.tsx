@@ -3,7 +3,8 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
 
 interface Magazine {
@@ -65,7 +66,7 @@ class SliderBlot extends BlockEmbed {
         // Add click listener to remove the blot
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent editor selection
-            // Find the closest ql-editor to trigger an update if needed, but removing the node is usually enough for key events. 
+            // Find the closest ql-editor to trigger an update if needed, but removing the node is usually enough for key events.
             // However, to be safe with ReactQuill, we just remove the DOM node.
             // Quill's MutationObserver will handle the deletion.
             node.remove();
@@ -218,9 +219,6 @@ icons['location'] = '<svg viewBox="0 0 18 18"> <path class="ql-stroke" d="M9,1 C
 
 
 export const AdminMagazineManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
-
-
     const [editorContent, setEditorContent] = useState('');
 
     const quillRef = useRef<ReactQuill>(null);
@@ -504,11 +502,6 @@ export const AdminMagazineManage: React.FC = () => {
         fetchMagazines();
     };
 
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
-
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -672,505 +665,455 @@ export const AdminMagazineManage: React.FC = () => {
         fetchCategories();
     };
 
+    // Header actions differ between list and edit views
+    const headerActions = viewMode === 'edit' ? (
+        <>
+            <button className="btn btn-ghost btn-sm" onClick={resetForm}>
+                <Icon name="arrow_back" />목록
+            </button>
+            <button className="btn btn-ink" onClick={handleSubmit}>
+                <Icon name="check" />{editingMagazine ? '수정 완료' : '발행하기'}
+            </button>
+        </>
+    ) : (
+        <button className="btn btn-ink" onClick={handleCreateNew}>
+            <Icon name="edit_document" />매거진 작성
+        </button>
+    );
 
     return (
-        <div className={`min-h-screen font-sans ${isDarkMode ? 'dark' : ''}`}>
-            {/* Custom Quill Styles for Sticky Toolbar & Dark Mode */}
+        <AdminLayout activePage="magazines" title="매거진 관리" actions={headerActions}>
+            {/* Custom Quill Styles for Sticky Toolbar */}
             <style>{`
                 .quill { display: flex; flex-direction: column; overflow: hidden; }
-                .ql-toolbar { flex-shrink: 0; background: white; z-index: 10; }
-                .ql-container { flex: 1; overflow: hidden !important; display: flex; flex-direction: column; }
-                .ql-editor { flex: 1; overflow-y: auto; }
-                
-                /* Dark Mode Overrides */
-                .dark .ql-toolbar { background: #1e293b; border-color: #334155 !important; }
-                .dark .ql-container { border-color: #334155 !important; }
-                .dark .ql-stroke { stroke: #94a3b8 !important; }
-                .dark .ql-fill { fill: #94a3b8 !important; }
-                .dark .ql-picker { color: #94a3b8 !important; }
-                .dark .ql-picker-options { background: #1e293b !important; border-color: #334155 !important; }
-                .dark .ql-editor { color: #e2e8f0; }
-                .dark .ql-editor.ql-blank::before { color: #64748b; }
+                .ql-toolbar { flex-shrink: 0; background: white; z-index: 10; border-color: var(--border-default) !important; border-top-left-radius: var(--r-md); border-top-right-radius: var(--r-md); }
+                .ql-container { flex: 1; overflow: hidden !important; display: flex; flex-direction: column; border-color: var(--border-default) !important; border-bottom-left-radius: var(--r-md); border-bottom-right-radius: var(--r-md); font-family: inherit; font-size: 1rem; }
+                .ql-editor { flex: 1; overflow-y: auto; padding: 1.5rem; min-height: 360px; }
             `}</style>
-            <div className="flex bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
-                <AdminSidebar activePage="magazines" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
 
-                <main className="flex-1 ml-64 p-8">
-                    <div className="max-w-[1600px] mx-auto space-y-6">
-                        {/* Tabs */}
-                        <div className="flex gap-2 mb-4 items-center justify-between">
-                            <div className="flex gap-2">
-                                <button onClick={() => setActiveTab('magazines')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === 'magazines' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'}`}>매거진 목록</button>
-                                <button onClick={() => setActiveTab('categories')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === 'categories' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'}`}>카테고리 관리</button>
+            {/* Tabs */}
+            <div className="seg" style={{ marginBottom: 22 }}>
+                <button className={activeTab === 'magazines' ? 'active' : ''} onClick={() => setActiveTab('magazines')}>매거진 목록</button>
+                <button className={activeTab === 'categories' ? 'active' : ''} onClick={() => setActiveTab('categories')}>카테고리 관리</button>
+            </div>
+
+            {activeTab === 'categories' && (
+                <div className="card">
+                    <div className="card-head">
+                        <h2>매거진 카테고리</h2>
+                        <div className="spacer" />
+                        <button
+                            className="btn btn-ink btn-sm"
+                            onClick={() => {
+                                setEditingCategory(null);
+                                setCategoryForm({ name: '', isActive: true });
+                                setIsCategoryModalOpen(true);
+                            }}
+                        >
+                            <Icon name="add" />카테고리 추가
+                        </button>
+                    </div>
+                    <div className="tbl-wrap">
+                        <table className="tbl">
+                            <thead>
+                                <tr>
+                                    <th>순서</th>
+                                    <th>카테고리명</th>
+                                    <th className="c">매거진 수</th>
+                                    <th className="c">상태</th>
+                                    <th className="c">액션</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {magazineCategories?.map((cat, index) => (
+                                    <tr key={cat.id}>
+                                        <td>
+                                            <div className="edit-move">
+                                                <button onClick={() => moveCategoryOrder(index, 'up')} disabled={index === 0}>
+                                                    <Icon name="arrow_upward" />
+                                                </button>
+                                                <button onClick={() => moveCategoryOrder(index, 'down')} disabled={index === magazineCategories.length - 1}>
+                                                    <Icon name="arrow_downward" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="cell-strong">{cat.name}</td>
+                                        <td className="c cell-muted">{magazines?.filter(m => m.category === cat.name).length || 0}개</td>
+                                        <td className="c">
+                                            <button
+                                                onClick={() => handleToggleCategoryActive(cat)}
+                                                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                                            >
+                                                <span className={`badge ${cat.isActive ? 'b-green' : 'b-gray'}`}>
+                                                    {cat.isActive ? '활성' : '비활성'}
+                                                </span>
+                                            </button>
+                                        </td>
+                                        <td className="c">
+                                            <span className="row-actions">
+                                                <button className="act-btn" onClick={() => {
+                                                    setEditingCategory({ id: cat.id, name: cat.name, order: cat.order, isActive: cat.isActive });
+                                                    setCategoryForm({ name: cat.name, isActive: cat.isActive });
+                                                    setIsCategoryModalOpen(true);
+                                                }}>
+                                                    <Icon name="edit" />
+                                                </button>
+                                                <button className="act-btn danger" onClick={() => handleDeleteCategory(cat)}>
+                                                    <Icon name="delete" />
+                                                </button>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'magazines' && (
+                <>
+                    {viewMode === 'list' && (
+                        <>
+                            <div className="toolbar">
+                                <label className="tb-search">
+                                    <Icon name="search" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="매거진 제목 검색"
+                                    />
+                                </label>
+                                <select
+                                    className="select"
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                >
+                                    <option value="all">전체 카테고리</option>
+                                    {categories.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                                <div className="spacer" />
+                                <button className="btn btn-ink" onClick={handleCreateNew}>
+                                    <Icon name="add" />매거진 작성
+                                </button>
+                            </div>
+
+                            {filteredMagazines?.length === 0 ? (
+                                <div className="empty">
+                                    <Icon name="menu_book" />
+                                    <p>검색 결과가 없습니다.</p>
+                                </div>
+                            ) : (
+                                <div className="mag-grid">
+                                    {filteredMagazines?.map((magazine, index) => (
+                                        <div className="mag-card" key={magazine.id} onClick={() => handleEdit(magazine)}>
+                                            <div className="mag-cover">
+                                                {magazine.image && (
+                                                    <img src={magazine.image} alt={magazine.title} loading="lazy" />
+                                                )}
+                                                <span className={`badge ${magazine.isActive ? 'b-green' : 'b-amber'}`}>
+                                                    {magazine.isActive ? '게시중' : '임시저장'}
+                                                </span>
+                                            </div>
+                                            <div className="mag-body">
+                                                <h4>{magazine.title}</h4>
+                                                <div className="mag-meta">
+                                                    <span className="badge b-blue">{magazine.category}</span>
+                                                    {magazine.isFeatured && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span className="badge b-amber">인기</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="row" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                                                    {isReorderable ? (
+                                                        <span className="edit-move" style={{ flexDirection: 'row' }}>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); moveMagazine(index, 'up'); }}
+                                                                disabled={index === 0}
+                                                            >
+                                                                <Icon name="arrow_back" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); moveMagazine(index, 'down'); }}
+                                                                disabled={index === filteredMagazines.length - 1}
+                                                            >
+                                                                <Icon name="arrow_forward" />
+                                                            </button>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="row" style={{ gap: 4, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                                                            <Icon name="calendar_today" style={{ fontSize: 14 }} />
+                                                            {magazine.createdAt ? new Date(magazine.createdAt).toLocaleDateString() : ''}
+                                                        </span>
+                                                    )}
+                                                    <div className="spacer" style={{ flex: 1 }} />
+                                                    <span className="row-actions">
+                                                        <button className="act-btn" onClick={(e) => { e.stopPropagation(); handleEdit(magazine); }}>
+                                                            <Icon name="edit" />
+                                                        </button>
+                                                        <button className="act-btn danger" onClick={(e) => { e.stopPropagation(); handleDelete(magazine.id); }}>
+                                                            <Icon name="delete" />
+                                                        </button>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                    {viewMode === 'edit' && (
+                        <div className="grid-2" style={{ gridTemplateColumns: '340px 1fr', alignItems: 'start' }}>
+                            <div className="stack" style={{ gap: 16 }}>
+                                <div className="card card-pad">
+                                    <h3 className="sec-head" style={{ marginBottom: 16 }}>기본 설정</h3>
+
+                                    <div className="field">
+                                        <label>카테고리</label>
+                                        <select
+                                            className="inp"
+                                            value={formData.category}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                                        >
+                                            {categories.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="field">
+                                        <label>대표 이미지</label>
+                                        <div
+                                            className="block-img"
+                                            style={{ position: 'relative', borderRadius: 'var(--r-md)', overflow: 'hidden', cursor: 'pointer' }}
+                                        >
+                                            {formData.image ? (
+                                                <>
+                                                    <img src={formData.image} alt="Preview" />
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setFormData(prev => ({ ...prev, image: '' }));
+                                                        }}
+                                                        style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                    >
+                                                        <Icon name="close" style={{ fontSize: 16 }} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="block-img-empty">
+                                                    <Icon name="add_photo_alternate" />
+                                                    클릭하여 업로드
+                                                </div>
+                                            )}
+                                            <input type="file" accept="image/*" onChange={handleImageUpload} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="field">
+                                        <label>요약 설명</label>
+                                        <textarea
+                                            className="inp"
+                                            value={formData.description}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                            style={{ height: 96 }}
+                                        />
+                                    </div>
+
+                                    <div className="field">
+                                        <label>태그</label>
+                                        <input
+                                            className="inp"
+                                            type="text"
+                                            value={formData.tag}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, tag: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="stack" style={{ gap: 10 }}>
+                                        <label className="toggle-row" style={{ justifyContent: 'space-between', cursor: 'pointer' }}>
+                                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>발행 상태</span>
+                                            <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))} style={{ width: 16, height: 16 }} />
+                                        </label>
+                                        <label className="toggle-row" style={{ justifyContent: 'space-between', cursor: 'pointer' }}>
+                                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>인기 게시물</span>
+                                            <input type="checkbox" checked={formData.isFeatured} onChange={(e) => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))} style={{ width: 16, height: 16 }} />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="row" style={{ gap: 10 }}>
+                                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={resetForm}>작성 취소</button>
+                                    <button className="btn btn-ink" style={{ flex: 1 }} onClick={handleSubmit}>{editingMagazine ? '수정 완료' : '발행하기'}</button>
+                                </div>
+                            </div>
+
+                            <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <div style={{ padding: '20px 22px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                    <input
+                                        type="text"
+                                        value={formData.title}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                                        style={{ width: '100%', fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-strong)', border: 'none', outline: 'none', background: 'transparent' }}
+                                        placeholder="제목을 입력하세요"
+                                    />
+                                </div>
+                                <div style={{ padding: 16 }}>
+                                    <ReactQuill
+                                        ref={quillRef}
+                                        theme="snow"
+                                        value={editorContent}
+                                        onChange={setEditorContent}
+                                        modules={modules}
+                                        className="bg-white rounded-xl overflow-hidden flex flex-col"
+                                    />
+                                    <input type="file" ref={sliderInputRef} onChange={handleSliderFiles} multiple accept="image/*" className="hidden" style={{ display: 'none' }} />
+                                </div>
                             </div>
                         </div>
+                    )}
+                </>
+            )}
 
-                        {/* Contents moved from previous file... keeping structure identical */}
-                        {activeTab === 'categories' && (
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">매거진 카테고리</h2>
-                                    <button
-                                        onClick={() => {
-                                            setEditingCategory(null);
-                                            setCategoryForm({ name: '', isActive: true });
-                                            setIsCategoryModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-medium text-sm"
-                                    >
-                                        <span className="material-symbols-outlined text-lg">add</span>
-                                        카테고리 추가
-                                    </button>
-                                </div>
-                                <table className="w-full">
-                                    <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">순서</th>
-                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">카테고리명</th>
-                                            <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">매거진 수</th>
-                                            <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">상태</th>
-                                            <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">액션</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                        {magazineCategories?.map((cat, index) => (
-                                            <tr key={cat.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex gap-1">
-                                                        <button onClick={() => moveCategoryOrder(index, 'up')} disabled={index === 0} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded disabled:opacity-30">
-                                                            <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                                                        </button>
-                                                        <button onClick={() => moveCategoryOrder(index, 'down')} disabled={index === magazineCategories.length - 1} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded disabled:opacity-30">
-                                                            <span className="material-symbols-outlined text-sm">arrow_downward</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{cat.name}</td>
-                                                <td className="px-6 py-4 text-center text-sm text-slate-500">{magazines?.filter(m => m.category === cat.name).length || 0}개</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <button onClick={() => handleToggleCategoryActive(cat)}>
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${cat.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                            {cat.isActive ? '활성' : '비활성'}
-                                                        </span>
-                                                    </button>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex justify-center gap-2">
-                                                        <button onClick={() => {
-                                                            setEditingCategory({ id: cat.id, name: cat.name, order: cat.order, isActive: cat.isActive });
-                                                            setCategoryForm({ name: cat.name, isActive: cat.isActive });
-                                                            setIsCategoryModalOpen(true);
-                                                        }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                                                            <span className="material-symbols-outlined text-lg">edit</span>
-                                                        </button>
-                                                        <button onClick={() => handleDeleteCategory(cat)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+            {/* Inline Location Block Modal */}
+            {isLocationModalOpen && (
+                <div className="picker-scrim" onClick={() => setIsLocationModalOpen(false)}>
+                    <div className="picker" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="card-head">
+                            <Icon name="add_location" style={{ color: 'var(--mrt-blue)' }} />
+                            <h2>위치 카드 삽입</h2>
+                            <div className="spacer" />
+                            <button className="act-btn" onClick={() => setIsLocationModalOpen(false)}>
+                                <Icon name="close" />
+                            </button>
+                        </div>
+                        <div style={{ padding: '18px 22px', overflowY: 'auto' }}>
+                            <div className="field">
+                                <label>장소 이름</label>
+                                <input
+                                    className="inp"
+                                    type="text"
+                                    value={locationModalForm.name}
+                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="예: チンギスハーン博物館"
+                                />
                             </div>
-                        )}
-
-                        {activeTab === 'magazines' && (
-                            <>
-                                {viewMode === 'list' && (
-                                    <>
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                                            <div>
-                                                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">매거진 관리</h1>
-                                                <p className="text-slate-500 dark:text-slate-400 mt-1">전문 에디터로 여행 가이드를 작성하고 관리하세요.</p>
-                                            </div>
-                                            <button onClick={handleCreateNew} className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-teal-500/20 active:scale-95">
-                                                <span className="material-symbols-outlined">edit_document</span>
-                                                <span>새 매거진 작성</span>
-                                            </button>
-                                        </div>
-
-                                        <div className="flex gap-4">
-                                            <div className="flex-1 relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                                                <input
-                                                    type="text"
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    placeholder="제목 검색..."
-                                                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-white"
-                                                />
-                                            </div>
-                                            <select
-                                                value={filterCategory}
-                                                onChange={(e) => setFilterCategory(e.target.value)}
-                                                className="px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-white min-w-[160px]"
-                                            >
-                                                <option value="all">모든 카테고리</option>
-                                                {categories.map(cat => (
-                                                    <option key={cat} value={cat}>{cat}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {filteredMagazines?.length === 0 ? (
-                                                <div className="col-span-full py-20 text-center text-slate-400">검색 결과가 없습니다.</div>
-                                            ) : (
-                                                filteredMagazines?.map((magazine, index) => (
-                                                    <div key={magazine.id} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-full group hover:border-teal-500 transition-colors">
-                                                        <div className="relative h-48 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 mb-4">
-                                                            {magazine.image ? (
-                                                                <img src={magazine.image} alt={magazine.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                            ) : (
-                                                                <div className="flex items-center justify-center h-full text-slate-400">
-                                                                    <span className="material-symbols-outlined text-4xl">image</span>
-                                                                </div>
-                                                            )}
-                                                            <div className="absolute top-2 right-2 flex gap-1">
-                                                                {magazine.isFeatured && (
-                                                                    <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">Featured</span>
-                                                                )}
-                                                                {!magazine.isActive && (
-                                                                    <span className="bg-slate-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">Hidden</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-1 rounded-md">{magazine.category}</span>
-                                                        </div>
-                                                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 line-clamp-1">{magazine.title}</h3>
-                                                        <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 mb-4 flex-grow">{magazine.description}</p>
-
-                                                        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700 mt-auto">
-                                                            {isReorderable ? (
-                                                                <div className="flex items-center gap-1">
-                                                                    <button onClick={() => moveMagazine(index, 'up')} disabled={index === 0} className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-30">
-                                                                        <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-                                                                    </button>
-                                                                    <button onClick={() => moveMagazine(index, 'down')} disabled={index === filteredMagazines.length - 1} className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-30">
-                                                                        <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-xs text-slate-400">{magazine.createdAt ? new Date(magazine.createdAt).toLocaleDateString() : ''}</span>
-                                                            )}
-                                                            <div className="flex gap-2">
-                                                                <button onClick={() => handleEdit(magazine)} className="p-2 text-slate-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded-lg transition-colors">
-                                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                                                                </button>
-                                                                <button onClick={() => handleDelete(magazine.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
-                                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </>
-                                )}{viewMode === 'edit' && (
-                                    <div className="grid grid-cols-12 gap-8 h-[calc(100vh-6rem)]">
-                                        <div className="col-span-12 lg:col-span-3 space-y-6 overflow-y-auto pr-2">
-                                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
-                                                <h3 className="font-bold text-lg text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-3">기본 설정</h3>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">카테고리</label>
-                                                    <select
-                                                        value={formData.category}
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                                    >
-                                                        {categories.map(cat => (
-                                                            <option key={cat} value={cat}>{cat}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">대표 이미지</label>
-                                                    <div className="relative aspect-video rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 flex flex-col items-center justify-center overflow-hidden group hover:border-teal-500 transition-colors cursor-pointer">
-                                                        {formData.image ? (
-                                                            <>
-                                                                <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setFormData(prev => ({ ...prev, image: '' }));
-                                                                    }}
-                                                                    className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-sm">close</span>
-                                                                </button>
-                                                            </>
-                                                        ) : (
-                                                            <div className="text-center p-4">
-                                                                <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">add_photo_alternate</span>
-                                                                <p className="text-xs text-slate-500">클릭하여 업로드</p>
-                                                            </div>
-                                                        )}
-                                                        <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">요약 설명</label>
-                                                    <textarea
-                                                        value={formData.description}
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none resize-none h-32 text-sm"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">태그</label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.tag}
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, tag: e.target.value }))}
-                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-                                                    <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">발행 상태</span>
-                                                        <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))} className="w-4 h-4" />
-                                                    </label>
-                                                    <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">인기 게시물</span>
-                                                        <input type="checkbox" checked={formData.isFeatured} onChange={(e) => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))} className="w-4 h-4" />
-                                                    </label>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button onClick={resetForm} className="px-4 py-3 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">작성 취소</button>
-                                                <button onClick={handleSubmit} className="px-4 py-3 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-lg shadow-teal-500/20 active:scale-95 transition-all">{editingMagazine ? '수정 완료' : '발행하기'}</button>
-                                            </div>
-
-                                        </div>
-
-                                        <div className="col-span-12 lg:col-span-9 flex flex-col h-full bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                            <div className="p-8 border-b border-slate-100 dark:border-slate-700">
-                                                <input
-                                                    type="text"
-                                                    value={formData.title}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                                                    className="w-full text-3xl font-bold text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 border-none outline-none bg-transparent"
-                                                    placeholder="제목을 입력하세요"
-                                                />
-                                            </div>
-                                            <div className="flex-1 overflow-hidden p-4 flex flex-col bg-slate-50 dark:bg-slate-900">
-                                                <ReactQuill
-                                                    ref={quillRef}
-                                                    theme="snow"
-                                                    value={editorContent}
-                                                    onChange={setEditorContent}
-                                                    modules={modules}
-                                                    className="h-full bg-white dark:bg-slate-800 rounded-xl overflow-hidden flex flex-col"
-                                                />
-                                                <input type="file" ref={sliderInputRef} onChange={handleSliderFiles} multiple accept="image/*" className="hidden" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        {/* Inline Location Block Modal */}
-                        {isLocationModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                                <div className="absolute inset-0 bg-black/50" onClick={() => setIsLocationModalOpen(false)}></div>
-                                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-                                    <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-teal-500">add_location</span>
-                                        <h2 className="text-lg font-bold dark:text-white">위치 카드 삽입</h2>
-                                        <button
-                                            onClick={() => setIsLocationModalOpen(false)}
-                                            className="ml-auto w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"
-                                        >
-                                            <span className="material-symbols-outlined">close</span>
-                                        </button>
-                                    </div>
-                                    <div className="p-6 overflow-y-auto space-y-4">
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">장소 이름</label>
-                                            <input
-                                                type="text"
-                                                value={locationModalForm.name}
-                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, name: e.target.value }))}
-                                                placeholder="예: チンギスハーン博物館"
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">주소</label>
-                                            <textarea
-                                                value={locationModalForm.address}
-                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, address: e.target.value }))}
-                                                placeholder="Sambuu St, Ulaanbaatar 15141, Mongolia"
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-none h-16"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">전화</label>
-                                                <input
-                                                    type="tel"
-                                                    value={locationModalForm.phone}
-                                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, phone: e.target.value }))}
-                                                    placeholder="+976 xxxx xxxx"
-                                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">홈페이지</label>
-                                                <input
-                                                    type="url"
-                                                    value={locationModalForm.website}
-                                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, website: e.target.value }))}
-                                                    placeholder="https://..."
-                                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                                Google 지도 임베드
-                                                <span className="text-[10px] text-slate-400 ml-1">— iframe 코드 또는 src URL</span>
-                                            </label>
-                                            <textarea
-                                                value={locationModalForm.mapEmbedUrl}
-                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, mapEmbedUrl: e.target.value }))}
-                                                placeholder='Google 지도 → "공유" → "지도 임베드" → HTML 복사'
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none resize-none h-16"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                                길찾기 검색어
-                                                <span className="text-[10px] text-slate-400 ml-1">— 좌표 또는 주소</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={locationModalForm.mapQuery}
-                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, mapQuery: e.target.value }))}
-                                                placeholder="47.918,106.917 or place name"
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                                운영시간
-                                                <span className="text-[10px] text-slate-400 ml-1">— 요일별 1줄씩</span>
-                                            </label>
-                                            <textarea
-                                                value={locationModalForm.hours}
-                                                onChange={(e) => setLocationModalForm(prev => ({ ...prev, hours: e.target.value }))}
-                                                placeholder={'月: 09:00 - 17:00\n火: 09:00 - 17:00\n日: 休業'}
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none resize-none h-28"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
-                                        <button
-                                            onClick={() => setIsLocationModalOpen(false)}
-                                            className="flex-1 px-4 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                        >
-                                            취소
-                                        </button>
-                                        <button
-                                            onClick={insertLocationBlot}
-                                            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-md shadow-teal-500/30 active:scale-95 transition-all"
-                                        >
-                                            본문에 삽입
-                                        </button>
-                                    </div>
+                            <div className="field">
+                                <label>주소</label>
+                                <textarea
+                                    className="inp"
+                                    value={locationModalForm.address}
+                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, address: e.target.value }))}
+                                    placeholder="Sambuu St, Ulaanbaatar 15141, Mongolia"
+                                    style={{ height: 64 }}
+                                />
+                            </div>
+                            <div className="field-row">
+                                <div className="field">
+                                    <label>전화</label>
+                                    <input
+                                        className="inp"
+                                        type="tel"
+                                        value={locationModalForm.phone}
+                                        onChange={(e) => setLocationModalForm(prev => ({ ...prev, phone: e.target.value }))}
+                                        placeholder="+976 xxxx xxxx"
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label>홈페이지</label>
+                                    <input
+                                        className="inp"
+                                        type="url"
+                                        value={locationModalForm.website}
+                                        onChange={(e) => setLocationModalForm(prev => ({ ...prev, website: e.target.value }))}
+                                        placeholder="https://..."
+                                    />
                                 </div>
                             </div>
-                        )}
-                        {isCategoryModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                                <div className="absolute inset-0 bg-black/50" onClick={() => setIsCategoryModalOpen(false)}></div>
-                                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md">
-                                    <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                                        <h2 className="text-lg font-bold">{editingCategory ? '카테고리 수정' : '카테고리 추가'}</h2>
-                                    </div>
-                                    <div className="p-6 space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">카테고리명</label>
-                                            <input
-                                                type="text"
-                                                value={categoryForm.name}
-                                                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                                                placeholder="예: 여행 팁"
-                                                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900"
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                id="catActive"
-                                                checked={categoryForm.isActive}
-                                                onChange={(e) => setCategoryForm({ ...categoryForm, isActive: e.target.checked })}
-                                                className="w-4 h-4"
-                                            />
-                                            <label htmlFor="catActive" className="text-sm">활성화</label>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
-                                        <button onClick={() => setIsCategoryModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">취소</button>
-                                        <button onClick={handleSaveCategory} className="px-4 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600">저장</button>
-                                    </div>
-                                </div>
+                            <div className="field">
+                                <label>Google 지도 임베드 <span className="muted" style={{ fontWeight: 600, fontSize: 11 }}>— iframe 코드 또는 src URL</span></label>
+                                <textarea
+                                    className="inp"
+                                    value={locationModalForm.mapEmbedUrl}
+                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, mapEmbedUrl: e.target.value }))}
+                                    placeholder='Google 지도 → "공유" → "지도 임베드" → HTML 복사'
+                                    style={{ height: 64, fontFamily: 'var(--font-mono)', fontSize: 12 }}
+                                />
                             </div>
-                        )}
-
+                            <div className="field">
+                                <label>길찾기 검색어 <span className="muted" style={{ fontWeight: 600, fontSize: 11 }}>— 좌표 또는 주소</span></label>
+                                <input
+                                    className="inp"
+                                    type="text"
+                                    value={locationModalForm.mapQuery}
+                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, mapQuery: e.target.value }))}
+                                    placeholder="47.918,106.917 or place name"
+                                />
+                            </div>
+                            <div className="field" style={{ marginBottom: 0 }}>
+                                <label>운영시간 <span className="muted" style={{ fontWeight: 600, fontSize: 11 }}>— 요일별 1줄씩</span></label>
+                                <textarea
+                                    className="inp"
+                                    value={locationModalForm.hours}
+                                    onChange={(e) => setLocationModalForm(prev => ({ ...prev, hours: e.target.value }))}
+                                    placeholder={'月: 09:00 - 17:00\n火: 09:00 - 17:00\n日: 休業'}
+                                    style={{ height: 112, fontFamily: 'var(--font-mono)', fontSize: 12 }}
+                                />
+                            </div>
+                        </div>
+                        <div className="drawer-foot">
+                            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setIsLocationModalOpen(false)}>취소</button>
+                            <button className="btn btn-ink" style={{ flex: 1 }} onClick={insertLocationBlot}>본문에 삽입</button>
+                        </div>
                     </div>
-                </main>
-                <style>{`
-                    .ql-toolbar {
-                        border-top-left-radius: 0.75rem;
-                        border-top-right-radius: 0.75rem;
-                        border-color: #e2e8f0 !important;
-                        background-color: white;
-                    }
-                    .dark .ql-toolbar {
-                        border-color: #334155 !important;
-                        background-color: #1e293b;
-                        color: white !important;
-                    }
-                     .dark .ql-toolbar .ql-stroke {
-                         stroke: #cbd5e1;
-                     }
-                      .dark .ql-toolbar .ql-fill {
-                         fill: #cbd5e1;
-                     }
-                      .dark .ql-toolbar .ql-picker {
-                         color: #cbd5e1;
-                     }
-                    .ql-container {
-                        border-bottom-left-radius: 0.75rem;
-                        border-bottom-right-radius: 0.75rem;
-                        border-color: #e2e8f0 !important;
-                        font-family: inherit;
-                        font-size: 1rem;
-                        flex: 1;
-                        display: flex;
-                        flex-direction: column;
-                    }
-                     .dark .ql-container {
-                        border-color: #334155 !important;
-                        color: white;
-                     }
-                    .ql-editor {
-                        padding: 1.5rem;
-                        min-height: 300px;
+                </div>
+            )}
 
-
-                `}</style>
-            </div>
-        </div>
+            {isCategoryModalOpen && (
+                <div className="picker-scrim" onClick={() => setIsCategoryModalOpen(false)}>
+                    <div className="picker" onClick={(e) => e.stopPropagation()}>
+                        <div className="card-head">
+                            <h2>{editingCategory ? '카테고리 수정' : '카테고리 추가'}</h2>
+                            <div className="spacer" />
+                            <button className="act-btn" onClick={() => setIsCategoryModalOpen(false)}>
+                                <Icon name="close" />
+                            </button>
+                        </div>
+                        <div style={{ padding: '18px 22px' }}>
+                            <div className="field">
+                                <label>카테고리명</label>
+                                <input
+                                    className="inp"
+                                    type="text"
+                                    value={categoryForm.name}
+                                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                                    placeholder="예: 여행 팁"
+                                />
+                            </div>
+                            <label className="toggle-row" style={{ cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    id="catActive"
+                                    checked={categoryForm.isActive}
+                                    onChange={(e) => setCategoryForm({ ...categoryForm, isActive: e.target.checked })}
+                                    style={{ width: 16, height: 16 }}
+                                />
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>활성화</span>
+                            </label>
+                        </div>
+                        <div className="drawer-foot" style={{ justifyContent: 'flex-end' }}>
+                            <button className="btn btn-ghost" onClick={() => setIsCategoryModalOpen(false)}>취소</button>
+                            <button className="btn btn-ink" onClick={handleSaveCategory}>저장</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </AdminLayout>
     );
 };

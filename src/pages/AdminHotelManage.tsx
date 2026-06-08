@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import type { Hotel } from '../types/hotel';
@@ -25,16 +26,11 @@ const EMPTY_HOTEL: Hotel = {
 
 /**
  * Admin page for the hotel master library.
- * Left side = filterable list. Right side = detail editor.
- * The "가져오기" button in the itinerary editor opens a similar list as a modal.
+ * Toolbar + master table (대표 / 호텔명 / 주소 / 사진 / 사용 / 관리).
+ * The editor (add/edit) opens in a modal. The "가져오기" button in the
+ * itinerary editor opens a similar list as a modal elsewhere.
  */
 export const AdminHotelManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
-    const toggleTheme = () => {
-        setIsDarkMode((v) => !v);
-        document.documentElement.classList.toggle('dark');
-    };
-
     const [hotels, setHotels] = useState<Hotel[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -43,7 +39,7 @@ export const AdminHotelManage: React.FC = () => {
     const [q, setQ] = useState('');
     const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
 
-    // Selected hotel (right pane)
+    // Editor (modal)
     const [editing, setEditing] = useState<Hotel | null>(null);
     const [isNew, setIsNew] = useState(false);
 
@@ -70,7 +66,7 @@ export const AdminHotelManage: React.FC = () => {
             if (filterActive === 'inactive' && h.is_active) return false;
             if (q) {
                 const needle = q.toLowerCase();
-                const hay = `${h.name_kr} ${h.name_local || ''}`.toLowerCase();
+                const hay = `${h.name_kr} ${h.name_local || ''} ${h.address || ''}`.toLowerCase();
                 if (!hay.includes(needle)) return false;
             }
             return true;
@@ -122,6 +118,27 @@ export const AdminHotelManage: React.FC = () => {
         }
     };
 
+    // Delete directly from the table row.
+    const deleteRow = async (h: Hotel) => {
+        if (!confirm(`"${h.name_kr}" 호텔을 삭제하시겠습니까?\n\n이 호텔을 사용 중인 상품의 일정에는 영향이 없습니다(스냅샷으로 저장되어 있음).`)) return;
+        try {
+            await api.hotels.delete(h.id);
+            await load();
+        } catch (e: any) {
+            alert('삭제 실패: ' + (e?.message || '알 수 없는 오류'));
+        }
+    };
+
+    // Inline toggle of the 사용 (active) flag from the table.
+    const toggleActive = async (h: Hotel) => {
+        try {
+            await api.hotels.update(h.id, { ...h, is_active: !h.is_active });
+            await load();
+        } catch (e: any) {
+            alert('업데이트 실패: ' + (e?.message || '알 수 없는 오류'));
+        }
+    };
+
     const handleAddImages = async (files: FileList | null) => {
         if (!files || !editing) return;
         try {
@@ -144,302 +161,375 @@ export const AdminHotelManage: React.FC = () => {
     };
 
     return (
-        <div className={`flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans ${isDarkMode ? 'dark' : ''}`}>
-            <AdminSidebar activePage="hotels" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">호텔 관리</h1>
-                    <button
-                        type="button"
-                        onClick={startNew}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold text-sm flex items-center gap-2 transition-colors"
+        <AdminLayout
+            activePage="hotels"
+            title="호텔 마스터"
+            actions={
+                <button type="button" onClick={startNew} className="btn btn-ink">
+                    <Icon name="add" />
+                    호텔 추가
+                </button>
+            }
+        >
+            <div className="route-anim">
+                <div className="toolbar">
+                    <label className="tb-search">
+                        <Icon name="search" />
+                        <input
+                            placeholder="호텔명, 주소 검색"
+                            value={q}
+                            onChange={(e) => setQ(e.target.value)}
+                        />
+                    </label>
+                    <select
+                        className="select"
+                        value={filterActive}
+                        onChange={(e) => setFilterActive(e.target.value as 'all' | 'active' | 'inactive')}
                     >
-                        <span className="material-symbols-outlined text-base">add</span>
+                        <option value="all">전체 사용여부</option>
+                        <option value="active">사용중</option>
+                        <option value="inactive">미사용</option>
+                    </select>
+                    <div className="spacer" />
+                    <span className="cell-muted" style={{ fontSize: 13 }}>
+                        전체 {hotels.length}개 중 <b style={{ color: 'var(--text-strong)' }}>{filtered.length}</b>개 표시
+                    </span>
+                    <button type="button" onClick={startNew} className="btn btn-ink">
+                        <Icon name="add" />
                         호텔 추가
                     </button>
-                </header>
+                </div>
 
-                <div className="flex-1 p-8 flex gap-6 min-h-0">
-                    {/* ─── LEFT: List + filters ─── */}
-                    <div className="flex-1 min-w-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 flex-wrap">
-                            <input
-                                type="text"
-                                value={q}
-                                onChange={(e) => setQ(e.target.value)}
-                                placeholder="호텔명으로 검색"
-                                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                            />
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="text-slate-500 dark:text-slate-400">사용여부:</span>
-                                {([
-                                    { v: 'all', l: '전체' },
-                                    { v: 'active', l: '사용중' },
-                                    { v: 'inactive', l: '미사용' },
-                                ] as const).map((opt) => (
-                                    <button
-                                        key={opt.v}
-                                        type="button"
-                                        onClick={() => setFilterActive(opt.v)}
-                                        className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${filterActive === opt.v
-                                            ? 'bg-teal-500 border-teal-500 text-white'
-                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                            }`}
-                                    >
-                                        {opt.l}
-                                    </button>
-                                ))}
-                            </div>
-                            <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
-                                전체 {hotels.length}개 중 <strong className="text-slate-900 dark:text-white">{filtered.length}</strong>개 표시
-                            </span>
-                        </div>
-
-                        <div className="flex-1 overflow-auto">
-                            {loading ? (
-                                <div className="py-20 text-center text-slate-500">불러오는 중...</div>
-                            ) : filtered.length === 0 ? (
-                                <div className="py-20 text-center text-slate-500">
-                                    {hotels.length === 0 ? '아직 등록된 호텔이 없습니다. 우상단 "호텔 추가" 버튼으로 시작하세요.' : '조건에 맞는 호텔이 없습니다.'}
-                                </div>
-                            ) : (
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
-                                        <tr className="text-xs text-slate-500 dark:text-slate-400">
-                                            <th className="text-left px-4 py-3 font-medium w-20">대표</th>
-                                            <th className="text-left px-4 py-3 font-medium">호텔명</th>
-                                            <th className="text-left px-4 py-3 font-medium">주소</th>
-                                            <th className="text-center px-4 py-3 font-medium w-20">사진</th>
-                                            <th className="text-center px-4 py-3 font-medium w-24">사용</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filtered.map((h) => {
-                                            const thumb = (h.images || []).find((url) => !!url);
-                                            return (
-                                                <tr
-                                                    key={h.id}
-                                                    onClick={() => startEdit(h)}
-                                                    className={`border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors ${editing?.id === h.id ? 'bg-teal-50/60 dark:bg-teal-900/30' : ''
-                                                        }`}
-                                                >
-                                                    <td className="px-4 py-2">
-                                                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                                                            {thumb ? (
-                                                                <img
-                                                                    src={thumb}
-                                                                    alt={h.name_kr}
-                                                                    loading="lazy"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <span className="material-symbols-outlined text-slate-400 text-base">hotel</span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                                                        {h.name_kr}
-                                                        {h.name_local && (
-                                                            <span className="ml-2 text-xs font-normal text-slate-500">{h.name_local}</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
-                                                        {h.address || '-'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-xs text-slate-500">
-                                                        {(h.images || []).length}장
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${h.is_active
-                                                            ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'
-                                                            : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                                                            }`}>
-                                                            {h.is_active ? 'Y' : 'N'}
+                <div className="card">
+                    <div className="tbl-wrap">
+                        <table className="tbl">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: 80 }}>대표</th>
+                                    <th>호텔명</th>
+                                    <th>주소</th>
+                                    <th className="c">사진</th>
+                                    <th className="c">사용</th>
+                                    <th className="r">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={6}>
+                                            <div className="empty">
+                                                <Icon name="hotel" />
+                                                <p>불러오는 중...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6}>
+                                            <div className="empty">
+                                                <Icon name="hotel" />
+                                                <p>
+                                                    {hotels.length === 0
+                                                        ? '아직 등록된 호텔이 없습니다. 우상단 "호텔 추가" 버튼으로 시작하세요.'
+                                                        : '조건에 맞는 호텔이 없습니다.'}
+                                                </p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((h) => {
+                                        const thumb = (h.images || []).find((url) => !!url);
+                                        return (
+                                            <tr key={h.id} onClick={() => startEdit(h)}>
+                                                <td>
+                                                    {thumb ? (
+                                                        <img className="thumb sq" src={thumb} alt={h.name_kr} loading="lazy" />
+                                                    ) : (
+                                                        <span
+                                                            className="thumb sq"
+                                                            style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}
+                                                        >
+                                                            <Icon name="image" style={{ fontSize: 20 }} />
                                                         </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* ─── RIGHT: Detail editor ─── */}
-                    {editing ? (
-                        <div className="w-[520px] flex-shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                                <h2 className="font-bold text-slate-800 dark:text-white">
-                                    {isNew ? '새 호텔 등록' : '호텔 정보 수정'}
-                                </h2>
-                                <div className="flex gap-2">
-                                    {!isNew && (
-                                        <button
-                                            type="button"
-                                            onClick={handleDelete}
-                                            className="px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                                        >
-                                            삭제
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => { setEditing(null); setIsNew(false); }}
-                                        className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                                    >
-                                        닫기
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleSave}
-                                        disabled={saving}
-                                        className="px-4 py-1.5 text-xs font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {saving ? '저장 중...' : '저장'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-auto p-4 space-y-3">
-                                <Field label="대제목" required hint="일정 카드의 큰 제목으로 표시됩니다. (예: 마리나베이샌즈호텔)">
-                                    <input
-                                        type="text"
-                                        value={editing.name_kr}
-                                        onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
-                                        placeholder="마리나베이샌즈호텔"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field label="소제목" hint="대제목 아래 작은 한 줄 설명. (예: 5성급, 시내 중심·뷰 추천)">
-                                    <input
-                                        type="text"
-                                        value={editing.name_local || ''}
-                                        onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
-                                        placeholder="5성급, 시내 중심·뷰 추천"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field label="주소">
-                                    <input
-                                        type="text"
-                                        value={editing.address || ''}
-                                        onChange={(e) => setEditing({ ...editing, address: e.target.value })}
-                                        placeholder="10 Bayfront Ave, Singapore 018956"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field label="상세 설명">
-                                    <textarea
-                                        value={editing.description || ''}
-                                        onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                                        rows={4}
-                                        placeholder="호텔 소개, 특징, 위치적 장점 등..."
-                                        className={`${inputCls} resize-y min-h-[100px]`}
-                                    />
-                                </Field>
-
-                                <Field label="편의시설 (쉼표로 구분)">
-                                    <input
-                                        type="text"
-                                        value={(editing.amenities || []).join(', ')}
-                                        onChange={(e) =>
-                                            setEditing({
-                                                ...editing,
-                                                amenities: e.target.value
-                                                    .split(',')
-                                                    .map((s) => s.trim())
-                                                    .filter(Boolean),
-                                            })
-                                        }
-                                        placeholder="수영장, 사우나, 무료 Wi-Fi, 조식 포함"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field label="이미지">
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {(editing.images || []).map((src, i) => (
-                                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-                                                    <img src={src} alt="" className="w-full h-full object-cover" />
+                                                    )}
+                                                </td>
+                                                <td className="cell-strong">
+                                                    {h.name_kr}
+                                                    {h.name_local && (
+                                                        <span className="cell-muted" style={{ marginLeft: 8, fontWeight: 400 }}>
+                                                            {h.name_local}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="cell-muted">{h.address || '-'}</td>
+                                                <td className="c">
+                                                    <span className="badge b-gray">
+                                                        <Icon name="photo_library" />
+                                                        {(h.images || []).length}
+                                                    </span>
+                                                </td>
+                                                <td className="c">
                                                     <button
                                                         type="button"
-                                                        onClick={() => removeImage(i)}
-                                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-red-500 text-white text-xs flex items-center justify-center"
-                                                        title="삭제"
+                                                        className={`switch${h.is_active ? ' on' : ''}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleActive(h);
+                                                        }}
                                                     >
-                                                        ×
+                                                        <span className="knob" />
                                                     </button>
-                                                    {i === 0 && (
-                                                        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-teal-500 text-white text-[10px] font-bold">
-                                                            대표
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            <label className="aspect-square border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors">
-                                                <span className="material-symbols-outlined text-slate-400">add_photo_alternate</span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    multiple
-                                                    onChange={(e) => {
-                                                        handleAddImages(e.target.files);
-                                                        e.target.value = '';
-                                                    }}
-                                                    className="hidden"
-                                                />
-                                            </label>
-                                        </div>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            첫 번째 이미지가 일정 화면에 표시되는 대표 이미지입니다.
-                                        </p>
-                                    </div>
-                                </Field>
-
-                                <Field label="사용 여부">
-                                    <div className="flex gap-2">
-                                        {([
-                                            { v: true, l: '사용 (목록에 노출)' },
-                                            { v: false, l: '미사용 (숨김)' },
-                                        ] as const).map((opt) => (
-                                            <button
-                                                key={String(opt.v)}
-                                                type="button"
-                                                onClick={() => setEditing({ ...editing, is_active: opt.v })}
-                                                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${editing.is_active === opt.v
-                                                    ? 'bg-teal-500 border-teal-500 text-white'
-                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                                    }`}
-                                            >
-                                                {opt.l}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </Field>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-[520px] flex-shrink-0 flex items-center justify-center text-center p-8 text-slate-500 dark:text-slate-400">
-                            <div>
-                                <div className="text-5xl mb-3 opacity-60">🏨</div>
-                                <p className="text-sm">왼쪽에서 호텔을 선택하거나 우상단 "호텔 추가" 버튼을 누르세요.</p>
-                            </div>
-                        </div>
-                    )}
+                                                </td>
+                                                <td className="r">
+                                                    <span className="row-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="act-btn"
+                                                            title="수정"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                startEdit(h);
+                                                            }}
+                                                        >
+                                                            <Icon name="edit" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="act-btn danger"
+                                                            title="삭제"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                deleteRow(h);
+                                                            }}
+                                                        >
+                                                            <Icon name="delete" />
+                                                        </button>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </main>
-        </div>
+            </div>
+
+            {/* ─── Add / Edit modal ─── */}
+            {editing && (
+                <div
+                    className="picker-scrim"
+                    onClick={() => {
+                        setEditing(null);
+                        setIsNew(false);
+                    }}
+                >
+                    <div
+                        className="picker"
+                        style={{ width: 560, maxHeight: '90vh' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="card-head">
+                            <h2>{isNew ? '새 호텔 등록' : '호텔 정보 수정'}</h2>
+                            <div className="spacer" />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditing(null);
+                                    setIsNew(false);
+                                }}
+                                className="act-btn"
+                                title="닫기"
+                            >
+                                <Icon name="close" />
+                            </button>
+                        </div>
+
+                        <div style={{ overflowY: 'auto', padding: '20px 22px' }}>
+                            <Field label="대제목" required hint="일정 카드의 큰 제목으로 표시됩니다. (예: 마리나베이샌즈호텔)">
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={editing.name_kr}
+                                    onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
+                                    placeholder="마리나베이샌즈호텔"
+                                />
+                            </Field>
+
+                            <Field label="소제목" hint="대제목 아래 작은 한 줄 설명. (예: 5성급, 시내 중심·뷰 추천)">
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={editing.name_local || ''}
+                                    onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
+                                    placeholder="5성급, 시내 중심·뷰 추천"
+                                />
+                            </Field>
+
+                            <Field label="주소">
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={editing.address || ''}
+                                    onChange={(e) => setEditing({ ...editing, address: e.target.value })}
+                                    placeholder="10 Bayfront Ave, Singapore 018956"
+                                />
+                            </Field>
+
+                            <Field label="상세 설명">
+                                <textarea
+                                    className="inp"
+                                    value={editing.description || ''}
+                                    onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                                    rows={4}
+                                    placeholder="호텔 소개, 특징, 위치적 장점 등..."
+                                    style={{ minHeight: 100 }}
+                                />
+                            </Field>
+
+                            <Field label="편의시설 (쉼표로 구분)">
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={(editing.amenities || []).join(', ')}
+                                    onChange={(e) =>
+                                        setEditing({
+                                            ...editing,
+                                            amenities: e.target.value
+                                                .split(',')
+                                                .map((s) => s.trim())
+                                                .filter(Boolean),
+                                        })
+                                    }
+                                    placeholder="수영장, 사우나, 무료 Wi-Fi, 조식 포함"
+                                />
+                            </Field>
+
+                            <Field label="이미지" hint="첫 번째 이미지가 일정 화면에 표시되는 대표 이미지입니다.">
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                                    {(editing.images || []).map((src, i) => (
+                                        <div
+                                            key={i}
+                                            style={{
+                                                position: 'relative',
+                                                aspectRatio: '1 / 1',
+                                                borderRadius: 'var(--r-md)',
+                                                overflow: 'hidden',
+                                                border: '1px solid var(--border-default)',
+                                            }}
+                                        >
+                                            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(i)}
+                                                title="삭제"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 4,
+                                                    right: 4,
+                                                    width: 24,
+                                                    height: 24,
+                                                    borderRadius: '50%',
+                                                    border: 'none',
+                                                    background: 'rgba(255,79,79,0.9)',
+                                                    color: '#fff',
+                                                    cursor: 'pointer',
+                                                    display: 'grid',
+                                                    placeItems: 'center',
+                                                }}
+                                            >
+                                                <Icon name="close" style={{ fontSize: 16 }} />
+                                            </button>
+                                            {i === 0 && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        bottom: 4,
+                                                        left: 4,
+                                                        padding: '1px 7px',
+                                                        borderRadius: 6,
+                                                        background: 'var(--mrt-ink)',
+                                                        color: '#fff',
+                                                        fontSize: 10,
+                                                        fontWeight: 800,
+                                                    }}
+                                                >
+                                                    대표
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <label
+                                        style={{
+                                            aspectRatio: '1 / 1',
+                                            border: '1.5px dashed var(--border-strong)',
+                                            borderRadius: 'var(--r-md)',
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            cursor: 'pointer',
+                                            color: 'var(--mrt-gray-400)',
+                                        }}
+                                    >
+                                        <Icon name="add_photo_alternate" />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={(e) => {
+                                                handleAddImages(e.target.files);
+                                                e.target.value = '';
+                                            }}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                </div>
+                            </Field>
+
+                            <Field label="사용 여부">
+                                <div className="toggle-row">
+                                    <button
+                                        type="button"
+                                        className={`switch${editing.is_active ? ' on' : ''}`}
+                                        onClick={() => setEditing({ ...editing, is_active: !editing.is_active })}
+                                    >
+                                        <span className="knob" />
+                                    </button>
+                                    <span className="cell-strong" style={{ fontSize: 13.5 }}>
+                                        {editing.is_active ? '사용 (목록에 노출)' : '미사용 (숨김)'}
+                                    </span>
+                                </div>
+                            </Field>
+                        </div>
+
+                        <div className="drawer-foot">
+                            {!isNew && (
+                                <button type="button" onClick={handleDelete} className="btn btn-danger">
+                                    <Icon name="delete" />
+                                    삭제
+                                </button>
+                            )}
+                            <div className="spacer" style={{ flex: 1 }} />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditing(null);
+                                    setIsNew(false);
+                                }}
+                                className="btn btn-ghost"
+                            >
+                                닫기
+                            </button>
+                            <button type="button" onClick={handleSave} disabled={saving} className="btn btn-ink">
+                                {saving ? '저장 중...' : '저장'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </AdminLayout>
     );
 };
-
-const inputCls =
-    'w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none';
 
 const Field: React.FC<{ label: string; required?: boolean; hint?: string; children: React.ReactNode }> = ({
     label,
@@ -447,11 +537,15 @@ const Field: React.FC<{ label: string; required?: boolean; hint?: string; childr
     hint,
     children,
 }) => (
-    <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-            {label} {required && <span className="text-red-500">*</span>}
+    <div className="field">
+        <label>
+            {label} {required && <span style={{ color: 'var(--mrt-red)' }}>*</span>}
         </label>
         {children}
-        {hint && <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{hint}</p>}
+        {hint && (
+            <p className="cell-muted" style={{ fontSize: 12, marginTop: 6 }}>
+                {hint}
+            </p>
+        )}
     </div>
 );

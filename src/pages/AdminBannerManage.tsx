@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 
@@ -317,478 +318,458 @@ export const AdminBannerManage: React.FC = () => {
         }
     };
 
-    const [isDarkMode, setIsDarkMode] = useState(false);
-
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
+    // Preview tone for the main-banner thumbnail when no image is set.
+    const bannerTone = (index: number) => ['bp-blue', 'bp-purple', 'bp-red'][index % 3];
 
     return (
-        <div className={`flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans ${isDarkMode ? 'dark' : ''}`}>
-            <AdminSidebar
-                activePage="banners"
-                isDarkMode={isDarkMode}
-                toggleTheme={toggleTheme}
-            />
+        <AdminLayout
+            activePage="banners"
+            title="홈 화면 관리"
+            actions={
+                <button
+                    className="btn btn-ink"
+                    onClick={saveAll}
+                    disabled={!hasUnsavedChanges}
+                >
+                    <Icon name="save" />변경사항 저장
+                    {hasUnsavedChanges && <span className="badge b-amber" style={{ padding: '0 6px', marginLeft: 2 }}>•</span>}
+                </button>
+            }
+        >
+            <div className="route-anim">
 
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        홈 화면 관리
-                        {hasUnsavedChanges && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>}
-                    </h1>
-                    <button
-                        onClick={saveAll}
-                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all shadow-lg flex items-center gap-2
-                        ${hasUnsavedChanges
-                                ? 'bg-teal-500 text-white hover:bg-teal-600 hover:scale-105'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
-                    >
-                        <span className="material-symbols-outlined text-lg">save</span>
-                        변경사항 저장
-                    </button>
-                </header>
-
-                <div className="p-8 space-y-8 max-w-5xl">
-
-                    {/* Banners Section */}
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <span className="material-symbols-outlined text-teal-500">ad_units</span>
-                                메인 배너 관리 (상단 슬라이드)
-                            </h2>
-                            <button onClick={addBanner} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm">add</span>
-                                배너 추가
-                            </button>
-                        </div>
-
-                        <input type="file" ref={bannerFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'banner')} />
-                        <input type="file" ref={pcBannerFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'pcBanner')} />
-
-                        <div className="space-y-6">
-                            {banners.map((banner, index) => (
-                                <div key={banner.id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex gap-6 group relative bg-slate-50/50 hover:bg-white transition-colors hover:shadow-sm">
-                                    <div className="absolute top-4 left-4 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full z-10">#{index + 1}</div>
-                                    <button
-                                        onClick={() => deleteBanner(banner.id)}
-                                        className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1"
-                                        title="삭제"
-                                    >
-                                        <span className="material-symbols-outlined">delete</span>
-                                    </button>
-
-                                    <div className="flex flex-col gap-2 shrink-0">
-                                        <div>
-                                            <div className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-xs">smartphone</span>
-                                                모바일 (세로/정사각)
-                                            </div>
-                                            <div
-                                                className="w-48 aspect-[16/10] bg-slate-200 rounded-lg bg-cover bg-center relative group/img cursor-pointer border border-slate-200 text-slate-800"
-                                                style={{ backgroundImage: banner.image ? `url('${banner.image}')` : undefined }}
-                                                onClick={() => { setSelectedId(banner.id); bannerFileInputRef.current?.click(); }}
-                                            >
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg">
-                                                    <span className="material-symbols-outlined text-white">edit</span>
-                                                </div>
-                                                {!banner.image && (
-                                                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
-                                                        클릭하여 업로드
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className="text-[10px] font-bold text-teal-700 mb-1 flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-xs">desktop_windows</span>
-                                                PC 전용 (와이드, 선택)
-                                            </div>
-                                            <div
-                                                className="w-48 aspect-[21/9] bg-slate-100 rounded-lg bg-cover bg-center relative group/pcimg cursor-pointer border border-dashed border-teal-300 text-slate-800"
-                                                style={{ backgroundImage: banner.pcImage ? `url('${banner.pcImage}')` : undefined }}
-                                                onClick={() => { setSelectedId(banner.id); pcBannerFileInputRef.current?.click(); }}
-                                            >
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/pcimg:opacity-100 transition-opacity rounded-lg">
-                                                    <span className="material-symbols-outlined text-white">edit</span>
-                                                </div>
-                                                {!banner.pcImage && (
-                                                    <div className="absolute inset-0 flex items-center justify-center text-teal-500 text-[10px] text-center px-2">
-                                                        PC 와이드 이미지 업로드<br />(미설정 시 모바일 이미지 사용)
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {banner.pcImage && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => clearPcImage(banner.id)}
-                                                    className="mt-1 text-[10px] text-slate-500 hover:text-red-500"
-                                                >
-                                                    PC 이미지 제거
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 space-y-3 pr-8">
-                                        {/* Mobile (default) text section */}
-                                        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-3">
-                                            <div className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-xs">smartphone</span>
-                                                모바일 텍스트 (기본값 — PC에도 자동 적용)
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-xs text-slate-400 block mb-1">태그 (Tag)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={banner.tag}
-                                                        onChange={(e) => handleBannerChange(banner.id, 'tag', e.target.value)}
-                                                        className="w-full text-sm font-medium border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs text-slate-400 block mb-1">링크 (Link)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={banner.link || ''}
-                                                        placeholder="/products/..."
-                                                        onChange={(e) => handleBannerChange(banner.id, 'link', e.target.value)}
-                                                        className="w-full text-xs text-blue-500 border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-400 block mb-1">제목 (Title)</label>
-                                                <textarea
-                                                    value={banner.title}
-                                                    onChange={(e) => handleBannerChange(banner.id, 'title', e.target.value)}
-                                                    className="w-full text-sm font-bold border-slate-200 rounded px-2 py-1 whitespace-pre-wrap h-14 resize-none focus:ring-1 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-400 block mb-1">부제목 (Subtitle)</label>
-                                                <input
-                                                    type="text"
-                                                    value={banner.subtitle}
-                                                    onChange={(e) => handleBannerChange(banner.id, 'subtitle', e.target.value)}
-                                                    className="w-full text-xs text-slate-500 border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* PC-only override section */}
-                                        <div className="rounded-lg border border-dashed border-teal-300 bg-teal-50/30 p-3 space-y-3">
-                                            <div className="text-[11px] font-bold text-teal-700 flex items-center justify-between">
-                                                <span className="flex items-center gap-1">
-                                                    <span className="material-symbols-outlined text-xs">desktop_windows</span>
-                                                    PC 전용 텍스트 (선택 — 비워두면 모바일 텍스트 사용)
-                                                </span>
-                                                <span className="text-[10px] font-normal text-teal-600">
-                                                    PC는 폰트가 커서 모바일과 다른 짧은 문구를 쓰는 것을 추천
-                                                </span>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-xs text-slate-500 block mb-1">PC 태그</label>
-                                                    <input
-                                                        type="text"
-                                                        value={banner.pcTag || ''}
-                                                        placeholder={banner.tag || '(모바일 값 사용)'}
-                                                        onChange={(e) => handleBannerChange(banner.id, 'pcTag', e.target.value)}
-                                                        className="w-full text-sm font-medium border-teal-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-500 block mb-1">PC 제목 (줄바꿈은 Enter로)</label>
-                                                <textarea
-                                                    value={banner.pcTitle || ''}
-                                                    placeholder={banner.title || '(모바일 값 사용)'}
-                                                    onChange={(e) => handleBannerChange(banner.id, 'pcTitle', e.target.value)}
-                                                    className="w-full text-sm font-bold border-teal-200 rounded px-2 py-1 whitespace-pre-wrap h-14 resize-none focus:ring-1 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-500 block mb-1">PC 부제목</label>
-                                                <input
-                                                    type="text"
-                                                    value={banner.pcSubtitle || ''}
-                                                    placeholder={banner.subtitle || '(모바일 값 사용)'}
-                                                    onChange={(e) => handleBannerChange(banner.id, 'pcSubtitle', e.target.value)}
-                                                    className="w-full text-xs text-slate-600 border-teal-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {banners.length === 0 && (
-                                <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                    등록된 배너가 없습니다.
-                                </div>
-                            )}
-                        </div>
+                {/* ============ Main Banners ============ */}
+                <div className="sec-head">
+                    <div>
+                        <h3>메인 배너</h3>
+                        <div className="cell-muted" style={{ fontSize: 13 }}>홈 상단 슬라이드 배너 · 모바일/PC 이미지 및 문구 설정</div>
                     </div>
+                    <div className="spacer" />
+                    <button className="btn btn-ink" onClick={addBanner}>
+                        <Icon name="add" />배너 추가
+                    </button>
+                </div>
 
-                    {/* Quick Icons Section */}
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <span className="material-symbols-outlined text-teal-500">grid_view</span>
-                                바로가기 아이콘 관리
-                            </h2>
-                            <button onClick={addLink} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm">add</span>
-                                아이콘 추가
-                            </button>
-                        </div>
+                <input type="file" ref={bannerFileInputRef} className="hidden" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleUpload(e, 'banner')} />
+                <input type="file" ref={pcBannerFileInputRef} className="hidden" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleUpload(e, 'pcBanner')} />
 
-                        <input type="file" ref={iconFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'icon')} />
+                <div className="stack" style={{ gap: 12 }}>
+                    {banners.map((banner, index) => (
+                        <div className="banner-card" key={banner.id} style={{ alignItems: 'flex-start' }}>
+                            <div className="row" style={{ flexDirection: 'column', gap: 10, flex: 'none' }}>
+                                {/* Mobile image preview */}
+                                <div
+                                    className={`banner-prev ${banner.image ? '' : bannerTone(index)}`}
+                                    style={{ cursor: 'pointer', position: 'relative', backgroundImage: banner.image ? `url('${banner.image}')` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                    onClick={() => { setSelectedId(banner.id); bannerFileInputRef.current?.click(); }}
+                                    title="모바일 이미지 변경"
+                                >
+                                    {!banner.image && (
+                                        <>
+                                            <div className="bt">{banner.title || `배너 #${index + 1}`}</div>
+                                            <div className="bs">{banner.subtitle || '클릭하여 이미지 업로드'}</div>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="cell-muted row" style={{ fontSize: 11, gap: 4, justifyContent: 'center' }}>
+                                    <Icon name="smartphone" style={{ fontSize: 14 }} />모바일 (16:10)
+                                </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            {links.map((link, index) => (
-                                <div key={link.id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col items-center gap-3 relative group bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all text-center">
-                                    <div className="absolute top-2 w-full px-2 flex justify-between opacity-0 group-hover:opacity-100 transition-all z-10 pointer-events-none">
-                                        <button
-                                            onClick={() => moveLink(index, 'left')}
-                                            disabled={index === 0}
-                                            className="pointer-events-auto p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 disabled:hover:text-slate-400"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">chevron_left</span>
-                                        </button>
-                                        <button
-                                            onClick={() => moveLink(index, 'right')}
-                                            disabled={index === links.length - 1}
-                                            className="pointer-events-auto p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 disabled:hover:text-slate-400"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">chevron_right</span>
-                                        </button>
-                                    </div>
-
-                                    <button
-                                        onClick={() => deleteLink(link.id)}
-                                        className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow border border-slate-100 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all z-20"
-                                        title="삭제"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">close</span>
+                                {/* PC wide image preview */}
+                                <div
+                                    className="banner-prev"
+                                    style={{ width: 150, height: 64, cursor: 'pointer', position: 'relative', border: '1.5px dashed var(--border-strong)', background: banner.pcImage ? `url('${banner.pcImage}') center/cover` : 'var(--mrt-gray-50)', color: 'var(--text-tertiary)' }}
+                                    onClick={() => { setSelectedId(banner.id); pcBannerFileInputRef.current?.click(); }}
+                                    title="PC 와이드 이미지 변경"
+                                >
+                                    {!banner.pcImage && (
+                                        <div className="bs" style={{ color: 'var(--text-tertiary)', textAlign: 'center', opacity: 1 }}>PC 와이드<br />(선택)</div>
+                                    )}
+                                </div>
+                                <div className="cell-muted row" style={{ fontSize: 11, gap: 4, justifyContent: 'center' }}>
+                                    <Icon name="desktop_windows" style={{ fontSize: 14 }} />PC (21:9)
+                                </div>
+                                {banner.pcImage && (
+                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => clearPcImage(banner.id)}>
+                                        PC 이미지 제거
                                     </button>
+                                )}
+                            </div>
 
-                                    <div
-                                        className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center relative group/img cursor-pointer overflow-hidden border border-slate-100 shadow-sm"
-                                        onClick={() => { setSelectedId(link.id); iconFileInputRef.current?.click(); }}
-                                    >
-                                        {link.image ? (
-                                            <img src={link.image} alt="icon" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span className="material-symbols-outlined text-slate-400 text-2xl">{link.icon}</span>
-                                        )}
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
-                                            <span className="material-symbols-outlined text-white text-sm">edit</span>
+                            {/* Edit fields */}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="row" style={{ gap: 8, marginBottom: 12 }}>
+                                    <span className="badge b-gray">#{index + 1}</span>
+                                    <span className="cell-strong" style={{ fontSize: 15 }}>{banner.title?.split('\n')[0] || '제목 없음'}</span>
+                                </div>
+
+                                {/* Mobile (default) text */}
+                                <div className="edit-sec" style={{ marginBottom: 12 }}>
+                                    <div className="edit-sec-head">
+                                        <Icon name="smartphone" />
+                                        <h4>모바일 텍스트 (기본값 — PC에도 자동 적용)</h4>
+                                    </div>
+                                    <div className="field-row">
+                                        <div className="field" style={{ marginBottom: 0 }}>
+                                            <label>태그 (Tag)</label>
+                                            <input
+                                                type="text"
+                                                className="inp"
+                                                value={banner.tag}
+                                                onChange={(e) => handleBannerChange(banner.id, 'tag', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="field" style={{ marginBottom: 0 }}>
+                                            <label>링크 (Link)</label>
+                                            <input
+                                                type="text"
+                                                className="inp"
+                                                value={banner.link || ''}
+                                                placeholder="/products/..."
+                                                onChange={(e) => handleBannerChange(banner.id, 'link', e.target.value)}
+                                            />
                                         </div>
                                     </div>
-
-                                    <div className="w-full space-y-2">
+                                    <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+                                        <label>제목 (Title)</label>
+                                        <textarea
+                                            className="inp"
+                                            style={{ height: 60 }}
+                                            value={banner.title}
+                                            onChange={(e) => handleBannerChange(banner.id, 'title', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+                                        <label>부제목 (Subtitle)</label>
                                         <input
                                             type="text"
+                                            className="inp"
+                                            value={banner.subtitle}
+                                            onChange={(e) => handleBannerChange(banner.id, 'subtitle', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* PC-only override */}
+                                <div className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="desktop_windows" />
+                                        <h4>PC 전용 텍스트 (선택)</h4>
+                                        <span className="muted cell-muted">비워두면 모바일 텍스트 사용</span>
+                                    </div>
+                                    <div className="field-row">
+                                        <div className="field" style={{ marginBottom: 0 }}>
+                                            <label>PC 태그</label>
+                                            <input
+                                                type="text"
+                                                className="inp"
+                                                value={banner.pcTag || ''}
+                                                placeholder={banner.tag || '(모바일 값 사용)'}
+                                                onChange={(e) => handleBannerChange(banner.id, 'pcTag', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+                                        <label>PC 제목 (줄바꿈은 Enter로)</label>
+                                        <textarea
+                                            className="inp"
+                                            style={{ height: 60 }}
+                                            value={banner.pcTitle || ''}
+                                            placeholder={banner.title || '(모바일 값 사용)'}
+                                            onChange={(e) => handleBannerChange(banner.id, 'pcTitle', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+                                        <label>PC 부제목</label>
+                                        <input
+                                            type="text"
+                                            className="inp"
+                                            value={banner.pcSubtitle || ''}
+                                            placeholder={banner.subtitle || '(모바일 값 사용)'}
+                                            onChange={(e) => handleBannerChange(banner.id, 'pcSubtitle', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <span className="row-actions" style={{ flex: 'none' }}>
+                                <button className="act-btn danger" title="삭제" onClick={() => deleteBanner(banner.id)}>
+                                    <Icon name="delete" />
+                                </button>
+                            </span>
+                        </div>
+                    ))}
+
+                    {banners.length === 0 && (
+                        <div className="empty">
+                            <Icon name="ad_units" />
+                            <p>등록된 배너가 없습니다.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* ============ Quick Icons ============ */}
+                <div className="sec-head" style={{ marginTop: 32 }}>
+                    <div>
+                        <h3>바로가기 아이콘</h3>
+                        <div className="cell-muted" style={{ fontSize: 13 }}>홈 화면 숏컷 행 · 이미지 또는 아이콘으로 구성</div>
+                    </div>
+                    <div className="spacer" />
+                    <button className="btn btn-ink" onClick={addLink}>
+                        <Icon name="add" />아이콘 추가
+                    </button>
+                </div>
+
+                <input type="file" ref={iconFileInputRef} className="hidden" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleUpload(e, 'icon')} />
+
+                <div className="grid-3">
+                    {links.map((link, index) => (
+                        <div className="card card-pad" key={link.id}>
+                            <div className="row" style={{ alignItems: 'flex-start', gap: 14 }}>
+                                <div
+                                    className="metric-ico tint-ink"
+                                    style={{ width: 56, height: 56, borderRadius: 14, cursor: 'pointer', overflow: 'hidden', flex: 'none' }}
+                                    onClick={() => { setSelectedId(link.id); iconFileInputRef.current?.click(); }}
+                                    title="이미지 변경"
+                                >
+                                    {link.image
+                                        ? <img src={link.image} alt="icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        : <Icon name={link.icon} />}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div className="field" style={{ marginBottom: 10 }}>
+                                        <label>라벨</label>
+                                        <input
+                                            type="text"
+                                            className="inp"
                                             value={link.label}
                                             placeholder="라벨"
                                             onChange={(e) => handleLinkChange(link.id, 'label', e.target.value)}
-                                            className="text-xs font-bold text-center w-full border-slate-200 rounded px-1 py-1 focus:ring-1 focus:ring-teal-500 outline-none bg-white"
                                         />
+                                    </div>
+                                    <div className="field" style={{ marginBottom: 0 }}>
+                                        <label>링크</label>
                                         <input
                                             type="text"
+                                            className="inp"
                                             value={link.path}
                                             placeholder="링크"
                                             onChange={(e) => handleLinkChange(link.id, 'path', e.target.value)}
-                                            className="text-[10px] text-slate-400 text-center w-full border-slate-200 rounded px-1 py-1 focus:ring-1 focus:ring-teal-500 outline-none bg-white"
                                         />
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+                            <div className="row" style={{ marginTop: 14 }}>
+                                <button className="act-btn" title="앞으로" onClick={() => moveLink(index, 'left')} disabled={index === 0}>
+                                    <Icon name="chevron_left" />
+                                </button>
+                                <button className="act-btn" title="뒤로" onClick={() => moveLink(index, 'right')} disabled={index === links.length - 1}>
+                                    <Icon name="chevron_right" />
+                                </button>
+                                <div className="spacer" style={{ flex: 1 }} />
+                                <button className="act-btn danger" title="삭제" onClick={() => deleteLink(link.id)}>
+                                    <Icon name="delete" />
+                                </button>
+                            </div>
                         </div>
+                    ))}
+
+                    {links.length === 0 && (
+                        <div className="empty" style={{ gridColumn: '1 / -1' }}>
+                            <Icon name="grid_view" />
+                            <p>등록된 아이콘이 없습니다.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* ============ Event Banners ============ */}
+                <div className="sec-head" style={{ marginTop: 32 }}>
+                    <div>
+                        <h3>이벤트 배너</h3>
+                        <div className="cell-muted" style={{ fontSize: 13 }}>가로 스크롤 이벤트 배너 · 노출 위치 설정 가능</div>
                     </div>
+                    <div className="spacer" />
+                    <button className="btn btn-ink" onClick={addEventBanner}>
+                        <Icon name="add" />이벤트 추가
+                    </button>
+                </div>
 
-                    {/* Event Banners Section */}
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <span className="material-symbols-outlined text-teal-500">campaign</span>
-                                이벤트 배너 관리 (가로 스크롤)
-                            </h2>
-                            <button onClick={addEventBanner} className="text-xs font-bold text-teal-600 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors border border-teal-100 flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm">add</span>
-                                이벤트 추가
-                            </button>
-                        </div>
+                <input type="file" ref={eventFileInputRef} className="hidden" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleUpload(e, 'event')} />
 
-                        <input type="file" ref={eventFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'event')} />
+                <div className="stack" style={{ gap: 12 }}>
+                    {eventBanners.map((banner, index) => (
+                        <div className="banner-card" key={banner.id} style={{ alignItems: 'flex-start' }}>
+                            <div className="row" style={{ flexDirection: 'column', gap: 8, flex: 'none' }}>
+                                {/* Preview */}
+                                <div
+                                    className="banner-prev"
+                                    style={{
+                                        cursor: 'pointer', position: 'relative',
+                                        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                                        background: banner.image ? `url('${banner.image}') center/cover` : banner.backgroundColor
+                                    }}
+                                    onClick={() => { setSelectedId(banner.id); eventFileInputRef.current?.click(); }}
+                                    title="이미지 변경"
+                                >
+                                    {!banner.image && (
+                                        <>
+                                            <div>
+                                                <div className="bs" style={{ textTransform: 'uppercase' }}>{banner.tag}</div>
+                                                <div className="bt">{banner.title}</div>
+                                            </div>
+                                            <Icon name={banner.icon} style={{ fontSize: 24, opacity: 0.6 }} />
+                                        </>
+                                    )}
+                                </div>
+                                <div className="row" style={{ gap: 4, justifyContent: 'center' }}>
+                                    <button className="act-btn" title="위로" onClick={() => moveEventBanner(index, 'left')} disabled={index === 0}>
+                                        <Icon name="arrow_upward" />
+                                    </button>
+                                    <button className="act-btn" title="아래로" onClick={() => moveEventBanner(index, 'right')} disabled={index === eventBanners.length - 1}>
+                                        <Icon name="arrow_downward" />
+                                    </button>
+                                </div>
+                            </div>
 
-                        <div className="space-y-4">
-                            {eventBanners.map((banner, index) => (
-                                <div key={banner.id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex gap-6 group relative bg-slate-50/50 hover:bg-white transition-colors hover:shadow-sm items-center">
-                                    <div className="absolute top-2 left-2 flex gap-1 z-10">
-                                        <button onClick={() => moveEventBanner(index, 'left')} disabled={index === 0} className="p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 bg-white/80 rounded-full shadow-sm"><span className="material-symbols-outlined text-base">arrow_upward</span></button>
-                                        <button onClick={() => moveEventBanner(index, 'right')} disabled={index === eventBanners.length - 1} className="p-1 text-slate-400 hover:text-teal-500 disabled:opacity-30 bg-white/80 rounded-full shadow-sm"><span className="material-symbols-outlined text-base">arrow_downward</span></button>
-                                    </div>
-                                    <button onClick={() => deleteEventBanner(banner.id)} className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1" title="삭제"><span className="material-symbols-outlined">delete</span></button>
-
-                                    {/* Preview */}
-                                    <div
-                                        className="w-48 h-24 rounded-lg flex items-center justify-between p-4 shadow-sm relative group/img cursor-pointer shrink-0"
-                                        style={{
-                                            background: banner.image ? `url('${banner.image}') center/cover` : banner.backgroundColor
-                                        }}
-                                        onClick={() => { setSelectedId(banner.id); eventFileInputRef.current?.click(); }}
-                                    >
-                                        {/* ... preview content ... */}
-                                        {!banner.image && (
-                                            <>
-                                                <div>
-                                                    <p className="text-white/80 text-[10px] font-bold uppercase">{banner.tag}</p>
-                                                    <h4 className="text-white font-bold text-xs whitespace-pre-wrap">{banner.title}</h4>
-                                                </div>
-                                                <span className="material-symbols-outlined text-white/50 text-2xl">{banner.icon}</span>
-                                            </>
-                                        )}
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg">
-                                            <span className="material-symbols-outlined text-white">edit</span>
+                            {/* Edit fields */}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div className="field-row" style={{ marginBottom: 14 }}>
+                                    <div className="field" style={{ marginBottom: 0 }}>
+                                        <label>배경색 (이미지 없을 때)</label>
+                                        <div className="row" style={{ gap: 8 }}>
+                                            <input type="color" value={banner.backgroundColor} onChange={(e) => handleEventChange(banner.id, 'backgroundColor', e.target.value)} style={{ width: 44, height: 44, borderRadius: 'var(--r-md)', cursor: 'pointer', border: '1px solid var(--border-default)', padding: 2, flex: 'none' }} />
+                                            <input type="text" className="inp" value={banner.backgroundColor} onChange={(e) => handleEventChange(banner.id, 'backgroundColor', e.target.value)} />
                                         </div>
                                     </div>
-
-                                    {/* Edit Fields */}
-                                    <div className="flex-1 space-y-3 pr-8">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs text-slate-400 block mb-1">배경색 (Image 없을 때)</label>
-                                                <div className="flex gap-2">
-                                                    <input type="color" value={banner.backgroundColor} onChange={(e) => handleEventChange(banner.id, 'backgroundColor', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-none p-0" />
-                                                    <input type="text" value={banner.backgroundColor} onChange={(e) => handleEventChange(banner.id, 'backgroundColor', e.target.value)} className="flex-1 text-xs border-slate-200 rounded px-2" />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-400 block mb-1">표시 위치</label>
-                                                <select
-                                                    value={banner.location || 'all'}
-                                                    onChange={(e) => handleEventChange(banner.id, 'location', e.target.value)}
-                                                    className="w-full text-xs border-slate-200 rounded px-2 py-1.5 focus:ring-1 focus:ring-teal-500 outline-none"
-                                                >
-                                                    <option value="all">전체 (홈 + 여행상품)</option>
-                                                    <option value="home">홈 화면만</option>
-                                                    <option value="products">여행상품 페이지만</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs text-slate-400 block mb-1">태그</label>
-                                                <input type="text" value={banner.tag} onChange={(e) => handleEventChange(banner.id, 'tag', e.target.value)} className="w-full text-xs font-bold border-slate-200 rounded px-2 py-1" />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-slate-400 block mb-1">링크</label>
-                                                <div className="flex gap-2">
-                                                    <select
-                                                        className="w-1/3 text-xs border-slate-200 rounded px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
-                                                        onChange={(e) => {
-                                                            if (e.target.value) handleEventChange(banner.id, 'link', e.target.value);
-                                                            // If selecting a predefined link that isn't empty, valid. If empty (direct input), handled by input.
-                                                        }}
-                                                        value={PREDEFINED_LINKS.some(l => l.value === banner.link) ? banner.link : ''}
-                                                    >
-                                                        {PREDEFINED_LINKS.map(l => (
-                                                            <option key={l.label} value={l.value}>{l.label}</option>
-                                                        ))}
-                                                    </select>
-                                                    <input
-                                                        type="text"
-                                                        value={banner.link}
-                                                        onChange={(e) => handleEventChange(banner.id, 'link', e.target.value)}
-                                                        className="flex-1 text-xs text-blue-500 border-slate-200 rounded px-2 py-1"
-                                                        placeholder="https://..."
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-slate-400 block mb-1">제목 (줄바꿈 가능)</label>
-                                            <textarea value={banner.title} onChange={(e) => handleEventChange(banner.id, 'title', e.target.value)} className="w-full text-sm border-slate-200 rounded px-2 py-1 h-12 resize-none" />
-                                        </div>
+                                    <div className="field" style={{ marginBottom: 0 }}>
+                                        <label>표시 위치</label>
+                                        <select
+                                            className="inp"
+                                            value={banner.location || 'all'}
+                                            onChange={(e) => handleEventChange(banner.id, 'location', e.target.value)}
+                                        >
+                                            <option value="all">전체 (홈 + 여행상품)</option>
+                                            <option value="home">홈 화면만</option>
+                                            <option value="products">여행상품 페이지만</option>
+                                        </select>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-
-                    </div>
-
-                    {/* Category Tabs Section */}
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <span className="material-symbols-outlined text-teal-500">category</span>
-                                여행지 테마 배너 관리 (탭 이미지)
-                            </h2>
-                        </div>
-
-                        <input type="file" ref={categoryFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'category')} />
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {categoryTabs.map((tab) => (
-                                <div key={tab.id} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden group relative bg-white transition-all hover:shadow-md flex flex-col">
-
-                                    {/* Image Preview Area */}
-                                    <div
-                                        className="w-full aspect-[4/3] bg-slate-200 bg-cover bg-center relative group/img cursor-pointer"
-                                        style={{ backgroundImage: `url('${tab.bannerImage}')` }}
-                                        onClick={() => { setSelectedId(tab.id); categoryFileInputRef.current?.click(); }}
-                                    >
-                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-lg font-bold z-10">
-                                            {tab.name}
-                                        </div>
-                                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
-                                            <span className="material-symbols-outlined text-white text-3xl mb-1">add_photo_alternate</span>
-                                            <span className="text-white text-xs font-medium">이미지 변경</span>
-                                        </div>
+                                <div className="field-row" style={{ marginBottom: 14 }}>
+                                    <div className="field" style={{ marginBottom: 0 }}>
+                                        <label>태그</label>
+                                        <input type="text" className="inp" value={banner.tag} onChange={(e) => handleEventChange(banner.id, 'tag', e.target.value)} />
                                     </div>
-
-                                    {/* Edit Fields */}
-                                    <div className="p-4 space-y-3 flex-1 flex flex-col">
-                                        <div>
-                                            <label className="text-[11px] text-slate-400 font-bold uppercase block mb-1">제목</label>
+                                    <div className="field" style={{ marginBottom: 0 }}>
+                                        <label>링크</label>
+                                        <div className="row" style={{ gap: 8 }}>
+                                            <select
+                                                className="inp"
+                                                style={{ width: 120, flex: 'none' }}
+                                                onChange={(e) => {
+                                                    if (e.target.value) handleEventChange(banner.id, 'link', e.target.value);
+                                                    // If selecting a predefined link that isn't empty, valid. If empty (direct input), handled by input.
+                                                }}
+                                                value={PREDEFINED_LINKS.some(l => l.value === banner.link) ? banner.link : ''}
+                                            >
+                                                {PREDEFINED_LINKS.map(l => (
+                                                    <option key={l.label} value={l.value}>{l.label}</option>
+                                                ))}
+                                            </select>
                                             <input
                                                 type="text"
-                                                value={tab.title}
-                                                onChange={(e) => handleCategoryChange(tab.id, 'title', e.target.value)}
-                                                className="w-full text-sm font-bold text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-700 py-1 focus:border-teal-500 outline-none bg-transparent transition-colors"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="text-[11px] text-slate-400 font-bold uppercase block mb-1">부제목</label>
-                                            <textarea
-                                                value={tab.subtitle}
-                                                onChange={(e) => handleCategoryChange(tab.id, 'subtitle', e.target.value)}
-                                                className="w-full text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg p-2 h-20 resize-none focus:ring-1 focus:ring-teal-500 outline-none bg-slate-50 dark:bg-slate-800/50"
+                                                className="inp"
+                                                value={banner.link}
+                                                onChange={(e) => handleEventChange(banner.id, 'link', e.target.value)}
+                                                placeholder="https://..."
                                             />
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
+                                <div className="field" style={{ marginBottom: 0 }}>
+                                    <label>제목 (줄바꿈 가능)</label>
+                                    <textarea className="inp" style={{ height: 52 }} value={banner.title} onChange={(e) => handleEventChange(banner.id, 'title', e.target.value)} />
+                                </div>
+                            </div>
 
+                            <span className="row-actions" style={{ flex: 'none' }}>
+                                <button className="act-btn danger" title="삭제" onClick={() => deleteEventBanner(banner.id)}>
+                                    <Icon name="delete" />
+                                </button>
+                            </span>
+                        </div>
+                    ))}
+
+                    {eventBanners.length === 0 && (
+                        <div className="empty">
+                            <Icon name="campaign" />
+                            <p>등록된 이벤트 배너가 없습니다.</p>
+                        </div>
+                    )}
                 </div>
-            </main>
+
+                {/* ============ Category Tabs ============ */}
+                <div className="sec-head" style={{ marginTop: 32 }}>
+                    <div>
+                        <h3>여행지 테마 배너</h3>
+                        <div className="cell-muted" style={{ fontSize: 13 }}>홈 화면 탭별 대표 이미지와 문구</div>
+                    </div>
+                </div>
+
+                <input type="file" ref={categoryFileInputRef} className="hidden" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleUpload(e, 'category')} />
+
+                <div className="grid-3">
+                    {categoryTabs.map((tab) => (
+                        <div className="card" key={tab.id} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            {/* Image preview */}
+                            <div
+                                style={{ width: '100%', aspectRatio: '4 / 3', background: `url('${tab.bannerImage}') center/cover, var(--mrt-gray-100)`, position: 'relative', cursor: 'pointer' }}
+                                onClick={() => { setSelectedId(tab.id); categoryFileInputRef.current?.click(); }}
+                                title="이미지 변경"
+                            >
+                                <span className="badge b-ink" style={{ position: 'absolute', top: 12, left: 12 }}>{tab.name}</span>
+                            </div>
+
+                            {/* Edit fields */}
+                            <div className="card-pad" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                <div className="field" style={{ marginBottom: 14 }}>
+                                    <label>제목</label>
+                                    <input
+                                        type="text"
+                                        className="inp"
+                                        value={tab.title}
+                                        onChange={(e) => handleCategoryChange(tab.id, 'title', e.target.value)}
+                                    />
+                                </div>
+                                <div className="field" style={{ marginBottom: 0, flex: 1 }}>
+                                    <label>부제목</label>
+                                    <textarea
+                                        className="inp"
+                                        style={{ height: 72 }}
+                                        value={tab.subtitle}
+                                        onChange={(e) => handleCategoryChange(tab.id, 'subtitle', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {categoryTabs.length === 0 && (
+                        <div className="empty" style={{ gridColumn: '1 / -1' }}>
+                            <Icon name="category" />
+                            <p>등록된 테마 배너가 없습니다.</p>
+                        </div>
+                    )}
+                </div>
+
+            </div>
 
             {/* Toast Notification */}
             {showToast && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce-in z-[100]">
-                    <span className="material-symbols-outlined text-green-400">check_circle</span>
-                    <span className="font-bold text-sm">저장되었습니다!</span>
+                <div className="page-toast">
+                    <Icon name="check_circle" />
+                    <span>저장되었습니다!</span>
                 </div>
             )}
-        </div>
+        </AdminLayout>
     );
 };

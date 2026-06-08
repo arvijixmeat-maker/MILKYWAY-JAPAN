@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { GuideSelectionModal, AccommodationSelectionModal } from '../components/admin/SelectionModals';
 import { api } from '../lib/api';
 
@@ -32,7 +33,6 @@ interface Reservation {
 }
 
 export const AdminAssignment: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [reservations, setReservations] = useState<Reservation[]>([]);
     const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
     const [showGuideModal, setShowGuideModal] = useState(false);
@@ -153,162 +153,195 @@ export const AdminAssignment: React.FC = () => {
         }
     };
 
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
-
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-            <AdminSidebar activePage="assignment" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">가이드 & 숙소 할당</h1>
-                </header>
-
-                {isLoading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
-                    </div>
-                ) : (
-                    <div className="p-8">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* 예약 목록 */}
-                            <div>
-                                <h2 className="text-lg font-bold mb-4">예약 목록</h2>
-                                <div className="space-y-3">
+        <AdminLayout activePage="reservations" title="가이드/숙소 배정">
+            {isLoading ? (
+                <div className="empty">
+                    <Icon name="progress_activity" />
+                    <p>예약 목록을 불러오는 중입니다.</p>
+                </div>
+            ) : (
+                <div className="grid-2 route-anim">
+                    {/* 예약 목록 */}
+                    <div className="card">
+                        <div className="card-head">
+                            <h2>예약 목록</h2>
+                            <div className="spacer" />
+                            <span className="badge b-gray">{reservations.length}건</span>
+                        </div>
+                        <div className="tbl-wrap">
+                            <table className="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>상품 / 예약자</th>
+                                        <th>일정</th>
+                                        <th className="c">가이드</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                     {reservations.map(reservation => (
-                                        <div
+                                        <tr
                                             key={reservation.id}
                                             onClick={() => setSelectedReservation(reservation)}
-                                            className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedReservation?.id === reservation.id
-                                                ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                                                : 'border-slate-200 dark:border-slate-700 hover:border-teal-300'
-                                                }`}
+                                            style={selectedReservation?.id === reservation.id
+                                                ? { background: 'var(--mrt-blue-50)' }
+                                                : undefined}
                                         >
-                                            <p className="font-bold text-slate-800 dark:text-white">{reservation.productName}</p>
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">{reservation.customerName} · {reservation.id.slice(0, 8)}...</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{reservation.duration} · {reservation.startDate}</p>
-                                        </div>
-                                    ))}
-                                    {reservations.length === 0 && (
-                                        <div className="text-center py-12 text-slate-500">
-                                            예약이 없습니다
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 할당 패널 */}
-                            <div>
-                                {selectedReservation ? (
-                                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-                                        <h2 className="text-lg font-bold mb-4">{selectedReservation.productName}</h2>
-                                        <p className="text-sm text-slate-500 mb-6">예약자: {selectedReservation.customerName}</p>
-
-                                        {/* 가이드 할당 */}
-                                        <div className="mb-6">
-                                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-lg">badge</span>
-                                                담당 가이드
-                                            </h3>
-                                            {selectedReservation.assignedGuide ? (
-                                                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <img src={selectedReservation.assignedGuide.image} alt={selectedReservation.assignedGuide.name} className="w-12 h-12 rounded-full object-cover" />
-                                                        <div>
-                                                            <p className="font-bold text-slate-800 dark:text-white">{selectedReservation.assignedGuide.name}</p>
-                                                            <p className="text-xs text-slate-600 dark:text-slate-400">{selectedReservation.assignedGuide.phone}</p>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => setShowGuideModal(true)}
-                                                        className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-600"
-                                                    >
-                                                        변경
-                                                    </button>
+                                            <td>
+                                                <div className="cell-strong">{reservation.productName}</div>
+                                                <div className="cell-muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+                                                    {reservation.customerName} · {reservation.id.slice(0, 8)}…
                                                 </div>
-                                            ) : (
+                                            </td>
+                                            <td className="cell-muted">
+                                                <div>{reservation.duration}</div>
+                                                <div style={{ fontSize: 12.5, marginTop: 2 }}>{reservation.startDate}</div>
+                                            </td>
+                                            <td className="c">
+                                                {reservation.assignedGuide
+                                                    ? <span className="badge b-purple">배정됨</span>
+                                                    : <span className="badge b-gray">미배정</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {reservations.length === 0 && (
+                                <div className="empty"><Icon name="inbox" /><p>예약이 없습니다.</p></div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 할당 패널 */}
+                    <div className="stack">
+                        {selectedReservation ? (
+                            <>
+                                <div className="trip-hero">
+                                    <div className="th-label">배정 중인 예약</div>
+                                    <div className="th-date">{selectedReservation.productName}</div>
+                                    <div className="th-meta">
+                                        <span><Icon name="person" />{selectedReservation.customerName}</span>
+                                        <span><Icon name="event" />{selectedReservation.startDate}</span>
+                                        <span><Icon name="schedule" />{selectedReservation.duration}</span>
+                                    </div>
+                                </div>
+
+                                {/* 가이드 할당 */}
+                                <div className="card">
+                                    <div className="card-head">
+                                        <Icon name="badge" />
+                                        <h2>담당 가이드</h2>
+                                    </div>
+                                    <div className="card-pad">
+                                        {selectedReservation.assignedGuide ? (
+                                            <div className="assign-row">
+                                                <img
+                                                    className="avatar round"
+                                                    src={selectedReservation.assignedGuide.image}
+                                                    alt={selectedReservation.assignedGuide.name}
+                                                />
+                                                <div>
+                                                    <div className="cell-strong">{selectedReservation.assignedGuide.name}</div>
+                                                    <div className="cell-muted" style={{ fontSize: 12.5 }}>{selectedReservation.assignedGuide.phone}</div>
+                                                </div>
                                                 <button
+                                                    className="btn btn-ghost btn-sm"
+                                                    style={{ marginLeft: 'auto' }}
                                                     onClick={() => setShowGuideModal(true)}
-                                                    className="w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all"
                                                 >
-                                                    <span className="material-symbols-outlined text-2xl text-slate-400">add</span>
-                                                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">가이드 할당</p>
+                                                    <Icon name="swap_horiz" />변경
                                                 </button>
-                                            )}
-                                        </div>
+                                            </div>
+                                        ) : (
+                                            <button className="assign-empty" onClick={() => setShowGuideModal(true)}>
+                                                <Icon name="add" />가이드 배정
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
 
-                                        {/* 숙소 할당 */}
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-lg">hotel</span>
-                                                숙소 일정
-                                            </h3>
-                                            <div className="space-y-2">
-                                                {Array.from({ length: getTripDays(selectedReservation.duration) }, (_, i) => i + 1).map(day => {
-                                                    const assigned = selectedReservation.dailyAccommodations?.find(d => d.day === day);
-                                                    const startDate = new Date(selectedReservation.startDate);
-                                                    const currentDate = new Date(startDate);
-                                                    currentDate.setDate(startDate.getDate() + day - 1);
-                                                    const dateStr = currentDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+                                {/* 숙소 할당 */}
+                                <div className="card">
+                                    <div className="card-head">
+                                        <Icon name="hotel" />
+                                        <h2>숙소 일정</h2>
+                                    </div>
+                                    <div className="card-pad">
+                                        <div className="stack" style={{ gap: 10 }}>
+                                            {Array.from({ length: getTripDays(selectedReservation.duration) }, (_, i) => i + 1).map(day => {
+                                                const assigned = selectedReservation.dailyAccommodations?.find(d => d.day === day);
+                                                const startDate = new Date(selectedReservation.startDate);
+                                                const currentDate = new Date(startDate);
+                                                currentDate.setDate(startDate.getDate() + day - 1);
+                                                const dateStr = currentDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
-                                                    return (
-                                                        <div key={day} className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="px-2 py-0.5 bg-indigo-500 text-white text-xs font-bold rounded">{day}일차</span>
-                                                                    <span className="text-xs text-slate-600 dark:text-slate-400">{dateStr}</span>
+                                                return (
+                                                    <div key={day} className="accom-day">
+                                                        <span className="th-day">{day}일차<br />{dateStr}</span>
+                                                        {assigned ? (
+                                                            <div className="assign-row" style={{ flex: 1, padding: 0 }}>
+                                                                <div>
+                                                                    <div className="cell-strong">{assigned.accommodation.name}</div>
+                                                                    {assigned.accommodation.location && (
+                                                                        <div className="cell-muted" style={{ fontSize: 12.5 }}>{assigned.accommodation.location}</div>
+                                                                    )}
                                                                 </div>
-                                                                {assigned ? (
-                                                                    <p className="text-sm font-medium text-slate-800 dark:text-white">{assigned.accommodation.name}</p>
-                                                                ) : (
-                                                                    <p className="text-sm text-slate-500 dark:text-slate-500">미할당</p>
-                                                                )}
+                                                                <button
+                                                                    className="btn btn-ghost btn-sm"
+                                                                    style={{ marginLeft: 'auto' }}
+                                                                    onClick={() => {
+                                                                        setSelectedDay(day);
+                                                                        setShowAccommodationModal(true);
+                                                                    }}
+                                                                >
+                                                                    <Icon name="swap_horiz" />변경
+                                                                </button>
                                                             </div>
+                                                        ) : (
                                                             <button
+                                                                className="accom-empty"
                                                                 onClick={() => {
                                                                     setSelectedDay(day);
                                                                     setShowAccommodationModal(true);
                                                                 }}
-                                                                className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-600"
                                                             >
-                                                                {assigned ? '변경' : '선택'}
+                                                                <Icon name="add" />숙소 선택
                                                             </button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
-                                        <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4">assignment</span>
-                                        <p className="text-slate-500 dark:text-slate-400">예약을 선택하여 가이드와 숙소를 배정하세요</p>
-                                    </div>
-                                )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="card">
+                                <div className="empty">
+                                    <Icon name="assignment" />
+                                    <p>예약을 선택하여 가이드와 숙소를 배정하세요.</p>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Modals */}
-                <GuideSelectionModal
-                    isOpen={showGuideModal}
-                    onClose={() => setShowGuideModal(false)}
-                    onSelect={handleGuideAssign}
-                    currentGuide={selectedReservation?.assignedGuide as any || null}
-                />
+            {/* Modals */}
+            <GuideSelectionModal
+                isOpen={showGuideModal}
+                onClose={() => setShowGuideModal(false)}
+                onSelect={handleGuideAssign}
+                currentGuide={selectedReservation?.assignedGuide as any || null}
+            />
 
-                <AccommodationSelectionModal
-                    isOpen={showAccommodationModal}
-                    onClose={() => setShowAccommodationModal(false)}
-                    onSelect={handleAccommodationAssign}
-                    day={selectedDay}
-                    currentAccommodation={selectedReservation?.dailyAccommodations?.find(d => d.day === selectedDay)?.accommodation || null}
-                />
-            </main>
-        </div>
+            <AccommodationSelectionModal
+                isOpen={showAccommodationModal}
+                onClose={() => setShowAccommodationModal(false)}
+                onSelect={handleAccommodationAssign}
+                day={selectedDay}
+                currentAccommodation={selectedReservation?.dailyAccommodations?.find(d => d.day === selectedDay)?.accommodation || null}
+            />
+        </AdminLayout>
     );
 };

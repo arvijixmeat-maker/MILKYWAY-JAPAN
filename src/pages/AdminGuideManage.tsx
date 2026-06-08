@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 
@@ -17,11 +18,11 @@ interface Guide {
 }
 
 export const AdminGuideManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [guides, setGuides] = useState<Guide[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingGuide, setEditingGuide] = useState<Guide | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
     const [formData, setFormData] = useState<Omit<Guide, 'id' | 'createdAt' | 'status'>>({
         name: '',
@@ -173,245 +174,241 @@ export const AdminGuideManage: React.FC = () => {
     };
 
     const filteredGuides = guides.filter(g =>
-        g.name.toLowerCase().includes(searchTerm.toLowerCase())
+        g.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (statusFilter === 'all' || g.status === statusFilter)
     );
 
     const pendingCount = guides.filter(g => g.status === 'pending').length;
-
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
 
     const availableLanguages = ['한국어', '영어', '몽골어', '중국어', '일본어'];
     const availableSpecialties = ['고비사막', '홉스골', '테를지', '승마', '문화체험', '사진촬영'];
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-            <AdminSidebar activePage="guides" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-xl font-bold text-slate-800 dark:text-white">가이드 관리</h1>
-                        {pendingCount > 0 && (
-                            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-full">
-                                승인대기 {pendingCount}
-                            </span>
-                        )}
-                    </div>
+        <AdminLayout
+            activePage="guides"
+            title="가이드 관리"
+            description={pendingCount > 0 ? `승인대기 ${pendingCount}건` : undefined}
+            actions={
+                <button
+                    className="btn btn-ink"
+                    onClick={() => {
+                        resetForm();
+                        setIsModalOpen(true);
+                    }}
+                >
+                    <Icon name="person_add" />가이드 등록
+                </button>
+            }
+        >
+            <div className="route-anim">
+                {/* Toolbar */}
+                <div className="toolbar">
+                    <label className="tb-search">
+                        <Icon name="search" />
+                        <input
+                            placeholder="가이드 이름, 지역 검색"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </label>
+                    <select
+                        className="select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">전체 상태</option>
+                        <option value="active">활동중</option>
+                        <option value="pending">승인대기</option>
+                    </select>
+                    <div className="spacer" />
                     <button
+                        className="btn btn-ink"
                         onClick={() => {
                             resetForm();
                             setIsModalOpen(true);
                         }}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg shadow-lg shadow-teal-500/20 transition-all flex items-center gap-2"
                     >
-                        <span className="material-symbols-outlined">add</span>
-                        가이드 등록
+                        <Icon name="person_add" />가이드 등록
                     </button>
-                </header>
-
-                {/* Search */}
-                <div className="p-8">
-                    <div className="mb-6">
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="가이드 이름 검색..."
-                            className="w-full max-w-md px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        />
-                    </div>
-
-                    {/* Guide List */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredGuides.map(guide => (
-                            <div key={guide.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-all">
-                                <div className="aspect-square bg-slate-100 dark:bg-slate-700 relative">
-                                    {guide.image ? (
-                                        <img src={guide.image} alt={guide.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-6xl text-slate-400">person</span>
-                                        </div>
-                                    )}
-                                    {guide.status === 'pending' && (
-                                        <div className="absolute top-2 left-2">
-                                            <span className="px-2 py-1 bg-amber-500 text-white text-xs font-bold rounded-md">승인대기</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-5">
-                                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">{guide.name}</h3>
-                                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">{guide.introduction || '소개글이 없습니다.'}</p>
-
-                                    <div className="space-y-2 mb-4">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <span className="material-symbols-outlined text-slate-400 text-lg">phone</span>
-                                            <span className="text-slate-700 dark:text-slate-300">{guide.phone}</span>
-                                        </div>
-                                        {guide.experienceYears > 0 && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <span className="material-symbols-outlined text-slate-400 text-lg">workspace_premium</span>
-                                                <span className="text-slate-700 dark:text-slate-300">경력 {guide.experienceYears}년</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {guide.languages.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-3">
-                                            {guide.languages.map(lang => (
-                                                <span key={lang} className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs rounded-md">
-                                                    {lang}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {guide.status === 'pending' && (
-                                        <button
-                                            onClick={() => handleApprove(guide)}
-                                            className="w-full mb-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold transition-colors"
-                                        >
-                                            승인하기
-                                        </button>
-                                    )}
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleEdit(guide)}
-                                            className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            수정
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(guide.id)}
-                                            className="flex-1 px-3 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            삭제
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {filteredGuides.length === 0 && (
-                        <div className="text-center py-20">
-                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4">person_off</span>
-                            <p className="text-slate-500 dark:text-slate-400">등록된 가이드가 없습니다</p>
-                        </div>
-                    )}
                 </div>
-            </main>
 
-            {/* Modal */}
+                {/* Guide grid */}
+                {filteredGuides.length > 0 ? (
+                    <div className="guide-grid">
+                        {filteredGuides.map(guide => {
+                            const isActive = guide.status === 'active';
+                            const statusLabel = guide.status === 'pending' ? '승인대기' : '활동중';
+                            const langLabel = guide.languages.length > 0
+                                ? (guide.languages.length > 1 ? `${guide.languages[0]} 외` : guide.languages[0])
+                                : '–';
+                            return (
+                                <div className="guide-card" key={guide.id}>
+                                    {guide.image ? (
+                                        <img className="gphoto" src={guide.image} alt={guide.name} loading="lazy" />
+                                    ) : (
+                                        <span
+                                            className="gphoto"
+                                            style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}
+                                        >
+                                            <Icon name="person" style={{ fontSize: 30 }} />
+                                        </span>
+                                    )}
+                                    <div className="cell-strong" style={{ fontSize: 15 }}>{guide.name}</div>
+                                    <div className="cell-muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+                                        {guide.phone || '연락처 미등록'}
+                                    </div>
+                                    <div style={{ marginTop: 10 }}>
+                                        <span className={`badge ${isActive ? 'b-green' : 'b-amber'}`}>{statusLabel}</span>
+                                    </div>
+                                    <div className="gstat">
+                                        <div>
+                                            <b>{guide.experienceYears > 0 ? `${guide.experienceYears}년` : '–'}</b>
+                                            <span>경력</span>
+                                        </div>
+                                        <div>
+                                            <b>{guide.specialties.length}</b>
+                                            <span>전문</span>
+                                        </div>
+                                        <div>
+                                            <b>{langLabel}</b>
+                                            <span>언어</span>
+                                        </div>
+                                    </div>
+                                    <div className="row" style={{ gap: 6, marginTop: 14, justifyContent: 'center' }}>
+                                        {guide.status === 'pending' && (
+                                            <button className="btn btn-sm btn-blue" onClick={() => handleApprove(guide)}>
+                                                <Icon name="check" />승인
+                                            </button>
+                                        )}
+                                        <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(guide)}>
+                                            <Icon name="edit" />수정
+                                        </button>
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(guide.id)}>
+                                            <Icon name="delete" />삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="empty">
+                        <Icon name="person_off" />
+                        <p>등록된 가이드가 없습니다.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Add / Edit modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                                {editingGuide ? '가이드 수정' : '가이드 등록'}
-                            </h2>
+                <div className="picker-scrim" onClick={() => { setIsModalOpen(false); resetForm(); }}>
+                    <div
+                        className="picker"
+                        style={{ width: 560, maxHeight: '90vh' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="card-head">
+                            <h2>{editingGuide ? '가이드 수정' : '가이드 등록'}</h2>
+                            <div className="spacer" />
                             <button
-                                onClick={() => {
-                                    setIsModalOpen(false);
-                                    resetForm();
-                                }}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                className="act-btn"
+                                title="닫기"
+                                onClick={() => { setIsModalOpen(false); resetForm(); }}
                             >
-                                <span className="material-symbols-outlined">close</span>
+                                <Icon name="close" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-5">
-                            {/* Image Upload */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">프로필 사진</label>
-                                <div className="flex items-center gap-4">
+                        <div className="card-pad" style={{ overflowY: 'auto' }}>
+                            {/* Image upload */}
+                            <div className="field">
+                                <label>프로필 사진</label>
+                                <div className="row" style={{ gap: 16 }}>
                                     {formData.image ? (
-                                        <img src={formData.image} alt="Preview" className="w-24 h-24 rounded-full object-cover" />
+                                        <img
+                                            src={formData.image}
+                                            alt="Preview"
+                                            style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
+                                        />
                                     ) : (
-                                        <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
-                                        </div>
+                                        <span
+                                            style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--mrt-gray-100)', color: 'var(--mrt-gray-400)', display: 'grid', placeItems: 'center', flex: 'none' }}
+                                        >
+                                            <Icon name="person" style={{ fontSize: 36 }} />
+                                        </span>
                                     )}
                                     <input
                                         type="file"
                                         accept="image/*"
                                         onChange={handleImageUpload}
-                                        className="text-sm"
+                                        style={{ fontSize: 13, color: 'var(--text-tertiary)' }}
                                     />
                                 </div>
                             </div>
 
-                            {/* Name */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">이름 *</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    placeholder="가이드 이름"
-                                />
+                            {/* Name + Phone */}
+                            <div className="field-row">
+                                <div className="field" style={{ marginBottom: 0 }}>
+                                    <label>이름 *</label>
+                                    <input
+                                        type="text"
+                                        className="inp"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="가이드 이름"
+                                    />
+                                </div>
+                                <div className="field" style={{ marginBottom: 0 }}>
+                                    <label>연락처 *</label>
+                                    <input
+                                        type="tel"
+                                        className="inp"
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        placeholder="010-0000-0000"
+                                    />
+                                </div>
                             </div>
 
                             {/* Introduction */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">소개글</label>
+                            <div className="field" style={{ marginTop: 18 }}>
+                                <label>소개글</label>
                                 <textarea
+                                    className="inp"
                                     value={formData.introduction}
                                     onChange={(e) => setFormData({ ...formData, introduction: e.target.value })}
                                     rows={4}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     placeholder="가이드 경력, 전문 분야 등을 입력하세요"
                                 />
                             </div>
 
-                            {/* Phone */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">연락처 *</label>
-                                <input
-                                    type="tel"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    placeholder="010-0000-0000"
-                                />
-                            </div>
-
-                            {/* Experience Years */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">경력 연수</label>
-                                <div className="flex items-center gap-3">
+                            {/* Experience years */}
+                            <div className="field">
+                                <label>경력 연수</label>
+                                <div className="row" style={{ gap: 10 }}>
                                     <input
                                         type="number"
                                         min="0"
                                         max="50"
+                                        className="inp"
+                                        style={{ width: 120, textAlign: 'center' }}
                                         value={formData.experienceYears}
                                         onChange={(e) => setFormData({ ...formData, experienceYears: Number(e.target.value) })}
-                                        className="w-28 px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-center"
                                     />
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">년</span>
+                                    <span className="cell-muted" style={{ fontSize: 13.5 }}>년</span>
                                 </div>
                             </div>
 
                             {/* Languages */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">언어</label>
-                                <div className="flex flex-wrap gap-2">
+                            <div className="field">
+                                <label>언어</label>
+                                <div className="chip-row">
                                     {availableLanguages.map(lang => (
                                         <button
                                             key={lang}
                                             type="button"
                                             onClick={() => handleLanguageToggle(lang)}
-                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.languages.includes(lang)
-                                                ? 'bg-teal-500 text-white'
-                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                                                }`}
+                                            className={`chip ${formData.languages.includes(lang) ? 'active' : ''}`}
                                         >
                                             {lang}
                                         </button>
@@ -420,47 +417,38 @@ export const AdminGuideManage: React.FC = () => {
                             </div>
 
                             {/* Specialties */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">전문 분야</label>
-                                <div className="flex flex-wrap gap-2">
+                            <div className="field" style={{ marginBottom: 0 }}>
+                                <label>전문 분야</label>
+                                <div className="chip-row">
                                     {availableSpecialties.map(specialty => (
                                         <button
                                             key={specialty}
                                             type="button"
                                             onClick={() => handleSpecialtyToggle(specialty)}
-                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.specialties.includes(specialty)
-                                                ? 'bg-teal-500 text-white'
-                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                                                }`}
+                                            className={`chip ${formData.specialties.includes(specialty) ? 'active' : ''}`}
                                         >
                                             {specialty}
                                         </button>
                                     ))}
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Submit Button */}
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    onClick={() => {
-                                        setIsModalOpen(false);
-                                        resetForm();
-                                    }}
-                                    className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    onClick={handleSubmit}
-                                    className="flex-1 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold transition-colors"
-                                >
-                                    {editingGuide ? '수정' : '등록'}
-                                </button>
-                            </div>
+                        <div className="drawer-foot">
+                            <div className="spacer" style={{ flex: 1 }} />
+                            <button
+                                className="btn btn-ghost"
+                                onClick={() => { setIsModalOpen(false); resetForm(); }}
+                            >
+                                취소
+                            </button>
+                            <button className="btn btn-ink" onClick={handleSubmit}>
+                                {editingGuide ? '수정' : '등록'}
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </AdminLayout>
     );
 };

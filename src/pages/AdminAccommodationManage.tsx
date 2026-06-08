@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 
@@ -15,7 +16,6 @@ interface Accommodation {
 }
 
 export const AdminAccommodationManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAccommodation, setEditingAccommodation] = useState<Accommodation | null>(null);
@@ -169,11 +169,6 @@ export const AdminAccommodationManage: React.FC = () => {
         a.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
-
     const availableFacilities = ['Wi-Fi', '조식 포함', '주차장', '에어컨', '난방', '온수', '세탁 서비스', '픽업 서비스'];
 
     const accommodationTypes = {
@@ -183,179 +178,211 @@ export const AdminAccommodationManage: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-            <AdminSidebar activePage="accommodations" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">숙소 관리</h1>
+        <AdminLayout
+            activePage="hotels"
+            title="숙소 관리"
+            actions={
+                <button
+                    className="btn btn-ink"
+                    onClick={() => {
+                        resetForm();
+                        setIsModalOpen(true);
+                    }}
+                >
+                    <Icon name="add" />숙소 추가
+                </button>
+            }
+        >
+            <div className="route-anim">
+                {/* Toolbar */}
+                <div className="toolbar">
+                    <label className="tb-search">
+                        <Icon name="search" />
+                        <input
+                            placeholder="숙소명 검색"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </label>
+                    <div className="spacer" />
                     <button
+                        className="btn btn-ink"
                         onClick={() => {
                             resetForm();
                             setIsModalOpen(true);
                         }}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg shadow-lg shadow-teal-500/20 transition-all flex items-center gap-2"
                     >
-                        <span className="material-symbols-outlined">add</span>
-                        숙소 등록
+                        <Icon name="add" />숙소 추가
                     </button>
-                </header>
+                </div>
 
-                {/* Search */}
-                <div className="p-8">
-                    <div className="mb-6">
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="숙소 이름 검색..."
-                            className="w-full max-w-md px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        />
-                    </div>
-
-                    {/* Accommodation List */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredAccommodations.map(accommodation => (
-                            <div key={accommodation.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-all">
-                                <div className="aspect-video bg-slate-100 dark:bg-slate-700 relative">
-                                    {accommodation.images.length > 0 ? (
-                                        <img src={accommodation.images[0]} alt={accommodation.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-6xl text-slate-400">hotel</span>
-                                        </div>
-                                    )}
-                                    {accommodation.images.length > 1 && (
-                                        <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded-md text-xs">
-                                            +{accommodation.images.length - 1}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-5">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <h3 className="text-lg font-bold text-slate-800 dark:text-white">{accommodation.name}</h3>
-                                        <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 text-xs rounded-md">
-                                            {accommodation.type}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 mb-3">
-                                        <span className="material-symbols-outlined text-lg">location_on</span>
-                                        <span>{accommodation.location}</span>
-                                    </div>
-
-                                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
-                                        {accommodation.description || '설명이 없습니다.'}
-                                    </p>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleEdit(accommodation)}
-                                            className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            수정
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(accommodation.id)}
-                                            className="flex-1 px-3 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            삭제
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                {/* Accommodation table */}
+                <div className="card">
+                    <div className="tbl-wrap">
+                        <table className="tbl">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: 80 }}>대표</th>
+                                    <th>숙소명</th>
+                                    <th>타입</th>
+                                    <th>위치</th>
+                                    <th className="c">사진</th>
+                                    <th className="r">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredAccommodations.map(accommodation => (
+                                    <tr key={accommodation.id}>
+                                        <td>
+                                            {accommodation.images.length > 0 ? (
+                                                <img
+                                                    className="thumb sq"
+                                                    src={accommodation.images[0]}
+                                                    alt={accommodation.name}
+                                                />
+                                            ) : (
+                                                <span
+                                                    className="thumb sq"
+                                                    style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}
+                                                >
+                                                    <Icon name="hotel" style={{ fontSize: 20 }} />
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="cell-strong">{accommodation.name}</td>
+                                        <td><span className="badge b-blue">{accommodation.type}</span></td>
+                                        <td className="cell-muted">{accommodation.location}</td>
+                                        <td className="c">
+                                            <span className="badge b-gray">
+                                                <Icon name="photo_library" />{accommodation.images.length}
+                                            </span>
+                                        </td>
+                                        <td className="r">
+                                            <span className="row-actions">
+                                                <button
+                                                    className="act-btn"
+                                                    title="수정"
+                                                    onClick={() => handleEdit(accommodation)}
+                                                >
+                                                    <Icon name="edit" />
+                                                </button>
+                                                <button
+                                                    className="act-btn danger"
+                                                    title="삭제"
+                                                    onClick={() => handleDelete(accommodation.id)}
+                                                >
+                                                    <Icon name="delete" />
+                                                </button>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
 
                     {filteredAccommodations.length === 0 && (
-                        <div className="text-center py-20">
-                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4">hotel</span>
-                            <p className="text-slate-500 dark:text-slate-400">등록된 숙소가 없습니다</p>
+                        <div className="empty">
+                            <Icon name="hotel" />
+                            <p>등록된 숙소가 없습니다.</p>
                         </div>
                     )}
                 </div>
-            </main>
+            </div>
 
-            {/* Modal */}
+            {/* Add / Edit modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                                {editingAccommodation ? '숙소 수정' : '숙소 등록'}
-                            </h2>
+                <div className="picker-scrim" onClick={() => { setIsModalOpen(false); resetForm(); }}>
+                    <div
+                        className="picker"
+                        style={{ width: 640, maxHeight: '90vh' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="card-head">
+                            <h2>{editingAccommodation ? '숙소 수정' : '숙소 등록'}</h2>
+                            <div className="spacer" />
                             <button
-                                onClick={() => {
-                                    setIsModalOpen(false);
-                                    resetForm();
-                                }}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                className="act-btn"
+                                title="닫기"
+                                onClick={() => { setIsModalOpen(false); resetForm(); }}
                             >
-                                <span className="material-symbols-outlined">close</span>
+                                <Icon name="close" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-5">
+                        <div className="card-pad" style={{ overflowY: 'auto' }}>
                             {/* Images Upload */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">숙소 이미지</label>
-                                <div className="space-y-3">
-                                    {formData.images.length > 0 && (
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {formData.images.map((img, idx) => (
-                                                <div key={idx} className="relative aspect-video">
-                                                    <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
-                                                    <button
-                                                        onClick={() => removeImage(idx)}
-                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">close</span>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                            <div className="field">
+                                <label>숙소 이미지</label>
+                                {formData.images.length > 0 && (
+                                    <div className="grid-3" style={{ marginBottom: 12 }}>
+                                        {formData.images.map((img, idx) => (
+                                            <div key={idx} style={{ position: 'relative' }}>
+                                                <img
+                                                    src={img}
+                                                    alt={`Preview ${idx + 1}`}
+                                                    style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--r-md)' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(idx)}
+                                                    className="act-btn danger"
+                                                    title="삭제"
+                                                    style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, background: '#fff' }}
+                                                >
+                                                    <Icon name="close" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleImageUpload}
+                                    style={{ fontSize: 13, color: 'var(--text-tertiary)' }}
+                                />
+                            </div>
+
+                            {/* Name + Location */}
+                            <div className="field-row">
+                                <div className="field" style={{ marginBottom: 0 }}>
+                                    <label>숙소명 *</label>
                                     <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleImageUpload}
-                                        className="text-sm"
+                                        type="text"
+                                        className="inp"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="숙소 이름"
+                                    />
+                                </div>
+                                <div className="field" style={{ marginBottom: 0 }}>
+                                    <label>위치 *</label>
+                                    <input
+                                        type="text"
+                                        className="inp"
+                                        value={formData.location}
+                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        placeholder="예: 울란바토르 시내, 테를지 국립공원"
                                     />
                                 </div>
                             </div>
 
-                            {/* Name */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">숙소명 *</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    placeholder="숙소 이름"
-                                />
-                            </div>
-
-
                             {/* Type */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">숙소 타입</label>
-                                <div className="space-y-3">
+                            <div className="field" style={{ marginTop: 18 }}>
+                                <label>숙소 타입</label>
+                                <div className="stack" style={{ gap: 12 }}>
                                     {Object.entries(accommodationTypes).map(([category, subtypes]) => (
                                         <div key={category}>
-                                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">{category}</p>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <p className="cell-muted" style={{ fontSize: 12, fontWeight: 700, margin: '0 0 6px' }}>{category}</p>
+                                            <div className="chip-row">
                                                 {subtypes.map(subtype => (
                                                     <button
                                                         key={subtype}
                                                         type="button"
                                                         onClick={() => setFormData({ ...formData, type: subtype })}
-                                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.type === subtype
-                                                            ? 'bg-teal-500 text-white'
-                                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                                                            }`}
+                                                        className={`chip ${formData.type === subtype ? 'active' : ''}`}
                                                     >
                                                         {subtype}
                                                     </button>
@@ -366,52 +393,51 @@ export const AdminAccommodationManage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Location */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">위치 *</label>
-                                <input
-                                    type="text"
-                                    value={formData.location}
-                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                    placeholder="예: 울란바토르 시내, 테를지 국립공원"
-                                />
+                            {/* Facilities */}
+                            <div className="field">
+                                <label>편의시설</label>
+                                <div className="chip-row">
+                                    {availableFacilities.map(facility => (
+                                        <button
+                                            key={facility}
+                                            type="button"
+                                            onClick={() => handleFacilityToggle(facility)}
+                                            className={`chip ${formData.facilities.includes(facility) ? 'active' : ''}`}
+                                        >
+                                            {facility}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Description */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">숙소 설명</label>
+                            <div className="field" style={{ marginBottom: 0 }}>
+                                <label>숙소 설명</label>
                                 <textarea
+                                    className="inp"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     rows={4}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                                     placeholder="숙소에 대한 설명을 입력하세요"
                                 />
                             </div>
+                        </div>
 
-                            {/* Submit Button */}
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    onClick={() => {
-                                        setIsModalOpen(false);
-                                        resetForm();
-                                    }}
-                                    className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    onClick={handleSubmit}
-                                    className="flex-1 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold transition-colors"
-                                >
-                                    {editingAccommodation ? '수정' : '등록'}
-                                </button>
-                            </div>
+                        <div className="drawer-foot">
+                            <div className="spacer" style={{ flex: 1 }} />
+                            <button
+                                className="btn btn-ghost"
+                                onClick={() => { setIsModalOpen(false); resetForm(); }}
+                            >
+                                취소
+                            </button>
+                            <button className="btn btn-ink" onClick={handleSubmit}>
+                                {editingAccommodation ? '수정' : '등록'}
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </AdminLayout>
     );
 };
