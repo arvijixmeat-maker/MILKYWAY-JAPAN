@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
@@ -746,25 +747,26 @@ const TemplatesTab: React.FC = () => {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">고객에게 발송할 여행 문서 디자인을 만듭니다.</p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">일정 내용은 문서 안에 들어가고, 고객 화면은 여행 개요·계약서·상세 일정·공통 안내 패키지로 구성됩니다.</p>
+            <div className="toolbar">
+                <div style={{ minWidth: 0 }}>
+                    <div className="cell-strong" style={{ fontSize: 14 }}>고객에게 발송할 여행 문서 디자인을 만듭니다.</div>
+                    <div className="cell-muted" style={{ fontSize: 12.5, marginTop: 2 }}>일정 내용은 문서 안에 들어가고, 고객 화면은 여행 개요·계약서·상세 일정·공통 안내 패키지로 구성됩니다.</div>
                 </div>
-                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
-                    <span className="material-symbols-outlined text-sm">add</span> 문서 템플릿 추가
+                <div className="spacer" />
+                <button className="btn btn-ink" onClick={() => { resetForm(); setIsModalOpen(true); }}>
+                    <Icon name="add" /> 문서 템플릿 추가
                 </button>
             </div>
 
             {templates.length === 0 ? (
-                <div className="text-center py-20 text-slate-400">
-                    <span className="material-symbols-outlined text-5xl mb-2">event_note</span>
+                <div className="empty">
+                    <Icon name="event_note" />
                     <p>등록된 템플릿이 없습니다</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid-2" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                     {templates.map(t => (
-                        <div key={t.id} className="overflow-hidden rounded-2xl border border-[#8FE7DE]/80 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-teal-500/20 dark:bg-slate-800">
+                        <div key={t.id} className="card" style={{ overflow: 'hidden' }}>
                             <div className="relative h-36 overflow-hidden">
                                 <img src={mongoliaHero} alt="" className="h-full w-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-r from-[#0F8F84]/95 via-[#0F8F84]/65 to-transparent" />
@@ -782,7 +784,7 @@ const TemplatesTab: React.FC = () => {
                                 <span className="absolute right-4 top-4 rounded-xl bg-white/90 px-3 py-1 text-xs font-black text-[#0F8F84] shadow-sm">{Math.max(0, t.days.length - 1)}박{t.days.length}일</span>
                             </div>
 
-                            <div className="p-5">
+                            <div className="card-pad">
                                 <div className="mb-4 grid grid-cols-4 gap-2">
                                     {[
                                         { icon: 'article', label: '개요' },
@@ -797,7 +799,7 @@ const TemplatesTab: React.FC = () => {
                                     ))}
                                 </div>
 
-                                <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+                                <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-3">
                                     <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">문서에 들어갈 일정 내용</p>
                                     <div className="space-y-1">
                                         {t.days.slice(0, 3).map(d => (
@@ -811,13 +813,13 @@ const TemplatesTab: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleEdit(t)} className="flex-1 rounded-xl bg-[#39C4B7] py-2 text-sm font-black text-white transition-colors hover:bg-[#0F8F84]">문서 디자인 수정</button>
-                                    <button onClick={() => handleDuplicate(t)} className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600" title="이 템플릿 복제">
-                                        <span className="material-symbols-outlined text-sm">content_copy</span>
+                                <div className="row" style={{ gap: 8 }}>
+                                    <button onClick={() => handleEdit(t)} className="btn btn-ink" style={{ flex: 1 }}>문서 디자인 수정</button>
+                                    <button onClick={() => handleDuplicate(t)} className="act-btn" title="이 템플릿 복제">
+                                        <Icon name="content_copy" />
                                     </button>
-                                    <button onClick={() => handleDelete(t.id)} className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-500 transition-colors hover:bg-red-100" title="삭제">
-                                        <span className="material-symbols-outlined text-sm">delete</span>
+                                    <button onClick={() => handleDelete(t.id)} className="act-btn danger" title="삭제">
+                                        <Icon name="delete" />
                                     </button>
                                 </div>
                             </div>
@@ -827,29 +829,29 @@ const TemplatesTab: React.FC = () => {
             )}
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 p-3 sm:p-6">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full h-full flex flex-col overflow-hidden shadow-2xl">
+                <div className="fixed inset-0 z-50 p-3 sm:p-6" style={{ background: 'rgba(26,27,30,0.42)', backdropFilter: 'blur(2px)' }}>
+                    <div className="bg-white rounded-2xl w-full h-full flex flex-col overflow-hidden" style={{ boxShadow: 'var(--shadow-lg)' }}>
 
                         {/* Sticky header */}
-                        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0">
+                        <div className="bg-white px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-default)' }}>
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <button onClick={closeEditor} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
-                                    <span className="material-symbols-outlined">arrow_back</span>
+                                <button onClick={closeEditor} className="act-btn" title="닫기">
+                                    <Icon name="arrow_back" />
                                 </button>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400">{editing ? '템플릿 수정' : '새 템플릿'}</p>
+                                    <div className="eyebrow" style={{ marginBottom: 2 }}><span className="dot" />{editing ? '템플릿 수정' : '새 템플릿'}</div>
                                     <input
                                         value={form.name}
                                         onChange={e => setForm({ ...form, name: e.target.value })}
                                         placeholder="템플릿 이름 (예: 고비사막 4박5일 기본형)"
-                                        className="w-full text-lg font-bold bg-transparent text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-300"
+                                        className="w-full text-lg font-bold bg-transparent text-slate-900 focus:outline-none placeholder:text-slate-300"
                                     />
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <button onClick={closeEditor} className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">취소</button>
-                                <button onClick={handleSubmit} className="px-5 py-2 text-sm font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-lg inline-flex items-center gap-1.5 shadow-md shadow-teal-500/20">
-                                    <span className="material-symbols-outlined text-base">check</span>{editing ? '저장' : '생성'}
+                                <button onClick={closeEditor} className="btn btn-ghost">취소</button>
+                                <button onClick={handleSubmit} className="btn btn-ink">
+                                    <Icon name="check" />{editing ? '저장' : '생성'}
                                 </button>
                             </div>
                         </div>
@@ -858,7 +860,7 @@ const TemplatesTab: React.FC = () => {
                         <div className="flex-1 overflow-hidden">
 
 {/* Live preview */}
-                            <div className="h-full overflow-hidden bg-white dark:bg-slate-900">
+                            <div className="h-full overflow-hidden bg-white">
                                 <TemplatePreview name={form.name} description={form.description} days={form.days} documentSettings={form.documentSettings} onNameChange={(value) => setForm(f => ({ ...f, name: value }))} onDescriptionChange={(value) => setForm(f => ({ ...f, description: value }))} onDocSection={updateDocSection} onIncluded={updateIncluded} onCancellation={updateCancellation} onGuideNotice={updateGuideNotice} onDayChange={(d, field, v) => updateDay(d, field, v)} onActivityChange={(d, a, field, v) => field === 'time' ? updateActivity(d, a, 'time', v) : updateActivityText(d, a, field, v)} onAddDay={addDay} onAddActivity={(d) => addActivity(d)} onRemoveDay={removeDay} onRemoveActivity={removeActivity} onDayActivitiesText={(d, text) => setForm(f => { const days = [...f.days]; days[d] = { ...days[d], activities: parseDayActivitiesText(text) }; return { ...f, days }; })} />
                             </div>
                         </div>
@@ -937,67 +939,72 @@ const GuidesTab: React.FC = () => {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">가이드를 등록하고 관리합니다.</p>
-                    {pendingCount > 0 && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">승인대기 {pendingCount}</span>}
+            <div className="toolbar">
+                <div className="row" style={{ minWidth: 0 }}>
+                    <div className="cell-muted" style={{ fontSize: 13 }}>가이드를 등록하고 관리합니다.</div>
+                    {pendingCount > 0 && <span className="badge b-amber">승인대기 {pendingCount}</span>}
                 </div>
-                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
-                    <span className="material-symbols-outlined text-sm">add</span> 가이드 등록
+                <div className="spacer" />
+                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="btn btn-ink">
+                    <Icon name="add" /> 가이드 등록
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {guides.map(g => (
-                    <div key={g.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 grid grid-cols-[72px_1fr_auto] gap-4 items-center">
-                        <div className="relative w-18 h-18 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0" style={{ width: 72, height: 72 }}>
-                            {g.image ? <img src={g.image} alt={g.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-3xl text-slate-300">person</span></div>}
-                            {g.status === 'pending' && <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-bold rounded">대기</span>}
+                    <div key={g.id} className="card card-pad grid grid-cols-[72px_1fr_auto] gap-4 items-center" style={{ padding: 14 }}>
+                        <div className="avatar flex-shrink-0" style={{ width: 72, height: 72, borderRadius: 'var(--r-md)', position: 'relative' }}>
+                            {g.image ? <img src={g.image} alt={g.name} className="w-full h-full object-cover" /> : <Icon name="person" style={{ fontSize: 30, color: 'var(--mrt-gray-300)' }} />}
+                            {g.status === 'pending' && <span className="badge b-amber" style={{ position: 'absolute', top: 4, left: 4, padding: '1px 6px', fontSize: 9 }}>대기</span>}
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h3 className="font-bold text-slate-800 dark:text-white truncate">{g.name}</h3>
-                                {g.experienceYears > 0 && <span className="text-[11px] text-slate-500 inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">workspace_premium</span>{g.experienceYears}년</span>}
-                                <span className="text-[11px] text-slate-400 font-mono inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">phone</span>{g.phone}</span>
+                                <h3 className="cell-strong truncate" style={{ fontSize: 15 }}>{g.name}</h3>
+                                {g.experienceYears > 0 && <span className="cell-muted inline-flex items-center gap-0.5" style={{ fontSize: 11 }}><Icon name="workspace_premium" style={{ fontSize: 14 }} />{g.experienceYears}년</span>}
+                                <span className="cell-muted inline-flex items-center gap-0.5" style={{ fontSize: 11 }}><Icon name="phone" style={{ fontSize: 14 }} />{g.phone}</span>
                             </div>
-                            <p className="text-xs text-slate-500 line-clamp-1 mb-1.5">{g.introduction || '소개글 없음'}</p>
-                            {g.languages.length > 0 && <div className="flex flex-wrap gap-1">{g.languages.map(l => <span key={l} className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-[10px] font-semibold rounded">{l}</span>)}</div>}
+                            <p className="cell-muted line-clamp-1 mb-1.5" style={{ fontSize: 12.5 }}>{g.introduction || '소개글 없음'}</p>
+                            {g.languages.length > 0 && <div className="flex flex-wrap gap-1">{g.languages.map(l => <span key={l} className="badge b-blue" style={{ padding: '2px 7px', fontSize: 10.5 }}>{l}</span>)}</div>}
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {g.status === 'pending' && <button onClick={() => handleApprove(g)} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold">승인</button>}
-                            <button onClick={() => { setEditing(g); setForm({ name: g.name, image: g.image, introduction: g.introduction, phone: g.phone, experienceYears: g.experienceYears, languages: g.languages, specialties: g.specialties }); setIsModalOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="수정"><span className="material-symbols-outlined text-base">edit</span></button>
-                            <button onClick={() => handleDelete(g.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-base">delete</span></button>
+                        <div className="row-actions items-center" style={{ alignItems: 'center' }}>
+                            {g.status === 'pending' && <button onClick={() => handleApprove(g)} className="btn btn-sm btn-blue">승인</button>}
+                            <button onClick={() => { setEditing(g); setForm({ name: g.name, image: g.image, introduction: g.introduction, phone: g.phone, experienceYears: g.experienceYears, languages: g.languages, specialties: g.specialties }); setIsModalOpen(true); }} className="act-btn" title="수정"><Icon name="edit" /></button>
+                            <button onClick={() => handleDelete(g.id)} className="act-btn danger" title="삭제"><Icon name="delete" /></button>
                         </div>
                     </div>
                 ))}
-                {guides.length === 0 && <div className="col-span-full text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">person_off</span><p>등록된 가이드가 없습니다</p></div>}
+                {guides.length === 0 && <div className="col-span-full empty"><Icon name="person_off" /><p>등록된 가이드가 없습니다</p></div>}
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
-                            <h2 className="font-bold text-slate-800 dark:text-white">{editing ? '가이드 수정' : '가이드 등록'}</h2>
-                            <button onClick={() => { setIsModalOpen(false); resetForm(); }}><span className="material-symbols-outlined text-slate-400">close</span></button>
+                <div className="picker-scrim">
+                    <div className="picker" style={{ width: 520, maxHeight: '90vh' }}>
+                        <div className="card-head" style={{ flexShrink: 0 }}>
+                            <h2>{editing ? '가이드 수정' : '가이드 등록'}</h2>
+                            <div className="spacer" />
+                            <button className="act-btn" onClick={() => { setIsModalOpen(false); resetForm(); }} title="닫기"><Icon name="close" /></button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                                    {form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-slate-300">person</span>}
+                        <div className="picker-list" style={{ padding: '20px 22px' }}>
+                            <div className="field">
+                                <label>프로필 사진</label>
+                                <div className="row" style={{ gap: 16 }}>
+                                    <div className="avatar round" style={{ width: 64, height: 64 }}>
+                                        {form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <Icon name="person" style={{ fontSize: 28, color: 'var(--mrt-gray-300)' }} />}
+                                    </div>
+                                    <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
+                                        사진 선택 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                                    </label>
                                 </div>
-                                <label className="cursor-pointer px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-                                    사진 선택 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                                </label>
                             </div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">이름 *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">연락처 *</label><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">경력 연수</label><div className="flex items-center gap-2"><input type="number" min={0} value={form.experienceYears} onChange={e => setForm(f => ({ ...f, experienceYears: Number(e.target.value) }))} className="w-24 px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-center" /><span className="text-sm text-slate-500">년</span></div></div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">소개글</label><textarea value={form.introduction} onChange={e => setForm(f => ({ ...f, introduction: e.target.value }))} rows={3} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">언어</label><div className="flex flex-wrap gap-2">{LANGUAGES.map(l => <button key={l} type="button" onClick={() => toggle('languages', l)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${form.languages.includes(l) ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{l}</button>)}</div></div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">전문 분야</label><div className="flex flex-wrap gap-2">{SPECIALTIES.map(s => <button key={s} type="button" onClick={() => toggle('specialties', s)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${form.specialties.includes(s) ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{s}</button>)}</div></div>
-                            <div className="flex gap-3 pt-2">
-                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium">취소</button>
-                                <button onClick={handleSubmit} className="flex-1 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold">{editing ? '수정' : '등록'}</button>
+                            <div className="field"><label>이름 *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="inp" /></div>
+                            <div className="field"><label>연락처 *</label><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="inp" /></div>
+                            <div className="field"><label>경력 연수</label><div className="row"><input type="number" min={0} value={form.experienceYears} onChange={e => setForm(f => ({ ...f, experienceYears: Number(e.target.value) }))} className="inp" style={{ width: 110, textAlign: 'center' }} /><span className="cell-muted" style={{ fontSize: 13 }}>년</span></div></div>
+                            <div className="field"><label>소개글</label><textarea value={form.introduction} onChange={e => setForm(f => ({ ...f, introduction: e.target.value }))} rows={3} className="inp" /></div>
+                            <div className="field"><label>언어</label><div className="chip-row">{LANGUAGES.map(l => <button key={l} type="button" onClick={() => toggle('languages', l)} className={`chip${form.languages.includes(l) ? ' active' : ''}`}>{l}</button>)}</div></div>
+                            <div className="field"><label>전문 분야</label><div className="chip-row">{SPECIALTIES.map(s => <button key={s} type="button" onClick={() => toggle('specialties', s)} className={`chip${form.specialties.includes(s) ? ' active' : ''}`}>{s}</button>)}</div></div>
+                            <div className="row" style={{ gap: 10, paddingTop: 4 }}>
+                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="btn btn-ghost" style={{ flex: 1 }}>취소</button>
+                                <button onClick={handleSubmit} className="btn btn-ink" style={{ flex: 1 }}>{editing ? '수정' : '등록'}</button>
                             </div>
                         </div>
                     </div>
@@ -1048,64 +1055,68 @@ const AccommodationsTab: React.FC = () => {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
-                <p className="text-sm text-slate-500 dark:text-slate-400">숙소를 등록하고 예약에 배정합니다.</p>
-                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold rounded-lg flex items-center gap-2 text-sm">
-                    <span className="material-symbols-outlined text-sm">add</span> 숙소 등록
+            <div className="toolbar">
+                <div className="cell-muted" style={{ fontSize: 13, minWidth: 0 }}>숙소를 등록하고 예약에 배정합니다.</div>
+                <div className="spacer" />
+                <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="btn btn-ink">
+                    <Icon name="add" /> 숙소 등록
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {accommodations.map(a => (
-                    <div key={a.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 grid grid-cols-[96px_1fr_auto] gap-4 items-center">
-                        <div className="rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0" style={{ width: 96, height: 72 }}>
-                            {a.images.length > 0 ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-3xl text-slate-300">hotel</span></div>}
+                    <div key={a.id} className="card card-pad grid grid-cols-[96px_1fr_auto] gap-4 items-center" style={{ padding: 14 }}>
+                        <div className="flex-shrink-0 overflow-hidden" style={{ width: 96, height: 72, borderRadius: 'var(--r-md)', background: 'var(--mrt-gray-100)' }}>
+                            {a.images.length > 0 ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Icon name="hotel" style={{ fontSize: 30, color: 'var(--mrt-gray-300)' }} /></div>}
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h3 className="font-bold text-slate-800 dark:text-white truncate">{a.name}</h3>
-                                {a.type && <span className="px-1.5 py-0.5 bg-teal-50 dark:bg-teal-900/20 text-teal-600 text-[10px] font-semibold rounded">{a.type}</span>}
+                                <h3 className="cell-strong truncate" style={{ fontSize: 15 }}>{a.name}</h3>
+                                {a.type && <span className="badge b-gray" style={{ padding: '2px 7px', fontSize: 10.5 }}>{a.type}</span>}
                             </div>
-                            <div className="text-[11px] text-slate-500 mb-1 inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">location_on</span>{a.location}</div>
-                            <p className="text-xs text-slate-500 line-clamp-1">{a.description || '설명 없음'}</p>
+                            <div className="cell-muted mb-1 inline-flex items-center gap-0.5" style={{ fontSize: 11 }}><Icon name="location_on" style={{ fontSize: 14 }} />{a.location}</div>
+                            <p className="cell-muted line-clamp-1" style={{ fontSize: 12.5 }}>{a.description || '설명 없음'}</p>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button onClick={() => { setEditing(a); setForm({ name: a.name, images: a.images, description: a.description, type: a.type, location: a.location }); setIsModalOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="수정"><span className="material-symbols-outlined text-base">edit</span></button>
-                            <button onClick={() => handleDelete(a.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-base">delete</span></button>
+                        <div className="row-actions items-center" style={{ alignItems: 'center' }}>
+                            <button onClick={() => { setEditing(a); setForm({ name: a.name, images: a.images, description: a.description, type: a.type, location: a.location }); setIsModalOpen(true); }} className="act-btn" title="수정"><Icon name="edit" /></button>
+                            <button onClick={() => handleDelete(a.id)} className="act-btn danger" title="삭제"><Icon name="delete" /></button>
                         </div>
                     </div>
                 ))}
-                {accommodations.length === 0 && <div className="col-span-full text-center py-20 text-slate-400"><span className="material-symbols-outlined text-5xl mb-2">hotel</span><p>등록된 숙소가 없습니다</p></div>}
+                {accommodations.length === 0 && <div className="col-span-full empty"><Icon name="hotel" /><p>등록된 숙소가 없습니다</p></div>}
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
-                            <h2 className="font-bold text-slate-800 dark:text-white">{editing ? '숙소 수정' : '숙소 등록'}</h2>
-                            <button onClick={() => { setIsModalOpen(false); resetForm(); }}><span className="material-symbols-outlined text-slate-400">close</span></button>
+                <div className="picker-scrim">
+                    <div className="picker" style={{ width: 520, maxHeight: '90vh' }}>
+                        <div className="card-head" style={{ flexShrink: 0 }}>
+                            <h2>{editing ? '숙소 수정' : '숙소 등록'}</h2>
+                            <div className="spacer" />
+                            <button className="act-btn" onClick={() => { setIsModalOpen(false); resetForm(); }} title="닫기"><Icon name="close" /></button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">이미지</label>
+                        <div className="picker-list" style={{ padding: '20px 22px' }}>
+                            <div className="field">
+                                <label>이미지</label>
                                 {form.images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-2">{form.images.map((img, i) => <div key={i} className="relative aspect-video"><img src={img} className="w-full h-full object-cover rounded-lg" /><button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"><span className="material-symbols-outlined text-xs">close</span></button></div>)}</div>}
-                                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="text-sm" />
+                                <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
+                                    <Icon name="add_photo_alternate" /> 이미지 추가 <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+                                </label>
                             </div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">숙소명 *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">위치 *</label><input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="예: 울란바토르 시내, 테를지 국립공원" /></div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">숙소 타입</label>
+                            <div className="field"><label>숙소명 *</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="inp" /></div>
+                            <div className="field"><label>위치 *</label><input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="inp" placeholder="예: 울란바토르 시내, 테를지 국립공원" /></div>
+                            <div className="field">
+                                <label>숙소 타입</label>
                                 {Object.entries(ACCOM_TYPES).map(([cat, subs]) => (
-                                    <div key={cat} className="mb-3">
-                                        <p className="text-xs font-semibold text-slate-500 mb-1.5">{cat}</p>
-                                        <div className="grid grid-cols-2 gap-2">{subs.map(s => <button key={s} type="button" onClick={() => setForm(f => ({ ...f, type: s }))} className={`py-2 rounded-lg text-sm font-medium transition-all ${form.type === s ? 'bg-teal-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{s}</button>)}</div>
+                                    <div key={cat} style={{ marginBottom: 12 }}>
+                                        <p className="cell-muted" style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{cat}</p>
+                                        <div className="chip-row">{subs.map(s => <button key={s} type="button" onClick={() => setForm(f => ({ ...f, type: s }))} className={`chip${form.type === s ? ' active' : ''}`}>{s}</button>)}</div>
                                     </div>
                                 ))}
                             </div>
-                            <div><label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">설명</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" /></div>
-                            <div className="flex gap-3 pt-2">
-                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium">취소</button>
-                                <button onClick={handleSubmit} className="flex-1 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold">{editing ? '수정' : '등록'}</button>
+                            <div className="field"><label>설명</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="inp" /></div>
+                            <div className="row" style={{ gap: 10, paddingTop: 4 }}>
+                                <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="btn btn-ghost" style={{ flex: 1 }}>취소</button>
+                                <button onClick={handleSubmit} className="btn btn-ink" style={{ flex: 1 }}>{editing ? '수정' : '등록'}</button>
                             </div>
                         </div>
                     </div>
@@ -1123,37 +1134,21 @@ const TABS = [
 ];
 
 export const AdminTemplateManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [activeTab, setActiveTab] = useState('templates');
 
-    const toggleTheme = () => { setIsDarkMode(!isDarkMode); document.documentElement.classList.toggle('dark'); };
-
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-            <AdminSidebar activePage="templates" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center">
-                    <h1 className="text-xl font-bold">템플릿 관리</h1>
-                </header>
+        <AdminLayout activePage="templates" title="템플릿 관리">
+            <div className="seg" style={{ marginBottom: 18 }}>
+                {TABS.map(tab => (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={activeTab === tab.id ? 'active' : ''}>
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
-                <div className="px-8 pt-6">
-                    <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit mb-6">
-                        {TABS.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab.id ? 'bg-white dark:bg-slate-700 text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-                                <span className="material-symbols-outlined text-base">{tab.icon}</span>
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="pb-8">
-                        {activeTab === 'templates' && <TemplatesTab />}
-                        {activeTab === 'guides' && <GuidesTab />}
-                        {activeTab === 'accommodations' && <AccommodationsTab />}
-                    </div>
-                </div>
-            </main>
-        </div>
+            {activeTab === 'templates' && <TemplatesTab />}
+            {activeTab === 'guides' && <GuidesTab />}
+            {activeTab === 'accommodations' && <AccommodationsTab />}
+        </AdminLayout>
     );
 };
