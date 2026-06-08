@@ -1,13 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import type { DateClickArg, DatesSetArg, EventClickArg, EventInput } from '@fullcalendar/core';
-import koLocale from '@fullcalendar/core/locales/ko';
 import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
-import '../styles/CalendarStyles.css';
 
 type CalendarItemType = 'reservation' | 'quote';
 
@@ -46,16 +40,6 @@ const STATUS_LABEL: Record<string, string> = {
     cancelled: '취소',
 };
 
-const STATUS_TONE: Record<string, { bg: string; border: string; text: string }> = {
-    new: { bg: '#fff1f2', border: '#fb7185', text: '#be123c' },
-    processing: { bg: '#fff7ed', border: '#fb923c', text: '#c2410c' },
-    answered: { bg: '#eff6ff', border: '#60a5fa', text: '#1d4ed8' },
-    reservation_requested: { bg: '#f5f3ff', border: '#8b5cf6', text: '#6d28d9' },
-    pending_payment: { bg: '#fffbeb', border: '#f59e0b', text: '#b45309' },
-    paid: { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
-    confirmed: { bg: '#0f766e', border: '#0f766e', text: '#ffffff' },
-};
-
 const normalizeDate = (value: unknown): string => {
     if (!value || typeof value !== 'string') return '';
     const trimmed = value.trim();
@@ -70,12 +54,6 @@ const toDateKey = (date: Date): string => {
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
     const day = `${date.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
-};
-
-const addDays = (dateKey: string, days: number): string => {
-    const date = new Date(`${dateKey}T00:00:00`);
-    date.setDate(date.getDate() + days);
-    return toDateKey(date);
 };
 
 const parseDateRange = (period?: string): { startDate: string; endDate?: string } => {
@@ -114,33 +92,35 @@ const isOnDate = (item: CalendarItem, dateKey: string) => {
     return start <= dateKey && end >= dateKey;
 };
 
-const getItemTone = (item: CalendarItem) => {
-    if (item.itemType === 'quote') return STATUS_TONE[item.status] || STATUS_TONE.processing;
-    if ((item.status === 'confirmed' || item.status === 'paid') && !item.assignedGuide) {
-        return { bg: '#fff7ed', border: '#f97316', text: '#c2410c' };
-    }
-    return STATUS_TONE[item.status] || STATUS_TONE.pending_payment;
+// Calendar pill tone from real assignment/status data:
+// quote → amber (needs handling), assigned reservation → blue, unassigned reservation → amber, otherwise green.
+const getEventTone = (item: CalendarItem): 'blue' | 'green' | 'amber' => {
+    if (item.itemType === 'quote') return 'amber';
+    if (item.status === 'pending_payment' || item.depositStatus !== 'paid') return 'amber';
+    if (!item.assignedGuide) return 'amber';
+    if (item.status === 'confirmed' || item.status === 'paid') return 'blue';
+    return 'green';
 };
 
 const getNextAction = (item: CalendarItem): { label: string; tone: string; icon: string } => {
     if (item.itemType === 'quote') {
-        if (item.status === 'new') return { label: '요청 검토', tone: 'text-rose-700 bg-rose-50 border-rose-200', icon: 'fiber_new' };
-        if (item.status === 'processing') return { label: '견적 작성', tone: 'text-orange-700 bg-orange-50 border-orange-200', icon: 'edit_note' };
-        if (item.status === 'answered') return { label: '고객 확인 대기', tone: 'text-blue-700 bg-blue-50 border-blue-200', icon: 'mark_email_read' };
-        if (item.status === 'reservation_requested') return { label: '예약 전환', tone: 'text-purple-700 bg-purple-50 border-purple-200', icon: 'sync_alt' };
-        return { label: '견적 관리', tone: 'text-slate-700 bg-slate-50 border-slate-200', icon: 'request_quote' };
+        if (item.status === 'new') return { label: '요청 검토', tone: 'b-red', icon: 'fiber_new' };
+        if (item.status === 'processing') return { label: '견적 작성', tone: 'b-amber', icon: 'edit_note' };
+        if (item.status === 'answered') return { label: '고객 확인 대기', tone: 'b-blue', icon: 'mark_email_read' };
+        if (item.status === 'reservation_requested') return { label: '예약 전환', tone: 'b-purple', icon: 'sync_alt' };
+        return { label: '견적 관리', tone: 'b-gray', icon: 'request_quote' };
     }
 
     if (item.status === 'pending_payment' || item.depositStatus !== 'paid') {
-        return { label: '입금 확인', tone: 'text-amber-700 bg-amber-50 border-amber-200', icon: 'payments' };
+        return { label: '입금 확인', tone: 'b-amber', icon: 'payments' };
     }
     if (!item.assignedGuide) {
-        return { label: '가이드 배정', tone: 'text-orange-700 bg-orange-50 border-orange-200', icon: 'person_add' };
+        return { label: '가이드 배정', tone: 'b-amber', icon: 'person_add' };
     }
     if (!item.dailyAccommodations || item.dailyAccommodations.length === 0) {
-        return { label: '숙소 확인', tone: 'text-indigo-700 bg-indigo-50 border-indigo-200', icon: 'hotel' };
+        return { label: '숙소 확인', tone: 'b-blue', icon: 'hotel' };
     }
-    return { label: '운영 체크', tone: 'text-teal-700 bg-teal-50 border-teal-200', icon: 'task_alt' };
+    return { label: '운영 체크', tone: 'b-green', icon: 'task_alt' };
 };
 
 const formatRange = (item: CalendarItem) => {
@@ -148,154 +128,93 @@ const formatRange = (item: CalendarItem) => {
     return item.endDate && item.endDate !== item.startDate ? `${item.startDate} ~ ${item.endDate}` : item.startDate;
 };
 
-const StatCard = ({
-    label,
-    value,
-    icon,
-    tone,
-}: {
-    label: string;
-    value: number;
-    icon: string;
-    tone: string;
-}) => (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{label}</span>
-            <span className={`material-symbols-outlined flex h-8 w-8 items-center justify-center rounded-lg text-[18px] ${tone}`}>
-                {icon}
-            </span>
-        </div>
-        <p className="text-2xl font-black text-slate-950 dark:text-white">
-            {value}
-            <span className="ml-1 text-sm font-semibold text-slate-400">건</span>
-        </p>
-    </div>
-);
-
-const ItemCard = ({ item, compact = false }: { item: CalendarItem; compact?: boolean }) => {
-    const action = getNextAction(item);
-    return (
-        <a
-            href="/admin/reservations"
-            className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-teal-700"
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${item.itemType === 'quote' ? 'border-purple-200 bg-purple-50 text-purple-700' : 'border-teal-200 bg-teal-50 text-teal-700'}`}>
-                            {item.itemType === 'quote' ? '견적' : '예약'}
-                        </span>
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${action.tone}`}>
-                            {action.label}
-                        </span>
-                    </div>
-                    <p className="truncate text-sm font-black text-slate-950 dark:text-white">{item.productName}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                        {item.customerName || '고객명 미입력'} · {item.headcount || '인원 미정'}
-                    </p>
-                </div>
-                <span className="material-symbols-outlined text-slate-300">chevron_right</span>
-            </div>
-            {!compact && (
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
-                        <p className="font-bold text-slate-400">일정</p>
-                        <p className="mt-1 font-bold text-slate-700 dark:text-slate-200">{formatRange(item)}</p>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
-                        <p className="font-bold text-slate-400">담당</p>
-                        <p className="mt-1 font-bold text-slate-700 dark:text-slate-200">{item.assignedGuide?.name || '미배정'}</p>
-                    </div>
-                </div>
-            )}
-        </a>
-    );
+const parsePeople = (headcount: string): number => {
+    const match = headcount.match(/\d+/);
+    return match ? Number(match[0]) : 0;
 };
 
 const CalendarDetailModal = ({ item, onClose }: { item: CalendarItem | null; onClose: () => void }) => {
     if (!item) return null;
     const action = getNextAction(item);
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <button className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} aria-label="닫기" />
-            <div className="relative flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-                <div className="border-b border-slate-100 px-6 py-5 dark:border-slate-800">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <div className="mb-2 flex items-center gap-2">
-                                <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${item.itemType === 'quote' ? 'border-purple-200 bg-purple-50 text-purple-700' : 'border-teal-200 bg-teal-50 text-teal-700'}`}>
-                                    {item.itemType === 'quote' ? '맞춤 견적' : '예약'}
-                                </span>
-                                <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${action.tone}`}>
-                                    {STATUS_LABEL[item.status] || item.status}
-                                </span>
-                            </div>
-                            <h2 className="text-xl font-black text-slate-950 dark:text-white">{item.productName}</h2>
-                            <p className="mt-1 text-xs font-semibold text-slate-400">
-                                No. {item.reservationNumber || item.id.slice(0, 8).toUpperCase()}
-                            </p>
+        <div className="picker-scrim" onClick={onClose}>
+            <div className="picker" style={{ width: 480 }} onClick={(e) => e.stopPropagation()}>
+                <div className="card-head">
+                    <div style={{ minWidth: 0 }}>
+                        <div className="row" style={{ gap: 6, marginBottom: 6 }}>
+                            <span className={`tag-type ${item.itemType === 'quote' ? 'quote' : 'reservation'}`}>
+                                {item.itemType === 'quote' ? '맞춤 견적' : '예약'}
+                            </span>
+                            <span className={`badge ${action.tone}`}>{STATUS_LABEL[item.status] || item.status}</span>
                         </div>
-                        <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-                            <span className="material-symbols-outlined">close</span>
-                        </button>
+                        <h2>{item.productName}</h2>
+                        <div className="sub">No. {item.reservationNumber || item.id.slice(0, 8).toUpperCase()}</div>
                     </div>
+                    <div className="spacer" />
+                    <button className="icon-btn" onClick={onClose} title="닫기" type="button">
+                        <Icon name="close" />
+                    </button>
                 </div>
 
-                <div className="space-y-4 overflow-y-auto p-6">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="picker-list" style={{ padding: 18 }}>
+                    <div className="card card-pad" style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                             <div>
-                                <p className="text-xs font-bold text-slate-400">고객</p>
-                                <p className="mt-1 font-bold text-slate-900 dark:text-white">{item.customerName || '미입력'}</p>
+                                <div className="kv" style={{ borderBottom: 'none', padding: 0, display: 'block' }}>
+                                    <span style={{ display: 'block', marginBottom: 3 }}>고객</span>
+                                    <b>{item.customerName || '미입력'}</b>
+                                </div>
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-slate-400">연락처</p>
-                                <p className="mt-1 font-bold text-slate-900 dark:text-white">{item.phone || item.email || '미입력'}</p>
+                                <div className="kv" style={{ borderBottom: 'none', padding: 0, display: 'block' }}>
+                                    <span style={{ display: 'block', marginBottom: 3 }}>연락처</span>
+                                    <b>{item.phone || item.email || '미입력'}</b>
+                                </div>
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-slate-400">일정</p>
-                                <p className="mt-1 font-bold text-slate-900 dark:text-white">{formatRange(item)}</p>
+                                <div className="kv" style={{ borderBottom: 'none', padding: 0, display: 'block' }}>
+                                    <span style={{ display: 'block', marginBottom: 3 }}>일정</span>
+                                    <b>{formatRange(item)}</b>
+                                </div>
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-slate-400">인원</p>
-                                <p className="mt-1 font-bold text-slate-900 dark:text-white">{item.headcount || '미정'}</p>
+                                <div className="kv" style={{ borderBottom: 'none', padding: 0, display: 'block' }}>
+                                    <span style={{ display: 'block', marginBottom: 3 }}>인원</span>
+                                    <b>{item.headcount || '미정'}</b>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                            <p className="text-xs font-bold text-slate-400">금액</p>
-                            <p className="mt-2 text-lg font-black text-slate-950 dark:text-white">
-                                {(item.totalAmount || 0).toLocaleString()} 엔
-                            </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="card card-pad">
+                            <div className="cell-muted" style={{ fontSize: 12.5, marginBottom: 6 }}>금액</div>
+                            <div className="cell-price" style={{ fontSize: 18 }}>{(item.totalAmount || 0).toLocaleString()} 엔</div>
                         </div>
-                        <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                            <p className="text-xs font-bold text-slate-400">다음 처리</p>
-                            <p className="mt-2 flex items-center gap-1 text-sm font-black text-slate-950 dark:text-white">
-                                <span className="material-symbols-outlined text-[18px]">{action.icon}</span>
-                                {action.label}
-                            </p>
+                        <div className="card card-pad">
+                            <div className="cell-muted" style={{ fontSize: 12.5, marginBottom: 6 }}>다음 처리</div>
+                            <div className="row" style={{ gap: 6 }}>
+                                <Icon name={action.icon} style={{ fontSize: 18 }} />
+                                <span className="cell-strong">{action.label}</span>
+                            </div>
                         </div>
                     </div>
 
                     {item.itemType === 'quote' && (
-                        <div className="rounded-xl border border-purple-100 bg-purple-50 p-4 text-sm text-purple-900 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-200">
-                            <p className="font-black">견적 처리 포인트</p>
-                            <p className="mt-1 text-xs leading-5">
+                        <div className="card card-pad" style={{ marginTop: 14, background: 'var(--mrt-purple-soft)', borderColor: 'transparent' }}>
+                            <div className="cell-strong" style={{ color: 'var(--mrt-purple-2)' }}>견적 처리 포인트</div>
+                            <p style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.6, color: 'var(--mrt-purple-2)' }}>
                                 이 일정은 아직 확정 예약이 아닙니다. 캘린더에서 다른 확정 일정과 겹치는지 확인한 뒤 견적 금액, 안내문, 견적서 링크를 입력하면 됩니다.
                             </p>
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                    <button onClick={onClose} className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200">
-                        닫기
-                    </button>
-                    <a href="/admin/reservations" className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-700">
-                        통합 관리로 이동
+                <div className="drawer-foot">
+                    <button className="btn btn-ghost" onClick={onClose} type="button">닫기</button>
+                    <div className="spacer" style={{ flex: 1 }} />
+                    <a className="btn btn-ink" href="/admin/reservations">
+                        <Icon name="open_in_new" />통합 관리로 이동
                     </a>
                 </div>
             </div>
@@ -306,15 +225,9 @@ const CalendarDetailModal = ({ item, onClose }: { item: CalendarItem | null; onC
 export const AdminCalendar: React.FC = () => {
     const [selectedEvent, setSelectedEvent] = useState<CalendarItem | null>(null);
     const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()));
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [items, setItems] = useState<CalendarItem[]>([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isLoading, setIsLoading] = useState(false);
-
-    const toggleTheme = () => {
-        setIsDarkMode(prev => !prev);
-        document.documentElement.classList.toggle('dark');
-    };
 
     const fetchCalendarItems = async () => {
         setIsLoading(true);
@@ -413,6 +326,7 @@ export const AdminCalendar: React.FC = () => {
             if (item.itemType === 'quote') return ['new', 'processing', 'reservation_requested'].includes(item.status);
             return item.status === 'pending_payment' || !item.assignedGuide;
         }).length,
+        people: monthItems.reduce((sum, item) => sum + parsePeople(item.headcount), 0),
     }), [monthItems]);
 
     const selectedDateItems = useMemo(
@@ -430,30 +344,36 @@ export const AdminCalendar: React.FC = () => {
         [monthItems],
     );
 
-    const calendarEvents: EventInput[] = items.map(item => {
-        const tone = getItemTone(item);
-        return {
-            id: item.id,
-            title: `${item.itemType === 'quote' ? '견적' : '예약'} · ${item.customerName}`,
-            start: item.startDate,
-            end: item.endDate ? addDays(item.endDate, 1) : undefined,
-            backgroundColor: tone.bg,
-            borderColor: tone.border,
-            textColor: tone.text,
-            extendedProps: item,
-        };
-    });
+    // Build the month grid from the real currentMonth + items state.
+    const todayKey = toDateKey(new Date());
+    const calendarCells = useMemo(() => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const first = new Date(year, month, 1);
+        const startOffset = first.getDay(); // Sunday = 0
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+        const cells: Array<{ valid: boolean; dayNum: number; dateKey: string; events: CalendarItem[] }> = [];
+        for (let i = 0; i < totalCells; i++) {
+            const dayNum = i - startOffset + 1;
+            const valid = dayNum >= 1 && dayNum <= daysInMonth;
+            const dateKey = valid ? `${year}-${`${month + 1}`.padStart(2, '0')}-${`${dayNum}`.padStart(2, '0')}` : '';
+            const events = valid ? items.filter(item => isOnDate(item, dateKey)) : [];
+            cells.push({ valid, dayNum, dateKey, events });
+        }
+        return cells;
+    }, [currentMonth, items]);
 
-    const handleEventClick = (info: EventClickArg) => {
-        setSelectedEvent(info.event.extendedProps as CalendarItem);
+    const dow = ['일', '월', '화', '수', '목', '금', '토'];
+    const monthTitle = `${currentMonth.getFullYear()}년 ${currentMonth.getMonth() + 1}월`;
+
+    const goToMonth = (delta: number) => {
+        setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
     };
-
-    const handleDateClick = (arg: DateClickArg) => {
-        setSelectedDate(arg.dateStr);
-    };
-
-    const handleDatesSet = (arg: DatesSetArg) => {
-        setCurrentMonth(arg.view.currentStart);
+    const goToToday = () => {
+        const now = new Date();
+        setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+        setSelectedDate(toDateKey(now));
     };
 
     return (
@@ -461,108 +381,188 @@ export const AdminCalendar: React.FC = () => {
             activePage="calendar"
             title="투어 캘린더"
             description="확정 예약과 맞춤 견적 요청을 날짜 기준으로 함께 확인합니다."
-            isDarkMode={isDarkMode}
-            toggleTheme={toggleTheme}
             actions={(
-                <button
-                    onClick={fetchCalendarItems}
-                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                >
-                    <span className={`material-symbols-outlined text-base ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
-                    새로고침
+                <button className="btn btn-ghost btn-sm" onClick={fetchCalendarItems} type="button">
+                    <Icon name="refresh" className={isLoading ? 'spin' : ''} />새로고침
                 </button>
             )}
         >
-            <div className="space-y-5">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <StatCard label="이번 달 전체" value={monthStats.total} icon="event_note" tone="bg-slate-100 text-slate-600" />
-                    <StatCard label="견적 일정" value={monthStats.quotes} icon="request_quote" tone="bg-purple-50 text-purple-600" />
-                    <StatCard label="확정/결제 예약" value={monthStats.confirmed} icon="verified" tone="bg-teal-50 text-teal-600" />
-                    <StatCard label="처리 필요" value={monthStats.needsAction} icon="priority_high" tone="bg-orange-50 text-orange-600" />
+            <div className="toolbar">
+                <div className="row" style={{ gap: 8 }}>
+                    <button className="icon-btn" onClick={() => goToMonth(-1)} title="이전 달" type="button">
+                        <Icon name="chevron_left" />
+                    </button>
+                    <div className="page-title" style={{ fontSize: 19 }}>{monthTitle}</div>
+                    <button className="icon-btn" onClick={() => goToMonth(1)} title="다음 달" type="button">
+                        <Icon name="chevron_right" />
+                    </button>
+                    <button className="btn btn-ghost btn-sm" style={{ marginLeft: 6 }} onClick={goToToday} type="button">오늘</button>
                 </div>
+                <div className="spacer" />
+                <div className="row" style={{ gap: 14, marginRight: 8 }}>
+                    <span className="row" style={{ gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--mrt-blue)' }} />
+                        <span className="cell-muted" style={{ fontSize: 12.5 }}>배정 완료</span>
+                    </span>
+                    <span className="row" style={{ gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 3, background: '#F5B544' }} />
+                        <span className="cell-muted" style={{ fontSize: 12.5 }}>처리 필요</span>
+                    </span>
+                </div>
+                <a className="btn btn-ink" href="/admin/reservations">
+                    <Icon name="add" />투어 일정 추가
+                </a>
+            </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500 dark:text-slate-400">
-                        <span className="mr-1 text-slate-800 dark:text-slate-100">표시 기준</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-purple-100 ring-1 ring-purple-300" />견적중</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-teal-600" />예약 확정</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-300" />결제 완료</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-amber-100 ring-1 ring-amber-300" />입금 대기</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-orange-100 ring-1 ring-orange-300" />가이드 미배정</span>
+            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 18 }}>
+                <div className="metric" style={{ padding: '16px 18px' }}>
+                    <div className="row" style={{ gap: 12 }}>
+                        <span className="metric-ico tint-blue" style={{ width: 40, height: 40 }}><Icon name="event" fill /></span>
+                        <div>
+                            <div className="metric-label">이번 달 투어</div>
+                            <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.total}건</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="metric" style={{ padding: '16px 18px' }}>
+                    <div className="row" style={{ gap: 12 }}>
+                        <span className="metric-ico tint-amber" style={{ width: 40, height: 40 }}><Icon name="priority_high" fill /></span>
+                        <div>
+                            <div className="metric-label">처리 필요</div>
+                            <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.needsAction}건</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="metric" style={{ padding: '16px 18px' }}>
+                    <div className="row" style={{ gap: 12 }}>
+                        <span className="metric-ico tint-green" style={{ width: 40, height: 40 }}><Icon name="groups" fill /></span>
+                        <div>
+                            <div className="metric-label">예약 인원</div>
+                            <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.people}명</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="cal">
+                {dow.map((d, i) => (
+                    <div
+                        className="cal-dow"
+                        key={d}
+                        style={i === 0 ? { color: 'var(--mrt-red)' } : i === 6 ? { color: 'var(--mrt-blue)' } : undefined}
+                    >
+                        {d}
+                    </div>
+                ))}
+                {calendarCells.map((cell, i) => {
+                    const isToday = cell.valid && cell.dateKey === todayKey;
+                    const isSelected = cell.valid && cell.dateKey === selectedDate;
+                    return (
+                        <div
+                            className={`cal-cell${!cell.valid ? ' out' : ''}${isToday ? ' today' : ''}`}
+                            key={i}
+                            onClick={() => cell.valid && setSelectedDate(cell.dateKey)}
+                            style={isSelected && !isToday ? { boxShadow: 'inset 0 0 0 2px var(--mrt-blue)' } : undefined}
+                        >
+                            {cell.valid && <div className="cal-date">{cell.dayNum}</div>}
+                            {cell.events.map((e) => (
+                                <div
+                                    key={`${e.itemType}-${e.id}`}
+                                    className={`cal-ev ev-${getEventTone(e)}`}
+                                    title={`${e.customerName} | ${e.productName} | ${STATUS_LABEL[e.status] || e.status} | ${getNextAction(e).label}`}
+                                    onClick={(ev) => {
+                                        ev.stopPropagation();
+                                        setSelectedEvent(e);
+                                    }}
+                                >
+                                    <b>{e.itemType === 'quote' ? '견적' : '예약'} · {e.customerName}</b>
+                                    <div style={{ opacity: 0.85, fontWeight: 600 }}>
+                                        {e.headcount} · {e.assignedGuide?.name || '미배정'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="grid-2" style={{ marginTop: 22 }}>
+                <div className="card">
+                    <div className="card-head">
+                        <Icon name="calendar_month" style={{ color: 'var(--mrt-blue-strong)' }} />
+                        <div>
+                            <h2>선택한 날짜</h2>
+                            <div className="sub">{selectedDate}</div>
+                        </div>
+                    </div>
+                    <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {selectedDateItems.length > 0 ? (
+                            selectedDateItems.map(item => {
+                                const action = getNextAction(item);
+                                return (
+                                    <button
+                                        key={`sel-${item.itemType}-${item.id}`}
+                                        className="qlink"
+                                        onClick={() => setSelectedEvent(item)}
+                                        type="button"
+                                    >
+                                        <span className={`qi tint-${getEventTone(item) === 'blue' ? 'blue' : getEventTone(item) === 'green' ? 'green' : 'amber'}`}>
+                                            <Icon name={item.itemType === 'quote' ? 'request_quote' : 'confirmation_number'} />
+                                        </span>
+                                        <div className="qtext">
+                                            <div className="qt">{item.productName}</div>
+                                            <div className="qs">{item.customerName} · {item.headcount} · {action.label}</div>
+                                        </div>
+                                        <Icon name="chevron_right" className="arr" />
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            <div className="empty">
+                                <Icon name="event_busy" />
+                                <p>이 날짜에는 일정이 없습니다.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900" style={{ minHeight: '690px' }}>
-                        <FullCalendar
-                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                            initialView="dayGridMonth"
-                            locale={koLocale}
-                            events={calendarEvents}
-                            eventClick={handleEventClick}
-                            dateClick={handleDateClick}
-                            datesSet={handleDatesSet}
-                            headerToolbar={{
-                                left: 'prev,next today',
-                                center: 'title',
-                                right: 'dayGridMonth,timeGridWeek',
-                            }}
-                            buttonText={{
-                                today: '오늘',
-                                month: '월',
-                                week: '주',
-                            }}
-                            height="100%"
-                            eventDisplay="block"
-                            dayMaxEvents={4}
-                            eventDidMount={(info) => {
-                                const item = info.event.extendedProps as CalendarItem;
-                                info.el.title = `${item.customerName} | ${item.productName} | ${STATUS_LABEL[item.status] || item.status} | ${getNextAction(item).label}`;
-                            }}
-                        />
+                <div className="card">
+                    <div className="card-head">
+                        <Icon name="notification_important" style={{ color: '#B7791F' }} />
+                        <div>
+                            <h2>이번 달 처리 목록</h2>
+                            <div className="sub">우선 확인이 필요한 일정</div>
+                        </div>
                     </div>
-
-                    <aside className="space-y-4">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                            <div className="mb-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-teal-600">Selected Date</p>
-                                    <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">{selectedDate}</h2>
-                                </div>
-                                <span className="material-symbols-outlined text-slate-300">calendar_month</span>
+                    <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {actionItems.length > 0 ? (
+                            actionItems.map(item => {
+                                const action = getNextAction(item);
+                                return (
+                                    <button
+                                        key={`action-${item.itemType}-${item.id}`}
+                                        className="qlink"
+                                        onClick={() => setSelectedEvent(item)}
+                                        type="button"
+                                    >
+                                        <span className={`qi badge ${action.tone}`} style={{ borderRadius: 12 }}>
+                                            <Icon name={action.icon} />
+                                        </span>
+                                        <div className="qtext">
+                                            <div className="qt">{item.productName}</div>
+                                            <div className="qs">{item.customerName} · {item.headcount} · {action.label}</div>
+                                        </div>
+                                        <Icon name="chevron_right" className="arr" />
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            <div className="empty">
+                                <Icon name="task_alt" />
+                                <p>현재 처리할 항목이 없습니다.</p>
                             </div>
-                            <div className="space-y-3">
-                                {selectedDateItems.length > 0 ? (
-                                    selectedDateItems.map(item => <ItemCard key={`${item.itemType}-${item.id}`} item={item} compact />)
-                                ) : (
-                                    <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center dark:border-slate-700">
-                                        <span className="material-symbols-outlined text-3xl text-slate-300">event_busy</span>
-                                        <p className="mt-2 text-sm font-bold text-slate-500">이 날짜에는 일정이 없습니다.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                            <div className="mb-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-orange-600">Needs Action</p>
-                                    <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">이번 달 처리 목록</h2>
-                                </div>
-                                <span className="material-symbols-outlined text-orange-300">notification_important</span>
-                            </div>
-                            <div className="space-y-3">
-                                {actionItems.length > 0 ? (
-                                    actionItems.map(item => <ItemCard key={`action-${item.itemType}-${item.id}`} item={item} compact />)
-                                ) : (
-                                    <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center dark:border-slate-700">
-                                        <span className="material-symbols-outlined text-3xl text-slate-300">task_alt</span>
-                                        <p className="mt-2 text-sm font-bold text-slate-500">현재 처리할 항목이 없습니다.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </aside>
+                        )}
+                    </div>
                 </div>
             </div>
 

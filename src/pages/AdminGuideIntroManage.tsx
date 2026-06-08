@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { DEFAULT_GUIDE_INTRO } from '../hooks/useGuideIntro';
 
 /**
@@ -12,7 +12,6 @@ import { DEFAULT_GUIDE_INTRO } from '../hooks/useGuideIntro';
  * copy without touching code or each product individually.
  */
 export const AdminGuideIntroManage: React.FC = () => {
-    const navigate = useNavigate();
     const [title, setTitle] = useState(DEFAULT_GUIDE_INTRO.title);
     const [body, setBody] = useState(DEFAULT_GUIDE_INTRO.body);
     const [chipsRaw, setChipsRaw] = useState(DEFAULT_GUIDE_INTRO.chips.join('\n'));
@@ -59,125 +58,100 @@ export const AdminGuideIntroManage: React.FC = () => {
         }
     };
 
+    const chipList = chipsRaw.split('\n').map((s) => s.trim()).filter(Boolean);
+
     if (loading) {
         return (
-            <div className="admin-app-wrapper flex">
-                <AdminSidebar />
-                <div className="flex-1 p-8 text-slate-500">読み込み中...</div>
-            </div>
+            <AdminLayout activePage="guide-intro" title="가이드 소개 (공통)">
+                <div className="route-anim" style={{ maxWidth: 920 }}>
+                    <div className="cell-muted" style={{ fontSize: 14 }}>읽어들이는 중...</div>
+                </div>
+            </AdminLayout>
         );
     }
 
+    const saveBtn = (
+        <button
+            className="btn btn-ink"
+            onClick={handleSave}
+            disabled={saving || !title.trim() || !body.trim()}
+        >
+            <Icon name="check" />{saving ? '저장 중...' : '저장하기'}
+        </button>
+    );
+
     return (
-        <div className="admin-app-wrapper flex">
-            <AdminSidebar />
-            <div className="flex-1 p-8 max-w-3xl">
-                <div className="mb-8">
-                    <button
-                        onClick={() => navigate('/admin')}
-                        className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-3 inline-flex items-center gap-1"
-                    >
-                        <span className="material-symbols-outlined text-sm">arrow_back</span>
-                        대시보드로 돌아가기
-                    </button>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">가이드 소개 관리</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                        모든 투어 상품의 상세 페이지(모바일/PC)에 공통으로 표시되는 "가이드 소개" 카드 내용을 한 번에 관리합니다.
-                    </p>
+        <AdminLayout activePage="guide-intro" title="가이드 소개 (공통)" actions={saveBtn}>
+            <div className="route-anim" style={{ maxWidth: 920 }}>
+                <div className="card-muted-note">
+                    <Icon name="info" />
+                    <span>모든 투어 상품 상세 페이지(모바일·PC)에 공통으로 표시되는 “가이드 소개” 카드입니다. 여기서 한 번만 수정하면 전체 상품에 반영됩니다.</span>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            제목 <span className="text-xs text-slate-400">(예: 日本語ガイド同行)</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            본문 <span className="text-xs text-slate-400">(2~3 문장 권장)</span>
-                        </label>
-                        <textarea
-                            value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            rows={5}
-                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none leading-relaxed"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            칩(태그) <span className="text-xs text-slate-400">(한 줄에 하나씩, 예: N1 取得済み)</span>
-                        </label>
-                        <textarea
-                            value={chipsRaw}
-                            onChange={(e) => setChipsRaw(e.target.value)}
-                            rows={4}
-                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none font-mono text-sm"
-                        />
-                    </div>
-
-                    {/* Live preview */}
-                    <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-                        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 tracking-widest uppercase">
-                            미리보기
+                <div className="grid-2" style={{ gridTemplateColumns: '1fr 360px', alignItems: 'start', marginTop: 18 }}>
+                    <div className="card card-pad">
+                        <div className="field">
+                            <label>제목 <span className="muted" style={{ fontWeight: 500 }}>(예: 日本語ガイド同行)</span></label>
+                            <input
+                                className="inp"
+                                value={title}
+                                onChange={(e) => { setTitle(e.target.value); setSavedAt(null); }}
+                            />
                         </div>
-                        <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-50 to-transparent border border-teal-100 dark:border-teal-900/30 dark:from-teal-900/10">
-                            <div className="flex items-start gap-3 mb-3">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-600 to-teal-800 text-white flex items-center justify-center shrink-0 shadow-md">
-                                    <span className="material-symbols-outlined text-2xl">translate</span>
-                                </div>
+                        <div className="field">
+                            <label>본문 <span className="muted" style={{ fontWeight: 500 }}>(2~3 문장 권장)</span></label>
+                            <textarea
+                                className="inp"
+                                rows={4}
+                                value={body}
+                                onChange={(e) => { setBody(e.target.value); setSavedAt(null); }}
+                            />
+                        </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                            <label>칩(태그) <span className="muted" style={{ fontWeight: 500 }}>(한 줄에 하나씩, 예: N1 取得済み)</span></label>
+                            <textarea
+                                className="inp"
+                                rows={4}
+                                style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}
+                                value={chipsRaw}
+                                onChange={(e) => { setChipsRaw(e.target.value); setSavedAt(null); }}
+                            />
+                        </div>
+                        <div className="row" style={{ marginTop: 18 }}>
+                            {savedAt && (
+                                <span className="row" style={{ gap: 4, color: 'var(--mrt-green)', fontSize: 13, fontWeight: 700 }}>
+                                    <Icon name="check_circle" fill style={{ fontSize: 16 }} />{savedAt} 에 저장됨
+                                </span>
+                            )}
+                            <div className="spacer" style={{ flex: 1 }} />
+                            <button
+                                className="btn btn-ink"
+                                onClick={handleSave}
+                                disabled={saving || !title.trim() || !body.trim()}
+                            >
+                                <Icon name="check" />{saving ? '저장 중...' : '저장하기'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="sec-label">미리보기</div>
+                        <div className="gi-preview">
+                            <div className="row" style={{ gap: 12, marginBottom: 12 }}>
+                                <span className="gi-ava"><Icon name="translate" /></span>
                                 <div>
-                                    <div className="text-[11px] font-bold text-teal-600 tracking-widest uppercase mb-1">Your Guide</div>
-                                    <div className="text-[15px] font-bold text-slate-900 dark:text-white">{title || '(제목 없음)'}</div>
+                                    <div className="gi-eyebrow">Your Guide</div>
+                                    <div className="cell-strong" style={{ fontSize: 15 }}>{title || '(제목 없음)'}</div>
                                 </div>
                             </div>
-                            <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed mb-3 whitespace-pre-wrap">
-                                {body || '(본문 없음)'}
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                                {chipsRaw
-                                    .split('\n')
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                    .map((chip) => (
-                                        <span
-                                            key={chip}
-                                            className="text-[10px] font-semibold px-2 py-1 bg-white dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700"
-                                        >
-                                            {chip}
-                                        </span>
-                                    ))}
+                            <p className="gi-body">{body || '(본문 없음)'}</p>
+                            <div className="chip-row" style={{ gap: 6 }}>
+                                {chipList.map((c) => <span className="gi-chip" key={c}>{c}</span>)}
                             </div>
                         </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-4 pt-2">
-                        {savedAt && (
-                            <span className="text-xs text-teal-600 dark:text-teal-400">
-                                {savedAt} 에 저장됨
-                            </span>
-                        )}
-                        <button
-                            onClick={handleSave}
-                            disabled={saving || !title.trim() || !body.trim()}
-                            className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
-                                saving || !title.trim() || !body.trim()
-                                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
-                                    : 'bg-teal-600 text-white hover:bg-teal-700'
-                            }`}
-                        >
-                            {saving ? '저장 중...' : '저장하기'}
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </AdminLayout>
     );
 };

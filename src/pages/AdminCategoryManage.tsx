@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { DEFAULT_CATEGORIES, DEFAULT_MAGAZINE_CATEGORIES, type Category } from '../types/category';
 
 export const AdminCategoryManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -80,11 +80,6 @@ export const AdminCategoryManage: React.FC = () => {
     }, []);
 
     const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
-
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
 
     // Toggle active status
     const toggleActive = async (id: string, currentStatus: boolean) => {
@@ -194,119 +189,135 @@ export const AdminCategoryManage: React.FC = () => {
     };
 
     return (
-        <div className={`flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans ${isDarkMode ? 'dark' : ''}`}>
-            <AdminSidebar
-                activePage="categories"
-                isDarkMode={isDarkMode}
-                toggleTheme={toggleTheme}
-            />
-
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">카테고리 관리</h1>
+        <AdminLayout
+            activePage="categories"
+            title="카테고리 관리"
+            actions={
+                <button
+                    onClick={() => {
+                        setSelectedCategory(null);
+                        setIsModalOpen(true);
+                    }}
+                    className="btn btn-ink"
+                >
+                    <Icon name="add" />
+                    카테고리 추가
+                </button>
+            }
+        >
+            <div className="route-anim">
+                <div className="toolbar">
+                    <div className="cell-muted" style={{ fontSize: 13.5, fontWeight: 600 }}>
+                        순서 버튼으로 노출 순서를 변경할 수 있습니다.
+                    </div>
+                    <div className="spacer" />
                     <button
                         onClick={() => {
                             setSelectedCategory(null);
                             setIsModalOpen(true);
                         }}
-                        className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors"
+                        className="btn btn-ink"
                     >
-                        <span className="material-symbols-outlined">add</span>
+                        <Icon name="add" />
                         카테고리 추가
                     </button>
-                </header>
+                </div>
 
-                {/* Content */}
-                <div className="flex-1 p-8">
-
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                <div className="card">
+                    <div className="tbl-wrap">
+                        <table className="tbl">
+                            <thead>
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">순서</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">아이콘</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">이름</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">설명</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">상태</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">작업</th>
+                                    <th style={{ width: 60 }}>순서</th>
+                                    <th style={{ width: 80 }}>아이콘</th>
+                                    <th>이름</th>
+                                    <th>설명</th>
+                                    <th className="c">노출</th>
+                                    <th className="r">관리</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                            <tbody>
                                 {sortedCategories.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                                            등록된 카테고리가 없습니다.
+                                        <td colSpan={6}>
+                                            <div className="empty">
+                                                <Icon name="category" />
+                                                <p>등록된 카테고리가 없습니다.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     sortedCategories.map((category, index) => (
-                                        <tr key={category.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => moveCategory(index, 'up')}
-                                                        disabled={index === 0}
-                                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => moveCategory(index, 'down')}
-                                                        disabled={index === sortedCategories.length - 1}
-                                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">arrow_downward</span>
-                                                    </button>
-                                                    <span className="text-sm text-slate-500">{index + 1}</span>
-                                                </div>
+                                        <tr key={category.id}>
+                                            <td>
+                                                <span className="row" style={{ gap: 6 }}>
+                                                    <span className="edit-move">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveCategory(index, 'up')}
+                                                            disabled={index === 0}
+                                                        >
+                                                            <Icon name="arrow_upward" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveCategory(index, 'down')}
+                                                            disabled={index === sortedCategories.length - 1}
+                                                        >
+                                                            <Icon name="arrow_downward" />
+                                                        </button>
+                                                    </span>
+                                                    <b className="cell-mono">{index + 1}</b>
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td>
                                                 {category.icon.startsWith('data:') || category.icon.startsWith('http') || category.icon.startsWith('/') ? (
                                                     <img
                                                         src={category.icon}
                                                         alt={category.name}
-                                                        className="w-8 h-8 object-cover rounded"
+                                                        className="thumb sq"
                                                     />
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-teal-500">{category.icon}</span>
+                                                    <span className="thumb sq" style={{ display: 'grid', placeItems: 'center', fontSize: 22 }}>
+                                                        <Icon name={category.icon} />
+                                                    </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-slate-900 dark:text-white">{category.name}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-slate-500 dark:text-slate-400">{category.description}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="cell-strong">{category.name}</td>
+                                            <td className="cell-muted">{category.description}</td>
+                                            <td className="c">
                                                 <button
+                                                    type="button"
+                                                    className={`switch${category.isActive ? ' on' : ''}`}
                                                     onClick={() => toggleActive(category.id, category.isActive)}
-                                                    className={`px-3 py-1 rounded-full text-xs font-bold ${category.isActive
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                                                        }`}
                                                 >
-                                                    {category.isActive ? '활성' : '비활성'}
+                                                    <span className="knob" />
                                                 </button>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedCategory(category);
-                                                        setIsModalOpen(true);
-                                                    }}
-                                                    className="text-teal-600 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300 mr-4"
-                                                >
-                                                    수정
-                                                </button>
-                                                {category.id !== 'all' && (
+                                            <td className="r">
+                                                <span className="row-actions">
                                                     <button
-                                                        onClick={() => deleteCategory(category.id)}
-                                                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                        type="button"
+                                                        className="act-btn"
+                                                        title="수정"
+                                                        onClick={() => {
+                                                            setSelectedCategory(category);
+                                                            setIsModalOpen(true);
+                                                        }}
                                                     >
-                                                        삭제
+                                                        <Icon name="edit" />
                                                     </button>
-                                                )}
+                                                    {category.id !== 'all' && (
+                                                        <button
+                                                            type="button"
+                                                            className="act-btn danger"
+                                                            title="삭제"
+                                                            onClick={() => deleteCategory(category.id)}
+                                                        >
+                                                            <Icon name="delete" />
+                                                        </button>
+                                                    )}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))
@@ -315,7 +326,7 @@ export const AdminCategoryManage: React.FC = () => {
                         </table>
                     </div>
                 </div>
-            </main>
+            </div>
 
             {/* Modal */}
             {isModalOpen && (
@@ -329,7 +340,7 @@ export const AdminCategoryManage: React.FC = () => {
                     onSave={handleSaveCategory}
                 />
             )}
-        </div>
+        </AdminLayout>
     );
 };
 
@@ -368,88 +379,88 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <form onSubmit={handleSubmit}>
+        <div className="picker-scrim" onClick={onClose}>
+            <div
+                className="picker"
+                style={{ width: 680, maxHeight: '90vh' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+                    <div className="card-head">
+                        <h2>
                             {category ? '카테고리 수정' : `${type === 'product' ? '상품' : '매거진'} 카테고리 추가`}
                         </h2>
+                        <div className="spacer" />
                         <button
                             type="button"
                             onClick={onClose}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            className="act-btn"
+                            title="닫기"
                         >
-                            <span className="material-symbols-outlined">close</span>
+                            <Icon name="close" />
                         </button>
                     </div>
 
                     {/* Body */}
-                    <div className="p-6 space-y-4">
+                    <div style={{ overflowY: 'auto', padding: '20px 22px' }}>
                         {/* Name */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                카테고리 이름 *
-                            </label>
+                        <div className="field">
+                            <label>카테고리 이름 *</label>
                             <input
                                 type="text"
+                                className="inp"
                                 value={formData.name || ''}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                 placeholder={type === 'product' ? "예: 서부몽골" : "예: 몽골 기본 정보"}
                             />
                         </div>
 
                         {/* URL Slug (editable only in edit mode, and not for the "all" category) */}
                         {category && category.id !== 'all' && (
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    URL 슬러그 (ID)
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400 whitespace-nowrap">/category/</span>
+                            <div className="field">
+                                <label>URL 슬러그 (ID)</label>
+                                <div className="row" style={{ gap: 8 }}>
+                                    <span className="cell-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>/category/</span>
                                     <input
                                         type="text"
+                                        className="inp"
+                                        style={{ flex: 1, fontFamily: 'var(--font-mono)' }}
                                         value={formData.id || ''}
                                         onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                                        className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none font-mono text-sm"
                                         placeholder="예: gobi"
                                     />
                                 </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 6 }}>
                                     영문 소문자/숫자/하이픈만 허용. 변경 시 기존 URL이 더이상 열리지 않으니 주의하세요.
                                 </p>
                             </div>
                         )}
 
                         {/* Description */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                설명
-                            </label>
+                        <div className="field">
+                            <label>설명</label>
                             <input
                                 type="text"
+                                className="inp"
                                 value={formData.description || ''}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                 placeholder={type === 'product' ? "예: 알타이 산맥 트레킹" : "예: 환전, 유심, 날씨 등"}
                             />
                         </div>
 
                         {/* Icon */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                아이콘 이미지 *
-                            </label>
+                        <div className="field">
+                            <label>아이콘 이미지 *</label>
 
                             {/* Image Preview */}
                             {formData.icon && (formData.icon.startsWith('data:') || formData.icon.startsWith('http') || formData.icon.startsWith('/')) && (
-                                <div className="mb-3">
+                                <div style={{ marginBottom: 12 }}>
                                     <img
                                         src={formData.icon}
                                         alt="Category icon"
-                                        className="w-20 h-20 object-cover rounded-lg border-2 border-slate-200 dark:border-slate-700"
+                                        className="thumb sq"
+                                        style={{ width: 80, height: 80 }}
                                     />
                                 </div>
                             )}
@@ -458,6 +469,8 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                             <input
                                 type="file"
                                 accept="image/*"
+                                className="inp"
+                                style={{ paddingTop: 9 }}
                                 onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
@@ -470,25 +483,22 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                                         }
                                     }
                                 }}
-                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
                             />
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                            <p className="cell-muted" style={{ fontSize: 12, marginTop: 8 }}>
                                 권장: 1:1 비율의 이미지 (사용자 화면에서 원형으로 표시됩니다)
                             </p>
                         </div>
 
                         {/* Active Status */}
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                id="isActive"
-                                checked={formData.isActive || false}
-                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                                className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-                            />
-                            <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                활성화
-                            </label>
+                        <div className="toggle-row" style={{ marginBottom: 18 }}>
+                            <button
+                                type="button"
+                                className={`switch${formData.isActive ? ' on' : ''}`}
+                                onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                            >
+                                <span className="knob" />
+                            </button>
+                            <span className="cell-strong" style={{ fontSize: 13.5 }}>활성화</span>
                         </div>
 
                         {/* Landing page editor — only for product categories */}
@@ -501,17 +511,18 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
+                    <div className="drawer-foot">
+                        <div className="spacer" style={{ flex: 1 }} />
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
+                            className="btn btn-ghost"
                         >
                             취소
                         </button>
                         <button
                             type="submit"
-                            className="px-6 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-bold"
+                            className="btn btn-ink"
                         >
                             {category ? '수정 완료' : '추가 완료'}
                         </button>
@@ -571,24 +582,24 @@ const LandingPageEditor: React.FC<LandingEditorProps> = ({ formData, setFormData
     };
 
     return (
-        <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+        <div className="edit-sec" style={{ padding: 0 }}>
             <button
                 type="button"
                 onClick={() => setExpanded(!expanded)}
-                className="w-full px-4 py-3 flex items-center justify-between text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="edit-sec-head"
+                style={{ width: '100%', padding: '14px 16px', margin: 0, border: 'none', background: 'none', cursor: 'pointer' }}
             >
-                <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base text-teal-600">web</span>
-                    랜딩 페이지 편집 (/category/{formData.id || '...'})
-                </span>
-                <span className={`material-symbols-outlined transition-transform ${expanded ? 'rotate-180' : ''}`}>expand_more</span>
+                <Icon name="web" />
+                <h4 style={{ fontSize: 13.5 }}>랜딩 페이지 편집 (/category/{formData.id || '...'})</h4>
+                <span className="spacer" style={{ flex: 1 }} />
+                <Icon name="expand_more" className={expanded ? 'rotate' : ''} style={expanded ? { transform: 'rotate(180deg)' } : undefined} />
             </button>
 
             {expanded && (
-                <div className="p-4 space-y-4 border-t border-slate-200 dark:border-slate-700">
+                <div style={{ padding: 16, borderTop: '1px solid var(--border-default)' }}>
                     {/* Hero */}
-                    <div className="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-700">
-                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">히어로 배너</p>
+                    <div style={{ paddingBottom: 16, marginBottom: 16, borderBottom: '1px solid var(--border-subtle)' }}>
+                        <p className="sec-label">히어로 배너</p>
 
                         <HeroImagesEditor
                             images={(() => {
@@ -605,168 +616,173 @@ const LandingPageEditor: React.FC<LandingEditorProps> = ({ formData, setFormData
                             uploadImageTo={uploadImageTo}
                         />
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 mb-1">소제목 (tagline)</label>
+                        <div className="field-row" style={{ marginTop: 12 }}>
+                            <div className="field" style={{ marginBottom: 0 }}>
+                                <label>소제목 (tagline)</label>
                                 <input
                                     type="text"
+                                    className="inp"
                                     value={formData.landing_hero_tagline || ''}
                                     onChange={(e) => setFormData({ ...formData, landing_hero_tagline: e.target.value })}
                                     placeholder="例: 満天の星空が待っている"
-                                    className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 mb-1">강조 색상 (accent)</label>
+                            <div className="field" style={{ marginBottom: 0 }}>
+                                <label>강조 색상 (accent)</label>
                                 <input
                                     type="color"
+                                    className="inp"
+                                    style={{ padding: 4 }}
                                     value={formData.landing_accent_color || '#0f766e'}
                                     onChange={(e) => setFormData({ ...formData, landing_accent_color: e.target.value })}
-                                    className="w-full h-10 border border-slate-200 dark:border-slate-700 rounded-lg"
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">메인 제목</label>
+                        <div className="field" style={{ marginTop: 12, marginBottom: 0 }}>
+                            <label>메인 제목</label>
                             <input
                                 type="text"
+                                className="inp"
                                 value={formData.landing_hero_title || ''}
                                 onChange={(e) => setFormData({ ...formData, landing_hero_title: e.target.value })}
                                 placeholder="例: ゴビ砂漠ツアー"
-                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">서브 제목 (설명)</label>
+                        <div className="field" style={{ marginTop: 12, marginBottom: 0 }}>
+                            <label>서브 제목 (설명)</label>
                             <textarea
+                                className="inp"
                                 value={formData.landing_hero_subtitle || ''}
                                 onChange={(e) => setFormData({ ...formData, landing_hero_subtitle: e.target.value })}
                                 rows={2}
                                 placeholder="例: 天の川がはっきり見える空、夕陽に染まる砂丘..."
-                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">상품 섹션 제목</label>
+                        <div className="field" style={{ marginTop: 12, marginBottom: 0 }}>
+                            <label>상품 섹션 제목</label>
                             <input
                                 type="text"
+                                className="inp"
                                 value={formData.landing_product_grid_title || ''}
                                 onChange={(e) => setFormData({ ...formData, landing_product_grid_title: e.target.value })}
                                 placeholder="例: ゴビ砂漠の人気ツアー"
-                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:ring-2 focus:ring-teal-500 outline-none"
                             />
                         </div>
                     </div>
 
                     {/* Highlights */}
                     <div>
-                        <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">하이라이트 섹션 ({highlights.length})</p>
-                            <button type="button" onClick={addSection} className="text-xs font-bold text-teal-600 hover:text-teal-700 inline-flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-sm">add</span>섹션 추가
+                        <div className="row" style={{ marginBottom: 12 }}>
+                            <p className="sec-label" style={{ margin: 0 }}>하이라이트 섹션 ({highlights.length})</p>
+                            <span className="spacer" style={{ flex: 1 }} />
+                            <button type="button" onClick={addSection} className="btn btn-ghost btn-sm">
+                                <Icon name="add" />섹션 추가
                             </button>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="stack" style={{ gap: 12 }}>
                             {highlights.map((section: any, sIdx: number) => (
-                                <div key={sIdx} className="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <span className="text-[10px] font-bold text-teal-600">섹션 {sIdx + 1}</span>
-                                        <button type="button" onClick={() => removeSection(sIdx)} className="text-slate-400 hover:text-red-500">
-                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                <div key={sIdx} className="edit-sec">
+                                    <div className="row" style={{ marginBottom: 8 }}>
+                                        <span className="cell-mono" style={{ fontSize: 11 }}>섹션 {sIdx + 1}</span>
+                                        <span className="spacer" style={{ flex: 1 }} />
+                                        <button type="button" onClick={() => removeSection(sIdx)} className="act-btn danger" title="삭제">
+                                            <Icon name="delete" />
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="field-row">
                                         <input
                                             type="text"
+                                            className="inp"
                                             value={section.label || ''}
                                             onChange={(e) => updateSection(sIdx, { label: e.target.value })}
                                             placeholder="뱃지 라벨 (例: ハイライト 1)"
-                                            className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500"
                                         />
                                         <input
                                             type="text"
+                                            className="inp"
                                             value={section.title || ''}
                                             onChange={(e) => updateSection(sIdx, { title: e.target.value })}
                                             placeholder="섹션 제목"
-                                            className="px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500"
                                         />
                                     </div>
                                     <input
                                         type="text"
+                                        className="inp"
+                                        style={{ marginTop: 8 }}
                                         value={section.subtitle || ''}
                                         onChange={(e) => updateSection(sIdx, { subtitle: e.target.value })}
                                         placeholder="섹션 서브타이틀"
-                                        className="mt-2 w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-teal-500"
                                     />
 
                                     {/* Cards */}
-                                    <div className="mt-3 space-y-2">
+                                    <div className="stack" style={{ gap: 8, marginTop: 12 }}>
                                         {(section.cards || []).map((card: any, cIdx: number) => (
-                                            <div key={cIdx} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded p-2">
-                                                <div className="flex items-start gap-2">
-                                                    <div className="flex-shrink-0 w-16 h-16 rounded bg-slate-100 overflow-hidden">
+                                            <div key={cIdx} className="card card-pad" style={{ padding: 10 }}>
+                                                <div className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
+                                                    <div className="thumb sq" style={{ overflow: 'hidden', display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}>
                                                         {card.image ? (
-                                                            <img src={card.image} alt="" className="w-full h-full object-cover" />
+                                                            <img src={card.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                                                <span className="material-symbols-outlined">image</span>
-                                                            </div>
+                                                            <Icon name="image" />
                                                         )}
                                                     </div>
-                                                    <div className="flex-1 min-w-0 space-y-1.5">
-                                                        <div className="flex items-center gap-1">
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div className="row" style={{ gap: 6 }}>
                                                             <input
                                                                 type="file"
                                                                 accept="image/*"
+                                                                style={{ fontSize: 11, width: 112 }}
                                                                 onChange={(e) => {
                                                                     const file = e.target.files?.[0];
                                                                     if (file) uploadImageTo(file, (url) => updateCard(sIdx, cIdx, { image: url }));
                                                                 }}
-                                                                className="text-[10px] w-28"
                                                             />
                                                             <input
                                                                 type="text"
+                                                                className="inp"
+                                                                style={{ flex: 1, height: 34, fontSize: 12 }}
                                                                 value={(card.tags || []).join(', ')}
                                                                 onChange={(e) => updateCard(sIdx, cIdx, { tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
                                                                 placeholder="태그 (콤마 구분)"
-                                                                className="flex-1 px-1.5 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded"
                                                             />
-                                                            <button type="button" onClick={() => removeCard(sIdx, cIdx)} className="text-slate-400 hover:text-red-500">
-                                                                <span className="material-symbols-outlined text-xs">close</span>
+                                                            <button type="button" onClick={() => removeCard(sIdx, cIdx)} className="act-btn danger" title="삭제">
+                                                                <Icon name="close" />
                                                             </button>
                                                         </div>
                                                         <input
                                                             type="text"
+                                                            className="inp"
+                                                            style={{ marginTop: 6, height: 34, fontSize: 12 }}
                                                             value={card.title || ''}
                                                             onChange={(e) => updateCard(sIdx, cIdx, { title: e.target.value })}
                                                             placeholder="카드 제목"
-                                                            className="w-full px-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded"
                                                         />
                                                         <input
                                                             type="text"
+                                                            className="inp"
+                                                            style={{ marginTop: 6, height: 34, fontSize: 12 }}
                                                             value={card.description || ''}
                                                             onChange={(e) => updateCard(sIdx, cIdx, { description: e.target.value })}
                                                             placeholder="카드 설명"
-                                                            className="w-full px-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded"
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
-                                        <button type="button" onClick={() => addCard(sIdx)} className="w-full py-2 text-[11px] font-semibold text-slate-500 border border-dashed border-slate-300 rounded hover:text-teal-600 hover:border-teal-300">
-                                            <span className="material-symbols-outlined text-xs">add</span> 카드 추가
+                                        <button type="button" onClick={() => addCard(sIdx)} className="add-line">
+                                            <Icon name="add" /> 카드 추가
                                         </button>
                                     </div>
                                 </div>
                             ))}
                             {highlights.length === 0 && (
-                                <p className="text-xs text-center text-slate-400 py-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
-                                    위 "섹션 추가" 버튼으로 하이라이트를 만드세요
-                                </p>
+                                <div className="empty" style={{ padding: '32px 20px' }}>
+                                    <p>위 "섹션 추가" 버튼으로 하이라이트를 만드세요</p>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -808,47 +824,48 @@ const HeroImagesEditor: React.FC<HeroImagesEditorProps> = ({ images, onChange, u
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <div className="row" style={{ marginBottom: 6 }}>
+                <label className="cell-strong" style={{ fontSize: 12 }}>
                     배경 이미지 슬라이드 ({images.length})
                 </label>
-                <span className="text-[10px] text-slate-400">첫 번째 이미지가 대표 이미지로 사용됩니다</span>
+                <span className="spacer" style={{ flex: 1 }} />
+                <span className="cell-muted" style={{ fontSize: 11 }}>첫 번째 이미지가 대표 이미지로 사용됩니다</span>
             </div>
 
             {images.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                     {images.map((url, idx) => (
-                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-                            <img src={url} alt={`hero-${idx + 1}`} className="w-full aspect-video object-cover" />
-                            <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-bold">
+                        <div key={idx} style={{ position: 'relative', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border-default)' }}>
+                            <img src={url} alt={`hero-${idx + 1}`} style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block' }} />
+                            <div style={{ position: 'absolute', top: 4, left: 4, padding: '1px 6px', borderRadius: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, fontWeight: 700 }}>
                                 {idx + 1}
                             </div>
-                            <div className="absolute top-1 right-1 flex gap-1">
+                            <div className="row" style={{ position: 'absolute', top: 4, right: 4, gap: 4 }}>
                                 <button
                                     type="button"
                                     onClick={() => moveImage(idx, 'left')}
                                     disabled={idx === 0}
-                                    className="p-1 rounded bg-black/60 text-white disabled:opacity-30 hover:bg-black/80"
+                                    style={{ padding: 4, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                     aria-label="move left"
                                 >
-                                    <span className="material-symbols-outlined text-xs">chevron_left</span>
+                                    <Icon name="chevron_left" />
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => moveImage(idx, 'right')}
                                     disabled={idx === images.length - 1}
-                                    className="p-1 rounded bg-black/60 text-white disabled:opacity-30 hover:bg-black/80"
+                                    style={{ padding: 4, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                     aria-label="move right"
                                 >
-                                    <span className="material-symbols-outlined text-xs">chevron_right</span>
+                                    <Icon name="chevron_right" />
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => removeImage(idx)}
-                                    className="p-1 rounded bg-red-500/90 text-white hover:bg-red-600"
+                                    style={{ padding: 4, borderRadius: 6, border: 'none', background: 'rgba(255,79,79,0.9)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                     aria-label="delete"
                                 >
-                                    <span className="material-symbols-outlined text-xs">close</span>
+                                    <Icon name="close" />
                                 </button>
                             </div>
                         </div>
@@ -856,14 +873,14 @@ const HeroImagesEditor: React.FC<HeroImagesEditorProps> = ({ images, onChange, u
                 </div>
             )}
 
-            <label className="flex items-center justify-center gap-2 w-full py-3 text-xs font-semibold text-slate-500 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:text-teal-600 hover:border-teal-400 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-base">add_photo_alternate</span>
+            <label className="add-line" style={{ cursor: 'pointer' }}>
+                <Icon name="add_photo_alternate" />
                 이미지 추가
                 <input
                     type="file"
                     accept="image/*"
                     multiple
-                    className="hidden"
+                    style={{ display: 'none' }}
                     onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         handleFiles(files);

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import type { SpotRegion, TouristSpot } from '../types/touristSpot';
@@ -42,12 +43,6 @@ const regionLabel = (r?: SpotRegion | null): string | null => {
  * images automatically.
  */
 export const AdminTouristSpotManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
-    const toggleTheme = () => {
-        setIsDarkMode((v) => !v);
-        document.documentElement.classList.toggle('dark');
-    };
-
     const [spots, setSpots] = useState<TouristSpot[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -161,361 +156,355 @@ export const AdminTouristSpotManage: React.FC = () => {
         setEditing({ ...editing, images: next });
     };
 
-    return (
-        <div className={`flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans ${isDarkMode ? 'dark' : ''}`}>
-            <AdminSidebar activePage="tourist-spots" isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+    const closeEditor = () => { setEditing(null); setIsNew(false); };
 
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">관광지 마스터</h1>
-                    <button
-                        type="button"
-                        onClick={startNew}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-bold text-sm flex items-center gap-2 transition-colors"
+    return (
+        <AdminLayout
+            activePage="tourist-spots"
+            title="관광지 마스터"
+            actions={
+                <button type="button" onClick={startNew} className="btn btn-ink">
+                    <Icon name="add" />
+                    관광지 추가
+                </button>
+            }
+        >
+            <div className="route-anim">
+                {/* Toolbar: search + region select + 사용여부 select + add button */}
+                <div className="toolbar">
+                    <label className="tb-search">
+                        <Icon name="search" />
+                        <input
+                            placeholder="관광지명, 지역 검색"
+                            value={q}
+                            onChange={(e) => setQ(e.target.value)}
+                        />
+                    </label>
+                    <select
+                        className="select"
+                        value={filterRegion}
+                        onChange={(e) => setFilterRegion(e.target.value as RegionFilter)}
                     >
-                        <span className="material-symbols-outlined text-base">add</span>
+                        {REGION_FILTER_TABS.map((tab) => {
+                            const count = tab.value === 'all'
+                                ? spots.length
+                                : tab.value === 'uncat'
+                                    ? spots.filter((s) => !s.region).length
+                                    : spots.filter((s) => s.region === tab.value).length;
+                            return (
+                                <option key={tab.value} value={tab.value}>
+                                    {tab.label} ({count})
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <select
+                        className="select"
+                        value={filterActive}
+                        onChange={(e) => setFilterActive(e.target.value as 'all' | 'active' | 'inactive')}
+                    >
+                        <option value="all">전체 상태</option>
+                        <option value="active">사용중</option>
+                        <option value="inactive">미사용</option>
+                    </select>
+                    <div className="cell-muted" style={{ fontSize: 13, fontWeight: 600 }}>
+                        전체 {spots.length}개 중 <b className="cell-strong">{filtered.length}</b>개
+                    </div>
+                    <div className="spacer" />
+                    <button type="button" onClick={startNew} className="btn btn-ink">
+                        <Icon name="add" />
                         관광지 추가
                     </button>
-                </header>
+                </div>
 
-                <div className="flex-1 p-8 flex gap-6 min-h-0">
-                    {/* LEFT: List */}
-                    <div className="flex-1 min-w-0 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        {/* Region tab bar — primary filter so admin can quickly
-                            switch between '중앙몽골 / 고비사막 / 홉스굴'. */}
-                        <div className="px-4 pt-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto">
-                            {REGION_FILTER_TABS.map((tab) => {
-                                const count = tab.value === 'all'
-                                    ? spots.length
-                                    : tab.value === 'uncat'
-                                        ? spots.filter((s) => !s.region).length
-                                        : spots.filter((s) => s.region === tab.value).length;
-                                const on = filterRegion === tab.value;
-                                return (
-                                    <button
-                                        key={tab.value}
-                                        type="button"
-                                        onClick={() => setFilterRegion(tab.value)}
-                                        className={`shrink-0 px-3 pb-2.5 -mb-px text-sm font-medium border-b-2 transition-colors ${
-                                            on
-                                                ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                                                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                                        }`}
-                                    >
-                                        {tab.label}
-                                        <span className={`ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                                            on ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                                        }`}>
-                                            {count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 flex-wrap">
-                            <input
-                                type="text"
-                                value={q}
-                                onChange={(e) => setQ(e.target.value)}
-                                placeholder="관광지명으로 검색"
-                                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                            />
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="text-slate-500 dark:text-slate-400">사용여부:</span>
-                                {([
-                                    { v: 'all', l: '전체' },
-                                    { v: 'active', l: '사용중' },
-                                    { v: 'inactive', l: '미사용' },
-                                ] as const).map((opt) => (
-                                    <button
-                                        key={opt.v}
-                                        type="button"
-                                        onClick={() => setFilterActive(opt.v)}
-                                        className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${filterActive === opt.v
-                                            ? 'bg-teal-500 border-teal-500 text-white'
-                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                            }`}
-                                    >
-                                        {opt.l}
-                                    </button>
-                                ))}
-                            </div>
-                            <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
-                                전체 {spots.length}개 중 <strong className="text-slate-900 dark:text-white">{filtered.length}</strong>개 표시
-                            </span>
-                        </div>
-
-                        <div className="flex-1 overflow-auto">
-                            {loading ? (
-                                <div className="py-20 text-center text-slate-500">불러오는 중...</div>
-                            ) : filtered.length === 0 ? (
-                                <div className="py-20 text-center text-slate-500">
-                                    {spots.length === 0 ? '아직 등록된 관광지가 없습니다. 우상단 "관광지 추가" 버튼으로 시작하세요.' : '조건에 맞는 관광지가 없습니다.'}
-                                </div>
-                            ) : (
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
-                                        <tr className="text-xs text-slate-500 dark:text-slate-400">
-                                            <th className="text-left px-4 py-3 font-medium w-20">대표</th>
-                                            <th className="text-left px-4 py-3 font-medium">관광지명</th>
-                                            <th className="text-left px-4 py-3 font-medium w-28">지역</th>
-                                            <th className="text-left px-4 py-3 font-medium">주소</th>
-                                            <th className="text-center px-4 py-3 font-medium w-20">사진</th>
-                                            <th className="text-center px-4 py-3 font-medium w-24">사용</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filtered.map((s) => {
-                                            const thumb = (s.images || []).find((url) => !!url);
-                                            return (
-                                                <tr
-                                                    key={s.id}
-                                                    onClick={() => startEdit(s)}
-                                                    className={`border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors ${editing?.id === s.id ? 'bg-teal-50/60 dark:bg-teal-900/30' : ''
-                                                        }`}
-                                                >
-                                                    <td className="px-4 py-2">
-                                                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                                                            {thumb ? (
-                                                                <img
-                                                                    src={thumb}
-                                                                    alt={s.name_kr}
-                                                                    loading="lazy"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <span className="material-symbols-outlined text-slate-400 text-base">image</span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                                                        {s.name_kr}
-                                                        {s.name_local && (
-                                                            <span className="ml-2 text-xs font-normal text-slate-500">{s.name_local}</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-xs">
-                                                        {regionLabel(s.region) ? (
-                                                            <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium">
-                                                                {regionLabel(s.region)}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-slate-400">미분류</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs">
-                                                        {s.address || '-'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-xs text-slate-500">
-                                                        {(s.images || []).length}장
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${s.is_active
-                                                            ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'
-                                                            : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                                                            }`}>
-                                                            {s.is_active ? 'Y' : 'N'}
+                {/* Card + table */}
+                <div className="card">
+                    <div className="tbl-wrap">
+                        <table className="tbl">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: 80 }}>대표</th>
+                                    <th>관광지명</th>
+                                    <th>지역</th>
+                                    <th>주소</th>
+                                    <th className="c">사진</th>
+                                    <th className="c">사용</th>
+                                    <th className="r">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={7}>
+                                            <div className="empty">
+                                                <Icon name="hourglass_empty" />
+                                                <p>불러오는 중...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7}>
+                                            <div className="empty">
+                                                <Icon name="location_on" />
+                                                <p>
+                                                    {spots.length === 0
+                                                        ? '아직 등록된 관광지가 없습니다. 우상단 "관광지 추가" 버튼으로 시작하세요.'
+                                                        : '조건에 맞는 관광지가 없습니다.'}
+                                                </p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((s) => {
+                                        const thumb = (s.images || []).find((url) => !!url);
+                                        const photoCount = (s.images || []).length;
+                                        return (
+                                            <tr key={s.id} onClick={() => startEdit(s)}>
+                                                <td>
+                                                    {thumb ? (
+                                                        <img
+                                                            className="thumb sq"
+                                                            src={thumb}
+                                                            alt={s.name_kr}
+                                                            loading="lazy"
+                                                        />
+                                                    ) : (
+                                                        <span
+                                                            className="thumb sq"
+                                                            style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}
+                                                        >
+                                                            <Icon name="image" style={{ fontSize: 20 }} />
                                                         </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <span className="cell-strong">{s.name_kr}</span>
+                                                    {s.name_local && (
+                                                        <span className="cell-muted" style={{ marginLeft: 8, fontSize: 12.5 }}>
+                                                            {s.name_local}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {regionLabel(s.region) ? (
+                                                        <span className="badge b-blue">{regionLabel(s.region)}</span>
+                                                    ) : (
+                                                        <span className="cell-muted">미분류</span>
+                                                    )}
+                                                </td>
+                                                <td className="cell-muted">{s.address || '-'}</td>
+                                                <td className="c">
+                                                    <span className="badge b-gray">
+                                                        <Icon name="photo_library" />
+                                                        {photoCount}
+                                                    </span>
+                                                </td>
+                                                <td className="c">
+                                                    <span className={`badge ${s.is_active ? 'b-green' : 'b-gray'}`}>
+                                                        {s.is_active ? '사용중' : '미사용'}
+                                                    </span>
+                                                </td>
+                                                <td className="r" onClick={(e) => e.stopPropagation()}>
+                                                    <span className="row-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="act-btn"
+                                                            title="수정"
+                                                            onClick={() => startEdit(s)}
+                                                        >
+                                                            <Icon name="edit" />
+                                                        </button>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* Editor modal */}
+            {editing && (
+                <div className="picker-scrim" onClick={closeEditor}>
+                    <div
+                        className="picker"
+                        style={{ width: 560, maxHeight: '90vh' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="card-head">
+                            <h2>{isNew ? '새 관광지 등록' : '관광지 정보 수정'}</h2>
+                            <div className="spacer" />
+                            <button type="button" onClick={closeEditor} className="act-btn" title="닫기">
+                                <Icon name="close" />
+                            </button>
+                        </div>
+
+                        <div className="picker-list" style={{ padding: '20px 22px' }}>
+                            {/* 지역 분류 */}
+                            <div className="field">
+                                <label>지역 분류</label>
+                                <div className="chip-row">
+                                    {[{ v: '' as SpotRegion, l: '미분류' }, ...SPOT_REGION_OPTIONS.map((o) => ({ v: o.value, l: o.label }))].map((opt) => (
+                                        <button
+                                            key={opt.v || 'none'}
+                                            type="button"
+                                            onClick={() => setEditing({ ...editing, region: opt.v })}
+                                            className={`chip${(editing.region || '') === opt.v ? ' active' : ''}`}
+                                        >
+                                            {opt.l}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 7 }}>
+                                    필터에서 이 분류로 빠르게 찾을 수 있습니다. (선택)
+                                </p>
+                            </div>
+
+                            {/* 대제목 */}
+                            <div className="field">
+                                <label>대제목 *</label>
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={editing.name_kr}
+                                    onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
+                                    placeholder="차강소브라"
+                                />
+                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 7 }}>
+                                    일정 카드의 큰 제목으로 표시됩니다. (예: 차강소브라)
+                                </p>
+                            </div>
+
+                            {/* 소제목 */}
+                            <div className="field">
+                                <label>소제목</label>
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={editing.name_local || ''}
+                                    onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
+                                    placeholder="몽골의 그랜드캐년, 차강소브라"
+                                />
+                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 7 }}>
+                                    대제목 아래 작은 한 줄 설명. (예: 몽골의 그랜드캐년, 차강소브라)
+                                </p>
+                            </div>
+
+                            {/* 주소 */}
+                            <div className="field">
+                                <label>주소</label>
+                                <input
+                                    type="text"
+                                    className="inp"
+                                    value={editing.address || ''}
+                                    onChange={(e) => setEditing({ ...editing, address: e.target.value })}
+                                    placeholder="울란바토르 동북쪽 70km (선택)"
+                                />
+                            </div>
+
+                            {/* 상세 설명 */}
+                            <div className="field">
+                                <label>상세 설명</label>
+                                <textarea
+                                    className="inp"
+                                    value={editing.description || ''}
+                                    onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                                    rows={5}
+                                    placeholder="관광지 소개, 볼거리, 추천 사항 등..."
+                                    style={{ minHeight: 120 }}
+                                />
+                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 7 }}>
+                                    이 내용이 일정 항목의 설명으로 자동 입력됩니다.
+                                </p>
+                            </div>
+
+                            {/* 이미지 */}
+                            <div className="field">
+                                <label>이미지</label>
+                                <div className="grid-3" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                                    {(editing.images || []).map((src, i) => (
+                                        <div
+                                            key={i}
+                                            style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border-default)' }}
+                                        >
+                                            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(i)}
+                                                title="삭제"
+                                                style={{ position: 'absolute', top: 4, right: 4, width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(255,79,79,0.92)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                            >
+                                                <Icon name="close" style={{ fontSize: 16 }} />
+                                            </button>
+                                            {i === 0 && (
+                                                <span
+                                                    className="badge b-ink"
+                                                    style={{ position: 'absolute', bottom: 4, left: 4 }}
+                                                >
+                                                    대표
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <label
+                                        className="block-img-empty"
+                                        style={{ aspectRatio: '1 / 1', height: 'auto', cursor: 'pointer' }}
+                                    >
+                                        <Icon name="add_photo_alternate" />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                handleAddImages(e.target.files);
+                                                e.target.value = '';
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 7 }}>
+                                    이 사진들이 일정 항목의 사진으로 자동 첨부됩니다.
+                                </p>
+                            </div>
+
+                            {/* 사용 여부 */}
+                            <div className="toggle-row" style={{ marginBottom: 0 }}>
+                                <button
+                                    type="button"
+                                    className={`switch${editing.is_active ? ' on' : ''}`}
+                                    onClick={() => setEditing({ ...editing, is_active: !editing.is_active })}
+                                >
+                                    <span className="knob" />
+                                </button>
+                                <span className="cell-strong" style={{ fontSize: 13.5 }}>
+                                    {editing.is_active ? '사용 (목록에 노출)' : '미사용 (숨김)'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="drawer-foot">
+                            {!isNew && (
+                                <button type="button" onClick={handleDelete} className="btn btn-danger">
+                                    <Icon name="delete" />
+                                    삭제
+                                </button>
                             )}
+                            <div className="spacer" style={{ flex: 1 }} />
+                            <button type="button" onClick={closeEditor} className="btn btn-ghost">
+                                닫기
+                            </button>
+                            <button type="button" onClick={handleSave} disabled={saving} className="btn btn-ink">
+                                {saving ? '저장 중...' : '저장'}
+                            </button>
                         </div>
                     </div>
-
-                    {/* RIGHT: Detail editor */}
-                    {editing ? (
-                        <div className="w-[520px] flex-shrink-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                                <h2 className="font-bold text-slate-800 dark:text-white">
-                                    {isNew ? '새 관광지 등록' : '관광지 정보 수정'}
-                                </h2>
-                                <div className="flex gap-2">
-                                    {!isNew && (
-                                        <button
-                                            type="button"
-                                            onClick={handleDelete}
-                                            className="px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                                        >
-                                            삭제
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => { setEditing(null); setIsNew(false); }}
-                                        className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                                    >
-                                        닫기
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleSave}
-                                        disabled={saving}
-                                        className="px-4 py-1.5 text-xs font-bold bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {saving ? '저장 중...' : '저장'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-auto p-4 space-y-3">
-                                <Field label="지역 분류" hint="필터에서 이 분류로 빠르게 찾을 수 있습니다. (선택)">
-                                    <div className="flex gap-2 flex-wrap">
-                                        {[{ v: '' as SpotRegion, l: '미분류' }, ...SPOT_REGION_OPTIONS.map((o) => ({ v: o.value, l: o.label }))].map((opt) => (
-                                            <button
-                                                key={opt.v || 'none'}
-                                                type="button"
-                                                onClick={() => setEditing({ ...editing, region: opt.v })}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                                                    (editing.region || '') === opt.v
-                                                        ? 'bg-teal-500 border-teal-500 text-white'
-                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                                }`}
-                                            >
-                                                {opt.l}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </Field>
-
-                                <Field label="대제목" required hint="일정 카드의 큰 제목으로 표시됩니다. (예: 차강소브라)">
-                                    <input
-                                        type="text"
-                                        value={editing.name_kr}
-                                        onChange={(e) => setEditing({ ...editing, name_kr: e.target.value })}
-                                        placeholder="차강소브라"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field label="소제목" hint="대제목 아래 작은 한 줄 설명. (예: 몽골의 그랜드캐년, 차강소브라)">
-                                    <input
-                                        type="text"
-                                        value={editing.name_local || ''}
-                                        onChange={(e) => setEditing({ ...editing, name_local: e.target.value })}
-                                        placeholder="몽골의 그랜드캐년, 차강소브라"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field label="주소">
-                                    <input
-                                        type="text"
-                                        value={editing.address || ''}
-                                        onChange={(e) => setEditing({ ...editing, address: e.target.value })}
-                                        placeholder="울란바토르 동북쪽 70km (선택)"
-                                        className={inputCls}
-                                    />
-                                </Field>
-
-                                <Field
-                                    label="상세 설명"
-                                    hint="이 내용이 일정 항목의 설명으로 자동 입력됩니다."
-                                >
-                                    <textarea
-                                        value={editing.description || ''}
-                                        onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                                        rows={5}
-                                        placeholder="관광지 소개, 볼거리, 추천 사항 등..."
-                                        className={`${inputCls} resize-y min-h-[120px]`}
-                                    />
-                                </Field>
-
-                                <Field
-                                    label="이미지"
-                                    hint="이 사진들이 일정 항목의 사진으로 자동 첨부됩니다."
-                                >
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {(editing.images || []).map((src, i) => (
-                                                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-                                                    <img src={src} alt="" className="w-full h-full object-cover" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeImage(i)}
-                                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-red-500 text-white text-xs flex items-center justify-center"
-                                                        title="삭제"
-                                                    >
-                                                        ×
-                                                    </button>
-                                                    {i === 0 && (
-                                                        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-teal-500 text-white text-[10px] font-bold">
-                                                            대표
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            <label className="aspect-square border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors">
-                                                <span className="material-symbols-outlined text-slate-400">add_photo_alternate</span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    multiple
-                                                    onChange={(e) => {
-                                                        handleAddImages(e.target.files);
-                                                        e.target.value = '';
-                                                    }}
-                                                    className="hidden"
-                                                />
-                                            </label>
-                                        </div>
-                                    </div>
-                                </Field>
-
-                                <Field label="사용 여부">
-                                    <div className="flex gap-2">
-                                        {([
-                                            { v: true, l: '사용 (목록에 노출)' },
-                                            { v: false, l: '미사용 (숨김)' },
-                                        ] as const).map((opt) => (
-                                            <button
-                                                key={String(opt.v)}
-                                                type="button"
-                                                onClick={() => setEditing({ ...editing, is_active: opt.v })}
-                                                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${editing.is_active === opt.v
-                                                    ? 'bg-teal-500 border-teal-500 text-white'
-                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                                    }`}
-                                            >
-                                                {opt.l}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </Field>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-[520px] flex-shrink-0 flex items-center justify-center text-center p-8 text-slate-500 dark:text-slate-400">
-                            <div>
-                                <div className="text-5xl mb-3 opacity-60">📍</div>
-                                <p className="text-sm">왼쪽에서 관광지를 선택하거나 우상단 "관광지 추가" 버튼을 누르세요.</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
-            </main>
-        </div>
+            )}
+        </AdminLayout>
     );
 };
-
-const inputCls =
-    'w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none';
-
-const Field: React.FC<{ label: string; required?: boolean; hint?: string; children: React.ReactNode }> = ({
-    label,
-    required,
-    hint,
-    children,
-}) => (
-    <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-            {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        {children}
-        {hint && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{hint}</p>}
-    </div>
-);
