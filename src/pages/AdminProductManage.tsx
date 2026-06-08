@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
@@ -14,7 +15,6 @@ import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerMod
 
 
 export const AdminProductManage: React.FC = () => {
-    const [isDarkMode, setIsDarkMode] = useState(false);
     const [products, setProducts] = useState<TourProduct[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedProduct, setSelectedProduct] = useState<TourProduct | null>(null);
@@ -30,11 +30,6 @@ export const AdminProductManage: React.FC = () => {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
-
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark');
-    };
 
     // Load from API
     const fetchProducts = async () => {
@@ -313,10 +308,10 @@ export const AdminProductManage: React.FC = () => {
     };
 
     const getStatusBadge = (status: string) => {
-        const styles = {
-            active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-            inactive: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-            soldout: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+        const tones = {
+            active: 'b-green',
+            inactive: 'b-gray',
+            soldout: 'b-red'
         };
         const labels = {
             active: '판매중',
@@ -324,313 +319,245 @@ export const AdminProductManage: React.FC = () => {
             soldout: '품절'
         };
         return (
-            <span className={`px-2 py-1 rounded-full text-xs font-bold ${styles[status as keyof typeof styles]}`}>
+            <span className={`badge ${tones[status as keyof typeof tones]}`}>
                 {labels[status as keyof typeof labels]}
             </span>
         );
     };
 
+    const STAT_CARDS = [
+        { key: 'total', label: '전체 상품', value: stats.total, ico: 'inventory_2', tint: 'tint-blue' },
+        { key: 'active', label: '판매중', value: stats.active, ico: 'check_circle', tint: 'tint-green' },
+        { key: 'inactive', label: '비활성', value: stats.inactive, ico: 'cancel', tint: 'tint-ink' },
+        { key: 'soldout', label: '품절', value: stats.soldout, ico: 'remove_shopping_cart', tint: 'tint-red' },
+        { key: 'featured', label: '추천 상품', value: stats.featured, ico: 'star', tint: 'tint-amber' },
+    ];
+
     return (
-        <div className={`flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans ${isDarkMode ? 'dark' : ''}`}>
-            <AdminSidebar
-                activePage="products"
-                isDarkMode={isDarkMode}
-                toggleTheme={toggleTheme}
-            />
+        <AdminLayout
+            activePage="products"
+            title="상품 관리"
+            actions={
+                <button
+                    className="btn btn-ink"
+                    onClick={() => {
+                        setSelectedProduct(null);
+                        setIsModalOpen(true);
+                    }}
+                >
+                    <Icon name="add" />상품 추가
+                </button>
+            }
+        >
+            <div className="route-anim">
+                {/* Statistics Cards */}
+                <div className="prod-stats">
+                    {STAT_CARDS.map((s) => (
+                        <div className="metric" key={s.key} style={{ padding: '16px 18px' }}>
+                            <div className="row" style={{ gap: 12 }}>
+                                <span className={`metric-ico ${s.tint}`} style={{ width: 40, height: 40 }}>
+                                    <Icon name={s.ico} fill />
+                                </span>
+                                <div>
+                                    <div className="metric-label">{s.label}</div>
+                                    <div className="metric-value" style={{ fontSize: 22 }}>{s.value}</div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
 
-            <main className="ml-64 flex-1 flex flex-col min-h-screen">
-                {/* Header */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-8 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">상품 관리</h1>
-                    <button
-                        onClick={() => {
-                            setSelectedProduct(null);
-                            setIsModalOpen(true);
-                        }}
-                        className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors"
+                {/* Filters / Toolbar */}
+                <div className="toolbar" style={{ marginTop: 18 }}>
+                    <label className="tb-search">
+                        <Icon name="search" />
+                        <input
+                            type="text"
+                            placeholder="상품명 검색"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </label>
+                    <select
+                        className="select"
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
                     >
-                        <span className="material-symbols-outlined">add</span>
-                        상품 추가
-                    </button>
-                </header>
+                        <option value="all">전체 카테고리</option>
+                        {categories.map((cat) => (
+                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                    </select>
+                    <select
+                        className="select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">전체 상태</option>
+                        <option value="active">판매중</option>
+                        <option value="inactive">비활성</option>
+                        <option value="soldout">품절</option>
+                    </select>
+                    <select
+                        className="select"
+                        value={featuredFilter}
+                        onChange={(e) => setFeaturedFilter(e.target.value)}
+                    >
+                        <option value="all">추천 전체</option>
+                        <option value="featured">추천 상품</option>
+                        <option value="normal">일반 상품</option>
+                    </select>
+                </div>
 
-                <div className="p-8 space-y-6">
-                    {/* Statistics Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">전체 상품</p>
-                                    <p className="text-2xl font-bold text-slate-800 dark:text-white mt-1">{stats.total}</p>
-                                </div>
-                                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">inventory_2</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">판매중</p>
-                                    <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.active}</p>
-                                </div>
-                                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">비활성</p>
-                                    <p className="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{stats.inactive}</p>
-                                </div>
-                                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">cancel</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">품절</p>
-                                    <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats.soldout}</p>
-                                </div>
-                                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-red-600 dark:text-red-400">remove_shopping_cart</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">추천 상품</p>
-                                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.featured}</p>
-                                </div>
-                                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">star</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">검색</label>
-                                <div className="relative">
-                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                                    <input
-                                        type="text"
-                                        placeholder="상품명 검색..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">카테고리</label>
-                                <select
-                                    value={categoryFilter}
-                                    onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                >
-                                    <option value="all">전체</option>
-                                    {categories.map((cat) => (
-                                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">상태</label>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                >
-                                    <option value="all">전체</option>
-                                    <option value="active">판매중</option>
-                                    <option value="inactive">비활성</option>
-                                    <option value="soldout">품절</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">추천 여부</label>
-                                <select
-                                    value={featuredFilter}
-                                    onChange={(e) => setFeaturedFilter(e.target.value)}
-                                    className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                >
-                                    <option value="all">전체</option>
-                                    <option value="featured">추천 상품</option>
-                                    <option value="normal">일반 상품</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Products Table */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">상품</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">카테고리</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">기간</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">가격</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">상태</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">추천</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">인기</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">조회/예약</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">액션</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                    {paginatedProducts.map((product, index) => (
-                                        <tr 
-                                            key={product.id} 
-                                            draggable
-                                            onDragStart={(e) => handleProductDragStart(e, index)}
-                                            onDragOver={(e) => handleProductDragOver(e, index)}
-                                            onDrop={handleProductDragEnd}
-                                            onDragEnd={handleProductDragEnd}
-                                            className={`transition-colors cursor-move 
-                                                ${draggedProductIndex === index ? 'opacity-50 bg-slate-100 dark:bg-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}
-                                            `}
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 hover:text-slate-500 cursor-grab active:cursor-grabbing mr-2">drag_indicator</span>
+                {/* Products Table */}
+                <div className="card">
+                    <div className="tbl-wrap">
+                        <table className="tbl">
+                            <thead>
+                                <tr>
+                                    <th>상품</th>
+                                    <th>카테고리</th>
+                                    <th>기간</th>
+                                    <th className="r">가격</th>
+                                    <th>상태</th>
+                                    <th className="c">추천</th>
+                                    <th className="c">인기</th>
+                                    <th className="c">조회/예약</th>
+                                    <th className="r">액션</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paginatedProducts.map((product, index) => (
+                                    <tr
+                                        key={product.id}
+                                        draggable
+                                        onDragStart={(e) => handleProductDragStart(e, index)}
+                                        onDragOver={(e) => handleProductDragOver(e, index)}
+                                        onDrop={handleProductDragEnd}
+                                        onDragEnd={handleProductDragEnd}
+                                        style={draggedProductIndex === index ? { opacity: 0.5, cursor: 'move' } : { cursor: 'move' }}
+                                    >
+                                        <td style={{ maxWidth: 340 }}>
+                                            <div className="av-cell">
+                                                <Icon name="drag_indicator" className="drag-handle" style={{ fontSize: 18 }} />
+                                                <span className="thumb sq" style={{ overflow: 'hidden' }}>
                                                     <img
                                                         src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
                                                         alt={product.name}
-                                                        className="w-16 h-16 rounded-lg object-cover"
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     />
-                                                    <div className="max-w-xs">
-                                                        <p className="font-medium text-slate-900 dark:text-white line-clamp-2">{product.name}</p>
-                                                    </div>
+                                                </span>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div className="cell-strong" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</div>
+                                                    <div className="cell-muted" style={{ fontSize: 11.5 }}>{product.id}</div>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{product.category}</td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{product.duration}</td>
-                                            <td className="px-6 py-4">
-                                                <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</p>
-                                                    {product.originalPrice && (
-                                                        <p className="text-xs text-slate-400 line-through">₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</p>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <button
-                                                    onClick={() => toggleStatus(product.id)}
-                                                    className="transition-transform hover:scale-105"
-                                                >
-                                                    {getStatusBadge(product.status)}
+                                            </div>
+                                        </td>
+                                        <td className="cell-muted">{product.category}</td>
+                                        <td className="cell-muted">{product.duration}</td>
+                                        <td className="r">
+                                            <div className="cell-price">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</div>
+                                            {product.originalPrice ? (
+                                                <div className="cell-muted" style={{ fontSize: 11.5, textDecoration: 'line-through' }}>₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</div>
+                                            ) : null}
+                                        </td>
+                                        <td>
+                                            <button
+                                                onClick={() => toggleStatus(product.id)}
+                                                style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
+                                            >
+                                                {getStatusBadge(product.status)}
+                                            </button>
+                                        </td>
+                                        <td className="c">
+                                            <button onClick={() => toggleFeatured(product.id)} className="star-btn" title="추천">
+                                                <Icon
+                                                    name={product.isFeatured ? 'star' : 'star_border'}
+                                                    fill={product.isFeatured}
+                                                    style={{ color: product.isFeatured ? 'var(--mrt-star)' : 'var(--mrt-gray-300)' }}
+                                                />
+                                            </button>
+                                        </td>
+                                        <td className="c">
+                                            <button onClick={() => togglePopular(product.id)} className="star-btn" title="인기">
+                                                <Icon
+                                                    name={product.isPopular ? 'favorite' : 'favorite_border'}
+                                                    fill={product.isPopular}
+                                                    style={{ color: product.isPopular ? '#FF4F8B' : 'var(--mrt-gray-300)' }}
+                                                />
+                                            </button>
+                                        </td>
+                                        <td className="c">
+                                            <div className="cell-mono" style={{ fontSize: 12.5 }}>{typeof product.viewCount === 'number' ? product.viewCount.toLocaleString() : (product.viewCount || 0)}</div>
+                                            <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--mrt-blue-strong)' }}>예약 {product.bookingCount || 0}</div>
+                                        </td>
+                                        <td className="r">
+                                            <div className="row-actions">
+                                                <button onClick={() => duplicateProduct(product)} className="act-btn" title="복제">
+                                                    <Icon name="content_copy" />
                                                 </button>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
                                                 <button
-                                                    onClick={() => toggleFeatured(product.id)}
-                                                    className="transition-transform hover:scale-110"
+                                                    onClick={() => {
+                                                        setSelectedProduct(product);
+                                                        setIsModalOpen(true);
+                                                    }}
+                                                    className="act-btn"
+                                                    title="수정"
                                                 >
-                                                    <span className={`material-symbols-outlined ${product.isFeatured ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}`}>
-                                                        {product.isFeatured ? 'star' : 'star_border'}
-                                                    </span>
+                                                    <Icon name="edit" />
                                                 </button>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <button
-                                                    onClick={() => togglePopular(product.id)}
-                                                    className="transition-transform hover:scale-110"
-                                                >
-                                                    <span className={`material-symbols-outlined ${product.isPopular ? 'text-pink-500' : 'text-slate-300 dark:text-slate-600'}`}>
-                                                        {product.isPopular ? 'favorite' : 'favorite_border'}
-                                                    </span>
+                                                <button onClick={() => deleteProduct(product.id)} className="act-btn danger" title="삭제">
+                                                    <Icon name="delete" />
                                                 </button>
-                                            </td>
-                                            <td className="px-6 py-4 text-center text-sm text-slate-600 dark:text-slate-300">
-                                                <div className="flex flex-col gap-1">
-                                                    <span>{typeof product.viewCount === 'number' ? product.viewCount.toLocaleString() : (product.viewCount || 0)}</span>
-                                                    <span className="text-teal-600 dark:text-teal-400 font-bold">{product.bookingCount || 0}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => duplicateProduct(product)}
-                                                        className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                                                        title="복제"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">content_copy</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedProduct(product);
-                                                            setIsModalOpen(true);
-                                                        }}
-                                                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                                        title="수정"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">edit</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deleteProduct(product.id)}
-                                                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                                                        title="삭제"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">delete</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    총 {filteredProducts.length}개 상품 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredProducts.length)}개 표시
-                                </p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                                    >
-                                        이전
-                                    </button>
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                        <button
-                                            key={page}
-                                            onClick={() => setCurrentPage(page)}
-                                            className={`px-3 py-1 rounded border transition-colors ${page === currentPage
-                                                ? 'bg-teal-500 text-white border-teal-500'
-                                                : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                                }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    ))}
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                                    >
-                                        다음
-                                    </button>
-                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {paginatedProducts.length === 0 && (
+                            <div className="empty">
+                                <Icon name="inventory_2" />
+                                <p>조건에 맞는 상품이 없습니다.</p>
                             </div>
                         )}
                     </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="card-pad" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)' }}>
+                            <p className="cell-muted" style={{ fontSize: 13 }}>
+                                총 {filteredProducts.length}개 상품 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredProducts.length)}개 표시
+                            </p>
+                            <div className="row" style={{ gap: 6 }}>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="btn btn-ghost btn-sm"
+                                >
+                                    이전
+                                </button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`btn btn-sm ${page === currentPage ? 'btn-ink' : 'btn-ghost'}`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="btn btn-ghost btn-sm"
+                                >
+                                    다음
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            </main>
+            </div>
 
             {/* Add/Edit Modal */}
             {isModalOpen && (
@@ -667,7 +594,7 @@ export const AdminProductManage: React.FC = () => {
                     }}
                 />
             )}
-        </div>
+        </AdminLayout>
     );
 };
 
@@ -1480,92 +1407,84 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl my-8">
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,27,30,0.42)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 80, padding: 16, overflowY: 'auto' }}>
+            <div className="card" style={{ width: '100%', maxWidth: 920, margin: '32px 0', boxShadow: 'var(--shadow-lg)' }}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                <div className="card-head">
+                    <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-strong)', margin: 0 }}>
                         {product ? '상품 수정' : '상품 추가'}
                     </h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">close</span>
+                    <div className="spacer" />
+                    <button onClick={onClose} className="act-btn" title="닫기" type="button">
+                        <Icon name="close" />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-200 dark:border-slate-700 px-6">
-                    {[
-                        { id: 'basic', label: '기본 정보', icon: 'info' },
-                        { id: 'details', label: '상세 정보', icon: 'description' },
-                        { id: 'itinerary', label: '일정', icon: 'calendar_month' },
-                        { id: 'options', label: '가격/옵션', icon: 'attach_money' },
-                        { id: 'includes', label: '포함/불포함', icon: 'checklist' }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setCurrentTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${currentTab === tab.id
-                                ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                        >
-                            <span className="material-symbols-outlined text-sm">{tab.icon}</span>
-                            <span className="font-medium text-sm">{tab.label}</span>
-                        </button>
-                    ))}
+                <div className="card-pad" style={{ paddingTop: 10, paddingBottom: 0 }}>
+                    <div className="tabs" style={{ marginBottom: 0 }}>
+                        {[
+                            { id: 'basic', label: '기본 정보', icon: 'info' },
+                            { id: 'details', label: '상세 정보', icon: 'description' },
+                            { id: 'itinerary', label: '일정', icon: 'calendar_month' },
+                            { id: 'options', label: '가격/옵션', icon: 'attach_money' },
+                            { id: 'includes', label: '포함/불포함', icon: 'checklist' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setCurrentTab(tab.id as any)}
+                                className={`tab${currentTab === tab.id ? ' active' : ''}`}
+                            >
+                                <Icon name={tab.icon} />{tab.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="p-6 max-h-[60vh] overflow-y-auto">
+                    <div className="card-pad" style={{ maxHeight: '64vh', overflowY: 'auto' }}>
                         {/* Basic Info Tab */}
                         {currentTab === 'basic' && (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        상품명 *
-                                    </label>
+                            <div style={{ maxWidth: 760 }}>
+                                <div className="field">
+                                    <label>상품명 *</label>
                                     <input
                                         type="text"
+                                        className="inp"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                         required
                                     />
                                 </div>
 
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            상품 설명 / 概要 <span className="text-xs font-normal text-slate-500">(PC 상세페이지 「概要」 + 검색 결과·공유 미리보기)</span>
-                                        </label>
-                                        <span className={`text-xs ${(formData.description?.length || 0) > 160 ? 'text-red-500' : 'text-slate-400'}`}>
+                                <div className="field">
+                                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span>상품 설명 / 概要 <span className="muted" style={{ fontWeight: 500 }}>(PC 상세페이지 「概要」 + 검색 결과·공유 미리보기)</span></span>
+                                        <span className="muted" style={{ color: (formData.description?.length || 0) > 160 ? 'var(--mrt-red)' : undefined }}>
                                             {formData.description?.length || 0} / 160
                                         </span>
-                                    </div>
+                                    </label>
                                     <textarea
+                                        className="inp"
                                         value={formData.description || ''}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         rows={3}
                                         placeholder="例: 満天の星空と夕陽に染まる大草原、遊牧民文化を体験する中央モンゴル3泊4日ツアー。日本語ガイド同行、全日程食事・宿泊込み。"
-                                        className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none resize-none"
                                     />
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                                         Google検索・LINE/カカオ共有時に表示される短い紹介文です。100〜160字が最適です。
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            카테고리 *
-                                        </label>
+                                <div className="field-row">
+                                    <div className="field">
+                                        <label>카테고리 *</label>
                                         <select
+                                            className="inp"
+                                            style={{ appearance: 'none' }}
                                             value={formData.category}
                                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                             required
                                         >
                                             <option value="" disabled>카테고리 선택</option>
@@ -1575,107 +1494,100 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                         </select>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            기간 *
-                                        </label>
+                                    <div className="field">
+                                        <label>기간 *</label>
                                         <input
                                             type="text"
+                                            className="inp"
                                             value={formData.duration}
                                             onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                                             placeholder="예: 4박 5일"
-                                            className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            판매가 *
-                                        </label>
+                                <div className="field-row">
+                                    <div className="field">
+                                        <label>판매가 *</label>
                                         <input
                                             type="number"
+                                            className="inp"
                                             value={formData.price}
                                             onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                                            className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                             required
                                         />
                                     </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            정가 (선택)
-                                        </label>
+                                    <div className="field">
+                                        <label>정가 (선택)</label>
                                         <input
                                             type="number"
+                                            className="inp"
                                             value={formData.originalPrice || ''}
                                             onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) || undefined })}
-                                            className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Main Images Upload */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        메인 이미지 업로드 *
-                                    </label>
+                                <div className="field">
+                                    <label>메인 이미지 업로드 *</label>
                                     <input
                                         type="file"
                                         accept="image/*"
                                         multiple
                                         onChange={(e) => handleMainImageUpload(e.target.files)}
-                                        className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                                        className="inp"
+                                        style={{ paddingTop: 10, height: 'auto' }}
                                     />
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">여러 메인 이미지를 업로드하세요 (슬라이드로 표시됩니다)</p>
+                                    <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>여러 메인 이미지를 업로드하세요 (슬라이드로 표시됩니다)</p>
 
                                     {/* Main Images Grid */}
                                     {formData.mainImages && formData.mainImages.length > 0 && (
-                                        <div className="grid grid-cols-3 gap-3 mt-4">
+                                        <div className="grid-3" style={{ marginTop: 14 }}>
                                             {formData.mainImages.map((img, imgIndex) => (
-                                                <div key={imgIndex} className="relative group border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800">
+                                                <div key={imgIndex} style={{ position: 'relative', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'var(--mrt-gray-100)' }}>
                                                     <img
                                                         src={getOptimizedImageUrl(img, 'productThumbnail')}
                                                         alt={`Main ${imgIndex + 1}`}
-                                                        className="w-full h-32 object-cover pointer-events-none"
+                                                        style={{ width: '100%', height: 128, objectFit: 'cover', pointerEvents: 'none', display: 'block' }}
                                                     />
 
                                                     {/* Image Controls */}
-                                                    <div className="absolute top-2 right-2 flex gap-1">
+                                                    <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
                                                         {imgIndex > 0 && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => moveMainImage(imgIndex, 'up')}
-                                                                className="p-1 bg-white/90 dark:bg-slate-900/90 rounded hover:bg-white dark:hover:bg-slate-900 transition-colors"
+                                                                className="act-btn"
                                                                 title="위로 이동"
                                                             >
-                                                                <span className="material-symbols-outlined text-sm text-slate-700 dark:text-slate-300">arrow_upward</span>
+                                                                <Icon name="arrow_upward" />
                                                             </button>
                                                         )}
                                                         {imgIndex < (formData.mainImages?.length || 0) - 1 && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => moveMainImage(imgIndex, 'down')}
-                                                                className="p-1 bg-white/90 dark:bg-slate-900/90 rounded hover:bg-white dark:hover:bg-slate-900 transition-colors"
+                                                                className="act-btn"
                                                                 title="아래로 이동"
                                                             >
-                                                                <span className="material-symbols-outlined text-sm text-slate-700 dark:text-slate-300">arrow_downward</span>
+                                                                <Icon name="arrow_downward" />
                                                             </button>
                                                         )}
                                                         <button
                                                             type="button"
                                                             onClick={() => removeMainImage(imgIndex)}
-                                                            className="p-1 bg-red-500/90 rounded hover:bg-red-500 transition-colors"
+                                                            className="act-btn danger"
                                                             title="삭제"
                                                         >
-                                                            <span className="material-symbols-outlined text-sm text-white">delete</span>
+                                                            <Icon name="delete" />
                                                         </button>
                                                     </div>
 
                                                     {/* Image Number Badge */}
-                                                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                                    <div style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 6 }}>
                                                         {imgIndex + 1} / {formData.mainImages?.length || 0}
                                                     </div>
                                                 </div>
@@ -1684,15 +1596,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            상태
-                                        </label>
+                                <div className="field-row">
+                                    <div className="field">
+                                        <label>상태</label>
                                         <select
+                                            className="inp"
+                                            style={{ appearance: 'none' }}
                                             value={formData.status}
                                             onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                                            className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
                                         >
                                             <option value="active">판매중</option>
                                             <option value="inactive">비활성</option>
@@ -1700,25 +1611,38 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                         </select>
                                     </div>
 
-                                    <div className="flex items-center pt-8 gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.isFeatured}
-                                                onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-                                                className="w-5 h-5 text-teal-500 rounded focus:ring-2 focus:ring-teal-500"
-                                            />
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">추천 상품으로 설정</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.isPopular || false}
-                                                onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
-                                                className="w-5 h-5 text-pink-500 rounded focus:ring-2 focus:ring-pink-500"
-                                            />
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">인기 상품으로 설정</span>
-                                        </label>
+                                    <div className="field">
+                                        <label>노출 설정</label>
+                                        <div className="stack" style={{ gap: 10 }}>
+                                            <div className="toggle-row">
+                                                <div>
+                                                    <div className="cell-strong">추천 상품</div>
+                                                    <div className="cell-muted" style={{ fontSize: 12 }}>홈 추천 영역에 노출</div>
+                                                </div>
+                                                <div className="spacer" style={{ flex: 1 }} />
+                                                <button
+                                                    type="button"
+                                                    className={`switch${formData.isFeatured ? ' on' : ''}`}
+                                                    onClick={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })}
+                                                >
+                                                    <span className="knob" />
+                                                </button>
+                                            </div>
+                                            <div className="toggle-row">
+                                                <div>
+                                                    <div className="cell-strong">인기 상품</div>
+                                                    <div className="cell-muted" style={{ fontSize: 12 }}>인기 뱃지 표시</div>
+                                                </div>
+                                                <div className="spacer" style={{ flex: 1 }} />
+                                                <button
+                                                    type="button"
+                                                    className={`switch${formData.isPopular ? ' on' : ''}`}
+                                                    onClick={() => setFormData({ ...formData, isPopular: !formData.isPopular })}
+                                                >
+                                                    <span className="knob" />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1726,36 +1650,34 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                         {/* Details Tab */}
                         {currentTab === 'details' && (
-                            <div className="space-y-6">
+                            <div className="stack" style={{ maxWidth: 860 }}>
                                 {/* Tags */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        태그
-                                    </label>
-                                    <div className="flex flex-wrap gap-2 mb-2">
-                                        {formData.tags?.map(tag => (
-                                            <span key={tag} className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                                                {tag}
-                                                <button type="button" onClick={() => removeTag(tag)} className="hover:text-teal-900 dark:hover:text-teal-200">
-                                                    <span className="material-symbols-outlined text-xs">close</span>
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="태그 입력 후 Enter"
-                                            onKeyPress={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    addTag((e.target as HTMLInputElement).value);
-                                                    (e.target as HTMLInputElement).value = '';
-                                                }
-                                            }}
-                                            className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                        />
-                                    </div>
+                                <div className="field" style={{ marginBottom: 0 }}>
+                                    <label>태그</label>
+                                    {formData.tags && formData.tags.length > 0 && (
+                                        <div className="chip-row" style={{ marginBottom: 8 }}>
+                                            {formData.tags?.map(tag => (
+                                                <span key={tag} className="chip active">
+                                                    {tag}
+                                                    <button type="button" onClick={() => removeTag(tag)} style={{ border: 'none', background: 'none', color: 'inherit', cursor: 'pointer', display: 'inline-flex', padding: 0 }}>
+                                                        <Icon name="close" style={{ fontSize: 14 }} />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <input
+                                        type="text"
+                                        className="inp"
+                                        placeholder="태그 입력 후 Enter"
+                                        onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addTag((e.target as HTMLInputElement).value);
+                                                (e.target as HTMLInputElement).value = '';
+                                            }
+                                        }}
+                                    />
                                 </div>
 
                                 {/* Highlights form removed per admin request.
@@ -1765,362 +1687,278 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     them now. */}
 
                                 {/* FAQ — per-product Q&A. Empty list = use site-wide common FAQs. */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                FAQ (자주 묻는 질문)
-                                            </label>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                비워두면 사이트 공통 FAQ가 자동 표시됩니다.
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={addFAQ}
-                                            className="text-teal-600 dark:text-teal-400 text-sm font-medium hover:underline"
-                                        >
-                                            + Q&A 추가
-                                        </button>
+                                <section className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="help" />
+                                        <h4>FAQ (자주 묻는 질문)</h4>
+                                        <span className="muted">비워두면 공통 FAQ가 표시됩니다</span>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="stack" style={{ gap: 10 }}>
                                         {formData.faqs?.map((faq, index) => (
-                                            <div
-                                                key={index}
-                                                className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg space-y-2"
-                                            >
-                                                <div className="flex items-start gap-2">
-                                                    <span className="text-xs font-bold text-teal-600 dark:text-teal-400 pt-2.5 font-mono">
-                                                        Q{index + 1}.
-                                                    </span>
-                                                    <input
-                                                        type="text"
-                                                        value={faq.q}
-                                                        onChange={(e) => updateFAQ(index, 'q', e.target.value)}
-                                                        placeholder="질문"
-                                                        className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                                            <div className="edit-row" key={index}>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
+                                                        <span className="cell-mono" style={{ fontSize: 12, paddingTop: 12, color: 'var(--mrt-blue-strong)' }}>Q{index + 1}.</span>
+                                                        <input
+                                                            type="text"
+                                                            className="inp"
+                                                            style={{ flex: 1 }}
+                                                            value={faq.q}
+                                                            onChange={(e) => updateFAQ(index, 'q', e.target.value)}
+                                                            placeholder="질문"
+                                                        />
+                                                    </div>
+                                                    <textarea
+                                                        className="inp"
+                                                        style={{ marginTop: 8 }}
+                                                        value={faq.a}
+                                                        onChange={(e) => updateFAQ(index, 'a', e.target.value)}
+                                                        placeholder="답변"
+                                                        rows={3}
                                                     />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeFAQ(index)}
-                                                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">delete</span>
-                                                    </button>
                                                 </div>
-                                                <textarea
-                                                    value={faq.a}
-                                                    onChange={(e) => updateFAQ(index, 'a', e.target.value)}
-                                                    placeholder="답변"
-                                                    rows={3}
-                                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                                                />
+                                                <button type="button" className="act-btn danger" onClick={() => removeFAQ(index)} title="삭제">
+                                                    <Icon name="delete" />
+                                                </button>
                                             </div>
                                         ))}
                                         {(!formData.faqs || formData.faqs.length === 0) && (
-                                            <div className="text-xs text-slate-400 dark:text-slate-500 text-center py-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                                                Q&A를 추가하지 않으면 사이트 공통 FAQ가 사용됩니다.
+                                            <div className="card-muted-note">
+                                                <Icon name="info" />
+                                                <span>Q&A를 추가하지 않으면 사이트 공통 FAQ가 사용됩니다.</span>
                                             </div>
                                         )}
+                                        <button type="button" className="add-line" onClick={addFAQ}><Icon name="add" />Q&A 추가</button>
                                     </div>
-                                </div>
+                                </section>
 
                                 {/* Detail Images Section */}
                                 <div>
                                     {/* Detail Block Content Section */}
                                     <div>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                상세 컨텐츠 (이미지 & 슬라이드 순서 편집)
-                                            </label>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addDetailBlock('image')}
-                                                    className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">image</span>
-                                                    이미지 추가
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addDetailBlock('slide')}
-                                                    className="px-3 py-1.5 bg-teal-500 text-white text-xs font-medium rounded-lg hover:bg-teal-600 transition-colors flex items-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">view_carousel</span>
-                                                    슬라이드 추가
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addDetailBlock('timeline')}
-                                                    className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">timeline</span>
-                                                    타임라인 추가
-                                                </button>
-                                                <select
-                                                    onChange={(e) => { if (e.target.value) { addDetailBlock('dayInfo', e.target.value); e.target.value = ''; } }}
-                                                    defaultValue=""
-                                                    className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 transition-colors cursor-pointer appearance-none"
-                                                    style={{ backgroundImage: 'none' }}
-                                                >
-                                                    <option value="" disabled>📅 일차 추가</option>
-                                                    <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
-                                                    <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
-                                                    <option value="3日目（みっかめ）">3日目（みっかめ）</option>
-                                                    <option value="4日目（よっかめ）">4日目（よっかめ）</option>
-                                                    <option value="5日目（いつかめ）">5日目（いつかめ）</option>
-                                                    <option value="6日目（むいかめ）">6日目（むいかめ）</option>
-                                                    <option value="7日目（なのかめ）">7日目（なのかめ）</option>
-                                                    <option value="8日目（ようかめ）">8日目（ようかめ）</option>
-                                                    <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
-                                                    <option value="10日目（とおかめ）">10日目（とおかめ）</option>
-                                                </select>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => addDetailBlock('divider')}
-                                                    className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">remove</span>
-                                                    구분선/여백
-                                                </button>
-                                            </div>
+                                        <div className="block-add-bar">
+                                            <span className="block-add-label"><Icon name="add" />블록 추가</span>
+                                            <button type="button" className="chip" onClick={() => addDetailBlock('image')}>
+                                                <Icon name="image" style={{ fontSize: 16 }} />이미지
+                                            </button>
+                                            <button type="button" className="chip" onClick={() => addDetailBlock('slide')}>
+                                                <Icon name="view_carousel" style={{ fontSize: 16 }} />슬라이드
+                                            </button>
+                                            <button type="button" className="chip" onClick={() => addDetailBlock('timeline')}>
+                                                <Icon name="schedule" style={{ fontSize: 16 }} />타임라인
+                                            </button>
+                                            <select
+                                                onChange={(e) => { if (e.target.value) { addDetailBlock('dayInfo', e.target.value); e.target.value = ''; } }}
+                                                defaultValue=""
+                                                className="select"
+                                                style={{ height: 36, fontSize: 13 }}
+                                            >
+                                                <option value="" disabled>📅 일차 추가</option>
+                                                <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
+                                                <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
+                                                <option value="3日目（みっかめ）">3日目（みっかめ）</option>
+                                                <option value="4日目（よっかめ）">4日目（よっかめ）</option>
+                                                <option value="5日目（いつかめ）">5日目（いつかめ）</option>
+                                                <option value="6日目（むいかめ）">6日目（むいかめ）</option>
+                                                <option value="7日目（なのかめ）">7日目（なのかめ）</option>
+                                                <option value="8日目（ようかめ）">8日目（ようかめ）</option>
+                                                <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
+                                                <option value="10日目（とおかめ）">10日目（とおかめ）</option>
+                                            </select>
+                                            <button type="button" className="chip" onClick={() => addDetailBlock('divider')}>
+                                                <Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선/여백
+                                            </button>
                                         </div>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                                            이미지와 슬라이드를 자유롭게 배치하여 상세 페이지를 구성하세요. 순서를 변경하거나 삭제할 수 있습니다.
-                                        </p>
+                                        <div className="card-muted-note" style={{ marginBottom: 14 }}>
+                                            <Icon name="info" />
+                                            <span>이미지와 슬라이드를 자유롭게 배치하여 상세 페이지를 구성하세요. 순서를 변경하거나 삭제할 수 있습니다.</span>
+                                        </div>
 
-                                        <div className="space-y-4">
+                                        <div className="stack" style={{ gap: 12 }}>
                                             {(formData.detailBlocks || []).map((block, index) => (
-                                                <div key={block.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-slate-50 dark:bg-slate-800/50 relative">
-                                                    {/* Block Header */}
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                <div key={block.id} className="edit-row">
+                                                    <div className="edit-move">
+                                                        <button type="button" onClick={() => moveDetailBlock(index, index - 1)} disabled={index === 0}><Icon name="expand_less" /></button>
+                                                        <button type="button" onClick={() => moveDetailBlock(index, index + 1)} disabled={index === (formData.detailBlocks?.length || 0) - 1}><Icon name="expand_more" /></button>
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        {/* Block Header */}
+                                                        <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+                                                            <span className="badge b-gray">
                                                                 {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : 'DIVIDER')))}
                                                             </span>
-                                                            <span className="text-sm font-medium text-slate-900 dark:text-white">
-                                                                {index + 1}번째 블록
-                                                            </span>
+                                                            <span className="cell-muted" style={{ fontSize: 12 }}>{index + 1}번째 블록</span>
                                                         </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => moveDetailBlock(index, index - 1)}
-                                                                disabled={index === 0}
-                                                                className="p-1 text-slate-500 hover:text-slate-700 disabled:opacity-30"
-                                                            >
-                                                                <span className="material-symbols-outlined text-lg">arrow_upward</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => moveDetailBlock(index, index + 1)}
-                                                                disabled={index === (formData.detailBlocks?.length || 0) - 1}
-                                                                className="p-1 text-slate-500 hover:text-slate-700 disabled:opacity-30"
-                                                            >
-                                                                <span className="material-symbols-outlined text-lg">arrow_downward</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeDetailBlock(index)}
-                                                                className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded ml-2"
-                                                            >
-                                                                <span className="material-symbols-outlined text-lg">delete</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
 
-                                                    {/* Block Content */}
-                                                    {block.type === 'image' ? (
-                                                        // IMAGE BLOCK
-                                                        <div>
-                                                            {block.content ? (
-                                                                <div className="relative">
-                                                                    <img
-                                                                        src={getOptimizedImageUrl(block.content as string, 'productThumbnail')}
-                                                                        alt={`Block ${index + 1}`}
-                                                                        className="w-full h-auto max-h-60 object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-white"
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => updateBlockContent(index, '')}
-                                                                        className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded hover:bg-black/90"
-                                                                    >
-                                                                        변경
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <label className="block w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors">
-                                                                    <span className="material-symbols-outlined text-slate-400 mb-1">add_photo_alternate</span>
-                                                                    <span className="text-xs text-slate-500">이미지 업로드</span>
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        onChange={(e) => {
-                                                                            if (e.target.files?.[0]) handleBlockImageUpload(index, e.target.files[0]);
-                                                                        }}
-                                                                        className="hidden"
-                                                                    />
-                                                                </label>
-                                                            )}
-                                                        </div>
-                                                    ) : block.type === 'slide' ? (
-                                                        // SLIDE BLOCK
-                                                        <div>
-                                                            <div className="mb-3">
+                                                        {/* Block Content */}
+                                                        {block.type === 'image' ? (
+                                                            // IMAGE BLOCK
+                                                            <div className="block-img">
+                                                                {block.content ? (
+                                                                    <div style={{ position: 'relative' }}>
+                                                                        <img
+                                                                            src={getOptimizedImageUrl(block.content as string, 'productThumbnail')}
+                                                                            alt={`Block ${index + 1}`}
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => updateBlockContent(index, '')}
+                                                                            className="btn btn-ink btn-sm"
+                                                                            style={{ position: 'absolute', top: 8, right: 8 }}
+                                                                        >
+                                                                            변경
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <label className="block-img-empty" style={{ cursor: 'pointer' }}>
+                                                                        <Icon name="add_photo_alternate" />
+                                                                        이미지 업로드
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            onChange={(e) => {
+                                                                                if (e.target.files?.[0]) handleBlockImageUpload(index, e.target.files[0]);
+                                                                            }}
+                                                                            style={{ display: 'none' }}
+                                                                        />
+                                                                    </label>
+                                                                )}
+                                                            </div>
+                                                        ) : block.type === 'slide' ? (
+                                                            // SLIDE BLOCK
+                                                            <div className="stack" style={{ gap: 8 }}>
                                                                 <input
                                                                     type="text"
+                                                                    className="inp"
                                                                     value={(block.content as DetailSlide).title || ''}
                                                                     onChange={(e) => updateSlideInBlock(index, 'title', e.target.value)}
                                                                     placeholder="슬라이드 제목 (예: 1일차 숙소)"
-                                                                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
                                                                 />
-                                                            </div>
-                                                            <div className="mb-2">
-                                                                <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 가능)</label>
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    multiple
-                                                                    onChange={(e) => handleSlideBlockImages(index, e.target.files)}
-                                                                    className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-teal-50 file:text-teal-700"
-                                                                />
-                                                            </div>
-                                                            {(block.content as DetailSlide).images?.length > 0 && (
-                                                                <div className="flex gap-2 overflow-x-auto pb-2">
-                                                                    {(block.content as DetailSlide).images.map((img, imgIdx) => (
-                                                                        <div key={imgIdx} className="relative flex-shrink-0">
-                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`Slide Img ${imgIdx}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => removeSlideBlockImage(index, imgIdx)}
-                                                                                className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white"
-                                                                            >
-                                                                                <span className="material-symbols-outlined text-xs">close</span>
-                                                                            </button>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : block.type === 'timeline' ? (
-                                                        // TIMELINE BLOCK
-                                                        <div>
-                                                            <div className="grid grid-cols-2 gap-3 mb-3">
                                                                 <div>
-                                                                    <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이미지 목록 (다중 업로드 가능)</label>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        multiple
+                                                                        onChange={(e) => handleSlideBlockImages(index, e.target.files)}
+                                                                        className="inp"
+                                                                        style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }}
+                                                                    />
                                                                 </div>
-                                                                <div>
-                                                                    <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
-                                                                </div>
+                                                                {(block.content as DetailSlide).images?.length > 0 && (
+                                                                    <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
+                                                                        {(block.content as DetailSlide).images.map((img, imgIdx) => (
+                                                                            <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
+                                                                                <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`Slide Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeSlideBlockImage(index, imgIdx)}
+                                                                                    style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                                                >
+                                                                                    <Icon name="close" style={{ fontSize: 14 }} />
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            <div className="mb-3">
-                                                                <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                            </div>
-                                                            <div className="mb-2">
-                                                                <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
-                                                                <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('detail', index, e.target.files)} className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700" />
-                                                            </div>
-                                                            {(block.content as TimelineContent).images?.length > 0 && (
-                                                                <div className="flex gap-2 overflow-x-auto pb-2">
-                                                                    {(block.content as TimelineContent).images.map((img, imgIdx) => (
-                                                                        <div key={imgIdx} className="relative flex-shrink-0">
-                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-                                                                            <button type="button" onClick={() => removeTimelineBlockImage('detail', index, imgIdx)} className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white"><span className="material-symbols-outlined text-xs">close</span></button>
-                                                                        </div>
-                                                                    ))}
+                                                        ) : block.type === 'timeline' ? (
+                                                            // TIMELINE BLOCK
+                                                            <div className="stack" style={{ gap: 8 }}>
+                                                                <div className="row" style={{ gap: 8 }}>
+                                                                    <input type="text" className="inp" style={{ width: 140 }} value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'time', e.target.value)} placeholder="시간 (예: 10:00)" />
+                                                                    <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" />
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    ) : block.type === 'dayInfo' ? (
-                                                        // DAY INFO BLOCK
-                                                        <div>
-                                                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                                                <textarea className="inp" value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('detail', index, 'description', e.target.value)} placeholder="설명" rows={3} />
                                                                 <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">일차</label>
-                                                                    <div className="w-full px-3 py-2 border rounded-lg text-sm bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold">{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이미지 목록 (다중 업로드 기능)</label>
+                                                                    <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('detail', index, e.target.files)} className="inp" style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }} />
                                                                 </div>
-                                                                <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">날짜 (예: 05/26(화))</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                </div>
+                                                                {(block.content as TimelineContent).images?.length > 0 && (
+                                                                    <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
+                                                                        {(block.content as TimelineContent).images.map((img, imgIdx) => (
+                                                                            <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
+                                                                                <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                                <button type="button" onClick={() => removeTimelineBlockImage('detail', index, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 14 }} /></button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            <div className="grid grid-cols-1 gap-3 mb-3">
-                                                                <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">일정 제목</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                </div>
-                                                                <div>
-                                                                    <label className="block text-xs text-slate-500 mb-1">주요 일정 요약</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                </div>
-                                                            </div>
-                                                            <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                                <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">🍽 식사 정보</label>
-                                                                <div className="grid grid-cols-3 gap-2">
+                                                        ) : block.type === 'dayInfo' ? (
+                                                            // DAY INFO BLOCK
+                                                            <div className="stack" style={{ gap: 8 }}>
+                                                                <div className="field-row">
                                                                     <div>
-                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">조식</label>
-                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                        <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일차</label>
+                                                                        <div className="badge b-amber" style={{ height: 44, borderRadius: 'var(--r-md)', width: '100%', justifyContent: 'flex-start', padding: '0 14px', fontSize: 14 }}>{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">중식</label>
-                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="block text-[10px] text-slate-500 mb-0.5">석식</label>
-                                                                        <input type="text" value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                        <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>날짜 (예: 05/26(화))</label>
+                                                                        <input type="text" className="inp" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" />
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400 mb-2">🏠 숙소 정보</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        // DIVIDER BLOCK
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="flex-1">
-                                                                <label className="block text-xs font-medium text-slate-500 mb-1">스타일</label>
-                                                                <div className="flex gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => updateBlockContent(index, { ...(block.content as DividerContent), style: 'line' })}
-                                                                        className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${(block.content as DividerContent).style === 'line'
-                                                                            ? 'bg-teal-50 border-teal-500 text-teal-700'
-                                                                            : 'border-slate-200 dark:border-slate-700 text-slate-600'
-                                                                            }`}
-                                                                    >
-                                                                        가로선
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => updateBlockContent(index, { ...(block.content as DividerContent), style: 'space' })}
-                                                                        className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${(block.content as DividerContent).style === 'space'
-                                                                            ? 'bg-teal-50 border-teal-500 text-teal-700'
-                                                                            : 'border-slate-200 dark:border-slate-700 text-slate-600'
-                                                                            }`}
-                                                                    >
-                                                                        여백
-                                                                    </button>
+                                                                <div>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일정 제목</label>
+                                                                    <input type="text" className="inp" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>주요 일정 요약</label>
+                                                                    <input type="text" className="inp" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>🍽 식사 정보</label>
+                                                                    <div className="meal-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                                                        <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>조식</span><input value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" /></div>
+                                                                        <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>중식</span><input value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" /></div>
+                                                                        <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>석식</span><input value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" /></div>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>🏠 숙소 정보</label>
+                                                                    <div className="inp-mini"><span className="pre"><Icon name="hotel" style={{ fontSize: 14 }} /></span><input value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" /></div>
                                                                 </div>
                                                             </div>
-                                                            <div className="w-32">
-                                                                <label className="block text-xs font-medium text-slate-500 mb-1">
-                                                                    높이 ({(block.content as DividerContent).height}px)
-                                                                </label>
-                                                                <input
-                                                                    type="range"
-                                                                    min="10"
-                                                                    max="120"
-                                                                    step="10"
-                                                                    value={(block.content as DividerContent).height}
-                                                                    onChange={(e) => updateBlockContent(index, { ...(block.content as DividerContent), height: parseInt(e.target.value) })}
-                                                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                                                                />
+                                                        ) : (
+                                                            // DIVIDER BLOCK
+                                                            <div className="row" style={{ gap: 16, alignItems: 'flex-end' }}>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>스타일</label>
+                                                                    <div className="row" style={{ gap: 8 }}>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => updateBlockContent(index, { ...(block.content as DividerContent), style: 'line' })}
+                                                                            className={`btn btn-sm ${(block.content as DividerContent).style === 'line' ? 'btn-ink' : 'btn-ghost'}`}
+                                                                            style={{ flex: 1 }}
+                                                                        >
+                                                                            가로선
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => updateBlockContent(index, { ...(block.content as DividerContent), style: 'space' })}
+                                                                            className={`btn btn-sm ${(block.content as DividerContent).style === 'space' ? 'btn-ink' : 'btn-ghost'}`}
+                                                                            style={{ flex: 1 }}
+                                                                        >
+                                                                            여백
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ width: 140 }}>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>높이 ({(block.content as DividerContent).height}px)</label>
+                                                                    <input
+                                                                        type="range"
+                                                                        min="10"
+                                                                        max="120"
+                                                                        step="10"
+                                                                        value={(block.content as DividerContent).height}
+                                                                        onChange={(e) => updateBlockContent(index, { ...(block.content as DividerContent), height: parseInt(e.target.value) })}
+                                                                        style={{ width: '100%' }}
+                                                                    />
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                    </div>
+                                                    <button type="button" className="act-btn danger" onClick={() => removeDetailBlock(index)} title="삭제"><Icon name="delete" /></button>
                                                 </div>
                                             ))}
                                         </div>
@@ -2131,7 +1969,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                         {/* Itinerary Tab */}
                         {currentTab === 'itinerary' && (
-                            <div className="space-y-6">
+                            <div className="stack" style={{ maxWidth: 860 }}>
                                 {/* ─── Quick actions: bulk image upload + N-day skeleton ─── */}
                                 <ItineraryQuickActions
                                     onBulkImages={bulkAddItineraryImages}
@@ -2142,361 +1980,302 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                                 {/* Itinerary Block Content Section */}
                                 <div>
-                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            일정 블록 (위에서 아래로 표시되는 순서)
-                                        </label>
-                                        <div className="flex gap-2 flex-wrap">
-                                            <button
-                                                type="button"
-                                                onClick={() => addItineraryBlock('timeline')}
-                                                className="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
-                                                title="시간·제목·설명·이미지가 들어가는 일정 항목 (예: '10:00 자이승 전망대 + 사진 3장')"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">add_location</span>
-                                                일정 항목 추가
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addItineraryBlock('image')}
-                                                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
-                                                title="단일 이미지 하나만 (긴 한 장 이미지에 적합)"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">image</span>
-                                                사진 1장
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addItineraryBlock('slide')}
-                                                className="px-3 py-1.5 bg-teal-500 text-white text-xs font-medium rounded-lg hover:bg-teal-600 transition-colors flex items-center gap-1"
-                                                title="사진 여러 장을 가로 갤러리로 묶음 (제목 부여 가능)"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">view_carousel</span>
-                                                갤러리
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => addItineraryBlock('divider')}
-                                                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
-                                                title="블록 사이 간격 또는 가로선"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">remove</span>
-                                                구분선
-                                            </button>
-                                        </div>
+                                    <div className="block-add-bar">
+                                        <span className="block-add-label"><Icon name="add" />블록 추가</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => addItineraryBlock('timeline')}
+                                            className="chip"
+                                            title="시간·제목·설명·이미지가 들어가는 일정 항목 (예: '10:00 자이승 전망대 + 사진 3장')"
+                                        >
+                                            <Icon name="add_location" style={{ fontSize: 16 }} />일정 항목 추가
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => addItineraryBlock('image')}
+                                            className="chip"
+                                            title="단일 이미지 하나만 (긴 한 장 이미지에 적합)"
+                                        >
+                                            <Icon name="image" style={{ fontSize: 16 }} />사진 1장
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => addItineraryBlock('slide')}
+                                            className="chip"
+                                            title="사진 여러 장을 가로 갤러리로 묶음 (제목 부여 가능)"
+                                        >
+                                            <Icon name="view_carousel" style={{ fontSize: 16 }} />갤러리
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => addItineraryBlock('divider')}
+                                            className="chip"
+                                            title="블록 사이 간격 또는 가로선"
+                                        >
+                                            <Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선
+                                        </button>
                                     </div>
-                                    <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        💡 <strong>사용 방법:</strong>
-                                        <ul className="mt-1.5 ml-4 list-disc space-y-0.5">
-                                            <li><strong>1日目, 2日目 헤더</strong>는 위쪽 <span className="text-amber-700 dark:text-amber-400 font-semibold">「N일 일정 골격 만들기」</span> 버튼으로 한 번에 생성하세요. 헤더 안에 도시명·식사·숙소를 입력하시면 됩니다.</li>
-                                            <li><strong>각 일자 안의 이벤트</strong>(예: 자이승 전망대 방문 + 사진 5장)는 <span className="text-blue-600 dark:text-blue-400 font-semibold">「일정 항목 추가」</span> 버튼으로 추가. 시간·제목·설명·사진 여러 장 입력 가능.</li>
+                                    <div className="card-muted-note" style={{ marginBottom: 14, display: 'block' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontWeight: 700 }}><Icon name="lightbulb" />사용 방법</div>
+                                        <ul style={{ margin: '8px 0 0', paddingLeft: 20, listStyle: 'disc', lineHeight: 1.7 }}>
+                                            <li><strong>1日目, 2日目 헤더</strong>는 위쪽 <strong>「N일 일정 골격 만들기」</strong> 버튼으로 한 번에 생성하세요. 헤더 안에 도시명·식사·숙소를 입력하시면 됩니다.</li>
+                                            <li><strong>각 일자 안의 이벤트</strong>(예: 자이승 전망대 방문 + 사진 5장)는 <strong>「일정 항목 추가」</strong> 버튼으로 추가. 시간·제목·설명·사진 여러 장 입력 가능.</li>
                                             <li>해당 일자의 식사·숙소는 그 일자의 <strong>DAY INFO</strong> 블록 안에 입력 — PC 화면에서 자동으로 그 일자 맨 아래에 표시됩니다.</li>
-                                            <li>이미지만 길게 한 장씩 올리는 상품은 위쪽 <span className="text-teal-600 dark:text-teal-400 font-semibold">드래그&드롭 박스</span>로 한꺼번에.</li>
+                                            <li>이미지만 길게 한 장씩 올리는 상품은 위쪽 <strong>드래그&드롭 박스</strong>로 한꺼번에.</li>
                                         </ul>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div className="stack" style={{ gap: 12 }}>
                                         {(formData.itineraryBlocks || []).map((block, index) => (
-                                            <div key={block.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-slate-50 dark:bg-slate-800/50 relative">
-                                                {/* Block Header */}
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                            <div key={block.id} data-itinerary-block={block.id} className="edit-row">
+                                                <div className="edit-move">
+                                                    <button type="button" onClick={() => moveItineraryBlock(index, index - 1)} disabled={index === 0}><Icon name="expand_less" /></button>
+                                                    <button type="button" onClick={() => moveItineraryBlock(index, index + 1)} disabled={index === (formData.itineraryBlocks?.length || 0) - 1}><Icon name="expand_more" /></button>
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    {/* Block Header */}
+                                                    <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+                                                        <span className="badge b-gray">
                                                             {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : 'DIVIDER')))}
                                                         </span>
-                                                        <span className="text-sm font-medium text-slate-900 dark:text-white">
-                                                            {index + 1}번째 블록
-                                                        </span>
+                                                        <span className="cell-muted" style={{ fontSize: 12 }}>{index + 1}번째 블록</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => moveItineraryBlock(index, index - 1)}
-                                                            disabled={index === 0}
-                                                            className="p-1 text-slate-500 hover:text-slate-700 disabled:opacity-30"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">arrow_upward</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => moveItineraryBlock(index, index + 1)}
-                                                            disabled={index === (formData.itineraryBlocks?.length || 0) - 1}
-                                                            className="p-1 text-slate-500 hover:text-slate-700 disabled:opacity-30"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">arrow_downward</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeItineraryBlock(index)}
-                                                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded ml-2"
-                                                        >
-                                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
 
-                                                {/* Block Content */}
-                                                {block.type === 'image' ? (
-                                                    // IMAGE BLOCK
-                                                    <div>
-                                                        {block.content ? (
-                                                            <div className="relative">
-                                                                <img
-                                                                    src={getOptimizedImageUrl(block.content as string, 'productThumbnail')}
-                                                                    alt={`Block ${index + 1}`}
-                                                                    className="w-full h-auto max-h-60 object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-white"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => updateItineraryBlockContent(index, '')}
-                                                                    className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded hover:bg-black/90"
-                                                                >
-                                                                    변경
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <label className="block w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors">
-                                                                <span className="material-symbols-outlined text-slate-400 mb-1">add_photo_alternate</span>
-                                                                <span className="text-xs text-slate-500">이미지 업로드</span>
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    onChange={(e) => {
-                                                                        if (e.target.files?.[0]) handleItineraryBlockImageUpload(index, e.target.files[0]);
-                                                                    }}
-                                                                    className="hidden"
-                                                                />
-                                                            </label>
-                                                        )}
-                                                    </div>
-                                                ) : block.type === 'slide' ? (
-                                                    // SLIDE BLOCK
-                                                    <div>
-                                                        <div className="mb-3">
+                                                    {/* Block Content */}
+                                                    {block.type === 'image' ? (
+                                                        // IMAGE BLOCK
+                                                        <div className="block-img">
+                                                            {block.content ? (
+                                                                <div style={{ position: 'relative' }}>
+                                                                    <img
+                                                                        src={getOptimizedImageUrl(block.content as string, 'productThumbnail')}
+                                                                        alt={`Block ${index + 1}`}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateItineraryBlockContent(index, '')}
+                                                                        className="btn btn-ink btn-sm"
+                                                                        style={{ position: 'absolute', top: 8, right: 8 }}
+                                                                    >
+                                                                        변경
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <label className="block-img-empty" style={{ cursor: 'pointer' }}>
+                                                                    <Icon name="add_photo_alternate" />
+                                                                    이미지 업로드
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={(e) => {
+                                                                            if (e.target.files?.[0]) handleItineraryBlockImageUpload(index, e.target.files[0]);
+                                                                        }}
+                                                                        style={{ display: 'none' }}
+                                                                    />
+                                                                </label>
+                                                            )}
+                                                        </div>
+                                                    ) : block.type === 'slide' ? (
+                                                        // SLIDE BLOCK
+                                                        <div className="stack" style={{ gap: 8 }}>
                                                             <input
                                                                 type="text"
+                                                                className="inp"
                                                                 value={(block.content as DetailSlide).title || ''}
                                                                 onChange={(e) => updateItinerarySlideInBlock(index, 'title', e.target.value)}
                                                                 placeholder="슬라이드 제목 (예: 1일차 숙소)"
-                                                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
                                                             />
-                                                        </div>
-                                                        <div className="mb-2">
-                                                            <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 가능)</label>
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                multiple
-                                                                onChange={(e) => handleItinerarySlideBlockImages(index, e.target.files)}
-                                                                className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-teal-50 file:text-teal-700"
-                                                            />
-                                                        </div>
-                                                        {(block.content as DetailSlide).images?.length > 0 && (
-                                                            <div className="flex gap-2 overflow-x-auto pb-2">
-                                                                {(block.content as DetailSlide).images.map((img, imgIdx) => (
-                                                                    <div key={imgIdx} className="relative flex-shrink-0">
-                                                                        <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`Slide Img ${imgIdx}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeItinerarySlideBlockImage(index, imgIdx)}
-                                                                            className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-xs">close</span>
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
+                                                            <div>
+                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이미지 목록 (다중 업로드 가능)</label>
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    multiple
+                                                                    onChange={(e) => handleItinerarySlideBlockImages(index, e.target.files)}
+                                                                    className="inp"
+                                                                    style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }}
+                                                                />
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                ) : block.type === 'timeline' ? (
-                                                    // TIMELINE BLOCK
-                                                    <div>
-                                                        {/* Master picker buttons — pull in spot or hotel data with one click. */}
-                                                        <div className="mb-3">
-                                                            <div className="flex gap-2 mb-2 flex-wrap">
+                                                            {(block.content as DetailSlide).images?.length > 0 && (
+                                                                <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
+                                                                    {(block.content as DetailSlide).images.map((img, imgIdx) => (
+                                                                        <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
+                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`Slide Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => removeItinerarySlideBlockImage(index, imgIdx)}
+                                                                                style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                                            >
+                                                                                <Icon name="close" style={{ fontSize: 14 }} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : block.type === 'timeline' ? (
+                                                        // TIMELINE BLOCK
+                                                        <div className="stack" style={{ gap: 8 }}>
+                                                            {/* Master picker buttons — pull in spot or hotel data with one click. */}
+                                                            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setSpotPickerForIndex(index)}
-                                                                    className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                    className="btn btn-blue btn-sm"
                                                                     title="관광지 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
                                                                 >
-                                                                    <span className="material-symbols-outlined text-sm">location_on</span>
-                                                                    관광지에서 선택
+                                                                    <Icon name="location_on" />관광지에서 선택
                                                                 </button>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setHotelPickerTarget({ kind: 'timeline', index })}
-                                                                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                                                                    className="btn btn-ghost btn-sm"
                                                                     title="호텔 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
                                                                 >
-                                                                    <span className="material-symbols-outlined text-sm">hotel</span>
-                                                                    호텔에서 선택
+                                                                    <Icon name="hotel" />호텔에서 선택
                                                                 </button>
                                                             </div>
-                                                            <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                                                                💡 <strong>3가지 방법 중 선택:</strong>
-                                                                <ol className="list-decimal ml-4 mt-1 space-y-0.5">
-                                                                    <li><span className="text-teal-700 dark:text-teal-400 font-semibold">관광지/호텔에서 선택</span> — 마스터 데이터 자동 채움</li>
+                                                            <div className="card-muted-note" style={{ display: 'block' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontWeight: 700 }}><Icon name="lightbulb" />3가지 방법 중 선택</div>
+                                                                <ol style={{ margin: '6px 0 0', paddingLeft: 20, listStyle: 'decimal', lineHeight: 1.7 }}>
+                                                                    <li><strong>관광지/호텔에서 선택</strong> — 마스터 데이터 자동 채움</li>
                                                                     <li>아래에 <strong>제목·설명을 직접 입력</strong> + 이미지 업로드 → 흰 카드로 표시</li>
                                                                     <li>아래에 <strong>제목·설명만 입력</strong> (이미지 없음) → 큰 핀+텍스트로 표시 (지역 안내·이동 정보용)</li>
                                                                 </ol>
                                                             </div>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                                            <div className="row" style={{ gap: 8 }}>
+                                                                <input type="text" className="inp" style={{ width: 140 }} value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00)" />
+                                                                <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" />
+                                                            </div>
+                                                            <textarea className="inp" value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="설명" rows={3} />
                                                             <div>
-                                                                <input type="text" value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00) - 선택" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이미지 목록 (다중 업로드 기능)</label>
+                                                                <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', index, e.target.files)} className="inp" style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }} />
                                                             </div>
-                                                            <div>
-                                                                <input type="text" value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="mb-3">
-                                                            <textarea value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="설명" rows={3} className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                        </div>
-                                                        <div className="mb-2">
-                                                            <label className="block text-xs text-slate-500 mb-1">이미지 목록 (다중 업로드 기능)</label>
-                                                            <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', index, e.target.files)} className="w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-lg text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700" />
-                                                        </div>
-                                                        {(block.content as TimelineContent).images?.length > 0 && (
-                                                            <div className="flex gap-2 overflow-x-auto pb-2">
-                                                                {(block.content as TimelineContent).images.map((img, imgIdx) => (
-                                                                    <div key={imgIdx} className="relative flex-shrink-0">
-                                                                        <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-                                                                        <button type="button" onClick={() => removeTimelineBlockImage('itinerary', index, imgIdx)} className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white"><span className="material-symbols-outlined text-xs">close</span></button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : block.type === 'dayInfo' ? (
-                                                    // DAY INFO BLOCK
-                                                    <div>
-                                                        <div className="grid grid-cols-2 gap-3 mb-3">
-                                                            <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">일차</label>
-                                                                <div className="w-full px-3 py-2 border rounded-lg text-sm bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold">{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">날짜 (예: 05/26(화))</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 gap-3 mb-3">
-                                                            <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">일정 제목</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs text-slate-500 mb-1">주요 일정 요약</label>
-                                                                <input type="text" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." className="w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                            <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">🍽 식사 정보</label>
-                                                            <div className="grid grid-cols-3 gap-2">
-                                                                <div>
-                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">조식</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                </div>
-                                                                <div>
-                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">중식</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                </div>
-                                                                <div>
-                                                                    <label className="block text-[10px] text-slate-500 mb-0.5">석식</label>
-                                                                    <input type="text" value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <label className="block text-xs font-bold text-blue-700 dark:text-blue-400">🏠 숙소 정보</label>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setHotelPickerForIndex(index)}
-                                                                    className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-bold rounded transition-colors flex items-center gap-1"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-xs">hotel</span>
-                                                                    호텔 마스터에서 선택
-                                                                </button>
-                                                            </div>
-                                                            <input
-                                                                type="text"
-                                                                value={(block.content as DayInfoContent).accommodation || ''}
-                                                                onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value, accommodationHotelId: undefined })}
-                                                                placeholder="개별화장실과 샤워실이 구비된 디럭스게르 (또는 위 버튼으로 마스터 선택)"
-                                                                className="w-full px-2 py-1.5 border rounded text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                                                            />
-                                                            {(block.content as DayInfoContent).accommodationHotelId && (
-                                                                <div className="mt-1.5 text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                                                    <span className="material-symbols-outlined text-xs">link</span>
-                                                                    호텔 마스터에서 선택됨. 직접 입력하면 연결이 해제됩니다.
+                                                            {(block.content as TimelineContent).images?.length > 0 && (
+                                                                <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
+                                                                    {(block.content as TimelineContent).images.map((img, imgIdx) => (
+                                                                        <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
+                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                            <button type="button" onClick={() => removeTimelineBlockImage('itinerary', index, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 14 }} /></button>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             )}
                                                         </div>
+                                                    ) : block.type === 'dayInfo' ? (
+                                                        // DAY INFO BLOCK
+                                                        <div className="stack" style={{ gap: 8 }}>
+                                                            <div className="field-row">
+                                                                <div>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일차</label>
+                                                                    <div className="badge b-amber" style={{ height: 44, borderRadius: 'var(--r-md)', width: '100%', justifyContent: 'flex-start', padding: '0 14px', fontSize: 14 }}>{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>날짜 (예: 05/26(화))</label>
+                                                                    <input type="text" className="inp" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일정 제목</label>
+                                                                <input type="text" className="inp" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" />
+                                                            </div>
+                                                            <div>
+                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>주요 일정 요약</label>
+                                                                <input type="text" className="inp" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." />
+                                                            </div>
+                                                            <div>
+                                                                <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>🍽 식사 정보</label>
+                                                                <div className="meal-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                                                    <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>조식</span><input value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" /></div>
+                                                                    <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>중식</span><input value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" /></div>
+                                                                    <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>석식</span><input value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" /></div>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="row" style={{ marginBottom: 6 }}>
+                                                                    <label className="cell-strong" style={{ fontSize: 12.5 }}>🏠 숙소 정보</label>
+                                                                    <div className="spacer" style={{ flex: 1 }} />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setHotelPickerForIndex(index)}
+                                                                        className="btn btn-ghost btn-sm"
+                                                                    >
+                                                                        <Icon name="hotel" />호텔 마스터에서 선택
+                                                                    </button>
+                                                                </div>
+                                                                <div className="inp-mini"><span className="pre"><Icon name="hotel" style={{ fontSize: 14 }} /></span>
+                                                                    <input
+                                                                        value={(block.content as DayInfoContent).accommodation || ''}
+                                                                        onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value, accommodationHotelId: undefined })}
+                                                                        placeholder="개별화장실과 샤워실이 구비된 디럭스게르 (또는 위 버튼으로 마스터 선택)"
+                                                                    />
+                                                                </div>
+                                                                {(block.content as DayInfoContent).accommodationHotelId && (
+                                                                    <div className="row" style={{ gap: 4, marginTop: 6, fontSize: 11, color: 'var(--mrt-blue-strong)' }}>
+                                                                        <Icon name="link" style={{ fontSize: 14 }} />
+                                                                        호텔 마스터에서 선택됨. 직접 입력하면 연결이 해제됩니다.
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                        {/* ★ Add an event to this specific day — inserts a timeline block
-                                                            right after this dayInfo so admin can pile on events without
-                                                            using ↑/↓ arrows. */}
-                                                        <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-300 dark:border-slate-600">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => addTimelineAfterDay(index)}
-                                                                className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg text-sm font-bold text-blue-700 dark:text-blue-300 transition-colors flex items-center justify-center gap-2"
-                                                            >
-                                                                <span className="material-symbols-outlined text-lg">add_circle</span>
-                                                                이 일자에 일정 항목 추가
-                                                            </button>
-                                                            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 text-center">
-                                                                이 버튼을 누르면 <strong className="text-blue-600 dark:text-blue-400">{(block.content as DayInfoContent).dayLabel || '이 일자'}</strong>의 마지막 일정으로 새 항목이 추가됩니다.
-                                                                관광지 마스터에서 한 번에 채울 수 있어요.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    // DIVIDER BLOCK
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex-1">
-                                                            <label className="block text-xs font-medium text-slate-500 mb-1">스타일</label>
-                                                            <div className="flex gap-2">
+                                                            {/* ★ Add an event to this specific day — inserts a timeline block
+                                                                right after this dayInfo so admin can pile on events without
+                                                                using ↑/↓ arrows. */}
+                                                            <div style={{ marginTop: 6, paddingTop: 14, borderTop: '1.5px dashed var(--border-strong)' }}>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => updateItineraryBlockContent(index, { ...(block.content as DividerContent), style: 'line' })}
-                                                                    className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${(block.content as DividerContent).style === 'line'
-                                                                        ? 'bg-teal-50 border-teal-500 text-teal-700'
-                                                                        : 'border-slate-200 dark:border-slate-700 text-slate-600'
-                                                                        }`}
+                                                                    onClick={() => addTimelineAfterDay(index)}
+                                                                    className="add-line"
                                                                 >
-                                                                    가로선
+                                                                    <Icon name="add_circle" />이 일자에 일정 항목 추가
                                                                 </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => updateItineraryBlockContent(index, { ...(block.content as DividerContent), style: 'space' })}
-                                                                    className={`flex-1 py-1.5 text-xs font-medium rounded-lg border ${(block.content as DividerContent).style === 'space'
-                                                                        ? 'bg-teal-50 border-teal-500 text-teal-700'
-                                                                        : 'border-slate-200 dark:border-slate-700 text-slate-600'
-                                                                        }`}
-                                                                >
-                                                                    여백
-                                                                </button>
+                                                                <p className="muted" style={{ marginTop: 8, fontSize: 11, textAlign: 'center' }}>
+                                                                    이 버튼을 누르면 <strong style={{ color: 'var(--mrt-blue-strong)' }}>{(block.content as DayInfoContent).dayLabel || '이 일자'}</strong>의 마지막 일정으로 새 항목이 추가됩니다.
+                                                                    관광지 마스터에서 한 번에 채울 수 있어요.
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                        <div className="w-32">
-                                                            <label className="block text-xs font-medium text-slate-500 mb-1">
-                                                                높이 ({(block.content as DividerContent).height}px)
-                                                            </label>
-                                                            <input
-                                                                type="range"
-                                                                min="10"
-                                                                max="120"
-                                                                step="10"
-                                                                value={(block.content as DividerContent).height}
-                                                                onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DividerContent), height: parseInt(e.target.value) })}
-                                                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                                                            />
+                                                    ) : (
+                                                        // DIVIDER BLOCK
+                                                        <div className="row" style={{ gap: 16, alignItems: 'flex-end' }}>
+                                                            <div style={{ flex: 1 }}>
+                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>스타일</label>
+                                                                <div className="row" style={{ gap: 8 }}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateItineraryBlockContent(index, { ...(block.content as DividerContent), style: 'line' })}
+                                                                        className={`btn btn-sm ${(block.content as DividerContent).style === 'line' ? 'btn-ink' : 'btn-ghost'}`}
+                                                                        style={{ flex: 1 }}
+                                                                    >
+                                                                        가로선
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateItineraryBlockContent(index, { ...(block.content as DividerContent), style: 'space' })}
+                                                                        className={`btn btn-sm ${(block.content as DividerContent).style === 'space' ? 'btn-ink' : 'btn-ghost'}`}
+                                                                        style={{ flex: 1 }}
+                                                                    >
+                                                                        여백
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ width: 140 }}>
+                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>높이 ({(block.content as DividerContent).height}px)</label>
+                                                                <input
+                                                                    type="range"
+                                                                    min="10"
+                                                                    max="120"
+                                                                    step="10"
+                                                                    value={(block.content as DividerContent).height}
+                                                                    onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DividerContent), height: parseInt(e.target.value) })}
+                                                                    style={{ width: '100%' }}
+                                                                />
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
+                                                <button type="button" className="act-btn danger" onClick={() => removeItineraryBlock(index)} title="삭제"><Icon name="delete" /></button>
                                             </div>
                                         ))}
                                     </div>
@@ -2506,307 +2285,197 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                         {/* Options Tab */}
                         {currentTab === 'options' && (
-                            <div className="space-y-8">
+                            <div className="stack" style={{ maxWidth: 860 }}>
                                 {/* Pricing Options */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-lg dark:text-white">인원별 가격 옵션</h3>
-                                        <button
-                                            type="button"
-                                            onClick={addPricingOption}
-                                            className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
-                                        >
-                                            + 가격 옵션 추가
-                                        </button>
+                                <section className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="groups" />
+                                        <h4>인원별 가격 옵션</h4>
+                                        <span className="muted">1인 가격 · 예약금 · 현지결제</span>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="opt-grid-head"><span>인원</span><span>1인 총가격</span><span>예약금</span><span>현지 결제</span><span></span></div>
+                                    <div className="stack" style={{ gap: 10 }}>
                                         {formData.pricingOptions?.map((option, index) => (
-                                            <div key={index} className="flex gap-4 items-end bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
-                                                <div className="flex-1">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">인원 수</label>
-                                                    <input
-                                                        type="number"
-                                                        value={option.people}
-                                                        onChange={(e) => updatePricingOption(index, 'people', Number(e.target.value))}
-                                                        className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                    />
+                                            <div className="edit-row" key={index}>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div className="opt-grid">
+                                                        <div className="inp-mini"><input type="number" value={option.people} onChange={(e) => updatePricingOption(index, 'people', Number(e.target.value))} /><span>명</span></div>
+                                                        <div className="inp-mini"><span className="pre">₩</span><input type="number" value={option.pricePerPerson} onChange={(e) => updatePricingOption(index, 'pricePerPerson', Number(e.target.value))} /></div>
+                                                        <div className="inp-mini"><span className="pre">₩</span><input type="number" value={option.depositPerPerson || 0} onChange={(e) => updatePricingOption(index, 'depositPerPerson', Number(e.target.value))} /></div>
+                                                        <div className="inp-mini"><span className="pre">₩</span><input type="number" value={option.localPaymentPerPerson || 0} onChange={(e) => updatePricingOption(index, 'localPaymentPerPerson', Number(e.target.value))} /></div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-[2]">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1인당 총 가격</label>
-                                                    <input
-                                                        type="number"
-                                                        value={option.pricePerPerson}
-                                                        onChange={(e) => updatePricingOption(index, 'pricePerPerson', Number(e.target.value))}
-                                                        className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                    />
-                                                </div>
-                                                <div className="flex-[2]">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1인당 예약금</label>
-                                                    <input
-                                                        type="number"
-                                                        value={option.depositPerPerson || 0}
-                                                        onChange={(e) => updatePricingOption(index, 'depositPerPerson', Number(e.target.value))}
-                                                        className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                    />
-                                                </div>
-                                                <div className="flex-[2]">
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">1인당 현지 지불</label>
-                                                    <input
-                                                        type="number"
-                                                        value={option.localPaymentPerPerson || 0}
-                                                        onChange={(e) => updatePricingOption(index, 'localPaymentPerPerson', Number(e.target.value))}
-                                                        className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                    />
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removePricingOption(index)}
-                                                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                                >
-                                                    <span className="material-symbols-outlined">delete</span>
-                                                </button>
+                                                <button type="button" className="act-btn danger" onClick={() => removePricingOption(index)} title="삭제"><Icon name="delete" /></button>
                                             </div>
                                         ))}
                                         {(!formData.pricingOptions || formData.pricingOptions.length === 0) && (
-                                            <p className="text-sm text-slate-500 text-center py-4">등록된 가격 옵션이 없습니다.</p>
+                                            <p className="muted" style={{ textAlign: 'center', padding: '8px 0', fontSize: 13 }}>등록된 가격 옵션이 없습니다.</p>
                                         )}
+                                        <button type="button" className="add-line" onClick={addPricingOption}><Icon name="add" />인원 옵션 추가</button>
                                     </div>
-                                </div>
-
-                                <div className="border-t dark:border-slate-700 my-6"></div>
+                                </section>
 
                                 {/* Accommodation Options */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-lg dark:text-white">숙소 옵션</h3>
-                                        <button
-                                            type="button"
-                                            onClick={addAccommodationOption}
-                                            className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
-                                        >
-                                            + 숙소 옵션 추가
-                                        </button>
+                                <section className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="hotel" />
+                                        <h4>숙소 옵션</h4>
+                                        <span className="muted">기본 1개 선택</span>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="stack" style={{ gap: 10 }}>
                                         {formData.accommodationOptions?.map((option, index) => (
-                                            <div key={index} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg relative">
-                                                <div className="absolute top-2 right-2 flex gap-2">
-                                                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            checked={option.isDefault || false}
-                                                            onChange={() => updateAccommodationOption(index, 'isDefault', true)}
-                                                            className="text-teal-500 focus:ring-teal-500"
+                                            <div className="edit-row" key={index}>
+                                                <div style={{ flex: 1, minWidth: 0 }} className="opt-card">
+                                                    <div className="row" style={{ gap: 8 }}>
+                                                        <button
+                                                            type="button"
+                                                            className={`radio${option.isDefault ? ' on' : ''}`}
+                                                            onClick={() => updateAccommodationOption(index, 'isDefault', true)}
+                                                            title="기본 옵션"
                                                         />
-                                                        기본값
-                                                    </label>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeAccommodationOption(index)}
-                                                        className="text-red-500 hover:text-red-600"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">delete</span>
-                                                    </button>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">이름</label>
                                                         <input
                                                             type="text"
+                                                            className="inp"
+                                                            style={{ flex: 1 }}
                                                             value={option.name}
                                                             onChange={(e) => updateAccommodationOption(index, 'name', e.target.value)}
-                                                            className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="예: 게르"
+                                                            placeholder="옵션명 (예: 게르)"
                                                         />
+                                                        <div className="inp-mini" style={{ width: 130 }}><span className="pre">+₩</span><input type="number" value={option.priceModifier} onChange={(e) => updateAccommodationOption(index, 'priceModifier', Number(e.target.value))} placeholder="0" /></div>
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">가격 조정 (+/-)</label>
-                                                        <input
-                                                            type="number"
-                                                            value={option.priceModifier}
-                                                            onChange={(e) => updateAccommodationOption(index, 'priceModifier', Number(e.target.value))}
-                                                            className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">설명</label>
-                                                        <input
-                                                            type="text"
-                                                            value={option.description}
-                                                            onChange={(e) => updateAccommodationOption(index, 'description', e.target.value)}
-                                                            className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="옵션 설명"
-                                                        />
-                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        className="inp"
+                                                        style={{ marginTop: 8 }}
+                                                        value={option.description}
+                                                        onChange={(e) => updateAccommodationOption(index, 'description', e.target.value)}
+                                                        placeholder="옵션 설명"
+                                                    />
                                                 </div>
+                                                <button type="button" className="act-btn danger" onClick={() => removeAccommodationOption(index)} title="삭제"><Icon name="delete" /></button>
                                             </div>
                                         ))}
+                                        <button type="button" className="add-line" onClick={addAccommodationOption}><Icon name="add" />숙소 옵션 추가</button>
                                     </div>
-                                </div>
-
-                                <div className="border-t dark:border-slate-700 my-6"></div>
+                                </section>
 
                                 {/* Vehicle Options */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-lg dark:text-white">차량 옵션</h3>
-                                        <button
-                                            type="button"
-                                            onClick={addVehicleOption}
-                                            className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 text-sm"
-                                        >
-                                            + 차량 옵션 추가
-                                        </button>
+                                <section className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="directions_car" />
+                                        <h4>차량 옵션</h4>
+                                        <span className="muted">기본 1개 선택</span>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="stack" style={{ gap: 10 }}>
                                         {formData.vehicleOptions?.map((option, index) => (
-                                            <div key={index} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg relative">
-                                                <div className="absolute top-2 right-2 flex gap-2">
-                                                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            checked={option.isDefault || false}
-                                                            onChange={() => updateVehicleOption(index, 'isDefault', true)}
-                                                            className="text-teal-500 focus:ring-teal-500"
+                                            <div className="edit-row" key={index}>
+                                                <div style={{ flex: 1, minWidth: 0 }} className="opt-card">
+                                                    <div className="row" style={{ gap: 8 }}>
+                                                        <button
+                                                            type="button"
+                                                            className={`radio${option.isDefault ? ' on' : ''}`}
+                                                            onClick={() => updateVehicleOption(index, 'isDefault', true)}
+                                                            title="기본 옵션"
                                                         />
-                                                        기본값
-                                                    </label>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeVehicleOption(index)}
-                                                        className="text-red-500 hover:text-red-600"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">delete</span>
-                                                    </button>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4 mt-4">
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">이름</label>
                                                         <input
                                                             type="text"
+                                                            className="inp"
+                                                            style={{ flex: 1 }}
                                                             value={option.name}
                                                             onChange={(e) => updateVehicleOption(index, 'name', e.target.value)}
-                                                            className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="예: 스타렉스"
+                                                            placeholder="옵션명 (예: 스타렉스)"
                                                         />
+                                                        <div className="inp-mini" style={{ width: 130 }}><span className="pre">+₩</span><input type="number" value={option.priceModifier} onChange={(e) => updateVehicleOption(index, 'priceModifier', Number(e.target.value))} placeholder="0" /></div>
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">가격 조정 (+/-)</label>
-                                                        <input
-                                                            type="number"
-                                                            value={option.priceModifier}
-                                                            onChange={(e) => updateVehicleOption(index, 'priceModifier', Number(e.target.value))}
-                                                            className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <label className="block text-xs font-medium text-slate-500 mb-1">설명</label>
-                                                        <input
-                                                            type="text"
-                                                            value={option.description}
-                                                            onChange={(e) => updateVehicleOption(index, 'description', e.target.value)}
-                                                            className="w-full px-3 py-2 border rounded dark:bg-slate-900 dark:border-slate-700"
-                                                            placeholder="옵션 설명"
-                                                        />
-                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        className="inp"
+                                                        style={{ marginTop: 8 }}
+                                                        value={option.description}
+                                                        onChange={(e) => updateVehicleOption(index, 'description', e.target.value)}
+                                                        placeholder="옵션 설명"
+                                                    />
                                                 </div>
+                                                <button type="button" className="act-btn danger" onClick={() => removeVehicleOption(index)} title="삭제"><Icon name="delete" /></button>
                                             </div>
                                         ))}
+                                        <button type="button" className="add-line" onClick={addVehicleOption}><Icon name="add" />차량 옵션 추가</button>
                                     </div>
-                                </div>
+                                </section>
                             </div>
                         )}
 
                         {/* Includes Tab */}
                         {currentTab === 'includes' && (
-                            <div className="space-y-6">
+                            <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 18, maxWidth: 860 }}>
                                 {/* Included */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        포함 사항
-                                    </label>
-                                    <div className="space-y-2 mb-3">
+                                <section className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="check_circle" style={{ color: 'var(--mrt-green)' }} />
+                                        <h4>포함 사항</h4>
+                                    </div>
+                                    <div className="stack" style={{ gap: 8 }}>
                                         {formData.included?.map((item, index) => (
-                                            <div key={index} className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                                                <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-sm">check_circle</span>
-                                                <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">{item}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeIncluded(index)}
-                                                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                                                >
-                                                    <span className="material-symbols-outlined text-xs">close</span>
-                                                </button>
+                                            <div className="row" style={{ gap: 8 }} key={index}>
+                                                <Icon name="check_circle" style={{ color: 'var(--mrt-green)', fontSize: 18, flex: 'none' }} />
+                                                <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text-body)' }}>{item}</span>
+                                                <button type="button" className="act-btn danger" onClick={() => removeIncluded(index)} title="삭제"><Icon name="close" /></button>
                                             </div>
                                         ))}
+                                        <input
+                                            type="text"
+                                            className="inp"
+                                            placeholder="포함 항목 입력 후 Enter"
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    addIncluded((e.target as HTMLInputElement).value);
+                                                    (e.target as HTMLInputElement).value = '';
+                                                }
+                                            }}
+                                        />
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder="포함 항목 입력 후 Enter"
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                addIncluded((e.target as HTMLInputElement).value);
-                                                (e.target as HTMLInputElement).value = '';
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                    />
-                                </div>
+                                </section>
 
                                 {/* Excluded */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                        불포함 사항
-                                    </label>
-                                    <div className="space-y-2 mb-3">
+                                <section className="edit-sec">
+                                    <div className="edit-sec-head">
+                                        <Icon name="cancel" style={{ color: 'var(--mrt-red)' }} />
+                                        <h4>불포함 사항</h4>
+                                    </div>
+                                    <div className="stack" style={{ gap: 8 }}>
                                         {formData.excluded?.map((item, index) => (
-                                            <div key={index} className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                                <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-sm">cancel</span>
-                                                <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">{item}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeExcluded(index)}
-                                                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                                                >
-                                                    <span className="material-symbols-outlined text-xs">close</span>
-                                                </button>
+                                            <div className="row" style={{ gap: 8 }} key={index}>
+                                                <Icon name="cancel" style={{ color: 'var(--mrt-red)', fontSize: 18, flex: 'none' }} />
+                                                <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text-body)' }}>{item}</span>
+                                                <button type="button" className="act-btn danger" onClick={() => removeExcluded(index)} title="삭제"><Icon name="close" /></button>
                                             </div>
                                         ))}
+                                        <input
+                                            type="text"
+                                            className="inp"
+                                            placeholder="불포함 항목 입력 후 Enter"
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    addExcluded((e.target as HTMLInputElement).value);
+                                                    (e.target as HTMLInputElement).value = '';
+                                                }
+                                            }}
+                                        />
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder="불포함 항목 입력 후 Enter"
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                addExcluded((e.target as HTMLInputElement).value);
-                                                (e.target as HTMLInputElement).value = '';
-                                            }
-                                        }}
-                                        className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
-                                    />
-                                </div>
+                                </section>
                             </div>
                         )}
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
-                        >
+                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)' }}>
+                        <button type="button" onClick={onClose} className="btn btn-ghost">
                             취소
                         </button>
-                        <button
-                            type="submit"
-                            className="px-6 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-bold"
-                        >
-                            {product ? '수정 완료' : '추가 완료'}
+                        <button type="submit" className="btn btn-ink">
+                            <Icon name="check" />{product ? '수정 완료' : '추가 완료'}
                         </button>
                     </div>
                 </form>
@@ -2857,7 +2526,7 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
     };
 
     return (
-        <div className="space-y-4">
+        <div className="stack" style={{ gap: 12 }}>
             {/* ─── Bulk image drop zone ─── */}
             <div
                 onDragOver={(e) => {
@@ -2881,14 +2550,17 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
                     if (uploading) return;
                     fileInputRef.current?.click();
                 }}
-                className={`relative w-full rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                    drag
-                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                        : uploading
-                            ? 'border-slate-300 bg-slate-50 dark:bg-slate-800 cursor-wait'
-                            : 'border-slate-300 dark:border-slate-700 hover:border-teal-400 hover:bg-teal-50/30 dark:hover:bg-slate-800/50'
-                }`}
-                style={{ padding: '28px 24px' }}
+                style={{
+                    position: 'relative',
+                    width: '100%',
+                    borderRadius: 'var(--r-lg)',
+                    border: '1.5px dashed',
+                    borderColor: drag ? 'var(--mrt-blue)' : 'var(--border-strong)',
+                    background: drag ? 'var(--mrt-blue-50)' : (uploading ? 'var(--mrt-gray-50)' : '#fff'),
+                    cursor: uploading ? 'wait' : 'pointer',
+                    padding: '24px',
+                    transition: 'all var(--dur-fast)',
+                }}
                 role="button"
                 tabIndex={0}
             >
@@ -2897,58 +2569,51 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
                     type="file"
                     accept="image/*"
                     multiple
-                    className="hidden"
+                    style={{ display: 'none' }}
                     onChange={(e) => {
                         handleFiles(e.target.files);
                         // reset so picking the same files again still fires
                         e.target.value = '';
                     }}
                 />
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center flex-shrink-0">
-                        <span className="material-symbols-outlined text-teal-600 dark:text-teal-400 text-2xl">
-                            {uploading ? 'hourglass_top' : 'cloud_upload'}
-                        </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                <div className="row" style={{ gap: 14 }}>
+                    <span className="metric-ico tint-blue" style={{ width: 44, height: 44, flex: 'none' }}>
+                        <Icon name={uploading ? 'hourglass_top' : 'cloud_upload'} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="cell-strong" style={{ marginBottom: 2 }}>
                             {uploading
                                 ? `업로드 중... ${progress ? `${progress.done} / ${progress.total}` : ''}`
                                 : '이미지 한 번에 업로드'}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        <div className="cell-muted" style={{ fontSize: 12, lineHeight: 1.5 }}>
                             여러 장의 사진을 이 박스에 드래그하거나 클릭해서 선택하세요. 각 사진이 자동으로 일정 끝에 추가됩니다.
                         </div>
                     </div>
                     {!uploading && (
-                        <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl">
-                            add_photo_alternate
-                        </span>
+                        <Icon name="add_photo_alternate" style={{ color: 'var(--mrt-gray-400)', fontSize: 22 }} />
                     )}
                 </div>
             </div>
 
             {/* ─── N-day skeleton macro ─── */}
-            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 flex-wrap">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-amber-700 dark:text-amber-400">
-                        calendar_view_day
-                    </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-amber-900 dark:text-amber-300">
-                        N일 일정 골격 만들기
-                    </div>
-                    <div className="text-xs text-amber-800/80 dark:text-amber-400/80 mt-0.5">
+            <div className="row" style={{ gap: 12, flexWrap: 'wrap', padding: 16, borderRadius: 'var(--r-lg)', background: '#FFF3DC', border: '1px solid #F0DBA8' }}>
+                <span className="metric-ico tint-amber" style={{ width: 40, height: 40, flex: 'none' }}>
+                    <Icon name="calendar_view_day" />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="cell-strong" style={{ color: '#8a5a12' }}>N일 일정 골격 만들기</div>
+                    <div style={{ fontSize: 12, color: '#9a6a22', marginTop: 2 }}>
                         1日目 ~ N日目 헤더와 구분선을 한 번에 생성합니다. 각 날짜는 펼쳐서 내용 채우세요.
                     </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <label className="text-xs font-medium text-amber-900 dark:text-amber-300">일수</label>
+                <div className="row" style={{ gap: 8, flex: 'none' }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#8a5a12' }}>일수</label>
                     <select
                         value={skeletonDays}
                         onChange={(e) => setSkeletonDays(Number(e.target.value))}
-                        className="px-2 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-sm font-semibold text-amber-900 dark:text-amber-300"
+                        className="select"
+                        style={{ height: 36, fontSize: 13 }}
                     >
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                             <option key={n} value={n}>
@@ -2959,10 +2624,9 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
                     <button
                         type="button"
                         onClick={() => onSkeleton(skeletonDays)}
-                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 transition-colors"
+                        className="btn btn-ink btn-sm"
                     >
-                        <span className="material-symbols-outlined text-sm">add</span>
-                        생성
+                        <Icon name="add" />생성
                     </button>
                 </div>
             </div>
