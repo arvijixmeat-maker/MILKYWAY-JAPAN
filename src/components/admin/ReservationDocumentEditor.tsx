@@ -8,6 +8,8 @@ import {
     type TemplateDay,
     type ActivityType,
 } from '../../pages/AdminTemplateManage';
+import { api } from '../../lib/api';
+import type { DayInfoContent, DetailContentBlock, TimelineContent, TourProduct } from '../../types/product';
 
 export interface ReservationDocContent {
     name: string;
@@ -51,6 +53,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const [docSettings, setDocSettings] = useState<DocumentSettings>(defaultDocumentSettings());
     const [saving, setSaving] = useState(false);
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+    const [products, setProducts] = useState<TourProduct[]>([]);
+    const [selectedProductId, setSelectedProductId] = useState('');
+    const [loadingProducts, setLoadingProducts] = useState(false);
 
     useEffect(() => {
         if (!open) return;
@@ -60,6 +65,127 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         setDocSettings(mergeDocumentSettings(initialContent?.documentSettings));
         setSelectedDayIndex(0);
     }, [open, initialContent]);
+
+    useEffect(() => {
+        if (!open || documentType !== 'itinerary' || products.length > 0) return;
+        setLoadingProducts(true);
+        api.products.list()
+            .then((data: any) => {
+                if (!Array.isArray(data)) return;
+                const parse = (value: any, fallback: any = []) => {
+                    if (typeof value === 'string') {
+                        try { return JSON.parse(value); } catch { return fallback; }
+                    }
+                    return value || fallback;
+                };
+                const mapped = data.map((item: any) => ({
+                    ...item,
+                    mainImages: parse(item.mainImages || item.main_images),
+                    galleryImages: parse(item.galleryImages || item.gallery_images),
+                    detailImages: parse(item.detailImages || item.detail_images),
+                    itineraryImages: parse(item.itineraryImages || item.itinerary_images),
+                    itineraryBlocks: parse(item.itineraryBlocks || item.itinerary_blocks),
+                    highlights: parse(item.highlights),
+                    included: parse(item.included),
+                    excluded: parse(item.excluded),
+                    pricingOptions: parse(item.pricingOptions || item.pricing_options),
+                    accommodationOptions: parse(item.accommodationOptions || item.accommodation_options),
+                    vehicleOptions: parse(item.vehicleOptions || item.vehicle_options),
+                })) as TourProduct[];
+                setProducts(mapped);
+                const target = (customer.tripType || '').replace(/\s+/g, '').toLowerCase();
+                const matched = mapped.find(product => {
+                    const productName = (product.name || '').replace(/\s+/g, '').toLowerCase();
+                    return productName === target || productName.includes(target) || target.includes(productName);
+                });
+                if (matched) setSelectedProductId(matched.id);
+            })
+            .finally(() => setLoadingProducts(false));
+    }, [open, documentType, customer.tripType, products.length]);
+
+    const textFromProductItem = (item: any) => {
+        if (typeof item === 'string') return item;
+        return item?.label || item?.title || item?.name || item?.description || '';
+    };
+
+    const productBlocksToDays = (blocks: DetailContentBlock[] = []): TemplateDay[] => {
+        const converted: TemplateDay[] = [];
+        let current: TemplateDay | null = null;
+        for (const block of blocks) {
+            if (block.type === 'dayInfo') {
+                const info = block.content as DayInfoContent;
+                current = {
+                    day: converted.length + 1,
+                    title: info.title || '',
+                    region: '',
+                    summary: info.description || '',
+                    activities: [],
+                    meals: info.meals || {},
+                    accommodation: info.accommodation ? {
+                        id: info.accommodationHotelId,
+                        name: info.accommodation,
+                        location: info.accommodationAddress,
+                        images: info.accommodationImages || [],
+                        description: info.accommodationDescription,
+                    } : null,
+                };
+                converted.push(current);
+                continue;
+            }
+            if (!current) {
+                current = { day: 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
+                converted.push(current);
+            }
+            if (block.type === 'timeline') {
+                const timeline = block.content as TimelineContent;
+                current.activities.push({
+                    time: '',
+                    type: 'sightseeing',
+                    title: timeline.title || '',
+                    description: timeline.description || '',
+                    images: timeline.images || [],
+                });
+            }
+        }
+        return converted;
+    };
+
+    const importSelectedProduct = () => {
+        const product = products.find(item => item.id === selectedProductId);
+        if (!product) return;
+        if (days.length > 0 && !window.confirm('현재 작성 중인 일정과 문서 설정을 상품 정보로 교체할까요?')) return;
+
+        const importedDays = productBlocksToDays(product.itineraryBlocks || []);
+        const included = (product.included || []).map(textFromProductItem).filter(Boolean);
+        const excluded = (product.excluded || []).map(textFromProductItem).filter(Boolean);
+        const defaultPricing = product.pricingOptions?.find(option => option.people === customer.peopleCount)
+            || product.pricingOptions?.[0];
+
+        setName(product.name || customer.tripType || '');
+        setDescription(product.description || '');
+        setDays(importedDays);
+        setSelectedDayIndex(0);
+        setDocSettings(current => ({
+            ...current,
+            overview: {
+                ...current.overview,
+                heroTagline: product.description || current.overview.heroTagline,
+                pricePerPerson: String(defaultPricing?.pricePerPerson || product.price || current.overview.pricePerPerson),
+                includedText: included.join('\n'),
+                excludedText: excluded.join('\n'),
+                included: included.slice(0, 8).map((label, index) => ({
+                    icon: current.overview.included[index]?.icon || 'check_circle',
+                    label,
+                })),
+            },
+            guide: {
+                ...current.guide,
+                paymentInfo: defaultPricing
+                    ? `예약금: 1인 ${defaultPricing.depositPerPerson.toLocaleString()}원\n현지 잔금: 1인 ${defaultPricing.localPaymentPerPerson.toLocaleString()}원`
+                    : current.guide.paymentInfo,
+            },
+        }));
+    };
 
     // ── Day / activity 핸들러 ──
     const updateDay = (idx: number, field: keyof TemplateDay, value: any) =>
@@ -175,6 +301,33 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     {documentType === 'itinerary' ? (
                     <div className="grid h-full grid-cols-[240px_minmax(560px,1fr)_280px] overflow-hidden max-xl:grid-cols-[210px_minmax(520px,1fr)] max-lg:block max-lg:overflow-y-auto">
                         <aside className="overflow-y-auto border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 max-lg:border-b max-lg:border-r-0">
+                            <div className="mb-4 rounded-xl border border-[#8FE7DE] bg-[#F7FAFA] p-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[18px] text-[#0F8F84]">inventory_2</span>
+                                    <div>
+                                        <p className="text-xs font-black text-slate-800">상품 정보 불러오기</p>
+                                        <p className="text-[9px] font-semibold text-slate-400">일정·가격·포함사항을 재사용합니다.</p>
+                                    </div>
+                                </div>
+                                <select
+                                    value={selectedProductId}
+                                    onChange={event => setSelectedProductId(event.target.value)}
+                                    className="mt-3 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700 outline-none focus:border-[#39C4B7]"
+                                    disabled={loadingProducts}
+                                >
+                                    <option value="">{loadingProducts ? '상품 불러오는 중...' : '상품 선택'}</option>
+                                    {products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={importSelectedProduct}
+                                    disabled={!selectedProductId}
+                                    className="mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-[#0F8F84] text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    <span className="material-symbols-outlined text-[15px]">download</span>
+                                    선택 상품 적용
+                                </button>
+                            </div>
                             <div className="mb-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">일정 구성</p>
