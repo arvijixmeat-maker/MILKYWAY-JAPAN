@@ -236,6 +236,8 @@ type TemplatePreviewProps = {
     onPickSpot?: (dayIdx: number, actIdx: number) => void;
     onPickHotel?: (dayIdx: number) => void;
     defaultPage?: 'overview' | 'contract' | 'detail' | 'guide';
+    focusDayIndex?: number;
+    showPageTabs?: boolean;
     // 예약/견적에서 열 때 실제 고객 데이터 자동 표시 (없으면 샘플)
     customer?: {
         tripNumber?: string;
@@ -253,8 +255,9 @@ type TemplatePreviewProps = {
     dailyAccommodations?: Array<{ day: number; accommodation: { name?: string; type?: string; location?: string } }>;
 };
 
-export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview' }) => {
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>(defaultPage);
+    useEffect(() => setActivePage(defaultPage), [defaultPage]);
     const totalDays = days.length;
     const nights = Math.max(0, totalDays - 1);
     const settings = mergeDocumentSettings(documentSettings);
@@ -294,7 +297,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[#F7FAFA] dark:bg-slate-900">
-            <div className="border-b border-[#8FE7DE]/60 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+            {showPageTabs && <div className="border-b border-[#8FE7DE]/60 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-400">
                         <span className="material-symbols-outlined text-[15px]">edit_note</span>PDF 화면에서 직접 편집
@@ -308,7 +311,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                         </button>
                     ))}
                 </div>
-            </div>
+            </div>}
             {customer ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-teal-200 bg-teal-50 px-4 py-2 text-[11px] font-bold text-[#0F8F84] dark:border-teal-800 dark:bg-teal-900/20">
                     <span className="material-symbols-outlined text-[15px]">person</span>
@@ -345,6 +348,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
 
                         <div className="space-y-4">
                             {days.map((day, dayIdx) => {
+                                if (focusDayIndex !== undefined && dayIdx !== focusDayIndex) return null;
                                 const accommodation = getAccommodation(day.day);
                                 const meals = day.meals || {};
                                 return (

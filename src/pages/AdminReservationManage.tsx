@@ -1402,6 +1402,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             open={docEditorOpen}
             onClose={() => setDocEditorOpen(false)}
             title={`${reservation.customerName || '고객'} · ${isQuoteRes ? '見積提案書' : '確定日程表'}`}
+            documentType={activeDocument}
             customer={docCustomer}
             initialContent={docInitialContent}
             onSave={saveDocContent}
