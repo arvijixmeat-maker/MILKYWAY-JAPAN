@@ -344,6 +344,281 @@
 .admin-app-wrapper .drawer-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
 .admin-app-wrapper .drawer-foot { display: flex; align-items: center; gap: 8px; padding: 14px 22px; background: #fff; border-top: 1px solid var(--border-default); }
 
+/* ============ Reservation workspace ============ */
+.admin-app-wrapper .reservation-workspace-scrim {
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.36);
+}
+.admin-app-wrapper .reservation-workspace {
+  width: min(1540px, 100%);
+  max-width: none;
+  height: calc(100vh - 36px);
+  border-radius: 18px;
+  overflow: hidden;
+  animation: workspaceIn 0.24s var(--ease-out);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+}
+@keyframes workspaceIn {
+  from { transform: translateY(10px) scale(0.992); opacity: 0.45; }
+  to { transform: none; opacity: 1; }
+}
+.admin-app-wrapper .reservation-workspace .drawer-head {
+  align-items: center;
+  padding: 16px 22px;
+}
+.admin-app-wrapper .reservation-workspace .drawer-tabs {
+  padding-left: 22px;
+}
+.admin-app-wrapper .reservation-workspace-main {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  background: var(--surface-canvas);
+}
+.admin-app-wrapper .reservation-workspace-body {
+  min-width: 0;
+  padding: 20px 24px 28px;
+}
+.admin-app-wrapper .reservation-workspace-body > .stack {
+  max-width: 980px;
+  margin: 0 auto;
+}
+.admin-app-wrapper .reservation-workspace-body .op-steps {
+  grid-template-columns: repeat(5, minmax(128px, 1fr));
+}
+.admin-app-wrapper .reservation-workspace-body .trip-hero {
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.admin-app-wrapper .reservation-action-rail {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px;
+  border-left: 1px solid var(--border-default);
+  background: #fff;
+}
+.admin-app-wrapper .action-rail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.admin-app-wrapper .action-rail-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: var(--text-tertiary);
+}
+.admin-app-wrapper .action-rail-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  color: var(--text-strong);
+}
+.admin-app-wrapper .action-rail-stack {
+  display: grid;
+  gap: 10px;
+}
+.admin-app-wrapper .action-doc {
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  background: #fff;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.admin-app-wrapper .action-doc.active {
+  border-color: #8FE7DE;
+  box-shadow: 0 0 0 3px rgba(57, 196, 183, 0.08);
+}
+.admin-app-wrapper .action-doc-title {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 36px 1fr 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  text-align: left;
+  cursor: pointer;
+}
+.admin-app-wrapper .action-doc-title > span:nth-child(2) {
+  min-width: 0;
+}
+.admin-app-wrapper .action-doc-title b,
+.admin-app-wrapper .action-doc-title small {
+  display: block;
+}
+.admin-app-wrapper .action-doc-title b {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.admin-app-wrapper .action-doc-title small {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+.admin-app-wrapper .action-doc-title > .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-tertiary);
+}
+.admin-app-wrapper .action-doc-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+.admin-app-wrapper .action-doc-icon .material-symbols-outlined {
+  font-size: 19px;
+}
+.admin-app-wrapper .action-doc .inp {
+  height: 36px;
+  margin-top: 11px;
+  font-size: 12px;
+}
+.admin-app-wrapper .action-doc-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 9px;
+}
+.admin-app-wrapper .action-doc-buttons .btn:first-child {
+  grid-column: 1 / -1;
+}
+.admin-app-wrapper .action-send-all {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 2px;
+}
+.admin-app-wrapper .action-rail-group {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+.admin-app-wrapper .action-rail-group h3 {
+  margin: 0 0 9px;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.admin-app-wrapper .action-link {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr 18px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 5px;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+  text-align: left;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.admin-app-wrapper .action-link:hover {
+  color: var(--mrt-blue-strong);
+}
+.admin-app-wrapper .action-link > .material-symbols-outlined {
+  font-size: 19px;
+}
+.admin-app-wrapper .action-link span {
+  min-width: 0;
+}
+.admin-app-wrapper .action-link b,
+.admin-app-wrapper .action-link small {
+  display: block;
+}
+.admin-app-wrapper .action-link b {
+  font-size: 12.5px;
+  color: var(--text-strong);
+}
+.admin-app-wrapper .action-link small {
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+.admin-app-wrapper .action-history {
+  position: relative;
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 8px;
+  padding: 7px 0;
+}
+.admin-app-wrapper .action-history-dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #39C4B7;
+  box-shadow: 0 0 0 4px rgba(57, 196, 183, 0.1);
+}
+.admin-app-wrapper .action-history b,
+.admin-app-wrapper .action-history small {
+  display: block;
+}
+.admin-app-wrapper .action-history b {
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-app-wrapper .action-history small,
+.admin-app-wrapper .action-rail-empty {
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 1100px) {
+  .admin-app-wrapper .reservation-workspace-scrim { padding: 0; }
+  .admin-app-wrapper .reservation-workspace {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+  .admin-app-wrapper .reservation-workspace-main {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .admin-app-wrapper .reservation-workspace-body .op-steps {
+    grid-template-columns: repeat(3, minmax(125px, 1fr));
+  }
+}
+@media (max-width: 820px) {
+  .admin-app-wrapper .reservation-workspace-main {
+    display: block;
+    overflow-y: auto;
+  }
+  .admin-app-wrapper .reservation-workspace-body {
+    overflow: visible;
+  }
+  .admin-app-wrapper .reservation-action-rail {
+    overflow: visible;
+    border-top: 1px solid var(--border-default);
+    border-left: 0;
+  }
+  .admin-app-wrapper .reservation-workspace .drawer-tabs {
+    overflow-x: auto;
+  }
+  .admin-app-wrapper .reservation-workspace-body .op-steps {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
 .admin-app-wrapper .kv { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13.5px; }
 .admin-app-wrapper .kv > span { color: var(--text-tertiary); font-weight: 600; flex: none; }
 .admin-app-wrapper .kv > b { color: var(--text-strong); font-weight: 700; }

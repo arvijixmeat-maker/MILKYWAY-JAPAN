@@ -759,8 +759,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     ];
 
     return (<>
-        <div className="drawer-scrim" onClick={onClose}>
-            <div className="drawer wide" onClick={e => e.stopPropagation()}>
+        <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
+            <div className="drawer reservation-workspace" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="drawer-head">
@@ -796,8 +796,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                     ))}
                 </div>
 
+                <div className="reservation-workspace-main">
                 {/* Body */}
-                <div className="drawer-body">
+                <div className="drawer-body reservation-workspace-body">
                     {tab === 'overview' && (
                     <div className="stack" style={{ gap: 16 }}>
                         {/* progress */}
@@ -1182,6 +1183,117 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                             </div>
                     </div>
                     )}
+                </div>
+
+                <aside className="reservation-action-rail">
+                    <div className="action-rail-head">
+                        <div>
+                            <span className="action-rail-eyebrow">DOCUMENTS</span>
+                            <h2>문서와 고객 발송</h2>
+                        </div>
+                        <span className={`badge ${itinerarySent && contractSent ? 'b-green' : 'b-blue'}`}>
+                            {[itinerarySent, contractSent].filter(Boolean).length}/2 완료
+                        </span>
+                    </div>
+
+                    <div className="action-rail-stack">
+                        <section className={`action-doc ${activeDocument === 'itinerary' ? 'active' : ''}`}>
+                            <button type="button" className="action-doc-title" onClick={() => setActiveDocument('itinerary')}>
+                                <span className="action-doc-icon tint-blue"><Icon name="map" /></span>
+                                <span>
+                                    <b>확정 일정표</b>
+                                    <small>{itinerarySent ? '고객 발송 완료' : itineraryReady ? '편집 및 발송 가능' : '템플릿 선택 필요'}</small>
+                                </span>
+                                <Icon name={itinerarySent ? 'check_circle' : 'chevron_right'} />
+                            </button>
+                            <select
+                                className="inp"
+                                value={editForm.itineraryTemplateId || ''}
+                                onChange={e => {
+                                    const newId = e.target.value || undefined;
+                                    const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
+                                    setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
+                                    onUpdate(updated);
+                                    setActiveDocument('itinerary');
+                                }}
+                            >
+                                <option value="">일정표 템플릿 선택</option>
+                                {templatesList.map((template: any) => (
+                                    <option key={template.id} value={template.id}>{template.name}</option>
+                                ))}
+                            </select>
+                            <div className="action-doc-buttons">
+                                <button className="btn btn-sm btn-blue" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
+                                    <Icon name="edit_document" />일정표 만들기
+                                </button>
+                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => window.open(itineraryUrl, '_blank')}>
+                                    <Icon name="visibility" />미리보기
+                                </button>
+                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady || sendingItinerary} onClick={sendItineraryToCustomer}>
+                                    <Icon name="send" />발송
+                                </button>
+                            </div>
+                        </section>
+
+                        <section className={`action-doc ${activeDocument === 'contract' ? 'active' : ''}`}>
+                            <button type="button" className="action-doc-title" onClick={() => setActiveDocument('contract')}>
+                                <span className="action-doc-icon tint-purple"><Icon name="contract" /></span>
+                                <span>
+                                    <b>여행 계약서</b>
+                                    <small>{contractSent ? '고객 발송 완료' : contractReady ? '편집 및 발송 가능' : '고객 이메일 필요'}</small>
+                                </span>
+                                <Icon name={contractSent ? 'check_circle' : 'chevron_right'} />
+                            </button>
+                            <div className="action-doc-buttons">
+                                <button className="btn btn-sm btn-blue" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
+                                    <Icon name="edit_document" />계약서 만들기
+                                </button>
+                                <button className="btn btn-sm btn-ghost" onClick={() => window.open(contractUrl, '_blank')}>
+                                    <Icon name="visibility" />미리보기
+                                </button>
+                                <button className="btn btn-sm btn-ghost" disabled={!contractReady || sendingContract} onClick={sendContractToCustomer}>
+                                    <Icon name="send" />발송
+                                </button>
+                            </div>
+                        </section>
+
+                        <button
+                            className="btn btn-blue action-send-all"
+                            onClick={sendReadyDocumentsToCustomer}
+                            disabled={sendingAllDocs || (!itineraryReady && !contractReady) || (itinerarySent && contractSent)}
+                        >
+                            <Icon name={sendingAllDocs ? 'hourglass_top' : 'outgoing_mail'} />
+                            {sendingAllDocs ? '발송 중' : '준비 문서 일괄 발송'}
+                        </button>
+                    </div>
+
+                    <div className="action-rail-group">
+                        <h3>고객 공유</h3>
+                        <button className="action-link" onClick={() => copyCustomerMessage('final')}>
+                            <Icon name="content_copy" />
+                            <span><b>고객 안내문 복사</b><small>일정표와 계약서 링크를 함께 복사합니다.</small></span>
+                            <Icon name="chevron_right" />
+                        </button>
+                        <button className="action-link" onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); }}>
+                            <Icon name="link" />
+                            <span><b>고객 페이지 링크</b><small>마이페이지에서 동일한 문서를 확인합니다.</small></span>
+                            <Icon name="chevron_right" />
+                        </button>
+                    </div>
+
+                    <div className="action-rail-group">
+                        <h3>최근 활동</h3>
+                        {timelineEvents.length > 0 ? [...timelineEvents].reverse().slice(0, 3).map((event: any, index: number) => (
+                            <div className="action-history" key={`${event.timestamp}-${index}`}>
+                                <span className="action-history-dot" />
+                                <div>
+                                    <b>{event.description}</b>
+                                    <small>{event.timestamp ? new Date(event.timestamp).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</small>
+                                </div>
+                            </div>
+                        )) : <p className="action-rail-empty">아직 처리 이력이 없습니다.</p>}
+                    </div>
+                </aside>
                 </div>
 
                 {/* Footer */}
