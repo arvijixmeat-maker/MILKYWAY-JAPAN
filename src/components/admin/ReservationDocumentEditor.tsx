@@ -94,10 +94,14 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 })) as TourProduct[];
                 setProducts(mapped);
                 const target = (customer.tripType || '').replace(/\s+/g, '').toLowerCase();
-                const matched = mapped.find(product => {
+                const matched = mapped.filter(product => {
                     const productName = (product.name || '').replace(/\s+/g, '').toLowerCase();
                     return productName === target || productName.includes(target) || target.includes(productName);
-                });
+                }).sort((a, b) => {
+                    const aStats = getProductScheduleStats(a);
+                    const bStats = getProductScheduleStats(b);
+                    return (bStats.days * 1000 + bStats.activities) - (aStats.days * 1000 + aStats.activities);
+                })[0];
                 if (matched) setSelectedProductId(matched.id);
             })
             .finally(() => setLoadingProducts(false));
@@ -108,12 +112,25 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         return item?.label || item?.title || item?.name || item?.description || '';
     };
 
+    const parseBlockContent = <T,>(content: T | string): T => {
+        if (typeof content !== 'string') return content as T;
+        try { return JSON.parse(content) as T; } catch { return content as T; }
+    };
+
+    const getProductScheduleStats = (product: TourProduct) => {
+        const blocks = product.itineraryBlocks || [];
+        return {
+            days: blocks.filter(block => block.type === 'dayInfo').length,
+            activities: blocks.filter(block => block.type === 'timeline').length,
+        };
+    };
+
     const productBlocksToDays = (blocks: DetailContentBlock[] = []): TemplateDay[] => {
         const converted: TemplateDay[] = [];
         let current: TemplateDay | null = null;
         for (const block of blocks) {
             if (block.type === 'dayInfo') {
-                const info = block.content as DayInfoContent;
+                const info = parseBlockContent<DayInfoContent>(block.content as DayInfoContent | string);
                 current = {
                     day: converted.length + 1,
                     title: info.title || '',
@@ -132,12 +149,12 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 converted.push(current);
                 continue;
             }
-            if (!current) {
-                current = { day: 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
-                converted.push(current);
-            }
             if (block.type === 'timeline') {
-                const timeline = block.content as TimelineContent;
+                if (!current) {
+                    current = { day: 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
+                    converted.push(current);
+                }
+                const timeline = parseBlockContent<TimelineContent>(block.content as TimelineContent | string);
                 current.activities.push({
                     time: '',
                     type: 'sightseeing',
@@ -153,9 +170,12 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const importSelectedProduct = () => {
         const product = products.find(item => item.id === selectedProductId);
         if (!product) return;
-        if (days.length > 0 && !window.confirm('현재 작성 중인 일정과 문서 설정을 상품 정보로 교체할까요?')) return;
-
         const importedDays = productBlocksToDays(product.itineraryBlocks || []);
+        if (importedDays.length === 0 || importedDays.every(day => !day.title && !day.summary && day.activities.length === 0)) {
+            window.alert('이 상품은 예전 이미지형 일정만 등록되어 있어 DAY 일정으로 불러올 수 없습니다. 목록에서 DAY 개수가 표시된 동일 이름 상품을 선택해 주세요.');
+            return;
+        }
+        if (days.length > 0 && !window.confirm('현재 작성 중인 일정과 문서 설정을 상품 정보로 교체할까요?')) return;
         const included = (product.included || []).map(textFromProductItem).filter(Boolean);
         const excluded = (product.excluded || []).map(textFromProductItem).filter(Boolean);
         const defaultPricing = product.pricingOptions?.find(option => option.people === customer.peopleCount)
@@ -316,7 +336,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                     disabled={loadingProducts}
                                 >
                                     <option value="">{loadingProducts ? '상품 불러오는 중...' : '상품 선택'}</option>
-                                    {products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}
+                                    {products.map(product => {
+                                        const stats = getProductScheduleStats(product);
+                                        return <option key={product.id} value={product.id}>{product.name} ({stats.days}일 · 일정 {stats.activities}개)</option>;
+                                    })}
                                 </select>
                                 <button
                                     type="button"
