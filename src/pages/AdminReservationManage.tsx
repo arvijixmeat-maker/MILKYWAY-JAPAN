@@ -290,7 +290,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [showGuideModal, setShowGuideModal] = useState(false);
     const [showAccommodationModal, setShowAccommodationModal] = useState(false);
     const [selectedDay, setSelectedDay] = useState(1);
-    const [extraDays, setExtraDays] = useState(0);
     const [guideList, setGuideList] = useState<any[]>([]);
     const [accommodationList, setAccommodationList] = useState<any[]>([]);
     const [memoDraft, setMemoDraft] = useState('');
@@ -326,24 +325,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         }
     }, [showAccommodationModal]);
 
-    const getTripDays = (): number => {
-        if (!reservation) return 1;
-        // Try to match from date string first (e.g., "2024.05.01-05.05 (4박 5일)")
-        let days = 1;
-        const match = reservation.date.match(/(\d+)박/);
-        if (match) {
-            days = parseInt(match[1]) + 1;
-        } else {
-            // Fallback: try to guess from duration string or just default to 1
-            // If reservation has a dedicated duration field (which we might not have added yet internally to the interface but is in data)
-            // For now default to 1
-        }
-        return days + extraDays;
-    };
-
     useEffect(() => {
         setEditForm(reservation);
-        setExtraDays(0); // Reset extra days when reservation changes
     }, [reservation]);
 
     if (!reservation || !editForm) return null;
@@ -985,109 +968,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
 
-                            {/* Guide */}
-                            <div className="card">
-                                <div className="card-head">
-                                    <Icon name="badge" style={{ color: 'var(--mrt-gray-600)' }} /><h2>담당 가이드</h2>
-                                    <div className="spacer" style={{ flex: 1 }} />
-                                    <button className="link-action" onClick={() => setShowGuideModal(true)}>
-                                        {reservation.assignedGuide ? '변경' : '배정'}<Icon name="chevron_right" />
-                                    </button>
-                                </div>
-                                <div className="card-pad" style={{ paddingTop: 12 }}>
-                                    {reservation.assignedGuide ? (
-                                        <div className="assign-row">
-                                            {reservation.assignedGuide.image ? (
-                                                <img className="avatar round" src={reservation.assignedGuide.image} alt={reservation.assignedGuide.name} />
-                                            ) : (
-                                                <span className="avatar round tint-blue">{getInitials(reservation.assignedGuide.name)}</span>
-                                            )}
-                                            <div style={{ minWidth: 0 }}>
-                                                <div className="cell-strong">{reservation.assignedGuide.name}</div>
-                                                <div className="cell-muted" style={{ fontSize: 12 }}>{reservation.assignedGuide.phone}</div>
-                                            </div>
-                                            <button className="act-btn" title="변경" onClick={() => setShowGuideModal(true)}><Icon name="swap_horiz" /></button>
-                                        </div>
-                                    ) : (
-                                        <div className="assign-empty" onClick={() => setShowGuideModal(true)}>
-                                            <Icon name="person_add" />가이드를 배정하세요
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Trip Timeline / accommodation per day */}
-                            <div className="card">
-                                <div className="card-head">
-                                    <Icon name="hotel" style={{ color: 'var(--mrt-gray-600)' }} /><h2>여행 일정 & 배정</h2>
-                                    <div className="spacer" style={{ flex: 1 }} />
-                                    <button
-                                        className="link-action"
-                                        onClick={async () => {
-                                            if (!reservation.assignedGuide && (!reservation.dailyAccommodations || reservation.dailyAccommodations.length === 0)) {
-                                                alert('할당된 가이드나 숙소가 없습니다.');
-                                                return;
-                                            }
-                                            const updated = {
-                                                ...reservation,
-                                                areAssignmentsVisibleToUser: true,
-                                                history: [
-                                                    ...(reservation.history || []),
-                                                    { timestamp: new Date().toISOString(), type: 'modification', description: '担当ガイド・宿泊先のご案内を送信しました。' }
-                                                ]
-                                            };
-                                            onUpdate(updated);
-                                            await sendNotificationEmail(reservation.email, 'GUIDE_ASSIGNED', {
-                                                customerName: reservation.customerName,
-                                                productName: reservation.productName,
-                                                guideName: reservation.assignedGuide?.name,
-                                                guidePhone: reservation.assignedGuide?.phone,
-                                                userId: reservation.userId,
-                                                reservationId: (reservation as any).reservationNumber || reservation.id,
-                                                reservationDbId: reservation.id,
-                                            });
-                                            alert('고객에게 배정 알림 이메일을 발송했습니다.');
-                                        }}
-                                        title="배정 정보가 변경되었을 때 고객에게 이메일+인앱 알림을 보냅니다. 고객 마이페이지에는 이미 자동으로 표시되어 있습니다."
-                                    >
-                                        <Icon name={reservation.areAssignmentsVisibleToUser ? 'mark_email_read' : 'send'} />
-                                        {reservation.areAssignmentsVisibleToUser ? '알림 재발송' : '고객에게 알림 발송'}
-                                    </button>
-                                </div>
-                                <div className="card-pad" style={{ paddingTop: 12 }}>
-                                    <div className="stack" style={{ gap: 8 }}>
-                                        {Array.from({ length: getTripDays() }, (_, i) => i + 1).map((day) => {
-                                            const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
-                                            return (
-                                                <div className="accom-day" key={day}>
-                                                    <span className="th-day">{day}일차</span>
-                                                    {assigned ? (
-                                                        <div className="assign-row" style={{ flex: 1, padding: 0 }}>
-                                                            {(assigned.accommodation.images && assigned.accommodation.images[0]) ? (
-                                                                <img className="thumb" src={assigned.accommodation.images[0]} alt={assigned.accommodation.name} loading="lazy" />
-                                                            ) : (
-                                                                <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
-                                                            )}
-                                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                                                <div className="cell-strong">{assigned.accommodation.name}</div>
-                                                                <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.location || '—'}</div>
-                                                            </div>
-                                                            <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
-                                                        </div>
-                                                    ) : (
-                                                        <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
-                                                            <Icon name="add" />숙소 선택
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <button className="accom-add" onClick={() => setExtraDays(prev => prev + 1)}>
-                                        <Icon name="add_circle" />일차 추가
-                                    </button>
-                                </div>
-                            </div>
                     </div>
                     )}
 

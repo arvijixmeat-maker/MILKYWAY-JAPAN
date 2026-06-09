@@ -59,9 +59,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     }, [open, initialContent]);
 
     // ── Day / activity 핸들러 ──
-    const updateDay = (idx: number, field: 'title' | 'region', value: string) =>
+    const updateDay = (idx: number, field: keyof TemplateDay, value: any) =>
         setDays(d => d.map((x, i) => i === idx ? { ...x, [field]: value } : x));
-    const addDay = () => setDays(d => [...d, { day: d.length + 1, title: '', region: '', activities: [] }]);
+    const addDay = () => setDays(d => [...d, { day: d.length + 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null }]);
     const removeDay = (idx: number) => setDays(d => d.filter((_, i) => i !== idx).map((x, i) => ({ ...x, day: i + 1 })));
     const addActivity = (dayIdx: number) => setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: [...x.activities, { time: '', type: 'sightseeing' as ActivityType, title: '', description: '' }] } : x));
     const removeActivity = (dayIdx: number, actIdx: number) => setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.filter((_, j) => j !== actIdx) } : x));

@@ -12,7 +12,22 @@ import mongoliaHero from '../assets/login_bg_3.jpg';
 // ─── Types ───────────────────────────────────────────────
 export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
 export interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
-export interface TemplateDay { day: number; title: string; region?: string; activities: Activity[]; }
+export interface TemplateDay {
+    day: number;
+    title: string;
+    region?: string;
+    summary?: string;
+    activities: Activity[];
+    meals?: { breakfast?: string; lunch?: string; dinner?: string };
+    accommodation?: {
+        id?: string;
+        name: string;
+        type?: string;
+        location?: string;
+        images?: string[];
+        description?: string;
+    } | null;
+}
 export interface DocumentSettings {
     overview: {
         subtitle: string;
@@ -150,7 +165,7 @@ export const parseDayActivitiesText = (text: string): Activity[] =>
     (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
         const m = line.match(/^(\d{1,2}:\d{2})\s+(.*)$/);
         const title = m ? m[2] : line;
-        return { time: m ? m[1] : '', type: inferTypeForText(title), title, description: '' };
+        return { time: '', type: inferTypeForText(title), title, description: '' };
     });
 
 const encodeTemplateDescription = (description: string, documentSettings: DocumentSettings) =>
@@ -211,13 +226,16 @@ type TemplatePreviewProps = {
     onCancellation: (idx: number, field: 'period' | 'fee', value: string) => void;
     onGuideNotice: (idx: number, field: 'title' | 'body', value: string) => void;
     // 일정(日程) 직접 편집
-    onDayChange: (dayIdx: number, field: 'title' | 'region', value: string) => void;
+    onDayChange: (dayIdx: number, field: keyof TemplateDay, value: any) => void;
     onActivityChange: (dayIdx: number, actIdx: number, field: 'time' | 'title' | 'description', value: string) => void;
     onAddDay: () => void;
     onAddActivity: (dayIdx: number) => void;
     onRemoveDay: (dayIdx: number) => void;
     onRemoveActivity: (dayIdx: number, actIdx: number) => void;
     onDayActivitiesText?: (dayIdx: number, text: string) => void;
+    onPickSpot?: (dayIdx: number, actIdx: number) => void;
+    onPickHotel?: (dayIdx: number) => void;
+    defaultPage?: 'overview' | 'contract' | 'detail' | 'guide';
     // 예약/견적에서 열 때 실제 고객 데이터 자동 표시 (없으면 샘플)
     customer?: {
         tripNumber?: string;
@@ -235,10 +253,8 @@ type TemplatePreviewProps = {
     dailyAccommodations?: Array<{ day: number; accommodation: { name?: string; type?: string; location?: string } }>;
 };
 
-export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText }) => {
-    const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>('overview');
-    const [textDays, setTextDays] = useState<Set<number>>(new Set());
-    const toggleTextDay = (i: number) => setTextDays(p => { const n = new Set(p); n.has(i) ? n.delete(i) : n.add(i); return n; });
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview' }) => {
+    const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>(defaultPage);
     const totalDays = days.length;
     const nights = Math.max(0, totalDays - 1);
     const settings = mergeDocumentSettings(documentSettings);
@@ -251,14 +267,15 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
     const guideText = assignedGuide?.name
         ? `${assignedGuide.name}${assignedGuide.phone ? `（${assignedGuide.phone}）` : ''}`
         : '日本語ガイドが全日程同行します';
-    const getAccommodation = (day: number) => dailyAccommodations?.find(item => item.day === day)?.accommodation;
-    const accommodationSummary = dailyAccommodations?.length
-        ? dailyAccommodations
-            .filter(item => item.accommodation?.name)
-            .sort((a, b) => a.day - b.day)
-            .map(item => `${item.day}日目：${item.accommodation.name}`)
-            .join(' / ')
-        : '出発前までにご案内します';
+    const getAccommodation = (day: number) =>
+        dailyAccommodations?.find(item => item.day === day)?.accommodation
+        || days.find(item => item.day === day)?.accommodation
+        || null;
+    const accommodationSummary = days
+        .map(day => ({ day: day.day, accommodation: getAccommodation(day.day) }))
+        .filter(item => item.accommodation?.name)
+        .map(item => `${item.day}日目：${item.accommodation?.name}`)
+        .join(' / ') || '出発前までにご案内します';
     const pages = [
         { id: 'overview' as const, label: '日程表', icon: 'article' },
         { id: 'contract' as const, label: '契約書', icon: 'contract' },
@@ -316,27 +333,131 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                     <div className="mt-4 grid grid-cols-2 gap-3"><div><h4 className="mb-1 text-sm font-black text-[#0F8F84]">含まれているもの</h4><textarea value={settings.overview.includedText} onChange={e => onDocSection('overview', { includedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div><div><h4 className="mb-1 text-sm font-black text-slate-500">含まれないもの</h4><textarea value={settings.overview.excludedText} onChange={e => onDocSection('overview', { excludedText: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11px] font-semibold leading-relaxed text-slate-600`} placeholder="1行に1項目" /></div></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">参加人数</p><p className="text-base font-black text-slate-700">{peopleCount}名</p></div><div className="rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] p-3 text-center text-white"><p className="text-[9px] font-black">ご請求金額（合計）</p><p className="text-xl font-black">{sampleTotal.toLocaleString()}円</p></div></div><div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#39C4B7] bg-[#EAF8F7] p-3 text-center"><p className="text-[9px] font-black text-[#0F8F84]">ご予約金（お申込時にお支払い）</p><p className="text-lg font-black text-[#0F8F84]">{sampleDeposit.toLocaleString()}円</p></div><div className="rounded-xl border border-[#8FE7DE] bg-white p-3 text-center"><p className="text-[9px] font-black text-slate-400">現地払い残金</p><p className="text-lg font-black text-slate-700">{sampleLocal.toLocaleString()}円</p></div></div></div>
                 </Frame>}
                 {activePage === 'contract' && <Frame><div className="p-5"><div className="mb-5 flex items-start justify-between"><div className="text-[#0F8F84]"><p className="text-[12px] font-black">モンゴル銀河旅行社</p><p className="text-[8px] font-bold tracking-widest">MILKYWAY JAPAN</p></div><div className="rounded-lg bg-[#39C4B7]/10 px-3 py-2 text-[9px] font-black text-[#0F8F84]">契約日：2026年6月4日</div></div><h3 className="text-center text-[30px] font-black tracking-[0.18em] text-[#0F8F84]">ご旅行契約書</h3><p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500">Travel Contract</p><textarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11px] font-semibold leading-relaxed text-slate-500`} /><div className="mt-5 overflow-hidden rounded-xl border border-[#8FE7DE] text-xs">{[['ご旅行名', name || '銀河・大自然パッケージ'], ['ご旅行期間', tripLength], ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`], ['合計金額', `${sampleTotal.toLocaleString()}円`], ['ガイド', guideText], ['宿泊', accommodationSummary]].map(([label, value]) => <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#8FE7DE] last:border-b-0"><div className="bg-[#F7FAFA] px-3 py-2 font-black text-[#0F8F84]">{label}</div><div className="px-3 py-2 font-semibold text-slate-700">{value}</div></div>)}</div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">キャンセル規定</p><div className="mt-2 space-y-1">{settings.contract.cancellationRows.slice(0, 5).map((row, idx) => <div key={idx} className="grid grid-cols-[1fr_90px] gap-1"><input value={row.period} onChange={e => onCancellation(idx, 'period', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /><input value={row.fee} onChange={e => onCancellation(idx, 'fee', e.target.value)} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div>)}</div></div><div className="rounded-xl border border-[#8FE7DE] p-3"><p className="text-xs font-black text-[#0F8F84]">お支払い</p><input value={settings.contract.paymentMethod} onChange={e => onDocSection('contract', { paymentMethod: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.contract.paymentDeadline} onChange={e => onDocSection('contract', { paymentDeadline: e.target.value })} className={`${fieldClass} mt-1 text-[10px] font-semibold text-slate-500`} /><textarea value={settings.contract.bankInfo} onChange={e => onDocSection('contract', { bankInfo: e.target.value })} rows={3} placeholder="振込先・お支払い案内（自由入力）" className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><div className="mt-4 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div></div></div></div></Frame>}
-                {activePage === 'detail' && <Frame><div className="p-5"><div className="mb-5 flex items-center justify-between"><input value={settings.detail.title} onChange={e => onDocSection('detail', { title: e.target.value })} className={`${fieldClass} text-[24px] font-black tracking-[0.12em] text-[#0F8F84]`} /><span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span></div>
-                    <div className="space-y-3">{days.map((day, dayIdx) => { const inText = textDays.has(dayIdx); return (<div key={dayIdx} className="grid grid-cols-[64px_1fr] gap-3">
-                        <div className="flex flex-col items-center rounded-xl bg-gradient-to-b from-[#0F8F84] to-[#39C4B7] px-2 py-4 text-center text-white"><p className="text-[10px] font-black">DAY {day.day}</p><p className="mt-1 text-[11px] font-bold">{day.day}日目</p><button onClick={() => onRemoveDay(dayIdx)} className="mt-2 text-white/60 hover:text-white" title="이 일차 삭제"><span className="material-symbols-outlined text-[15px]">delete</span></button></div>
-                        <div className="rounded-xl border border-[#8FE7DE] p-3">
-                            <input value={day.title} onChange={e => onDayChange(dayIdx, 'title', e.target.value)} placeholder={`${day.day}日目のタイトル`} className={`${fieldClass} text-sm font-black text-[#0F8F84]`} />
-                            <input value={day.region || ''} onChange={e => onDayChange(dayIdx, 'region', e.target.value)} placeholder="地域（例：ウランバートル）" className={`${fieldClass} mt-0.5 text-[10px] font-semibold text-slate-400`} />
-                            {getAccommodation(day.day)?.name && <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-[10px] font-black text-[#0F8F84]"><span className="material-symbols-outlined text-[13px]">hotel</span>宿泊：{getAccommodation(day.day)?.name}</div>}
-                            <div className="mt-2 flex items-center justify-between"><span className="text-[10px] font-bold text-slate-400">スケジュール</span>{onDayActivitiesText && <button onClick={() => toggleTextDay(dayIdx)} className="text-[10px] font-bold text-[#0F8F84] hover:text-[#0a7d6a]">{inText ? '↩ 칸별 편집' : '✎ 텍스트로 한번에'}</button>}</div>
-                            {inText && onDayActivitiesText ? (
-                                <textarea value={day.activities.map(a => `${a.time ? a.time + ' ' : ''}${a.title}`).join('\n')} onChange={e => onDayActivitiesText(dayIdx, e.target.value)} rows={Math.max(4, day.activities.length + 1)} placeholder={'09:00 ウランバートル到着\n12:00 昼食\n宿泊：ホテル\n(한 줄에 한 항목, 맨 앞에 시간 선택)'} className={`${fieldClass} mt-1 resize-y text-[11px] font-semibold leading-relaxed text-slate-700`} />
-                            ) : (
-                                <div className="relative mt-1 border-l-2 border-dashed border-[#8FE7DE] pl-4">{day.activities.map((activity, index) => <div key={index} className="relative pb-1.5 last:pb-0"><span className="absolute -left-[23px] top-2 h-3 w-3 rounded-full bg-[#0F8F84] ring-2 ring-white" /><div className="flex items-center gap-1"><input value={activity.time || ''} onChange={e => onActivityChange(dayIdx, index, 'time', e.target.value)} placeholder="--:--" className={`${fieldClass} w-[58px] font-mono text-[11px] font-bold text-slate-400`} /><input value={activity.title} onChange={e => onActivityChange(dayIdx, index, 'title', e.target.value)} placeholder="項目名（例：亀石 観光）" className={`${fieldClass} flex-1 text-[11px] font-semibold text-slate-700`} /><button onClick={() => onRemoveActivity(dayIdx, index)} className="shrink-0 text-slate-300 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[15px]">close</span></button></div></div>)}
-                                    <button onClick={() => onAddActivity(dayIdx)} className="mt-1 inline-flex items-center gap-0.5 text-[11px] font-black text-[#0F8F84] hover:text-[#0a7d6a]"><span className="material-symbols-outlined text-[14px]">add</span>項目を追加</button>
-                                </div>
-                            )}
+                {activePage === 'detail' && <Frame>
+                    <div className="p-5">
+                        <div className="mb-5 flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Travel itinerary</p>
+                                <input value={settings.detail.title} onChange={e => onDocSection('detail', { title: e.target.value })} className={`${fieldClass} mt-1 text-[24px] font-black tracking-[0.08em] text-[#0F8F84]`} />
+                            </div>
+                            <span className="rounded-full bg-[#39C4B7]/10 px-3 py-1 text-xs font-black text-[#0F8F84]">{totalDays || 0}日間</span>
                         </div>
-                    </div>); })}
-                        {days.length === 0 && <p className="rounded-xl border border-dashed border-[#8FE7DE] py-6 text-center text-[11px] font-bold text-slate-400">아래 「日程（DAY）を追加」로 일정을 시작하세요.</p>}
-                        <button onClick={onAddDay} className="w-full rounded-xl border-2 border-dashed border-[#8FE7DE] py-3 text-xs font-black text-[#0F8F84] transition-colors hover:bg-[#EAF8F7]"><span className="material-symbols-outlined align-middle text-[16px]">add</span> 日程（DAY）を追加</button>
+
+                        <div className="space-y-4">
+                            {days.map((day, dayIdx) => {
+                                const accommodation = getAccommodation(day.day);
+                                const meals = day.meals || {};
+                                return (
+                                    <article key={dayIdx} className="overflow-hidden rounded-2xl border border-[#8FE7DE] bg-white">
+                                        <div className="grid grid-cols-[88px_1fr_auto] items-stretch border-b border-[#8FE7DE]">
+                                            <div className="flex flex-col items-center justify-center bg-gradient-to-b from-[#0F8F84] to-[#39C4B7] px-3 py-4 text-white">
+                                                <p className="text-xs font-black">DAY {day.day}</p>
+                                                <p className="mt-1 text-[10px] font-bold text-white/80">{day.day}日目</p>
+                                            </div>
+                                            <div className="min-w-0 px-4 py-3">
+                                                <input value={day.region || ''} onChange={e => onDayChange(dayIdx, 'region', e.target.value)} placeholder="地域（例：ウランバートル）" className={`${fieldClass} text-[10px] font-black uppercase tracking-wider text-[#0F8F84]`} />
+                                                <input value={day.title} onChange={e => onDayChange(dayIdx, 'title', e.target.value)} placeholder={`${day.day}日目のタイトル`} className={`${fieldClass} mt-1 text-base font-black text-slate-900`} />
+                                            </div>
+                                            <button onClick={() => onRemoveDay(dayIdx)} className="m-3 h-8 w-8 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500" title="이 일차 삭제">
+                                                <span className="material-symbols-outlined text-[17px]">delete</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="p-4">
+                                            <label className="text-[10px] font-black uppercase tracking-wide text-slate-400">여행 소개</label>
+                                            <textarea
+                                                value={day.summary || ''}
+                                                onChange={e => onDayChange(dayIdx, 'summary', e.target.value)}
+                                                rows={3}
+                                                placeholder="이날의 여행 흐름과 고객에게 전달할 설명을 입력하세요."
+                                                className={`${fieldClass} mt-1 resize-y text-[11px] font-semibold leading-relaxed text-slate-600`}
+                                            />
+
+                                            <div className="mt-4 flex items-center justify-between gap-3">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">주요 일정</p>
+                                                {onDayActivitiesText && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const text = prompt('한 줄에 하나씩 주요 일정을 붙여넣으세요.', day.activities.map(a => a.title).join('\n'));
+                                                            if (text !== null) onDayActivitiesText(dayIdx, text);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-black text-[#0F8F84]"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">content_paste</span>여러 줄 붙여넣기
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div className="relative mt-2 border-l-2 border-dashed border-[#8FE7DE] pl-5">
+                                                {day.activities.map((activity, index) => (
+                                                    <div key={index} className="relative pb-3 last:pb-0">
+                                                        <span className="absolute -left-[30px] top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F8F84] ring-4 ring-white">
+                                                            <span className="material-symbols-outlined text-[9px] text-white">{TYPE_MAP[activity.type || 'sightseeing']?.icon || 'place'}</span>
+                                                        </span>
+                                                        <div className="rounded-xl bg-[#F7FAFA] p-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <input value={activity.title} onChange={e => onActivityChange(dayIdx, index, 'title', e.target.value)} placeholder="주요 일정 (예: 공항 도착 및 가이드 미팅)" className={`${fieldClass} flex-1 text-[12px] font-black text-slate-800`} />
+                                                                {onPickSpot && <button onClick={() => onPickSpot(dayIdx, index)} className="h-7 rounded-lg border border-[#8FE7DE] bg-white px-2 text-[9px] font-black text-[#0F8F84]">관광지</button>}
+                                                                <button onClick={() => onRemoveActivity(dayIdx, index)} className="text-slate-300 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                                                            </div>
+                                                            <textarea value={activity.description || ''} onChange={e => onActivityChange(dayIdx, index, 'description', e.target.value)} rows={2} placeholder="상세 설명 (선택)" className={`${fieldClass} mt-1 resize-y text-[10px] font-semibold leading-relaxed text-slate-500`} />
+                                                            {(activity.images || []).length > 0 && (
+                                                                <div className="mt-2 grid grid-cols-3 gap-2">
+                                                                    {(activity.images || []).slice(0, 3).map((image, imageIndex) => <img key={imageIndex} src={image} alt="" className="h-16 w-full rounded-lg object-cover" />)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <button onClick={() => onAddActivity(dayIdx)} className="mt-1 inline-flex items-center gap-1 text-[11px] font-black text-[#0F8F84]">
+                                                    <span className="material-symbols-outlined text-[15px]">add_circle</span>주요 일정 추가
+                                                </button>
+                                            </div>
+
+                                            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1.1fr]">
+                                                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                                                    <p className="mb-2 flex items-center gap-1 text-[11px] font-black text-slate-700"><span className="material-symbols-outlined text-[16px] text-[#0F8F84]">restaurant</span>식사</p>
+                                                    <div className="grid grid-cols-3 gap-1.5">
+                                                        {([
+                                                            ['breakfast', '朝食'],
+                                                            ['lunch', '昼食'],
+                                                            ['dinner', '夕食'],
+                                                        ] as const).map(([key, label]) => (
+                                                            <label key={key} className="rounded-lg bg-[#F7FAFA] p-2">
+                                                                <span className="block text-[9px] font-black text-slate-400">{label}</span>
+                                                                <input value={meals[key] || ''} onChange={e => onDayChange(dayIdx, 'meals', { ...meals, [key]: e.target.value })} placeholder="미정" className={`${fieldClass} mt-1 text-[10px] font-bold text-slate-700`} />
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                                        <p className="flex items-center gap-1 text-[11px] font-black text-slate-700"><span className="material-symbols-outlined text-[16px] text-[#0F8F84]">hotel</span>숙소</p>
+                                                        {onPickHotel && <button onClick={() => onPickHotel(dayIdx)} className="text-[10px] font-black text-[#0F8F84]">숙소 마스터에서 선택</button>}
+                                                    </div>
+                                                    <input
+                                                        value={accommodation?.name || ''}
+                                                        onChange={e => onDayChange(dayIdx, 'accommodation', { ...(day.accommodation || {}), name: e.target.value })}
+                                                        placeholder="호텔 또는 게르명"
+                                                        className={`${fieldClass} text-[11px] font-black text-slate-800`}
+                                                    />
+                                                    {accommodation?.location && <p className="mt-1 text-[9px] font-semibold text-slate-400">{accommodation.location}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+
+                            {days.length === 0 && <p className="rounded-xl border border-dashed border-[#8FE7DE] py-8 text-center text-[11px] font-bold text-slate-400">아래 버튼으로 첫 번째 DAY를 추가하세요.</p>}
+                            <button onClick={onAddDay} className="w-full rounded-xl border-2 border-dashed border-[#8FE7DE] py-3 text-xs font-black text-[#0F8F84] transition-colors hover:bg-[#EAF8F7]">
+                                <span className="material-symbols-outlined align-middle text-[16px]">add</span> DAY 추가
+                            </button>
+                        </div>
+
+                        <textarea value={settings.detail.note} onChange={e => onDocSection('detail', { note: e.target.value })} rows={2} className={`${fieldClass} mt-4 resize-none text-[11px] font-semibold leading-relaxed text-slate-500`} />
                     </div>
-                    <textarea value={settings.detail.note} onChange={e => onDocSection('detail', { note: e.target.value })} rows={2} className={`${fieldClass} mt-4 resize-none text-[11px] font-semibold leading-relaxed text-slate-500`} /></div></Frame>}
+                </Frame>}
                 {activePage === 'guide' && <Frame><div className="grid gap-4 p-5 sm:grid-cols-2"><div className="rounded-xl border border-[#8FE7DE] p-4"><h3 className="text-sm font-black text-[#0F8F84]">ご案内・ご注意事項</h3>{settings.guide.notices.slice(0, 5).map((item, idx) => <div key={idx} className="mt-3 flex gap-2"><span className="material-symbols-outlined text-[20px] text-[#0F8F84]">info</span><div className="flex-1"><input value={item.title} onChange={e => onGuideNotice(idx, 'title', e.target.value)} className={`${fieldClass} text-xs font-black text-[#0F8F84]`} /><textarea value={item.body} onChange={e => onGuideNotice(idx, 'body', e.target.value)} rows={2} className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /></div></div>)}</div><div className="rounded-xl border border-[#8FE7DE] p-4"><h3 className="text-sm font-black text-[#0F8F84]">旅行条件（要約）</h3><textarea value={settings.guide.conditions} onChange={e => onDocSection('guide', { conditions: e.target.value })} rows={4} className={`${fieldClass} mt-2 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><h3 className="mt-5 text-sm font-black text-[#0F8F84]">旅行代金のお支払い</h3><textarea value={settings.guide.paymentInfo} onChange={e => onDocSection('guide', { paymentInfo: e.target.value })} rows={3} className={`${fieldClass} mt-2 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} /><h3 className="mt-5 text-sm font-black text-[#0F8F84]">緊急連絡先</h3><input value={settings.guide.emergencyPhone} onChange={e => onDocSection('guide', { emergencyPhone: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} /><input value={settings.guide.emergencyEmail} onChange={e => onDocSection('guide', { emergencyEmail: e.target.value })} className={`${fieldClass} text-[10px] font-semibold text-slate-500`} /></div></div><div className="relative h-[104px] overflow-hidden"><img src={mongoliaHero} alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-white via-white/75 to-transparent" /><input value={settings.guide.closingMessage} onChange={e => onDocSection('guide', { closingMessage: e.target.value })} className={`${fieldClass} absolute left-5 top-7 max-w-[360px] text-sm font-black text-[#0F8F84]`} /><div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-[#0F8F84] px-5 py-2 text-[10px] font-bold text-white"><span>モンゴル銀河旅行社</span><span>{settings.guide.emergencyEmail}</span></div></div></Frame>}
             </div>
         </div>
@@ -361,6 +482,7 @@ const TemplatesTab: React.FC = () => {
     // 마스터 picker — 특정 항목(일자 d, 항목 a)을 채움
     const [spotPickerTarget, setSpotPickerTarget] = useState<{ d: number; a: number } | null>(null);
     const [hotelPickerTarget, setHotelPickerTarget] = useState<{ d: number; a: number } | null>(null);
+    const [dayHotelTarget, setDayHotelTarget] = useState<number | null>(null);
     // UX 정리: 일정이 만들어지면 붙여넣기 박스를 접고, 항목 추가는 작은 메뉴로
     const [showPasteBox, setShowPasteBox] = useState(false);
     const [addMenuDay, setAddMenuDay] = useState<number | null>(null);
@@ -421,7 +543,10 @@ const TemplatesTab: React.FC = () => {
                 day: idx + 1,
                 title: f.days[idx]?.title || '',
                 region: f.days[idx]?.region || '',
+                summary: f.days[idx]?.summary || '',
                 activities: f.days[idx]?.activities || [],
+                meals: f.days[idx]?.meals || { breakfast: '', lunch: '', dinner: '' },
+                accommodation: f.days[idx]?.accommodation || null,
             })),
         }));
     };
@@ -457,10 +582,10 @@ const TemplatesTab: React.FC = () => {
             'ウランバートル市内 4つ星ホテル（2名1室）',
             '',
             'Day 2 테를지 국립공원',
-            '09:00 호텔 출발 - 테를지 국립공원 이동',
-            '11:00 거북바위 관광',
-            '13:00 현지식 점심',
-            '15:00 승마 체험',
+            '호텔 출발 및 테를지 국립공원 이동',
+            '거북바위 관광',
+            '현지식 점심',
+            '승마 체험',
             '숙박: 게르 캠프',
         ].join('\n'));
     };
@@ -481,13 +606,7 @@ const TemplatesTab: React.FC = () => {
             if (!currentDay) return;
             const cleaned = introLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
             if (cleaned) {
-                const [titleLine, ...rest] = cleaned.split('\n');
-                currentDay.activities.push({
-                    time: '',
-                    type: 'other',
-                    title: titleLine,
-                    description: rest.join('\n').trim(),
-                });
+                currentDay.summary = [currentDay.summary, cleaned].filter(Boolean).join('\n\n');
             }
             introLines = [];
         };
@@ -511,13 +630,13 @@ const TemplatesTab: React.FC = () => {
             const dayMatch = line.match(/^(?:day|d)\s*[-\s]*(\d+)\s*(?:[|｜:.)-]\s*)?(.*)$/i) || line.match(/^(\d+)\s*일차\s*[:.)-]?\s*(.*)$/);
             if (dayMatch) {
                 commitDay();
-                currentDay = { day: parsedDays.length + 1, title: dayMatch[2]?.trim() || '', region: '', activities: [] };
+                currentDay = { day: parsedDays.length + 1, title: dayMatch[2]?.trim() || '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
                 section = 'intro';
                 return;
             }
 
             if (!currentDay) {
-                currentDay = { day: 1, title: '', region: '', activities: [] };
+                currentDay = { day: 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
             }
 
             if (/^(スケジュール|일정|schedule)$/i.test(line)) {
@@ -536,7 +655,19 @@ const TemplatesTab: React.FC = () => {
             if (stayMatch) {
                 flushIntro();
                 const title = stayMatch[2].trim();
-                currentDay.activities.push({ time: '', type: 'checkin', title, description: '숙박' });
+                currentDay.accommodation = { name: title };
+                return;
+            }
+
+            const mealMatch = line.match(/^(조식|아침|朝食|breakfast|중식|점심|昼食|lunch|석식|저녁|夕食|dinner)\s*[:：｜|-]\s*(.+)$/i);
+            if (mealMatch) {
+                flushIntro();
+                const key = /조식|아침|朝食|breakfast/i.test(mealMatch[1])
+                    ? 'breakfast'
+                    : /중식|점심|昼食|lunch/i.test(mealMatch[1])
+                        ? 'lunch'
+                        : 'dinner';
+                currentDay.meals = { ...(currentDay.meals || {}), [key]: mealMatch[2].trim() };
                 return;
             }
 
@@ -546,7 +677,7 @@ const TemplatesTab: React.FC = () => {
                 const title = activityMatch[2].trim();
                 const description = activityMatch[3]?.trim() || '';
                 currentDay.activities.push({
-                    time: activityMatch[1],
+                    time: '',
                     type: inferActivityType(`${title} ${description}`),
                     title,
                     description,
@@ -555,7 +686,7 @@ const TemplatesTab: React.FC = () => {
             }
 
             if (section === 'stay') {
-                currentDay.activities.push({ time: '', type: 'checkin', title: line, description: '宿泊' });
+                currentDay.accommodation = { name: line };
                 return;
             }
 
@@ -578,7 +709,7 @@ const TemplatesTab: React.FC = () => {
     };
 
     // Day operations
-    const addDay = () => setForm(f => ({ ...f, days: [...f.days, { day: f.days.length + 1, title: '', region: '', activities: [] }] }));
+    const addDay = () => setForm(f => ({ ...f, days: [...f.days, { day: f.days.length + 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null }] }));
     const removeDay = (idx: number) => setForm(f => ({ ...f, days: f.days.filter((_, i) => i !== idx).map((d, i) => ({ ...d, day: i + 1 })) }));
     const updateDay = (idx: number, field: keyof TemplateDay, value: any) => setForm(f => { const d = [...f.days]; d[idx] = { ...d[idx], [field]: value }; return { ...f, days: d }; });
     const moveDay = (idx: number, dir: -1 | 1) => setForm(f => {
@@ -590,7 +721,12 @@ const TemplatesTab: React.FC = () => {
     });
     const duplicateDay = (idx: number) => setForm(f => {
         const src = f.days[idx];
-        const copy = { ...src, activities: src.activities.map(a => ({ ...a })) };
+        const copy = {
+            ...src,
+            meals: { ...(src.meals || {}) },
+            accommodation: src.accommodation ? { ...src.accommodation, images: [...(src.accommodation.images || [])] } : null,
+            activities: src.activities.map(a => ({ ...a, images: [...(a.images || [])] })),
+        };
         const d = [...f.days.slice(0, idx + 1), copy, ...f.days.slice(idx + 1)];
         return { ...f, days: d.map((x, i) => ({ ...x, day: i + 1 })) };
     });
@@ -641,6 +777,21 @@ const TemplatesTab: React.FC = () => {
             images: (hotel.images && hotel.images.length > 0) ? [...hotel.images] : cur.images,
         };
         days[d] = { ...days[d], activities: acts };
+        return { ...f, days };
+    });
+    const fillDayFromHotel = (d: number, hotel: Hotel) => setForm(f => {
+        const days = [...f.days];
+        days[d] = {
+            ...days[d],
+            accommodation: {
+                id: hotel.id,
+                name: hotel.name_kr,
+                type: hotel.star_rating ? `${hotel.star_rating}성급 호텔` : undefined,
+                location: hotel.address,
+                images: [...(hotel.images || [])],
+                description: hotel.description || '',
+            },
+        };
         return { ...f, days };
     });
     const removeActivity = (dayIdx: number, actIdx: number) => setForm(f => { const d = [...f.days]; d[dayIdx].activities = d[dayIdx].activities.filter((_, i) => i !== actIdx); return { ...f, days: d }; });
@@ -861,7 +1012,32 @@ const TemplatesTab: React.FC = () => {
 
 {/* Live preview */}
                             <div className="h-full overflow-hidden bg-white">
-                                <TemplatePreview name={form.name} description={form.description} days={form.days} documentSettings={form.documentSettings} onNameChange={(value) => setForm(f => ({ ...f, name: value }))} onDescriptionChange={(value) => setForm(f => ({ ...f, description: value }))} onDocSection={updateDocSection} onIncluded={updateIncluded} onCancellation={updateCancellation} onGuideNotice={updateGuideNotice} onDayChange={(d, field, v) => updateDay(d, field, v)} onActivityChange={(d, a, field, v) => field === 'time' ? updateActivity(d, a, 'time', v) : updateActivityText(d, a, field, v)} onAddDay={addDay} onAddActivity={(d) => addActivity(d)} onRemoveDay={removeDay} onRemoveActivity={removeActivity} onDayActivitiesText={(d, text) => setForm(f => { const days = [...f.days]; days[d] = { ...days[d], activities: parseDayActivitiesText(text) }; return { ...f, days }; })} />
+                                <TemplatePreview
+                                    name={form.name}
+                                    description={form.description}
+                                    days={form.days}
+                                    documentSettings={form.documentSettings}
+                                    onNameChange={(value) => setForm(f => ({ ...f, name: value }))}
+                                    onDescriptionChange={(value) => setForm(f => ({ ...f, description: value }))}
+                                    onDocSection={updateDocSection}
+                                    onIncluded={updateIncluded}
+                                    onCancellation={updateCancellation}
+                                    onGuideNotice={updateGuideNotice}
+                                    onDayChange={(d, field, v) => updateDay(d, field, v)}
+                                    onActivityChange={(d, a, field, v) => field === 'time' ? updateActivity(d, a, 'time', v) : updateActivityText(d, a, field, v)}
+                                    onAddDay={addDay}
+                                    onAddActivity={(d) => addActivity(d)}
+                                    onRemoveDay={removeDay}
+                                    onRemoveActivity={removeActivity}
+                                    onDayActivitiesText={(d, text) => setForm(f => {
+                                        const days = [...f.days];
+                                        days[d] = { ...days[d], activities: parseDayActivitiesText(text) };
+                                        return { ...f, days };
+                                    })}
+                                    onPickSpot={(d, a) => setSpotPickerTarget({ d, a })}
+                                    onPickHotel={(d) => setDayHotelTarget(d)}
+                                    defaultPage="detail"
+                                />
                             </div>
                         </div>
                     </div>
@@ -876,11 +1052,13 @@ const TemplatesTab: React.FC = () => {
                         }}
                     />
                     <HotelPickerModal
-                        open={hotelPickerTarget !== null}
-                        onClose={() => setHotelPickerTarget(null)}
+                        open={hotelPickerTarget !== null || dayHotelTarget !== null}
+                        onClose={() => { setHotelPickerTarget(null); setDayHotelTarget(null); }}
                         onPick={(hotel) => {
-                            if (hotelPickerTarget) fillItemFromHotel(hotelPickerTarget.d, hotelPickerTarget.a, hotel);
+                            if (dayHotelTarget !== null) fillDayFromHotel(dayHotelTarget, hotel);
+                            else if (hotelPickerTarget) fillItemFromHotel(hotelPickerTarget.d, hotelPickerTarget.a, hotel);
                             setHotelPickerTarget(null);
+                            setDayHotelTarget(null);
                         }}
                     />
                 </div>

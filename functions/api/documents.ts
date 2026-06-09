@@ -79,13 +79,18 @@ app.get('/itinerary/:reservationId', async (c) => {
     // Compute day-by-day merged view
     const mergedDays = (template?.days || []).map((tday: any, idx: number) => {
         const dayNumber = tday.day || idx + 1;
-        const accommodation = dailyAccommodations.find((d: any) => d.day === dayNumber)?.accommodation || null;
+        const assignedAccommodation = dailyAccommodations.find((d: any) => d.day === dayNumber)?.accommodation || null;
+        const templateAccommodation = tday.accommodation
+            ? (typeof tday.accommodation === 'string' ? { name: tday.accommodation } : tday.accommodation)
+            : null;
         return {
             day: dayNumber,
             title: tday.title || '',
             region: tday.region || '',
+            summary: tday.summary || '',
             activities: Array.isArray(tday.activities) ? tday.activities : [],
-            accommodation,
+            meals: tday.meals || {},
+            accommodation: assignedAccommodation || templateAccommodation,
         };
     });
 
@@ -149,6 +154,9 @@ app.get('/contract/:reservationId', async (c) => {
                 name: t.name,
                 description: decoded.description,
                 documentSettings: decoded.documentSettings,
+                days: (() => {
+                    try { return t.days ? JSON.parse(t.days) : []; } catch { return []; }
+                })(),
             };
         }
     }
@@ -162,8 +170,16 @@ app.get('/contract/:reservationId', async (c) => {
             name: dcc.name || template?.name || '',
             description: dcc.description || template?.description || '',
             documentSettings: dcc.documentSettings,
+            days: Array.isArray(dcc.days) ? dcc.days : (template?.days || []),
         };
     }
+
+    const templateAccommodations = (template?.days || [])
+        .filter((day: any) => day?.accommodation)
+        .map((day: any, index: number) => ({
+            day: day.day || index + 1,
+            accommodation: typeof day.accommodation === 'string' ? { name: day.accommodation } : day.accommodation,
+        }));
 
     return c.json({
         reservation: {
@@ -184,7 +200,7 @@ app.get('/contract/:reservationId', async (c) => {
         },
         contract: contractData,
         template,
-        accommodations: dailyAccommodations,
+        accommodations: dailyAccommodations.length > 0 ? dailyAccommodations : templateAccommodations,
         guide: assignedGuide,
     });
 });

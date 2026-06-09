@@ -16,7 +16,13 @@ interface DayData {
     day: number;
     title: string;
     region?: string;
+    summary?: string;
     activities: Activity[];
+    meals?: {
+        breakfast?: string;
+        lunch?: string;
+        dinner?: string;
+    };
     accommodation: {
         id: string;
         name: string;
@@ -371,6 +377,12 @@ export const DocumentItinerary: React.FC = () => {
                                                     {accommodation && <Chip>宿泊：{accommodation.name}</Chip>}
                                                 </div>
 
+                                                {day.summary && (
+                                                    <p className="mb-4 whitespace-pre-wrap rounded-xl bg-[#F7FAFA] p-3 text-sm font-semibold leading-relaxed text-slate-600">
+                                                        {day.summary}
+                                                    </p>
+                                                )}
+
                                                 <div className="relative ml-2 space-y-0 border-l-2 border-dashed border-[#8FE7DE] pl-5">
                                                     {day.activities.length > 0 ? day.activities.map((activity, index) => {
                                                         const type = activity.type || 'other';
@@ -380,9 +392,7 @@ export const DocumentItinerary: React.FC = () => {
                                                                 <span className="absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#0F8F84] ring-4 ring-white">
                                                                     <span className="material-symbols-outlined text-[12px] text-white">{ACTIVITY_ICON[type] || ACTIVITY_ICON.other}</span>
                                                                 </span>
-                                                                <div className="grid gap-2 sm:grid-cols-[70px_1fr]">
-                                                                    <p className="font-mono text-sm font-black text-slate-400">{activity.time || '--:--'}</p>
-                                                                    <div>
+                                                                <div>
                                                                         <div className="flex flex-wrap items-center gap-2">
                                                                             <p className="font-black text-slate-900">{activity.title || 'ご案内'}</p>
                                                                             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{ACTIVITY_LABEL[type] || ACTIVITY_LABEL.other}</span>
@@ -395,7 +405,6 @@ export const DocumentItinerary: React.FC = () => {
                                                                                 ))}
                                                                             </div>
                                                                         )}
-                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         );
@@ -403,6 +412,21 @@ export const DocumentItinerary: React.FC = () => {
                                                         <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">この日の詳細は現在準備中です。</p>
                                                     )}
                                                 </div>
+
+                                                {day.meals && Object.values(day.meals).some(Boolean) && (
+                                                    <div className="mt-4 grid grid-cols-3 gap-2">
+                                                        {([
+                                                            ['breakfast', '朝食'],
+                                                            ['lunch', '昼食'],
+                                                            ['dinner', '夕食'],
+                                                        ] as const).map(([key, label]) => (
+                                                            <div key={key} className="rounded-xl border border-slate-200 bg-[#F7FAFA] p-2.5">
+                                                                <p className="text-[10px] font-black text-[#0F8F84]">{label}</p>
+                                                                <p className="mt-1 text-xs font-bold text-slate-700">{day.meals?.[key] || '—'}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
 
                                                 {accommodation && (
                                                     <button
