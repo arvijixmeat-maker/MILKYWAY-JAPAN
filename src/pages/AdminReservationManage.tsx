@@ -775,6 +775,14 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         return Math.max((reservation.dailyAccommodations || []).length, 1);
     })();
 
+    // 문서별 마지막 발송 일시 (history의 email 이벤트에서)
+    const lastEmailAt = (url: string, keyword: string) => {
+        const ev = [...timelineEvents].reverse().find((e: any) => e.type === 'email' && (e.detail === url || String(e.description || '').includes(keyword)));
+        return ev?.timestamp ? new Date(ev.timestamp).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    };
+    const itinerarySentAt = lastEmailAt(itineraryUrl, '日程');
+    const contractSentAt = lastEmailAt(contractUrl, '契約');
+
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
             <div className="drawer reservation-workspace tcom" onClick={e => e.stopPropagation()}>
@@ -1176,39 +1184,60 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <span className="action-doc-icon tint-blue"><Icon name="map" /></span>
                                 <span>
                                     <b>확정 일정표</b>
-                                    <small>{itinerarySent ? '고객 발송 완료' : itineraryReady ? '편집 및 발송 가능' : '템플릿 선택 필요'}</small>
+                                    <small>{itinerarySent ? `발송 완료${itinerarySentAt ? ` · ${itinerarySentAt}` : ''}` : itineraryReady ? '작성됨 · 발송 대기' : '템플릿 선택 또는 문서 작성 필요'}</small>
                                 </span>
                                 <Icon name={itinerarySent ? 'check_circle' : 'chevron_right'} />
                             </button>
-                            <select
-                                className="inp"
-                                value={editForm.itineraryTemplateId || ''}
-                                onChange={e => {
-                                    const newId = e.target.value || undefined;
-                                    const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
-                                    setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
-                                    onUpdate(updated);
-                                    setActiveDocument('itinerary');
-                                }}
-                            >
-                                <option value="">일정표 템플릿 선택</option>
-                                {templatesList.map((template: any) => (
-                                    <option key={template.id} value={template.id}>{template.name}</option>
-                                ))}
-                            </select>
+                            {!itinerarySent && (
+                                <select
+                                    className="inp"
+                                    value={editForm.itineraryTemplateId || ''}
+                                    onChange={e => {
+                                        const newId = e.target.value || undefined;
+                                        const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
+                                        setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
+                                        onUpdate(updated);
+                                        setActiveDocument('itinerary');
+                                    }}
+                                >
+                                    <option value="">일정표 템플릿 선택</option>
+                                    {templatesList.map((template: any) => (
+                                        <option key={template.id} value={template.id}>{template.name}</option>
+                                    ))}
+                                </select>
+                            )}
                             <div className="action-doc-buttons">
-                                <button className="btn btn-sm btn-blue" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
-                                    <Icon name="edit_document" />일정표 만들기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => window.open(itineraryUrl, '_blank')}>
-                                    <Icon name="visibility" />미리보기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
-                                    <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady || sendingItinerary} onClick={sendItineraryToCustomer}>
-                                    <Icon name="send" />발송
-                                </button>
+                                {!itinerarySent ? (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" disabled={!itineraryReady || sendingItinerary} onClick={sendItineraryToCustomer}>
+                                            <Icon name="send" />{sendingItinerary ? '발송 중' : '고객에게 발송'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />{reservation.documentContent ? '편집' : '일정표 만들기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => window.open(itineraryUrl, '_blank')}>
+                                            <Icon name="visibility" />미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" onClick={() => window.open(itineraryUrl, '_blank')}>
+                                            <Icon name="visibility" />미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />편집
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={sendingItinerary} onClick={sendItineraryToCustomer}>
+                                            <Icon name="forward_to_inbox" />{sendingItinerary ? '발송 중' : '재발송'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </section>
 
@@ -1217,23 +1246,48 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <span className="action-doc-icon tint-purple"><Icon name="contract" /></span>
                                 <span>
                                     <b>여행 계약서</b>
-                                    <small>{contractSent ? '고객 발송 완료' : contractReady ? '편집 및 발송 가능' : '고객 이메일 필요'}</small>
+                                    <small>
+                                        {contractHasTravelers
+                                            ? `여행자 ${contractTravelers.length}명 작성 완료`
+                                            : contractSent
+                                                ? `고객 작성 대기${contractSentAt ? ` · 발송 ${contractSentAt}` : ''}`
+                                                : contractReady ? '작성·발송 가능' : '고객 이메일 필요'}
+                                    </small>
                                 </span>
-                                <Icon name={contractSent ? 'check_circle' : 'chevron_right'} />
+                                <Icon name={contractHasTravelers ? 'check_circle' : contractSent ? 'hourglass_top' : 'chevron_right'} />
                             </button>
                             <div className="action-doc-buttons">
-                                <button className="btn btn-sm btn-blue" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
-                                    <Icon name="edit_document" />계약서 만들기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => window.open(contractUrl, '_blank')}>
-                                    <Icon name="visibility" />미리보기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
-                                    <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!contractReady || sendingContract} onClick={sendContractToCustomer}>
-                                    <Icon name="send" />발송
-                                </button>
+                                {!contractSent ? (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" disabled={!contractReady || sendingContract} onClick={sendContractToCustomer}>
+                                            <Icon name="send" />{sendingContract ? '발송 중' : '고객에게 발송'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />{reservation.documentContent ? '편집' : '계약서 만들기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => window.open(contractUrl, '_blank')}>
+                                            <Icon name="visibility" />미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" onClick={() => window.open(contractUrl, '_blank')}>
+                                            <Icon name="visibility" />{contractHasTravelers ? '작성 내용 확인' : '미리보기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />편집
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={sendingContract} onClick={sendContractToCustomer}>
+                                            <Icon name="forward_to_inbox" />{sendingContract ? '발송 중' : '재발송'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </section>
 
