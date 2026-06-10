@@ -1497,8 +1497,11 @@ export const AdminReservationManage: React.FC = () => {
                     documentContent: (() => {
                         const raw = r.documentContent || r.document_content;
                         if (!raw) return null;
-                        if (typeof raw === 'object') return raw;
-                        try { return JSON.parse(raw); } catch { return null; }
+                        let parsed = raw;
+                        for (let depth = 0; depth < 2 && typeof parsed === 'string'; depth += 1) {
+                            try { parsed = JSON.parse(parsed); } catch { return null; }
+                        }
+                        return parsed && typeof parsed === 'object' ? parsed : null;
                     })(),
                     assignedGuide: r.assignedGuide || r.assigned_guide,
                     dailyAccommodations: r.dailyAccommodations || r.daily_accommodations,

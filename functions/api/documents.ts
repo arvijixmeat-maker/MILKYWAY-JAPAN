@@ -8,6 +8,19 @@ const app = new Hono<{ Bindings: Env }>();
 
 const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
 
+const parseNestedJson = (value: any, fallback: any = null, maxDepth = 2) => {
+    if (!value) return fallback;
+    let parsed = value;
+    for (let depth = 0; depth < maxDepth && typeof parsed === 'string'; depth += 1) {
+        try {
+            parsed = JSON.parse(parsed);
+        } catch {
+            return fallback;
+        }
+    }
+    return parsed;
+};
+
 const decodeTemplateDescription = (raw = '') => {
     const [description, encoded] = String(raw || '').split(DOC_SETTINGS_MARKER);
     if (!encoded) return { description: raw || '', documentSettings: null };
@@ -64,8 +77,7 @@ app.get('/itinerary/:reservationId', async (c) => {
     }
 
     // 고객별로 편집·저장된 문서 내용이 있으면 템플릿보다 우선 사용
-    let dc: any = null;
-    try { dc = reservation.document_content ? JSON.parse(reservation.document_content) : null; } catch { dc = null; }
+    const dc = parseNestedJson(reservation.document_content);
     if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
         template = {
             id: template?.id || 'custom',
@@ -162,8 +174,7 @@ app.get('/contract/:reservationId', async (c) => {
     }
 
     // 고객별 편집·저장된 문서 설정이 있으면 우선 사용
-    let dcc: any = null;
-    try { dcc = reservation.document_content ? JSON.parse(reservation.document_content) : null; } catch { dcc = null; }
+    const dcc = parseNestedJson(reservation.document_content);
     if (dcc && dcc.documentSettings) {
         template = {
             id: template?.id || 'custom',

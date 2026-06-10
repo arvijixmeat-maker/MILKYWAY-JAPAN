@@ -18,6 +18,18 @@ const app = new Hono<{ Bindings: Env }>();
 
 // Fields stored as JSON strings — parse for client convenience.
 const JSON_ARRAY_FIELDS = ['travelTypes', 'travel_types', 'accommodations'] as const;
+const parseNestedJson = (value: any, maxDepth = 2) => {
+    let parsed = value;
+    for (let depth = 0; depth < maxDepth && typeof parsed === 'string'; depth += 1) {
+        try {
+            parsed = JSON.parse(parsed);
+        } catch {
+            break;
+        }
+    }
+    return parsed;
+};
+
 const parseQuoteRow = (q: any) => {
     const out: any = { ...q };
     for (const f of JSON_ARRAY_FIELDS) {
@@ -87,7 +99,7 @@ app.get('/:id', async (c) => {
     const dc = result.document_content ?? result.documentContent;
     if (dc) {
         try {
-            const parsedDc = typeof dc === 'string' ? JSON.parse(dc) : dc;
+            const parsedDc = parseNestedJson(dc);
             if (parsedDc && Array.isArray(parsedDc.days) && parsedDc.days.length) {
                 parsed.itinerary = {
                     id: 'doc',

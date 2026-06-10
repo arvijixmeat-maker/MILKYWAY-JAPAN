@@ -52,10 +52,11 @@ const unformatNumber = (str: string) => {
 
 const normalizeDocumentContent = (value: any): ReservationDocContent | null => {
     if (!value) return null;
-    if (typeof value === 'string') {
-        try { return JSON.parse(value) as ReservationDocContent; } catch { return null; }
+    let parsed = value;
+    for (let depth = 0; depth < 2 && typeof parsed === 'string'; depth += 1) {
+        try { parsed = JSON.parse(parsed); } catch { return null; }
     }
-    return value as ReservationDocContent;
+    return parsed && typeof parsed === 'object' ? parsed as ReservationDocContent : null;
 };
 
 // Conversion Modal Component
