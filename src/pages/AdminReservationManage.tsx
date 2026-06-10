@@ -824,41 +824,66 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 <div className="drawer-body reservation-workspace-body">
                     {tab === 'overview' && (
                     <div className="stack" style={{ gap: 16 }}>
-                        {/* trip hero */}
-                        <div className="trip-hero">
-                            <div className="th-label">여행 기간</div>
-                            <div className="th-date">{reservation.date}</div>
-                            <div className="th-meta">
-                                <span><Icon name="event_available" />접수 {reservation.bookedAt}</span>
-                                <span><Icon name="group" />{reservation.headcount || '인원 미정'}</span>
+                        {/* 주문 요약 — Trip.com식 정보 밀도: 첫 화면에서 클릭 없이 모든 사실 확인 */}
+                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'stretch' }}>
+                            <div className="card">
+                                <div className="card-head"><Icon name="flight_takeoff" style={{ color: 'var(--mrt-gray-600)' }} /><h2>여행 정보</h2></div>
+                                <div className="card-pad" style={{ paddingTop: 14 }}>
+                                    <div className="kv"><span>여행 기간</span><b>{reservation.date}</b></div>
+                                    <div className="kv">
+                                        <span>인원</span>
+                                        {isEditing ? (
+                                            <span className="row" style={{ gap: 4 }}>
+                                                <input
+                                                    type="number"
+                                                    value={editForm.totalPeople || ''}
+                                                    onChange={(e) => setEditForm(prev => prev ? ({ ...prev, totalPeople: parseInt(e.target.value) || 0, headcount: `${e.target.value}명` }) : null)}
+                                                    className="inp"
+                                                    style={{ width: 72, height: 32 }}
+                                                />
+                                                <span className="cell-muted" style={{ fontSize: 12 }}>명</span>
+                                            </span>
+                                        ) : (
+                                            <b>{reservation.headcount}</b>
+                                        )}
+                                    </div>
+                                    <div className="kv"><span>접수일</span><b>{reservation.bookedAt}</b></div>
+                                    <div className="kv" style={{ borderBottom: 'none' }}><span>상품</span><b style={{ textAlign: 'right', whiteSpace: 'normal' }}>{reservation.productName}</b></div>
+                                </div>
+                            </div>
+                            <div className="card">
+                                <div className="card-head"><Icon name="person" style={{ color: 'var(--mrt-gray-600)' }} /><h2>예약자 정보</h2></div>
+                                <div className="card-pad" style={{ paddingTop: 14 }}>
+                                    <div className="kv"><span>이름</span><b>{reservation.customerName}</b></div>
+                                    <div className="kv"><span>연락처</span><b style={{ fontVariantNumeric: 'tabular-nums' }}>{reservation.phone || '—'}</b></div>
+                                    <div className="kv" style={{ borderBottom: 'none' }}><span>이메일</span><b style={{ textAlign: 'right' }}>{reservation.email || '—'}</b></div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* guest */}
-                        <div className="card">
-                            <div className="card-head"><Icon name="person" style={{ color: 'var(--mrt-gray-600)' }} /><h2>예약자 정보</h2></div>
-                            <div className="card-pad" style={{ paddingTop: 14 }}>
-                                <div className="kv"><span>이름</span><b>{reservation.customerName}</b></div>
-                                <div className="kv">
-                                    <span>인원</span>
-                                    {isEditing ? (
-                                        <span className="row" style={{ gap: 4 }}>
-                                            <input
-                                                type="number"
-                                                value={editForm.totalPeople || ''}
-                                                onChange={(e) => setEditForm(prev => prev ? ({ ...prev, totalPeople: parseInt(e.target.value) || 0, headcount: `${e.target.value}명` }) : null)}
-                                                className="inp"
-                                                style={{ width: 72, height: 32 }}
-                                            />
-                                            <span className="cell-muted" style={{ fontSize: 12 }}>명</span>
-                                        </span>
-                                    ) : (
-                                        <b>{reservation.headcount}</b>
-                                    )}
-                                </div>
-                                <div className="kv"><span>연락처</span><b style={{ fontVariantNumeric: 'tabular-nums' }}>{reservation.phone || '—'}</b></div>
-                                <div className="kv" style={{ borderBottom: 'none' }}><span>이메일</span><b style={{ textAlign: 'right' }}>{reservation.email || '—'}</b></div>
-                            </div>
+                        {/* 상태 요약 — 클릭 시 해당 작업 탭으로 */}
+                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <button className="qlink" onClick={() => setTab('payment')}>
+                                <span className={`qi ${paidPercent >= 100 ? 'tint-green' : 'tint-amber'}`}><Icon name="payments" fill /></span>
+                                <span className="qtext">
+                                    <span className="qt">금액 · 입금</span>
+                                    <span className="qs">
+                                        예약금 {editForm.depositStatus === 'paid' ? '입금' : '미납'} · 잔금 {editForm.balanceStatus === 'paid' ? '입금' : '미납'} ({paidPercent}%)
+                                    </span>
+                                </span>
+                                <span className="qv" style={{ fontSize: 18 }}>₩{(editForm.totalAmount || 0).toLocaleString()}</span>
+                                <Icon name="chevron_right" className="arr" />
+                            </button>
+                            <button className="qlink" onClick={() => setTab('payment')}>
+                                <span className={`qi ${reservation.assignedGuide ? 'tint-green' : 'tint-blue'}`}><Icon name="support_agent" fill /></span>
+                                <span className="qtext">
+                                    <span className="qt">가이드 · 숙소 배정</span>
+                                    <span className="qs">
+                                        {reservation.assignedGuide ? `가이드 ${reservation.assignedGuide.name}` : '가이드 미배정'} · 숙소 {(reservation.dailyAccommodations || []).length}/{getTripDays()}일
+                                    </span>
+                                </span>
+                                <Icon name="chevron_right" className="arr" />
+                            </button>
                         </div>
                     </div>
                     )}
