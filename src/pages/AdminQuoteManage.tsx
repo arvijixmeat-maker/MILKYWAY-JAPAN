@@ -135,6 +135,10 @@ export const AdminQuoteManage: React.FC = () => {
                     local: data.totalAmount - data.deposit
                 },
                 bank_account: bankAccount,
+                itinerary_template_id: selectedRequest.itineraryTemplateId || selectedRequest.itinerary_template_id || null,
+                document_content: selectedRequest.documentContent
+                    ? (typeof selectedRequest.documentContent === 'string' ? selectedRequest.documentContent : JSON.stringify(selectedRequest.documentContent))
+                    : (selectedRequest.document_content || null),
             });
 
             const reservationNumber = newReservation.reservationNumber || newReservation.id?.slice(0, 8);

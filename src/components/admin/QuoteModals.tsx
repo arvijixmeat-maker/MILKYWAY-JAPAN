@@ -50,6 +50,14 @@ const unformatNumber = (str: string) => {
     return parseInt(str.replace(/,/g, '')) || 0;
 };
 
+const normalizeDocumentContent = (value: any): ReservationDocContent | null => {
+    if (!value) return null;
+    if (typeof value === 'string') {
+        try { return JSON.parse(value) as ReservationDocContent; } catch { return null; }
+    }
+    return value as ReservationDocContent;
+};
+
 // Conversion Modal Component
 export const ConvertSelectionModal: React.FC<{
     request: QuoteRequest | null;
@@ -241,6 +249,9 @@ export const QuoteDetailModal: React.FC<{
     // 맞춤 일정표 — 고객 견적 페이지에 함께 보낼 일정표 템플릿
     const [templatesList, setTemplatesList] = useState<any[]>([]);
     const [itineraryTemplateId, setItineraryTemplateId] = useState<string>(request?.itineraryTemplateId || request?.itinerary_template_id || '');
+    const [quoteDocumentContent, setQuoteDocumentContent] = useState<ReservationDocContent | null>(
+        normalizeDocumentContent(request?.documentContent || request?.document_content)
+    );
     const [docEditorOpen, setDocEditorOpen] = useState(false);
     useEffect(() => {
         api.itineraryTemplates.list().then((d: any) => { if (Array.isArray(d)) setTemplatesList(d); }).catch(() => {});
@@ -307,6 +318,7 @@ export const QuoteDetailModal: React.FC<{
             setConfirmedStartDate(request.confirmed_start_date || '');
             setConfirmedEndDate(request.confirmed_end_date || '');
             setItineraryTemplateId(request.itineraryTemplateId || request.itinerary_template_id || '');
+            setQuoteDocumentContent(normalizeDocumentContent(request.documentContent || request.document_content));
         }
     }, [request]);
 
@@ -384,23 +396,41 @@ export const QuoteDetailModal: React.FC<{
         localAmount: priceDetail.totalAmount ? (priceDetail.totalAmount - (priceDetail.deposit || 0)) : undefined,
         peopleCount: quotePeople || undefined,
     };
+    const templateToDocumentContent = (templateId: string): ReservationDocContent | null => {
+        const tpl = templatesList.find((t: any) => t.id === templateId);
+        if (!tpl) return null;
+        const decoded = decodeTemplateDescription(tpl.description || '');
+        let templateDays: any[] = [];
+        try { templateDays = typeof tpl.days === 'string' ? JSON.parse(tpl.days || '[]') : (tpl.days || []); } catch { templateDays = []; }
+        return {
+            name: tpl.name || '',
+            description: decoded.description || '',
+            days: structuredClone(templateDays),
+            documentSettings: structuredClone(decoded.documentSettings),
+        };
+    };
     const docInitialContent: ReservationDocContent | null = (() => {
-        const dc = request.documentContent || request.document_content;
+        const dc = quoteDocumentContent;
         if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
             return { name: dc.name || '', description: dc.description || '', days: dc.days || [], documentSettings: mergeDocumentSettings(dc.documentSettings) };
         }
-        const tpl = templatesList.find((t: any) => t.id === itineraryTemplateId);
-        if (tpl) {
-            const decoded = decodeTemplateDescription(tpl.description || '');
-            let tDays: any[] = [];
-            try { tDays = typeof tpl.days === 'string' ? JSON.parse(tpl.days || '[]') : (tpl.days || []); } catch { tDays = []; }
-            return { name: tpl.name || '', description: decoded.description || '', days: tDays, documentSettings: decoded.documentSettings };
-        }
-        return null;
+        return templateToDocumentContent(itineraryTemplateId);
     })();
     const saveQuoteDoc = async (content: ReservationDocContent) => {
-        await (api.quotes as any).update(request.id, { document_content: JSON.stringify(content) });
-        await onUpdateQuote(request.id, { documentContent: content } as any);
+        setQuoteDocumentContent(content);
+        await onUpdateQuote(request.id, {
+            itineraryTemplateId,
+            documentContent: content,
+        } as any);
+    };
+    const handleTemplateChange = async (templateId: string) => {
+        setItineraryTemplateId(templateId);
+        const content = templateId ? templateToDocumentContent(templateId) : null;
+        setQuoteDocumentContent(content);
+        await onUpdateQuote(request.id, {
+            itineraryTemplateId: templateId,
+            documentContent: content,
+        } as any);
     };
 
     const quoteStatusMeta: Record<string, { label: string; tone: string }> = {
@@ -744,7 +774,7 @@ export const QuoteDetailModal: React.FC<{
                                     </p>
                                     <select
                                         value={itineraryTemplateId}
-                                        onChange={(e) => setItineraryTemplateId(e.target.value)}
+                                        onChange={(e) => void handleTemplateChange(e.target.value)}
                                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                     >
                                         <option value="">일정표 없음 (비용만 안내)</option>
@@ -754,6 +784,12 @@ export const QuoteDetailModal: React.FC<{
                                     </select>
                                     {templatesList.length === 0 && (
                                         <p className="mt-1.5 text-[11px] font-medium text-amber-600">등록된 일정표가 없습니다. [템플릿 관리]에서 먼저 만들어 주세요.</p>
+                                    )}
+                                    {itineraryTemplateId && quoteDocumentContent && (
+                                        <p className="mt-2 flex items-center gap-1 text-[11px] font-bold text-teal-600">
+                                            <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                                            고객 전용 일정 복사본이 저장되었습니다. 원본 템플릿은 변경되지 않습니다.
+                                        </p>
                                     )}
                                 </div>
 
@@ -772,7 +808,7 @@ export const QuoteDetailModal: React.FC<{
                                     className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-teal-300 bg-white px-5 py-3 text-sm font-black text-teal-700 transition-colors hover:bg-teal-50 dark:border-teal-700 dark:bg-slate-800 dark:text-teal-300"
                                 >
                                     <span className="material-symbols-outlined text-[20px]">edit_document</span>
-                                    문서 편집 (고객·금액 자동)
+                                    고객별 일정 만들기·편집
                                 </button>
                                 <button
                                     onClick={() => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId)}

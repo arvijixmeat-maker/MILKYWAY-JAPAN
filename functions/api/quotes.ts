@@ -162,16 +162,47 @@ app.put('/:id', async (c) => {
     const db = drizzle(c.env.DB);
     const body = await c.req.json();
 
-    // Explicitly map snake_case keys that must persist to their camelCase model props
-    const itineraryTemplateId = body.itinerary_template_id ?? body.itineraryTemplateId;
-    const documentContent = body.document_content ?? body.documentContent;
+    const updates: Record<string, any> = {};
+    const assign = (property: string, ...keys: string[]) => {
+        const key = keys.find(candidate => Object.prototype.hasOwnProperty.call(body, candidate));
+        if (key) updates[property] = body[key];
+    };
 
-    // Update
+    assign('userId', 'user_id', 'userId');
+    assign('type', 'type');
+    assign('name', 'name');
+    assign('phone', 'phone');
+    assign('email', 'email');
+    assign('destination', 'destination');
+    assign('headcount', 'headcount');
+    assign('period', 'period');
+    assign('budget', 'budget');
+    assign('travelTypes', 'travel_types', 'travelTypes');
+    assign('accommodations', 'accommodations');
+    assign('vehicle', 'vehicle');
+    assign('additionalRequest', 'additional_request', 'additionalRequest');
+    assign('attachmentUrl', 'attachment_url', 'attachmentUrl');
+    assign('status', 'status');
+    assign('adminNote', 'admin_note', 'adminNote');
+    assign('estimateUrl', 'estimate_url', 'estimateUrl');
+    assign('confirmedStartDate', 'confirmed_start_date', 'confirmedStartDate');
+    assign('confirmedEndDate', 'confirmed_end_date', 'confirmedEndDate');
+    assign('confirmedPrice', 'confirmed_price', 'confirmedPrice');
+    assign('deposit', 'deposit');
+    assign('depositStatus', 'deposit_status', 'depositStatus');
+    assign('balanceStatus', 'balance_status', 'balanceStatus');
+    assign('itineraryTemplateId', 'itinerary_template_id', 'itineraryTemplateId');
+    assign('documentContent', 'document_content', 'documentContent');
+
+    if (Array.isArray(updates.travelTypes)) updates.travelTypes = JSON.stringify(updates.travelTypes);
+    if (Array.isArray(updates.accommodations)) updates.accommodations = JSON.stringify(updates.accommodations);
+    if (updates.documentContent !== undefined && updates.documentContent !== null && typeof updates.documentContent !== 'string') {
+        updates.documentContent = JSON.stringify(updates.documentContent);
+    }
+
     await db.update(quotes).set({
-        ...body,
-        ...(itineraryTemplateId !== undefined ? { itineraryTemplateId } : {}),
-        ...(documentContent !== undefined ? { documentContent } : {}),
-        updatedAt: new Date().toISOString() // Ensure camelCase vs snake_case matches schema
+        ...updates,
+        updatedAt: new Date().toISOString(),
     }).where(eq(quotes.id, id)).run();
 
     return c.json({ success: true });

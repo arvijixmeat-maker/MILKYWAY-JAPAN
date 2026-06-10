@@ -756,25 +756,9 @@ const TemplatesTab: React.FC = () => {
     });
     const [quickDays, setQuickDays] = useState(4);
     const [editorMode, setEditorMode] = useState<'itinerary' | 'documents'>('itinerary');
-    const [bulkText, setBulkText] = useState('');
-    const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
-    // 마스터 picker — 어느 일자에 추가할지(day index) 저장
-    // 마스터 picker — 특정 항목(일자 d, 항목 a)을 채움
     const [spotPickerTarget, setSpotPickerTarget] = useState<{ d: number; a: number } | null>(null);
     const [hotelPickerTarget, setHotelPickerTarget] = useState<{ d: number; a: number } | null>(null);
     const [dayHotelTarget, setDayHotelTarget] = useState<number | null>(null);
-    // UX 정리: 일정이 만들어지면 붙여넣기 박스를 접고, 항목 추가는 작은 메뉴로
-    const [showPasteBox, setShowPasteBox] = useState(false);
-    const [addMenuDay, setAddMenuDay] = useState<number | null>(null);
-    // 식사 종류(조식/중식/석식) 선택 메뉴 — 어느 일자에서 열렸는지
-    const [mealMenuDay, setMealMenuDay] = useState<number | null>(null);
-    // 항목별 "상세 설명" 펼침 상태 (key: `${dayIdx}-${actIdx}`)
-    const [openDesc, setOpenDesc] = useState<Set<string>>(new Set());
-    const toggleDesc = (key: string) => setOpenDesc(prev => {
-        const next = new Set(prev);
-        next.has(key) ? next.delete(key) : next.add(key);
-        return next;
-    });
 
     const load = async () => {
         try {
@@ -797,12 +781,7 @@ const TemplatesTab: React.FC = () => {
 
     useEffect(() => { load(); }, []);
 
-    const resetForm = () => { setForm({ name: '', description: '', days: [], documentSettings: defaultDocumentSettings() }); setEditing(null); setBulkText(''); setQuickDays(4); setEditorMode('itinerary'); setShowAdvancedEditor(false); setShowPasteBox(false); setAddMenuDay(null); };
-
-    const DAY_LABELS_JP = [
-        '1日目', '2日目', '3日目', '4日目', '5日目',
-        '6日目', '7日目', '8日目', '9日目', '10日目',
-    ];
+    const resetForm = () => { setForm({ name: '', description: '', days: [], documentSettings: defaultDocumentSettings() }); setEditing(null); setQuickDays(4); setEditorMode('itinerary'); };
 
     const inferActivityType = (text: string): ActivityType => {
         const value = text.toLowerCase();
@@ -830,163 +809,6 @@ const TemplatesTab: React.FC = () => {
                 accommodation: f.days[idx]?.accommodation || null,
             })),
         }));
-    };
-
-    const addActivityToLastDay = () => setForm(f => {
-        const days = f.days.length > 0 ? [...f.days] : [{ day: 1, title: '', region: '', activities: [] as Activity[] }];
-        const lastIdx = days.length - 1;
-        days[lastIdx] = {
-            ...days[lastIdx],
-            activities: [...days[lastIdx].activities, { time: '', type: 'sightseeing', title: '', description: '' }],
-        };
-        return { ...f, days };
-    });
-
-    const loadBulkSample = () => {
-        setBulkText([
-            'DAY 1｜ウランバートル到着',
-            'モンゴルの旅、はじまりの日。',
-            '',
-            'チンギスハーン国際空港に到着後、',
-            '「MILKYWAY」のサインボードを持った日本語ガイドがお出迎えいたします。',
-            '',
-            '長時間のフライト後も安心してご移動いただけるよう、',
-            '軽食（ハンバーガー・サンドイッチ）をご用意しております。',
-            '',
-            'スケジュール',
-            'チンギスハーン国際空港 到着',
-            '日本語ガイド・ドライバーと合流',
-            'SIMカード（USIM）購入・両替サポート可能',
-            '専用車にてホテルへ移動',
-            'ホテルチェックイン・休憩',
-            '宿泊',
-            'ウランバートル市内 4つ星ホテル（2名1室）',
-            '',
-            'Day 2 테를지 국립공원',
-            '호텔 출발 및 테를지 국립공원 이동',
-            '거북바위 관광',
-            '현지식 점심',
-            '승마 체험',
-            '숙박: 게르 캠프',
-        ].join('\n'));
-    };
-
-    const importBulkText = () => {
-        const rawLines = bulkText.split(/\r?\n/);
-        if (rawLines.every(line => !line.trim())) {
-            alert('붙여넣을 일정표 내용을 입력해 주세요.');
-            return;
-        }
-
-        const parsedDays: TemplateDay[] = [];
-        let currentDay: TemplateDay | null = null;
-        let section: 'intro' | 'schedule' | 'stay' = 'intro';
-        let introLines: string[] = [];
-
-        const flushIntro = () => {
-            if (!currentDay) return;
-            const cleaned = introLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-            if (cleaned) {
-                currentDay.summary = [currentDay.summary, cleaned].filter(Boolean).join('\n\n');
-            }
-            introLines = [];
-        };
-
-        const commitDay = () => {
-            flushIntro();
-            if (currentDay) parsedDays.push(currentDay);
-            currentDay = null;
-            section = 'intro';
-        };
-
-        rawLines.forEach(rawLine => {
-            const line = rawLine.trim();
-            if (!line) {
-                if (section === 'intro' && introLines.length > 0 && introLines[introLines.length - 1] !== '') {
-                    introLines.push('');
-                }
-                return;
-            }
-
-            const dayMatch = line.match(/^(?:day|d)\s*[-\s]*(\d+)\s*(?:[|｜:.)-]\s*)?(.*)$/i) || line.match(/^(\d+)\s*일차\s*[:.)-]?\s*(.*)$/);
-            if (dayMatch) {
-                commitDay();
-                currentDay = { day: parsedDays.length + 1, title: dayMatch[2]?.trim() || '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
-                section = 'intro';
-                return;
-            }
-
-            if (!currentDay) {
-                currentDay = { day: 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null };
-            }
-
-            if (/^(スケジュール|일정|schedule)$/i.test(line)) {
-                flushIntro();
-                section = 'schedule';
-                return;
-            }
-
-            if (/^(宿泊|숙박|hotel|stay)$/i.test(line)) {
-                flushIntro();
-                section = 'stay';
-                return;
-            }
-
-            const stayMatch = line.match(/^(숙박|宿泊|hotel|stay)\s*[:：]\s*(.+)$/i);
-            if (stayMatch) {
-                flushIntro();
-                const title = stayMatch[2].trim();
-                currentDay.accommodation = { name: title };
-                return;
-            }
-
-            const mealMatch = line.match(/^(조식|아침|朝食|breakfast|중식|점심|昼食|lunch|석식|저녁|夕食|dinner)\s*[:：｜|-]\s*(.+)$/i);
-            if (mealMatch) {
-                flushIntro();
-                const key = /조식|아침|朝食|breakfast/i.test(mealMatch[1])
-                    ? 'breakfast'
-                    : /중식|점심|昼食|lunch/i.test(mealMatch[1])
-                        ? 'lunch'
-                        : 'dinner';
-                currentDay.meals = { ...(currentDay.meals || {}), [key]: mealMatch[2].trim() };
-                return;
-            }
-
-            const activityMatch = line.match(/^(\d{1,2}:\d{2})\s+(.+?)(?:\s*[-–]\s*(.+))?$/);
-            if (activityMatch) {
-                flushIntro();
-                const title = activityMatch[2].trim();
-                const description = activityMatch[3]?.trim() || '';
-                currentDay.activities.push({
-                    time: '',
-                    type: inferActivityType(`${title} ${description}`),
-                    title,
-                    description,
-                });
-                return;
-            }
-
-            if (section === 'stay') {
-                currentDay.accommodation = { name: line };
-                return;
-            }
-
-            if (section === 'schedule') {
-                currentDay.activities.push({ time: '', type: inferActivityType(line), title: line, description: '' });
-                return;
-            }
-
-            if (!currentDay.title) {
-                currentDay.title = line;
-            } else {
-                introLines.push(line);
-            }
-        });
-
-        commitDay();
-        const days = parsedDays.map((day, idx) => ({ ...day, day: idx + 1 }));
-        setForm(f => ({ ...f, days }));
-        setShowAdvancedEditor(false);
     };
 
     // Day operations
@@ -1018,12 +840,6 @@ const TemplatesTab: React.FC = () => {
     const addActivityTyped = (dayIdx: number, type: ActivityType) => setForm(f => {
         const d = [...f.days];
         d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, { time: '', type, title: '', description: '' }] };
-        return { ...f, days: d };
-    });
-    // 식사 항목 추가 — 일본어 식사명(朝食/昼食/夕食)을 제목에 미리 넣고 뒤에 음식명 입력
-    const addMeal = (dayIdx: number, jp: string) => setForm(f => {
-        const d = [...f.days];
-        d[dayIdx] = { ...d[dayIdx], activities: [...d[dayIdx].activities, { time: '', type: 'meal' as ActivityType, title: `${jp} ｜ `, description: '' }] };
         return { ...f, days: d };
     });
     // 관광지 마스터에서 선택 → 상세 설명을 채움. 직접 쓴 제목은 보존(비어 있을 때만 마스터명 사용)
@@ -1116,13 +932,6 @@ const TemplatesTab: React.FC = () => {
         d[dayIdx] = { ...d[dayIdx], activities: acts };
         return { ...f, days: d };
     });
-    const sortByTime = (dayIdx: number) => setForm(f => {
-        const acts = [...f.days[dayIdx].activities].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-        const d = [...f.days];
-        d[dayIdx] = { ...d[dayIdx], activities: acts };
-        return { ...f, days: d };
-    });
-
     const updateDocSection = <K extends keyof DocumentSettings>(section: K, patch: Partial<DocumentSettings[K]>) => {
         setForm(f => ({
             ...f,
@@ -1171,7 +980,7 @@ const TemplatesTab: React.FC = () => {
         } catch (e: any) { alert('저장 실패: ' + e.message); }
     };
 
-    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days, documentSettings: mergeDocumentSettings(t.documentSettings) }); setEditorMode('itinerary'); setShowAdvancedEditor(false); setIsModalOpen(true); };
+    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days, documentSettings: mergeDocumentSettings(t.documentSettings) }); setEditorMode('itinerary'); setIsModalOpen(true); };
     const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.itineraryTemplates.delete(id); await load(); } catch (e: any) { alert('삭제 실패'); } };
     const handleDuplicate = (t: ItineraryTemplate) => {
         setEditing(null);
@@ -1182,7 +991,6 @@ const TemplatesTab: React.FC = () => {
             days: t.days.map(d => ({ ...d, activities: d.activities.map(a => ({ ...a })) })),
         });
         setEditorMode('itinerary');
-        setShowAdvancedEditor(false);
         setIsModalOpen(true);
     };
 

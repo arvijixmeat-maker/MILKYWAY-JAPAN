@@ -289,6 +289,14 @@ app.post('/', async (c) => {
             notes: body.notes ? String(body.notes) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,
             history: body.history ? JSON.stringify(body.history) : null,
+            itineraryTemplateId: (body.itinerary_template_id || body.itineraryTemplateId)
+                ? String(body.itinerary_template_id || body.itineraryTemplateId)
+                : null,
+            documentContent: body.document_content
+                ? (typeof body.document_content === 'string' ? body.document_content : JSON.stringify(body.document_content))
+                : body.documentContent
+                    ? (typeof body.documentContent === 'string' ? body.documentContent : JSON.stringify(body.documentContent))
+                    : null,
             reservationNumber,
         }).run();
 
