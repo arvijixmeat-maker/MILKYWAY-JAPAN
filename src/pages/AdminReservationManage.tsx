@@ -301,7 +301,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
     const [docEditorOpen, setDocEditorOpen] = useState(false);
     const [activeDocument, setActiveDocument] = useState<'itinerary' | 'contract'>('itinerary');
-    const [tab, setTab] = useState<'overview' | 'payment' | 'docs' | 'history'>('overview');
+    const [tab, setTab] = useState<'overview' | 'payment' | 'history'>('overview');
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -697,7 +697,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             icon: 'map',
             done: itinerarySent,
             actionLabel: itineraryReady ? '문서 확인' : '템플릿 필요',
-            onAction: () => { setTab('docs'); setActiveDocument('itinerary'); },
+            onAction: () => setActiveDocument('itinerary'),
         },
         {
             title: '계약서',
@@ -705,7 +705,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             icon: 'description',
             done: contractSent,
             actionLabel: contractReady ? '문서 확인' : '이메일 없음',
-            onAction: () => { setTab('docs'); setActiveDocument('contract'); },
+            onAction: () => setActiveDocument('contract'),
         },
         {
             title: '현지 안내',
@@ -754,9 +754,18 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const DRAWER_TABS: Array<{ id: typeof tab; label: string; icon: string }> = [
         { id: 'overview', label: '개요', icon: 'route' },
         { id: 'payment', label: '결제·배정', icon: 'payments' },
-        { id: 'docs', label: '문서', icon: 'description' },
         { id: 'history', label: '메모·이력', icon: 'history' },
     ];
+
+    // NEXT 바 — 운영 단계 중 첫 미완료 1개만 제시 (개요 탭의 5단계 카드 그리드 대체)
+    const doneCount = operationSteps.filter(s => s.done).length;
+    const nextStep = operationSteps.find(s => !s.done);
+    // 여행 일수 — date 문자열의 "n박"에서 파생 (구 getTripDays 제거됨)
+    const tripDays = (() => {
+        const m = String(reservation.date || '').match(/(\d+)박/);
+        if (m) return parseInt(m[1]) + 1;
+        return Math.max((reservation.dailyAccommodations || []).length, 1);
+    })();
 
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
@@ -770,7 +779,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 {reservation.type !== 'quote' ? '일반상품' : '맞춤견적'}
                             </span>
                             <span className="cell-mono" style={{ fontSize: 13 }}>#{(reservation as any).reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</span>
-                            <span className="cell-muted" style={{ fontSize: 12 }}>· 접수 {reservation.bookedAt}</span>
                         </div>
                         <div className="page-title" style={{ fontSize: 18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reservation.productName}</div>
                     </div>
@@ -779,6 +787,27 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                         onChange={(s) => { setEditForm({ ...editForm, status: s }); if (!isEditing) onUpdate({ ...editForm, status: s }); }}
                     />
                     <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={onClose}><Icon name="close" /></button>
+                </div>
+
+                {/* NEXT — 다음 할 일 1개 + 진행 점 스텝퍼 (개요의 5단계 카드 대체) */}
+                <div className={`next-bar${nextStep ? '' : ' all-done'}`}>
+                    <span className="nb-label">{nextStep ? '다음 할 일' : '처리 완료'}</span>
+                    {nextStep ? (
+                        <>
+                            <button className="btn btn-sm btn-ink" onClick={nextStep.onAction} disabled={!nextStep.onAction}>
+                                <Icon name={nextStep.icon} />{nextStep.title} · {nextStep.actionLabel}
+                            </button>
+                            <span className="nb-desc">{nextStep.description}</span>
+                        </>
+                    ) : (
+                        <span className="row" style={{ gap: 6, fontSize: 13, fontWeight: 800, color: 'var(--mrt-green)' }}>
+                            <Icon name="check_circle" fill />모든 운영 단계가 완료되었습니다
+                        </span>
+                    )}
+                    <span className="step-dots">
+                        {operationSteps.map((s) => <span key={s.title} className={`sd${s.done ? ' on' : ''}`} title={`${s.title} — ${s.description}`} />)}
+                        <span className="sd-n">{doneCount}/{operationSteps.length}</span>
+                    </span>
                 </div>
 
                 {/* Tabs */}
@@ -801,69 +830,66 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 <div className="drawer-body reservation-workspace-body">
                     {tab === 'overview' && (
                     <div className="stack" style={{ gap: 16 }}>
-                        {/* progress */}
-                        <div className="card card-pad">
-                            <div className="row" style={{ marginBottom: 12 }}>
-                                <Icon name="route" style={{ color: 'var(--mrt-blue-strong)' }} />
-                                <b style={{ fontSize: 14, fontWeight: 800 }}>예약 처리 현황</b>
-                                <div className="spacer" style={{ flex: 1 }} />
-                                <span className={`badge ${operationSteps.filter(s => s.done).length === operationSteps.length ? 'b-green' : 'b-blue'}`}>
-                                    {operationSteps.filter(s => s.done).length}/{operationSteps.length} 단계
-                                </span>
-                            </div>
-                            <div className="op-steps">
-                                {operationSteps.map((step, index) => (
-                                    <button
-                                        key={step.title}
-                                        type="button"
-                                        onClick={step.onAction}
-                                        disabled={!step.onAction}
-                                        className={`op-step${step.done ? ' done' : ''}`}
-                                    >
-                                        <span className="op-ico"><Icon name={step.done ? 'check' : step.icon} /></span>
-                                        <span className="op-no">STEP {index + 1}</span>
-                                        <span className="op-t">{step.title}</span>
-                                        <span className="op-d">{step.description}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* trip hero */}
-                        <div className="trip-hero">
-                            <div className="th-label">여행 기간</div>
-                            <div className="th-date">{reservation.date}</div>
-                            <div className="th-meta">
-                                <span><Icon name="event_available" />접수 {reservation.bookedAt}</span>
-                                <span><Icon name="group" />{reservation.headcount || '인원 미정'}</span>
-                            </div>
-                        </div>
-
-                        {/* guest */}
-                        <div className="card">
-                            <div className="card-head"><Icon name="person" style={{ color: 'var(--mrt-gray-600)' }} /><h2>예약자 정보</h2></div>
-                            <div className="card-pad" style={{ paddingTop: 14 }}>
-                                <div className="kv"><span>이름</span><b>{reservation.customerName}</b></div>
-                                <div className="kv">
-                                    <span>인원</span>
-                                    {isEditing ? (
-                                        <span className="row" style={{ gap: 4 }}>
-                                            <input
-                                                type="number"
-                                                value={editForm.totalPeople || ''}
-                                                onChange={(e) => setEditForm(prev => prev ? ({ ...prev, totalPeople: parseInt(e.target.value) || 0, headcount: `${e.target.value}명` }) : null)}
-                                                className="inp"
-                                                style={{ width: 72, height: 32 }}
-                                            />
-                                            <span className="cell-muted" style={{ fontSize: 12 }}>명</span>
-                                        </span>
-                                    ) : (
-                                        <b>{reservation.headcount}</b>
-                                    )}
+                        {/* 주문 요약 — Trip.com식 정보 밀도: 첫 화면에서 클릭 없이 모든 사실 확인 */}
+                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'stretch' }}>
+                            <div className="card">
+                                <div className="card-head"><Icon name="flight_takeoff" style={{ color: 'var(--mrt-gray-600)' }} /><h2>여행 정보</h2></div>
+                                <div className="card-pad" style={{ paddingTop: 14 }}>
+                                    <div className="kv"><span>여행 기간</span><b>{reservation.date}</b></div>
+                                    <div className="kv">
+                                        <span>인원</span>
+                                        {isEditing ? (
+                                            <span className="row" style={{ gap: 4 }}>
+                                                <input
+                                                    type="number"
+                                                    value={editForm.totalPeople || ''}
+                                                    onChange={(e) => setEditForm(prev => prev ? ({ ...prev, totalPeople: parseInt(e.target.value) || 0, headcount: `${e.target.value}명` }) : null)}
+                                                    className="inp"
+                                                    style={{ width: 72, height: 32 }}
+                                                />
+                                                <span className="cell-muted" style={{ fontSize: 12 }}>명</span>
+                                            </span>
+                                        ) : (
+                                            <b>{reservation.headcount}</b>
+                                        )}
+                                    </div>
+                                    <div className="kv"><span>접수일</span><b>{reservation.bookedAt}</b></div>
+                                    <div className="kv" style={{ borderBottom: 'none' }}><span>상품</span><b style={{ textAlign: 'right', whiteSpace: 'normal' }}>{reservation.productName}</b></div>
                                 </div>
-                                <div className="kv"><span>연락처</span><b style={{ fontVariantNumeric: 'tabular-nums' }}>{reservation.phone || '—'}</b></div>
-                                <div className="kv" style={{ borderBottom: 'none' }}><span>이메일</span><b style={{ textAlign: 'right' }}>{reservation.email || '—'}</b></div>
                             </div>
+                            <div className="card">
+                                <div className="card-head"><Icon name="person" style={{ color: 'var(--mrt-gray-600)' }} /><h2>예약자 정보</h2></div>
+                                <div className="card-pad" style={{ paddingTop: 14 }}>
+                                    <div className="kv"><span>이름</span><b>{reservation.customerName}</b></div>
+                                    <div className="kv"><span>연락처</span><b style={{ fontVariantNumeric: 'tabular-nums' }}>{reservation.phone || '—'}</b></div>
+                                    <div className="kv" style={{ borderBottom: 'none' }}><span>이메일</span><b style={{ textAlign: 'right' }}>{reservation.email || '—'}</b></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 상태 요약 — 클릭 시 해당 작업 탭으로 */}
+                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <button className="qlink" onClick={() => setTab('payment')}>
+                                <span className={`qi ${paidPercent >= 100 ? 'tint-green' : 'tint-amber'}`}><Icon name="payments" fill /></span>
+                                <span className="qtext">
+                                    <span className="qt">금액 · 입금</span>
+                                    <span className="qs">
+                                        예약금 {editForm.depositStatus === 'paid' ? '입금' : '미납'} · 잔금 {editForm.balanceStatus === 'paid' ? '입금' : '미납'} ({paidPercent}%)
+                                    </span>
+                                </span>
+                                <span className="qv" style={{ fontSize: 18 }}>₩{(editForm.totalAmount || 0).toLocaleString()}</span>
+                                <Icon name="chevron_right" className="arr" />
+                            </button>
+                            <button className="qlink" onClick={() => setTab('payment')}>
+                                <span className={`qi ${reservation.assignedGuide ? 'tint-green' : 'tint-blue'}`}><Icon name="support_agent" fill /></span>
+                                <span className="qtext">
+                                    <span className="qt">가이드 · 숙소 배정</span>
+                                    <span className="qs">
+                                        {reservation.assignedGuide ? `가이드 ${reservation.assignedGuide.name}` : '가이드 미배정'} · 숙소 {(reservation.dailyAccommodations || []).length}/{tripDays}일
+                                    </span>
+                                </span>
+                                <Icon name="chevron_right" className="arr" />
+                            </button>
                         </div>
                     </div>
                     )}
@@ -969,141 +995,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
 
-                    </div>
-                    )}
-
-                    {tab === 'docs' && (
-                    <div className="stack" style={{ gap: 16 }}>
-                            {/* Documents header */}
-                            <div className="row" style={{ gap: 8 }}>
-                                <Icon name="folder_shared" style={{ color: 'var(--mrt-gray-600)' }} />
-                                <b style={{ fontSize: 14, fontWeight: 800 }}>고객 문서 작업</b>
-                                <div className="spacer" style={{ flex: 1 }} />
-                                <button
-                                    onClick={sendReadyDocumentsToCustomer}
-                                    disabled={sendingAllDocs || (!itineraryReady && !contractReady) || (itinerarySent && contractSent)}
-                                    className="btn btn-sm btn-blue"
-                                >
-                                    <Icon name={sendingAllDocs ? 'hourglass_top' : 'outgoing_mail'} />
-                                    {sendingAllDocs ? '발송중' : '준비 문서 일괄 발송'}
-                                </button>
-                            </div>
-
-                            {/* Document type tabs */}
-                            <div className="seg" style={{ width: '100%' }}>
-                                {[
-                                    { key: 'itinerary' as const, label: '일정표', ready: itineraryReady, sent: itinerarySent, icon: 'map' },
-                                    { key: 'contract' as const, label: '계약서', ready: contractReady, sent: contractSent, icon: 'contract' },
-                                ].map(doc => (
-                                    <button
-                                        key={doc.key}
-                                        type="button"
-                                        onClick={() => setActiveDocument(doc.key)}
-                                        className={activeDocument === doc.key ? 'active' : ''}
-                                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-                                    >
-                                        <Icon name={doc.sent ? 'check_circle' : doc.icon} style={{ fontSize: 16 }} />
-                                        {doc.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Itinerary template + status doc-card */}
-                            <div className="doc-card">
-                                <div className="row" style={{ marginBottom: 12 }}>
-                                    <span className="doc-ico tint-blue"><Icon name="map" fill /></span>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div className="cell-strong" style={{ fontSize: 14.5 }}>고객에게 보낼 문서</div>
-                                        <div className="cell-muted" style={{ fontSize: 12 }}>템플릿 선택 후 미리보기, 링크 복사, 이메일 발송을 처리합니다.</div>
-                                    </div>
-                                </div>
-                                <label className="field" style={{ marginBottom: 12, display: 'block' }}>
-                                    <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: 6 }}>일정표 템플릿</span>
-                                    <select
-                                        className="inp"
-                                        value={editForm.itineraryTemplateId || ''}
-                                        onChange={e => {
-                                            const newId = e.target.value || undefined;
-                                            const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
-                                            setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
-                                            onUpdate(updated);
-                                            setActiveDocument('itinerary');
-                                        }}
-                                    >
-                                        <option value="">일정표 템플릿 선택</option>
-                                        {templatesList.map((t: any) => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                                    <span className={`badge ${itinerarySent ? 'b-green' : itineraryReady ? 'b-blue' : 'b-amber'}`}>
-                                        일정표 {itinerarySent ? '발송완료' : itineraryReady ? '준비됨' : '대기'}
-                                    </span>
-                                    <span className={`badge ${contractSent ? 'b-green' : contractReady ? 'b-blue' : 'b-amber'}`}>
-                                        계약서 {contractSent ? '발송완료' : contractReady ? '준비됨' : '대기'}
-                                    </span>
-                                    <span className="badge b-gray">고객 페이지 자동 연결</span>
-                                </div>
-                            </div>
-
-                            {/* Active document actions doc-card */}
-                            <div className="doc-card">
-                                <div className="row" style={{ marginBottom: 12 }}>
-                                    <span className={`doc-ico ${activeDocument === 'itinerary' ? 'tint-blue' : 'tint-purple'}`}>
-                                        <Icon name={activeDocument === 'itinerary' ? 'map' : 'description'} fill />
-                                    </span>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div className="cell-strong" style={{ fontSize: 14.5 }}>
-                                            {activeDocument === 'itinerary' ? '확정 일정표' : '여행 계약서'}
-                                        </div>
-                                        <div className="cell-muted" style={{ fontSize: 12 }}>
-                                            이곳에서는 문서 상태만 확인합니다. 실제 수정은 전용 편집 화면에서 진행합니다.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                    <button
-                                        onClick={() => setDocEditorOpen(true)}
-                                        className="btn btn-sm btn-blue"
-                                    >
-                                        <Icon name="edit_document" />
-                                        {reservation.documentContent ? '저장된 문서 편집' : '문서 직접 편집'}
-                                    </button>
-                                    <button
-                                        onClick={() => window.open(activeDocument === 'itinerary' ? itineraryUrl : contractUrl, '_blank')}
-                                        disabled={activeDocument === 'itinerary' && !itineraryReady}
-                                        className="btn btn-sm btn-ghost"
-                                    >
-                                        <Icon name="open_in_new" />
-                                        새 창에서 열기
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            const url = activeDocument === 'itinerary' ? itineraryUrl : contractUrl;
-                                            if (activeDocument === 'itinerary' && !itineraryReady) return;
-                                            navigator.clipboard.writeText(url);
-                                            setCopiedDocId(activeDocument);
-                                            setTimeout(() => setCopiedDocId(null), 1500);
-                                        }}
-                                        disabled={activeDocument === 'itinerary' && !itineraryReady}
-                                        className="btn btn-sm btn-ghost"
-                                    >
-                                        <Icon name={copiedDocId === activeDocument ? 'check' : 'content_copy'} />
-                                        {copiedDocId === activeDocument ? '복사됨' : '링크 복사'}
-                                    </button>
-                                    <button
-                                        onClick={activeDocument === 'itinerary' ? sendItineraryToCustomer : sendContractToCustomer}
-                                        disabled={activeDocument === 'itinerary' ? (!itineraryReady || sendingItinerary) : (!contractReady || sendingContract)}
-                                        className="btn btn-sm btn-blue"
-                                    >
-                                        <Icon name="send" />
-                                        {activeDocument === 'itinerary'
-                                            ? (sendingItinerary ? '발송중' : '일정표 발송')
-                                            : (sendingContract ? '발송중' : '계약서 발송')}
-                                    </button>
-                                </div>
-                            </div>
                     </div>
                     )}
 
@@ -1229,6 +1120,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => window.open(itineraryUrl, '_blank')}>
                                     <Icon name="visibility" />미리보기
                                 </button>
+                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                    <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
+                                </button>
                                 <button className="btn btn-sm btn-ghost" disabled={!itineraryReady || sendingItinerary} onClick={sendItineraryToCustomer}>
                                     <Icon name="send" />발송
                                 </button>
@@ -1250,6 +1144,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </button>
                                 <button className="btn btn-sm btn-ghost" onClick={() => window.open(contractUrl, '_blank')}>
                                     <Icon name="visibility" />미리보기
+                                </button>
+                                <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                    <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
                                 </button>
                                 <button className="btn btn-sm btn-ghost" disabled={!contractReady || sendingContract} onClick={sendContractToCustomer}>
                                     <Icon name="send" />발송
@@ -1308,7 +1205,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                         <>
                             <button onClick={onClose} className="btn btn-ghost">닫기</button>
                             <div className="spacer" style={{ flex: 1 }} />
-                            <button onClick={() => copyCustomerMessage('final')} className="btn btn-ghost"><Icon name="content_copy" />안내문 복사</button>
                             <button onClick={() => setIsEditing(true)} className="btn btn-ink"><Icon name="edit" />수정</button>
                         </>
                     )}
