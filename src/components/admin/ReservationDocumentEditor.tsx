@@ -133,6 +133,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 const info = parseBlockContent<DayInfoContent>(block.content as DayInfoContent | string);
                 current = {
                     day: converted.length + 1,
+                    date: info.dayDate || '',
                     title: info.title || '',
                     region: '',
                     summary: info.description || '',

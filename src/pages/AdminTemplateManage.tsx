@@ -14,6 +14,7 @@ export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'ac
 export interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
 export interface TemplateDay {
     day: number;
+    date?: string;
     title: string;
     region?: string;
     summary?: string;
@@ -238,6 +239,7 @@ type TemplatePreviewProps = {
     defaultPage?: 'overview' | 'contract' | 'detail' | 'guide';
     focusDayIndex?: number;
     showPageTabs?: boolean;
+    visiblePages?: Array<'overview' | 'contract' | 'detail' | 'guide'>;
     // 예약/견적에서 열 때 실제 고객 데이터 자동 표시 (없으면 샘플)
     customer?: {
         tripNumber?: string;
@@ -255,7 +257,7 @@ type TemplatePreviewProps = {
     dailyAccommodations?: Array<{ day: number; accommodation: { name?: string; type?: string; location?: string } }>;
 };
 
-export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true }) => {
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true, visiblePages }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>(defaultPage);
     useEffect(() => setActivePage(defaultPage), [defaultPage]);
     const totalDays = days.length;
@@ -284,7 +286,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
         { id: 'contract' as const, label: '契約書', icon: 'contract' },
         { id: 'detail' as const, label: '詳細', icon: 'route' },
         { id: 'guide' as const, label: '案内', icon: 'info' },
-    ];
+    ].filter(page => !visiblePages || visiblePages.includes(page.id));
     const rows = [
         ['ご旅行番号', customer?.tripNumber || 'QT-20240604-001'],
         ['ご旅行期間', `${customer?.period || '2026年6月10日（火）〜 2026年6月13日（金）'} ${tripLength}`],
@@ -356,7 +358,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                         <div className="grid grid-cols-[88px_1fr_auto] items-stretch border-b border-[#8FE7DE]">
                                             <div className="flex flex-col items-center justify-center bg-gradient-to-b from-[#0F8F84] to-[#39C4B7] px-3 py-4 text-white">
                                                 <p className="text-xs font-black">DAY {day.day}</p>
-                                                <p className="mt-1 text-[10px] font-bold text-white/80">{day.day}日目</p>
+                                                <p className="mt-1 text-[10px] font-bold text-white/80">{day.date || `${day.day}日目`}</p>
                                             </div>
                                             <div className="min-w-0 px-4 py-3">
                                                 <input value={day.region || ''} onChange={e => onDayChange(dayIdx, 'region', e.target.value)} placeholder="地域（例：ウランバートル）" className={`${fieldClass} text-[10px] font-black uppercase tracking-wider text-[#0F8F84]`} />
@@ -468,6 +470,279 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
     );
 };
 
+type ProductStyleItineraryEditorProps = {
+    days: TemplateDay[];
+    quickDays: number;
+    onQuickDaysChange: (value: number) => void;
+    onCreateSkeleton: () => void;
+    onAddDay: () => void;
+    onUpdateDay: (dayIdx: number, field: keyof TemplateDay, value: any) => void;
+    onMoveDay: (dayIdx: number, direction: -1 | 1) => void;
+    onDuplicateDay: (dayIdx: number) => void;
+    onRemoveDay: (dayIdx: number) => void;
+    onAddActivity: (dayIdx: number, type: ActivityType) => void;
+    onUpdateActivity: (dayIdx: number, activityIdx: number, field: keyof Activity, value: any) => void;
+    onMoveActivity: (dayIdx: number, activityIdx: number, direction: -1 | 1) => void;
+    onRemoveActivity: (dayIdx: number, activityIdx: number) => void;
+    onRemoveActivityImage: (dayIdx: number, activityIdx: number, imageIdx: number) => void;
+    onUploadActivityImages: (dayIdx: number, activityIdx: number, files: FileList | null) => void;
+    onPickSpot: (dayIdx: number, activityIdx: number) => void;
+    onPickHotelActivity: (dayIdx: number, activityIdx: number) => void;
+    onPickDayHotel: (dayIdx: number) => void;
+};
+
+const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = ({
+    days,
+    quickDays,
+    onQuickDaysChange,
+    onCreateSkeleton,
+    onAddDay,
+    onUpdateDay,
+    onMoveDay,
+    onDuplicateDay,
+    onRemoveDay,
+    onAddActivity,
+    onUpdateActivity,
+    onMoveActivity,
+    onRemoveActivity,
+    onRemoveActivityImage,
+    onUploadActivityImages,
+    onPickSpot,
+    onPickHotelActivity,
+    onPickDayHotel,
+}) => {
+    const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+
+    useEffect(() => {
+        setSelectedDayIndex(current => Math.max(0, Math.min(current, days.length - 1)));
+    }, [days.length]);
+
+    const selectedDay = days[selectedDayIndex];
+    const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#39C4B7] focus:ring-2 focus:ring-[#39C4B7]/15';
+    const iconButtonClass = 'flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-[#8FE7DE] hover:text-[#0F8F84] disabled:cursor-not-allowed disabled:opacity-30';
+
+    return (
+        <div className="grid h-full grid-cols-[230px_minmax(580px,1fr)_260px] overflow-hidden bg-[#F7FAFA] max-xl:grid-cols-[210px_minmax(520px,1fr)] max-lg:block max-lg:overflow-y-auto">
+            <aside className="overflow-y-auto border-r border-slate-200 bg-white p-4 max-lg:border-b max-lg:border-r-0">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs font-black text-amber-900">N일 일정 골격 만들기</p>
+                    <p className="mt-1 text-[10px] font-semibold leading-relaxed text-amber-700">상품관리 일정탭과 같은 방식으로 DAY를 먼저 생성합니다.</p>
+                    <div className="mt-3 flex gap-2">
+                        <select
+                            value={quickDays}
+                            onChange={event => onQuickDaysChange(Number(event.target.value))}
+                            className="h-9 flex-1 rounded-lg border border-amber-200 bg-white px-2 text-xs font-black text-slate-700 outline-none"
+                        >
+                            {Array.from({ length: 14 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}일</option>)}
+                        </select>
+                        <button type="button" onClick={onCreateSkeleton} className="h-9 rounded-lg bg-amber-500 px-3 text-xs font-black text-white hover:bg-amber-600">생성</button>
+                    </div>
+                </div>
+
+                <div className="mb-3 mt-5 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">일정 구성</p>
+                        <p className="mt-1 text-base font-black text-slate-900">{days.length}일 일정</p>
+                    </div>
+                    <button type="button" onClick={onAddDay} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F8F84] text-white" title="DAY 추가">
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                    </button>
+                </div>
+
+                <div className="space-y-2">
+                    {days.map((day, index) => (
+                        <button
+                            key={`${day.day}-${index}`}
+                            type="button"
+                            onClick={() => setSelectedDayIndex(index)}
+                            className={`w-full rounded-xl border p-3 text-left transition ${selectedDayIndex === index ? 'border-[#39C4B7] bg-[#EAF8F7] shadow-sm' : 'border-slate-200 bg-white hover:border-[#8FE7DE]'}`}
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black text-[#0F8F84]">DAY {day.day}</span>
+                                <span className="text-[9px] font-bold text-slate-400">{day.activities.length}개 일정</span>
+                            </div>
+                            <p className="mt-1 truncate text-xs font-black text-slate-800">{day.title || '일차 제목을 입력하세요'}</p>
+                            <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{[day.date, day.region].filter(Boolean).join(' · ') || '날짜·지역 미정'}</p>
+                        </button>
+                    ))}
+                    {days.length === 0 && (
+                        <button type="button" onClick={onCreateSkeleton} className="w-full rounded-xl border-2 border-dashed border-[#8FE7DE] px-3 py-8 text-xs font-black text-[#0F8F84]">
+                            일정 골격 생성
+                        </button>
+                    )}
+                </div>
+            </aside>
+
+            <main className="min-w-0 overflow-y-auto p-5">
+                {!selectedDay ? (
+                    <div className="flex min-h-[420px] items-center justify-center rounded-2xl border-2 border-dashed border-[#8FE7DE] bg-white text-center">
+                        <div>
+                            <span className="material-symbols-outlined text-4xl text-[#39C4B7]">calendar_add_on</span>
+                            <p className="mt-3 text-sm font-black text-slate-800">먼저 여행 일수를 선택해 일정 골격을 생성하세요.</p>
+                            <p className="mt-1 text-xs font-semibold text-slate-400">생성 후 일차별 제목, 일정, 식사와 숙소를 입력할 수 있습니다.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <section className="overflow-hidden rounded-2xl border border-[#8FE7DE] bg-white shadow-sm">
+                        <header className="flex items-start gap-3 border-b border-[#8FE7DE] bg-[#EAF8F7]/50 p-4">
+                            <div className="flex h-14 w-16 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] text-white">
+                                <span className="text-xs font-black">DAY {selectedDay.day}</span>
+                                <span className="mt-0.5 text-[9px] font-bold text-white/80">{selectedDay.day}日目</span>
+                            </div>
+                            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[130px_170px_1fr]">
+                                <input value={selectedDay.date || ''} onChange={event => onUpdateDay(selectedDayIndex, 'date', event.target.value)} placeholder="날짜 (예: 06/10)" className={inputClass} />
+                                <input value={selectedDay.region || ''} onChange={event => onUpdateDay(selectedDayIndex, 'region', event.target.value)} placeholder="지역 (예: 울란바토르)" className={inputClass} />
+                                <input value={selectedDay.title} onChange={event => onUpdateDay(selectedDayIndex, 'title', event.target.value)} placeholder="일정 제목 (예: 공항 도착 및 시내 이동)" className={`${inputClass} font-black`} />
+                            </div>
+                            <div className="flex flex-shrink-0 gap-1">
+                                <button type="button" onClick={() => onMoveDay(selectedDayIndex, -1)} disabled={selectedDayIndex === 0} className={iconButtonClass} title="앞으로 이동"><Icon name="arrow_upward" /></button>
+                                <button type="button" onClick={() => onMoveDay(selectedDayIndex, 1)} disabled={selectedDayIndex === days.length - 1} className={iconButtonClass} title="뒤로 이동"><Icon name="arrow_downward" /></button>
+                                <button type="button" onClick={() => onDuplicateDay(selectedDayIndex)} className={iconButtonClass} title="일차 복제"><Icon name="content_copy" /></button>
+                                <button type="button" onClick={() => onRemoveDay(selectedDayIndex)} className={`${iconButtonClass} hover:border-rose-200 hover:text-rose-500`} title="일차 삭제"><Icon name="delete" /></button>
+                            </div>
+                        </header>
+
+                        <div className="p-5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">여행 소개</label>
+                            <textarea
+                                value={selectedDay.summary || ''}
+                                onChange={event => onUpdateDay(selectedDayIndex, 'summary', event.target.value)}
+                                rows={3}
+                                placeholder="이날의 여행 흐름과 고객에게 전달할 설명을 입력하세요."
+                                className={`${inputClass} mt-2 resize-y leading-relaxed`}
+                            />
+
+                            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-black text-slate-900">주요 일정</p>
+                                    <p className="mt-0.5 text-[10px] font-semibold text-slate-400">시간 없이 방문지와 이동 흐름을 순서대로 구성합니다.</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {([
+                                        ['sightseeing', 'add_location_alt', '관광 일정'],
+                                        ['transport', 'directions_car', '이동'],
+                                        ['activity', 'hiking', '체험'],
+                                        ['free', 'park', '자유 일정'],
+                                    ] as Array<[ActivityType, string, string]>).map(([type, icon, label]) => (
+                                        <button key={type} type="button" onClick={() => onAddActivity(selectedDayIndex, type)} className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-700 hover:border-[#39C4B7] hover:text-[#0F8F84]">
+                                            <span className="material-symbols-outlined text-[16px]">{icon}</span>{label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-4 space-y-3">
+                                {selectedDay.activities.map((activity, activityIdx) => (
+                                    <article key={activityIdx} className="rounded-2xl border border-slate-200 bg-[#F7FAFA] p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#EAF8F7] text-[#0F8F84]">
+                                                <span className="material-symbols-outlined text-[19px]">{TYPE_MAP[activity.type || 'sightseeing']?.icon || 'place'}</span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="grid gap-2 sm:grid-cols-[130px_1fr]">
+                                                    <select value={activity.type || 'sightseeing'} onChange={event => onUpdateActivity(selectedDayIndex, activityIdx, 'type', event.target.value as ActivityType)} className={inputClass}>
+                                                        {ACTIVITY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+                                                    </select>
+                                                    <input value={activity.title} onChange={event => onUpdateActivity(selectedDayIndex, activityIdx, 'title', event.target.value)} placeholder="일정 제목" className={`${inputClass} font-black`} />
+                                                </div>
+                                                <textarea value={activity.description || ''} onChange={event => onUpdateActivity(selectedDayIndex, activityIdx, 'description', event.target.value)} rows={2} placeholder="상세 설명 (선택)" className={`${inputClass} mt-2 resize-y text-xs leading-relaxed`} />
+                                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                    <button type="button" onClick={() => onPickSpot(selectedDayIndex, activityIdx)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#8FE7DE] bg-white px-2.5 text-[10px] font-black text-[#0F8F84]"><Icon name="location_on" />관광지에서 선택</button>
+                                                    <button type="button" onClick={() => onPickHotelActivity(selectedDayIndex, activityIdx)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600"><Icon name="hotel" />호텔에서 선택</button>
+                                                    <label className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600">
+                                                        <Icon name="add_photo_alternate" />사진 추가
+                                                        <input type="file" accept="image/*" multiple className="hidden" onChange={event => onUploadActivityImages(selectedDayIndex, activityIdx, event.target.files)} />
+                                                    </label>
+                                                </div>
+                                                {(activity.images || []).length > 0 && (
+                                                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                                                        {(activity.images || []).map((image, imageIdx) => (
+                                                            <div key={`${image}-${imageIdx}`} className="relative flex-none">
+                                                                <img src={image} alt="" className="h-20 w-28 rounded-xl object-cover" />
+                                                                <button type="button" onClick={() => onRemoveActivityImage(selectedDayIndex, activityIdx, imageIdx)} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white"><Icon name="close" style={{ fontSize: 13 }} /></button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-shrink-0 flex-col gap-1">
+                                                <button type="button" onClick={() => onMoveActivity(selectedDayIndex, activityIdx, -1)} disabled={activityIdx === 0} className={iconButtonClass} title="위로"><Icon name="arrow_upward" /></button>
+                                                <button type="button" onClick={() => onMoveActivity(selectedDayIndex, activityIdx, 1)} disabled={activityIdx === selectedDay.activities.length - 1} className={iconButtonClass} title="아래로"><Icon name="arrow_downward" /></button>
+                                                <button type="button" onClick={() => onRemoveActivity(selectedDayIndex, activityIdx)} className={`${iconButtonClass} hover:border-rose-200 hover:text-rose-500`} title="삭제"><Icon name="delete" /></button>
+                                            </div>
+                                        </div>
+                                    </article>
+                                ))}
+                                {selectedDay.activities.length === 0 && (
+                                    <button type="button" onClick={() => onAddActivity(selectedDayIndex, 'sightseeing')} className="w-full rounded-2xl border-2 border-dashed border-[#8FE7DE] py-8 text-xs font-black text-[#0F8F84] hover:bg-[#EAF8F7]">
+                                        <Icon name="add_circle" /> 첫 일정 항목 추가
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                                <div className="rounded-2xl border border-slate-200 p-4">
+                                    <p className="flex items-center gap-1.5 text-sm font-black text-slate-900"><Icon name="restaurant" />식사 정보</p>
+                                    <div className="mt-3 grid grid-cols-3 gap-2">
+                                        {([
+                                            ['breakfast', '조식'],
+                                            ['lunch', '중식'],
+                                            ['dinner', '석식'],
+                                        ] as const).map(([key, label]) => (
+                                            <label key={key} className="rounded-xl bg-slate-50 p-2">
+                                                <span className="text-[9px] font-black text-slate-400">{label}</span>
+                                                <input value={selectedDay.meals?.[key] || ''} onChange={event => onUpdateDay(selectedDayIndex, 'meals', { ...(selectedDay.meals || {}), [key]: event.target.value })} placeholder="미정" className="mt-1 w-full bg-transparent text-xs font-bold text-slate-700 outline-none" />
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <p className="flex items-center gap-1.5 text-sm font-black text-slate-900"><Icon name="hotel" />숙소 정보</p>
+                                        <button type="button" onClick={() => onPickDayHotel(selectedDayIndex)} className="text-[10px] font-black text-[#0F8F84]">호텔 마스터에서 선택</button>
+                                    </div>
+                                    <input value={selectedDay.accommodation?.name || ''} onChange={event => onUpdateDay(selectedDayIndex, 'accommodation', { ...(selectedDay.accommodation || {}), name: event.target.value })} placeholder="호텔 또는 게르명" className={`${inputClass} mt-3`} />
+                                    {selectedDay.accommodation?.location && <p className="mt-2 text-[10px] font-semibold text-slate-400">{selectedDay.accommodation.location}</p>}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+            </main>
+
+            <aside className="overflow-y-auto border-l border-slate-200 bg-white p-4 max-xl:hidden">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">일정 요약</p>
+                <div className="mt-3 rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-800">전체 일정</span>
+                        <span className="rounded-full bg-[#EAF8F7] px-2 py-1 text-[10px] font-black text-[#0F8F84]">{days.length}일</span>
+                    </div>
+                    <dl className="mt-4 space-y-3 text-[11px]">
+                        <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">주요 일정</dt><dd className="font-black text-slate-700">{days.reduce((sum, day) => sum + day.activities.length, 0)}개</dd></div>
+                        <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">숙소 입력</dt><dd className="font-black text-slate-700">{days.filter(day => day.accommodation?.name).length}일</dd></div>
+                        <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">식사 입력</dt><dd className="font-black text-slate-700">{days.filter(day => Object.values(day.meals || {}).some(Boolean)).length}일</dd></div>
+                    </dl>
+                </div>
+                {selectedDay && (
+                    <div className="mt-4 rounded-2xl border border-[#8FE7DE] bg-[#F7FAFA] p-4">
+                        <p className="text-[10px] font-black text-[#0F8F84]">현재 DAY {selectedDay.day}</p>
+                        <p className="mt-2 text-sm font-black text-slate-900">{selectedDay.title || '제목 미입력'}</p>
+                        <p className="mt-1 text-[10px] font-semibold text-slate-400">{[selectedDay.date, selectedDay.region].filter(Boolean).join(' · ') || '날짜·지역 미정'}</p>
+                        <div className="mt-4 space-y-2">
+                            {selectedDay.activities.slice(0, 5).map((activity, index) => (
+                                <div key={index} className="flex items-start gap-2 text-[10px] font-semibold text-slate-600">
+                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#39C4B7]" />
+                                    <span>{activity.title || '일정 제목 미입력'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </aside>
+        </div>
+    );
+};
+
 // ─── Tab: Itinerary Templates ────────────────────────────
 const TemplatesTab: React.FC = () => {
     const [templates, setTemplates] = useState<ItineraryTemplate[]>([]);
@@ -480,6 +755,7 @@ const TemplatesTab: React.FC = () => {
         documentSettings: defaultDocumentSettings(),
     });
     const [quickDays, setQuickDays] = useState(4);
+    const [editorMode, setEditorMode] = useState<'itinerary' | 'documents'>('itinerary');
     const [bulkText, setBulkText] = useState('');
     const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
     // 마스터 picker — 어느 일자에 추가할지(day index) 저장
@@ -521,7 +797,7 @@ const TemplatesTab: React.FC = () => {
 
     useEffect(() => { load(); }, []);
 
-    const resetForm = () => { setForm({ name: '', description: '', days: [], documentSettings: defaultDocumentSettings() }); setEditing(null); setBulkText(''); setQuickDays(4); setShowAdvancedEditor(false); setShowPasteBox(false); setAddMenuDay(null); };
+    const resetForm = () => { setForm({ name: '', description: '', days: [], documentSettings: defaultDocumentSettings() }); setEditing(null); setBulkText(''); setQuickDays(4); setEditorMode('itinerary'); setShowAdvancedEditor(false); setShowPasteBox(false); setAddMenuDay(null); };
 
     const DAY_LABELS_JP = [
         '1日目', '2日目', '3日目', '4日目', '5日目',
@@ -546,6 +822,7 @@ const TemplatesTab: React.FC = () => {
             days: Array.from({ length: count }, (_, idx) => ({
                 day: idx + 1,
                 title: f.days[idx]?.title || '',
+                date: f.days[idx]?.date || '',
                 region: f.days[idx]?.region || '',
                 summary: f.days[idx]?.summary || '',
                 activities: f.days[idx]?.activities || [],
@@ -806,6 +1083,21 @@ const TemplatesTab: React.FC = () => {
         d[dayIdx] = { ...d[dayIdx], activities: acts };
         return { ...f, days: d };
     });
+    const uploadActivityImages = async (dayIdx: number, actIdx: number, files: FileList | null) => {
+        if (!files?.length) return;
+        try {
+            const urls = await Promise.all(Array.from(files).map(file => uploadImage(file, 'itinerary-templates')));
+            setForm(f => {
+                const days = [...f.days];
+                const activities = [...days[dayIdx].activities];
+                activities[actIdx] = { ...activities[actIdx], images: [...(activities[actIdx].images || []), ...urls] };
+                days[dayIdx] = { ...days[dayIdx], activities };
+                return { ...f, days };
+            });
+        } catch {
+            alert('일정 사진 업로드에 실패했습니다.');
+        }
+    };
     const updateActivity = (dayIdx: number, actIdx: number, field: keyof Activity, value: any) => setForm(f => { const d = [...f.days]; d[dayIdx].activities[actIdx] = { ...d[dayIdx].activities[actIdx], [field]: value }; return { ...f, days: d }; });
     const updateActivityText = (dayIdx: number, actIdx: number, field: 'title' | 'description', value: string) => setForm(f => {
         const d = [...f.days];
@@ -879,7 +1171,7 @@ const TemplatesTab: React.FC = () => {
         } catch (e: any) { alert('저장 실패: ' + e.message); }
     };
 
-    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days, documentSettings: mergeDocumentSettings(t.documentSettings) }); setShowAdvancedEditor(false); setIsModalOpen(true); };
+    const handleEdit = (t: ItineraryTemplate) => { setEditing(t); setForm({ name: t.name, description: t.description, days: t.days, documentSettings: mergeDocumentSettings(t.documentSettings) }); setEditorMode('itinerary'); setShowAdvancedEditor(false); setIsModalOpen(true); };
     const handleDelete = async (id: string) => { if (!confirm('삭제하시겠습니까?')) return; try { await api.itineraryTemplates.delete(id); await load(); } catch (e: any) { alert('삭제 실패'); } };
     const handleDuplicate = (t: ItineraryTemplate) => {
         setEditing(null);
@@ -889,6 +1181,7 @@ const TemplatesTab: React.FC = () => {
             documentSettings: mergeDocumentSettings(t.documentSettings),
             days: t.days.map(d => ({ ...d, activities: d.activities.map(a => ({ ...a })) })),
         });
+        setEditorMode('itinerary');
         setShowAdvancedEditor(false);
         setIsModalOpen(true);
     };
@@ -1011,10 +1304,51 @@ const TemplatesTab: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Body: editor + preview */}
-                        <div className="flex-1 overflow-hidden">
+                        <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
+                            <div className="inline-flex rounded-xl bg-slate-100 p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditorMode('itinerary')}
+                                    className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-black transition ${editorMode === 'itinerary' ? 'bg-white text-[#0F8F84] shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    <Icon name="route" />일정 구성
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditorMode('documents')}
+                                    className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-black transition ${editorMode === 'documents' ? 'bg-white text-[#0F8F84] shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    <Icon name="description" />문서 디자인
+                                </button>
+                            </div>
+                            <p className="hidden text-[11px] font-semibold text-slate-400 md:block">
+                                {editorMode === 'itinerary' ? '상품관리 일정탭 방식으로 고객용 일정을 구성합니다.' : '일정표 표지, 계약서와 공통 안내 문구를 편집합니다.'}
+                            </p>
+                        </div>
 
-{/* Live preview */}
+                        <div className="flex-1 overflow-hidden">
+                            {editorMode === 'itinerary' ? (
+                                <ProductStyleItineraryEditor
+                                    days={form.days}
+                                    quickDays={quickDays}
+                                    onQuickDaysChange={setQuickDays}
+                                    onCreateSkeleton={() => createBlankDays()}
+                                    onAddDay={addDay}
+                                    onUpdateDay={updateDay}
+                                    onMoveDay={moveDay}
+                                    onDuplicateDay={duplicateDay}
+                                    onRemoveDay={removeDay}
+                                    onAddActivity={addActivityTyped}
+                                    onUpdateActivity={updateActivity}
+                                    onMoveActivity={moveActivity}
+                                    onRemoveActivity={removeActivity}
+                                    onRemoveActivityImage={removeActivityImage}
+                                    onUploadActivityImages={uploadActivityImages}
+                                    onPickSpot={(d, a) => setSpotPickerTarget({ d, a })}
+                                    onPickHotelActivity={(d, a) => setHotelPickerTarget({ d, a })}
+                                    onPickDayHotel={setDayHotelTarget}
+                                />
+                            ) : (
                             <div className="h-full overflow-hidden bg-white">
                                 <TemplatePreview
                                     name={form.name}
@@ -1040,9 +1374,11 @@ const TemplatesTab: React.FC = () => {
                                     })}
                                     onPickSpot={(d, a) => setSpotPickerTarget({ d, a })}
                                     onPickHotel={(d) => setDayHotelTarget(d)}
-                                    defaultPage="detail"
+                                    defaultPage="overview"
+                                    visiblePages={['overview', 'contract', 'guide']}
                                 />
                             </div>
+                            )}
                         </div>
                     </div>
 
