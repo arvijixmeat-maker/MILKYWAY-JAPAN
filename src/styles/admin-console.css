@@ -1008,3 +1008,14 @@
 @keyframes fadeUp { from { opacity: 0.5; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .admin-app-wrapper .route-anim { animation: fadeUp 0.26s var(--ease-out); }
 
+/* ============ NEXT 바 — 다음 할 일 1개 + 진행 점 스텝퍼 (예약/견적 상세) ============ */
+.admin-app-wrapper .next-bar { display: flex; align-items: center; gap: 12px; padding: 9px 22px; background: var(--mrt-blue-50); border-bottom: 1px solid var(--border-default); flex: none; min-width: 0; }
+.admin-app-wrapper .next-bar.all-done { background: var(--mrt-green-soft); }
+.admin-app-wrapper .next-bar .nb-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mrt-blue-strong); flex: none; }
+.admin-app-wrapper .next-bar.all-done .nb-label { color: var(--mrt-green); }
+.admin-app-wrapper .next-bar .nb-desc { font-size: 12px; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.admin-app-wrapper .step-dots { display: flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
+.admin-app-wrapper .step-dots .sd { width: 8px; height: 8px; border-radius: 50%; background: var(--mrt-gray-300); }
+.admin-app-wrapper .step-dots .sd.on { background: var(--mrt-blue); }
+.admin-app-wrapper .step-dots .sd-n { font-size: 11px; font-weight: 700; color: var(--text-tertiary); margin-left: 3px; font-variant-numeric: tabular-nums; }
+
