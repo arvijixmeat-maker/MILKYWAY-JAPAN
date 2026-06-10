@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -986,6 +986,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     // → empty box → file picker for each one.
     const [itineraryBulkUploading, setItineraryBulkUploading] = useState(false);
     const [itineraryBulkProgress, setItineraryBulkProgress] = useState<{ done: number; total: number } | null>(null);
+    // Day-based itinerary editor UI state: which day cards are collapsed / showing the advanced menu.
+    const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+    const [advancedDays, setAdvancedDays] = useState<Set<string>>(new Set());
     const bulkAddItineraryImages = async (files: File[]) => {
         if (files.length === 0) return;
         setItineraryBulkUploading(true);
@@ -1161,6 +1164,142 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
             const el = document.querySelector(`[data-itinerary-block="${newBlock.id}"]`);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 50);
+    };
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Day-based itinerary editor (날짜별 카드).
+    //
+    // The public renderer groups the flat `itineraryBlocks` array by `dayInfo`
+    // markers: each dayInfo starts a new day, the blocks after it are that day's
+    // events. We keep that exact storage shape but project it into day cards so
+    // the admin never has to hand-order a flat block list. All content editing
+    // still flows through the existing index-based handlers (updateTimelineInBlock,
+    // handleTimelineBlockImages, master pickers, …) — only structural ops are new.
+    // ─────────────────────────────────────────────────────────────────────
+    type EditorEvent = { block: DetailContentBlock; flatIndex: number };
+    type EditorDay = { dayInfo: DetailContentBlock; dayInfoFlatIndex: number; events: EditorEvent[] };
+    type PlainDay = { dayInfo: DetailContentBlock; events: DetailContentBlock[] };
+
+    const isSpacerBlock = (b: DetailContentBlock) =>
+        b.type === 'divider' && (b.content as DividerContent)?.style === 'space';
+
+    // Read-only projection for the render layer. Cosmetic spacer dividers (auto
+    // inserted between days) are hidden from the per-day event lists.
+    const groupItineraryForEditor = (blocks: DetailContentBlock[]): { pre: EditorEvent[]; days: EditorDay[] } => {
+        const pre: EditorEvent[] = [];
+        const days: EditorDay[] = [];
+        let cur: EditorDay | null = null;
+        blocks.forEach((block, flatIndex) => {
+            if (block.type === 'dayInfo') {
+                cur = { dayInfo: block, dayInfoFlatIndex: flatIndex, events: [] };
+                days.push(cur);
+            } else if (isSpacerBlock(block)) {
+                // skip — regenerated on serialize
+            } else if (cur) {
+                cur.events.push({ block, flatIndex });
+            } else {
+                pre.push({ block, flatIndex });
+            }
+        });
+        return { pre, days };
+    };
+
+    // Serialize day groups back to the canonical flat array: renumber day labels
+    // sequentially, put exactly one space divider between consecutive days.
+    const flattenItineraryDays = (pre: DetailContentBlock[], days: PlainDay[]): DetailContentBlock[] => {
+        const out: DetailContentBlock[] = [...pre];
+        days.forEach((d, i) => {
+            const dc = d.dayInfo.content as DayInfoContent;
+            out.push({ ...d.dayInfo, content: { ...dc, dayLabel: DAY_LABELS_JP[i] || `${i + 1}일차` } });
+            out.push(...d.events);
+            if (i < days.length - 1) {
+                out.push({ id: `block-sep-${d.dayInfo.id}`, type: 'divider', content: { style: 'space', height: 40 } });
+            }
+        });
+        return out;
+    };
+
+    // Regroup current blocks → let the mutator edit the plain groups → flatten → set.
+    const rebuildItinerary = (mutate: (g: { pre: DetailContentBlock[]; days: PlainDay[] }) => void) => {
+        setFormData((prev) => {
+            const blocks = prev.itineraryBlocks || [];
+            const pre: DetailContentBlock[] = [];
+            const days: PlainDay[] = [];
+            let cur: PlainDay | null = null;
+            for (const b of blocks) {
+                if (b.type === 'dayInfo') { cur = { dayInfo: b, events: [] }; days.push(cur); }
+                else if (isSpacerBlock(b)) { /* drop cosmetic spacer; regenerated on flatten */ }
+                else if (cur) { cur.events.push(b); }
+                else { pre.push(b); }
+            }
+            const g = { pre, days };
+            mutate(g);
+            return { ...prev, itineraryBlocks: flattenItineraryDays(g.pre, g.days) };
+        });
+    };
+
+    const makeItineraryBlock = (type: 'timeline' | 'image' | 'slide' | 'divider'): DetailContentBlock => {
+        const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        if (type === 'timeline') return { id: `block-${stamp}`, type, content: { id: `timeline-${stamp}`, time: '', title: '', description: '', images: [] } };
+        if (type === 'slide') return { id: `block-${stamp}`, type, content: { id: `slide-${stamp}`, type: 'day', dayLabel: '', title: '', description: '', images: [] } };
+        if (type === 'divider') return { id: `block-${stamp}`, type, content: { style: 'line', height: 20 } };
+        return { id: `block-${stamp}`, type, content: '' }; // image
+    };
+
+    const addItineraryDay = () => {
+        const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        rebuildItinerary((g) => {
+            g.days.push({
+                dayInfo: {
+                    id: `block-${stamp}-info`,
+                    type: 'dayInfo',
+                    content: { id: `dayinfo-${stamp}`, dayLabel: '', dayDate: '', title: '', description: '', meals: { breakfast: '', lunch: '', dinner: '' }, accommodation: '' },
+                },
+                events: [],
+            });
+        });
+    };
+
+    const removeItineraryDay = (dayGroupIndex: number) => {
+        rebuildItinerary((g) => { g.days.splice(dayGroupIndex, 1); });
+    };
+
+    const moveItineraryDay = (dayGroupIndex: number, dir: -1 | 1) => {
+        rebuildItinerary((g) => {
+            const t = dayGroupIndex + dir;
+            if (t < 0 || t >= g.days.length) return;
+            [g.days[dayGroupIndex], g.days[t]] = [g.days[t], g.days[dayGroupIndex]];
+        });
+    };
+
+    const addItineraryEvent = (dayGroupIndex: number, type: 'timeline' | 'image' | 'slide' | 'divider') => {
+        const block = makeItineraryBlock(type);
+        rebuildItinerary((g) => { g.days[dayGroupIndex]?.events.push(block); });
+        setTimeout(() => {
+            const el = document.querySelector(`[data-itinerary-block="${block.id}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+    };
+
+    const removeItineraryEvent = (dayGroupIndex: number, eventIndex: number) => {
+        rebuildItinerary((g) => { g.days[dayGroupIndex]?.events.splice(eventIndex, 1); });
+    };
+
+    const moveItineraryEvent = (dayGroupIndex: number, eventIndex: number, dir: -1 | 1) => {
+        rebuildItinerary((g) => {
+            const evs = g.days[dayGroupIndex]?.events;
+            if (!evs) return;
+            const t = eventIndex + dir;
+            if (t < 0 || t >= evs.length) return;
+            [evs[eventIndex], evs[t]] = [evs[t], evs[eventIndex]];
+        });
+    };
+
+    const toggleDayCollapsed = (id: string) => {
+        setCollapsedDays((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    };
+    const toggleDayAdvanced = (id: string) => {
+        setAdvancedDays((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
     };
 
     const removeItineraryBlock = (index: number) => {
@@ -1978,307 +2117,230 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                     progress={itineraryBulkProgress}
                                 />
 
-                                {/* Itinerary Block Content Section */}
+                                {/* Itinerary — day-based editor (날짜별 카드).
+                                    Projects the flat itineraryBlocks array into day cards for
+                                    editing, then serializes back to the SAME flat shape the public
+                                    renderer expects. Public site / DB untouched. */}
                                 <div>
-                                    <div className="block-add-bar">
-                                        <span className="block-add-label"><Icon name="add" />블록 추가</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => addItineraryBlock('timeline')}
-                                            className="chip"
-                                            title="시간·제목·설명·이미지가 들어가는 일정 항목 (예: '10:00 자이승 전망대 + 사진 3장')"
-                                        >
-                                            <Icon name="add_location" style={{ fontSize: 16 }} />일정 항목 추가
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => addItineraryBlock('image')}
-                                            className="chip"
-                                            title="단일 이미지 하나만 (긴 한 장 이미지에 적합)"
-                                        >
-                                            <Icon name="image" style={{ fontSize: 16 }} />사진 1장
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => addItineraryBlock('slide')}
-                                            className="chip"
-                                            title="사진 여러 장을 가로 갤러리로 묶음 (제목 부여 가능)"
-                                        >
-                                            <Icon name="view_carousel" style={{ fontSize: 16 }} />갤러리
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => addItineraryBlock('divider')}
-                                            className="chip"
-                                            title="블록 사이 간격 또는 가로선"
-                                        >
-                                            <Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선
-                                        </button>
-                                    </div>
                                     <div className="card-muted-note" style={{ marginBottom: 14, display: 'block' }}>
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontWeight: 700 }}><Icon name="lightbulb" />사용 방법</div>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontWeight: 700 }}><Icon name="lightbulb" />날짜별 카드에서 일정을 간단히 작성합니다</div>
                                         <ul style={{ margin: '8px 0 0', paddingLeft: 20, listStyle: 'disc', lineHeight: 1.7 }}>
-                                            <li><strong>1日目, 2日目 헤더</strong>는 위쪽 <strong>「N일 일정 골격 만들기」</strong> 버튼으로 한 번에 생성하세요. 헤더 안에 도시명·식사·숙소를 입력하시면 됩니다.</li>
-                                            <li><strong>각 일자 안의 이벤트</strong>(예: 자이승 전망대 방문 + 사진 5장)는 <strong>「일정 항목 추가」</strong> 버튼으로 추가. 시간·제목·설명·사진 여러 장 입력 가능.</li>
-                                            <li>해당 일자의 식사·숙소는 그 일자의 <strong>DAY INFO</strong> 블록 안에 입력 — PC 화면에서 자동으로 그 일자 맨 아래에 표시됩니다.</li>
-                                            <li>이미지만 길게 한 장씩 올리는 상품은 위쪽 <strong>드래그&드롭 박스</strong>로 한꺼번에.</li>
+                                            <li>아래 <strong>DAY 추가</strong> 버튼으로 일차를 추가하면 번호가 자동으로 정리됩니다.</li>
+                                            <li>각 카드에 <strong>제목·날짜·식사·숙소</strong>를 입력하고, <strong>일정 항목 추가</strong>로 관광·이동·체험을 순서대로 구성합니다.</li>
+                                            <li><strong>관광지·호텔 마스터</strong>에서 선택하면 제목·설명·사진을 자동으로 불러옵니다.</li>
+                                            <li>단일 이미지·갤러리·구분선은 각 카드의 <strong>고급 항목</strong>에서 추가할 수 있습니다.</li>
                                         </ul>
                                     </div>
 
-                                    <div className="stack" style={{ gap: 12 }}>
-                                        {(formData.itineraryBlocks || []).map((block, index) => (
-                                            <div key={block.id} data-itinerary-block={block.id} className="edit-row">
-                                                <div className="edit-move">
-                                                    <button type="button" onClick={() => moveItineraryBlock(index, index - 1)} disabled={index === 0}><Icon name="expand_less" /></button>
-                                                    <button type="button" onClick={() => moveItineraryBlock(index, index + 1)} disabled={index === (formData.itineraryBlocks?.length || 0) - 1}><Icon name="expand_more" /></button>
-                                                </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    {/* Block Header */}
-                                                    <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-                                                        <span className="badge b-gray">
-                                                            {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : 'DIVIDER')))}
-                                                        </span>
-                                                        <span className="cell-muted" style={{ fontSize: 12 }}>{index + 1}번째 블록</span>
-                                                    </div>
+                                    {(() => {
+                                        const { pre, days } = groupItineraryForEditor(formData.itineraryBlocks || []);
+                                        const typeLabel = (t: string) => (t === 'image' ? '이미지' : t === 'slide' ? '갤러리' : t === 'divider' ? '구분선' : '일정');
 
-                                                    {/* Block Content */}
-                                                    {block.type === 'image' ? (
-                                                        // IMAGE BLOCK
-                                                        <div className="block-img">
-                                                            {block.content ? (
-                                                                <div style={{ position: 'relative' }}>
-                                                                    <img
-                                                                        src={getOptimizedImageUrl(block.content as string, 'productThumbnail')}
-                                                                        alt={`Block ${index + 1}`}
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => updateItineraryBlockContent(index, '')}
-                                                                        className="btn btn-ink btn-sm"
-                                                                        style={{ position: 'absolute', top: 8, right: 8 }}
-                                                                    >
-                                                                        변경
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <label className="block-img-empty" style={{ cursor: 'pointer' }}>
-                                                                    <Icon name="add_photo_alternate" />
-                                                                    이미지 업로드
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        onChange={(e) => {
-                                                                            if (e.target.files?.[0]) handleItineraryBlockImageUpload(index, e.target.files[0]);
-                                                                        }}
-                                                                        style={{ display: 'none' }}
-                                                                    />
-                                                                </label>
-                                                            )}
+                                        const renderEventBody = (block: DetailContentBlock, flatIndex: number) => {
+                                            if (block.type === 'timeline') {
+                                                const c = block.content as TimelineContent;
+                                                return (
+                                                    <div className="stack" style={{ gap: 8 }}>
+                                                        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                                                            <button type="button" onClick={() => setSpotPickerForIndex(flatIndex)} className="btn btn-blue btn-sm" title="관광지 마스터에서 정보를 불러옵니다"><Icon name="location_on" />관광지 선택</button>
+                                                            <button type="button" onClick={() => setHotelPickerTarget({ kind: 'timeline', index: flatIndex })} className="btn btn-ghost btn-sm" title="호텔 마스터에서 정보를 불러옵니다"><Icon name="hotel" />호텔 선택</button>
                                                         </div>
-                                                    ) : block.type === 'slide' ? (
-                                                        // SLIDE BLOCK
-                                                        <div className="stack" style={{ gap: 8 }}>
-                                                            <input
-                                                                type="text"
-                                                                className="inp"
-                                                                value={(block.content as DetailSlide).title || ''}
-                                                                onChange={(e) => updateItinerarySlideInBlock(index, 'title', e.target.value)}
-                                                                placeholder="슬라이드 제목 (예: 1일차 숙소)"
-                                                            />
-                                                            <div>
-                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이미지 목록 (다중 업로드 가능)</label>
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    multiple
-                                                                    onChange={(e) => handleItinerarySlideBlockImages(index, e.target.files)}
-                                                                    className="inp"
-                                                                    style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }}
-                                                                />
-                                                            </div>
-                                                            {(block.content as DetailSlide).images?.length > 0 && (
-                                                                <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
-                                                                    {(block.content as DetailSlide).images.map((img, imgIdx) => (
-                                                                        <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
-                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`Slide Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => removeItinerarySlideBlockImage(index, imgIdx)}
-                                                                                style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
-                                                                            >
-                                                                                <Icon name="close" style={{ fontSize: 14 }} />
-                                                                            </button>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
+                                                        <div className="row" style={{ gap: 8 }}>
+                                                            <input type="text" className="inp" style={{ width: 120 }} value={c.time || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'time', e.target.value)} placeholder="시간 (선택)" />
+                                                            <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={c.title || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'title', e.target.value)} placeholder="일정 제목 (예: 자이승 전망대)" />
                                                         </div>
-                                                    ) : block.type === 'timeline' ? (
-                                                        // TIMELINE BLOCK
-                                                        <div className="stack" style={{ gap: 8 }}>
-                                                            {/* Master picker buttons — pull in spot or hotel data with one click. */}
-                                                            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setSpotPickerForIndex(index)}
-                                                                    className="btn btn-blue btn-sm"
-                                                                    title="관광지 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
-                                                                >
-                                                                    <Icon name="location_on" />관광지에서 선택
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setHotelPickerTarget({ kind: 'timeline', index })}
-                                                                    className="btn btn-ghost btn-sm"
-                                                                    title="호텔 마스터에서 정보를 가져와 제목/설명/사진을 자동으로 채웁니다"
-                                                                >
-                                                                    <Icon name="hotel" />호텔에서 선택
-                                                                </button>
-                                                            </div>
-                                                            <div className="card-muted-note" style={{ display: 'block' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontWeight: 700 }}><Icon name="lightbulb" />3가지 방법 중 선택</div>
-                                                                <ol style={{ margin: '6px 0 0', paddingLeft: 20, listStyle: 'decimal', lineHeight: 1.7 }}>
-                                                                    <li><strong>관광지/호텔에서 선택</strong> — 마스터 데이터 자동 채움</li>
-                                                                    <li>아래에 <strong>제목·설명을 직접 입력</strong> + 이미지 업로드 → 흰 카드로 표시</li>
-                                                                    <li>아래에 <strong>제목·설명만 입력</strong> (이미지 없음) → 큰 핀+텍스트로 표시 (지역 안내·이동 정보용)</li>
-                                                                </ol>
-                                                            </div>
-                                                            <div className="row" style={{ gap: 8 }}>
-                                                                <input type="text" className="inp" style={{ width: 140 }} value={(block.content as TimelineContent).time || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'time', e.target.value)} placeholder="시간 (예: 10:00)" />
-                                                                <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={(block.content as TimelineContent).title || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'title', e.target.value)} placeholder="제목 (예: 자이승 전망대)" />
-                                                            </div>
-                                                            <textarea className="inp" value={(block.content as TimelineContent).description || ''} onChange={(e) => updateTimelineInBlock('itinerary', index, 'description', e.target.value)} placeholder="설명" rows={3} />
-                                                            <div>
-                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이미지 목록 (다중 업로드 기능)</label>
-                                                                <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', index, e.target.files)} className="inp" style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }} />
-                                                            </div>
-                                                            {(block.content as TimelineContent).images?.length > 0 && (
-                                                                <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 8 }}>
-                                                                    {(block.content as TimelineContent).images.map((img, imgIdx) => (
-                                                                        <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
-                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
-                                                                            <button type="button" onClick={() => removeTimelineBlockImage('itinerary', index, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 14 }} /></button>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : block.type === 'dayInfo' ? (
-                                                        // DAY INFO BLOCK
-                                                        <div className="stack" style={{ gap: 8 }}>
-                                                            <div className="field-row">
-                                                                <div>
-                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일차</label>
-                                                                    <div className="badge b-amber" style={{ height: 44, borderRadius: 'var(--r-md)', width: '100%', justifyContent: 'flex-start', padding: '0 14px', fontSize: 14 }}>{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>날짜 (예: 05/26(화))</label>
-                                                                    <input type="text" className="inp" value={(block.content as DayInfoContent).dayDate || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), dayDate: e.target.value })} placeholder="05/26(화)" />
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일정 제목</label>
-                                                                <input type="text" className="inp" value={(block.content as DayInfoContent).title || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), title: e.target.value })} placeholder="인천, 울란바토르, 고르히-테렐지" />
-                                                            </div>
-                                                            <div>
-                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>주요 일정 요약</label>
-                                                                <input type="text" className="inp" value={(block.content as DayInfoContent).description || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북 바위..." />
-                                                            </div>
-                                                            <div>
-                                                                <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>🍽 식사 정보</label>
-                                                                <div className="meal-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                                                                    <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>조식</span><input value={(block.content as DayInfoContent).meals?.breakfast || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, breakfast: e.target.value } })} placeholder="캠프식" /></div>
-                                                                    <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>중식</span><input value={(block.content as DayInfoContent).meals?.lunch || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, lunch: e.target.value } })} placeholder="현지식" /></div>
-                                                                    <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>석식</span><input value={(block.content as DayInfoContent).meals?.dinner || ''} onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), meals: { ...(block.content as DayInfoContent).meals, dinner: e.target.value } })} placeholder="캠프식" /></div>
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <div className="row" style={{ marginBottom: 6 }}>
-                                                                    <label className="cell-strong" style={{ fontSize: 12.5 }}>🏠 숙소 정보</label>
-                                                                    <div className="spacer" style={{ flex: 1 }} />
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setHotelPickerForIndex(index)}
-                                                                        className="btn btn-ghost btn-sm"
-                                                                    >
-                                                                        <Icon name="hotel" />호텔 마스터에서 선택
-                                                                    </button>
-                                                                </div>
-                                                                <div className="inp-mini"><span className="pre"><Icon name="hotel" style={{ fontSize: 14 }} /></span>
-                                                                    <input
-                                                                        value={(block.content as DayInfoContent).accommodation || ''}
-                                                                        onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value, accommodationHotelId: undefined })}
-                                                                        placeholder="개별화장실과 샤워실이 구비된 디럭스게르 (또는 위 버튼으로 마스터 선택)"
-                                                                    />
-                                                                </div>
-                                                                {(block.content as DayInfoContent).accommodationHotelId && (
-                                                                    <div className="row" style={{ gap: 4, marginTop: 6, fontSize: 11, color: 'var(--mrt-blue-strong)' }}>
-                                                                        <Icon name="link" style={{ fontSize: 14 }} />
-                                                                        호텔 마스터에서 선택됨. 직접 입력하면 연결이 해제됩니다.
+                                                        <textarea className="inp" value={c.description || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'description', e.target.value)} placeholder="상세 설명" rows={2} />
+                                                        <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', flatIndex, e.target.files)} className="inp" style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }} />
+                                                        {c.images?.length > 0 && (
+                                                            <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                                                                {c.images.map((img, imgIdx) => (
+                                                                    <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
+                                                                        <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`일정 사진 ${imgIdx + 1}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                        <button type="button" onClick={() => removeTimelineBlockImage('itinerary', flatIndex, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
                                                                     </div>
-                                                                )}
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            if (block.type === 'image') {
+                                                return (
+                                                    <div className="block-img">
+                                                        {block.content ? (
+                                                            <div style={{ position: 'relative' }}>
+                                                                <img src={getOptimizedImageUrl(block.content as string, 'productThumbnail')} alt="일정 이미지" />
+                                                                <button type="button" onClick={() => updateItineraryBlockContent(flatIndex, '')} className="btn btn-ink btn-sm" style={{ position: 'absolute', top: 8, right: 8 }}>변경</button>
+                                                            </div>
+                                                        ) : (
+                                                            <label className="block-img-empty" style={{ cursor: 'pointer' }}>
+                                                                <Icon name="add_photo_alternate" />이미지 업로드
+                                                                <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleItineraryBlockImageUpload(flatIndex, e.target.files[0]); }} style={{ display: 'none' }} />
+                                                            </label>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            if (block.type === 'slide') {
+                                                const c = block.content as DetailSlide;
+                                                return (
+                                                    <div className="stack" style={{ gap: 8 }}>
+                                                        <input type="text" className="inp" value={c.title || ''} onChange={(e) => updateItinerarySlideInBlock(flatIndex, 'title', e.target.value)} placeholder="갤러리 제목 (선택)" />
+                                                        <input type="file" accept="image/*" multiple onChange={(e) => handleItinerarySlideBlockImages(flatIndex, e.target.files)} className="inp" style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }} />
+                                                        {c.images?.length > 0 && (
+                                                            <div className="row" style={{ gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                                                                {c.images.map((img, imgIdx) => (
+                                                                    <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
+                                                                        <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`갤러리 ${imgIdx + 1}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                        <button type="button" onClick={() => removeItinerarySlideBlockImage(flatIndex, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            // divider (line)
+                                            const dvc = block.content as DividerContent;
+                                            return (
+                                                <div className="row" style={{ gap: 16, alignItems: 'flex-end' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>가로 구분선</label>
+                                                        <div style={{ height: 1, background: 'var(--border-strong)', width: '100%', marginBottom: 6 }} />
+                                                    </div>
+                                                    <div style={{ width: 140 }}>
+                                                        <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>간격 ({dvc.height}px)</label>
+                                                        <input type="range" min="10" max="120" step="10" value={dvc.height} onChange={(e) => updateItineraryBlockContent(flatIndex, { ...dvc, height: parseInt(e.target.value) })} style={{ width: '100%' }} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        };
+
+                                        return (
+                                            <div className="stack" style={{ gap: 14 }}>
+                                                {pre.length > 0 && (
+                                                    <div className="stack" style={{ gap: 10, border: '1px dashed var(--border-strong)', borderRadius: 'var(--r-lg)', padding: 14 }}>
+                                                        <div className="row" style={{ gap: 6 }}><Icon name="info" /><span className="cell-strong" style={{ fontSize: 12.5 }}>일차가 지정되지 않은 기존 항목</span></div>
+                                                        <p className="muted" style={{ fontSize: 11, margin: 0 }}>DAY를 추가하면 이 항목들은 첫째 날 일정으로 정리할 수 있습니다.</p>
+                                                        {pre.map((ev) => (
+                                                            <div key={ev.block.id} data-itinerary-block={ev.block.id} className="edit-row" style={{ background: 'var(--mrt-gray-50, #f8f9fa)', borderRadius: 'var(--r-md)', padding: 10 }}>
+                                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                                    <div className="row" style={{ gap: 8, marginBottom: 8 }}><span className="badge b-gray">{typeLabel(ev.block.type)}</span></div>
+                                                                    {renderEventBody(ev.block, ev.flatIndex)}
+                                                                </div>
+                                                                <button type="button" className="act-btn danger" onClick={() => removeItineraryBlock(ev.flatIndex)} title="삭제"><Icon name="delete" /></button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {days.length === 0 && (
+                                                    <div style={{ textAlign: 'center', padding: '32px 16px', border: '1.5px dashed var(--border-strong)', borderRadius: 'var(--r-lg)', color: 'var(--mrt-gray-500)' }}>
+                                                        <Icon name="event_note" style={{ fontSize: 32, opacity: 0.4 }} />
+                                                        <div style={{ marginTop: 8, fontSize: 14 }}>등록된 DAY가 없습니다. 아래 버튼으로 첫 일차를 추가하세요.</div>
+                                                    </div>
+                                                )}
+
+                                                {days.map((day, dayIdx) => {
+                                                    const dc = day.dayInfo.content as DayInfoContent;
+                                                    const collapsed = collapsedDays.has(day.dayInfo.id);
+                                                    const showAdv = advancedDays.has(day.dayInfo.id);
+                                                    const eventCount = day.events.filter((e) => e.block.type === 'timeline').length;
+                                                    return (
+                                                        <div key={day.dayInfo.id} data-itinerary-block={day.dayInfo.id} style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: '#fff' }}>
+                                                            {/* Day header */}
+                                                            <div className="row" style={{ gap: 8, alignItems: 'center', padding: '12px 14px', background: 'var(--mrt-gray-50, #f8f9fa)', borderBottom: collapsed ? 'none' : '1px solid var(--border-subtle)' }}>
+                                                                <button type="button" className="act-btn" onClick={() => toggleDayCollapsed(day.dayInfo.id)} title={collapsed ? '펼치기' : '접기'}><Icon name={collapsed ? 'expand_more' : 'expand_less'} /></button>
+                                                                <span className="badge b-amber" style={{ flex: 'none' }}>{dc.dayLabel || `${dayIdx + 1}일차`}</span>
+                                                                <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={dc.title || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, title: e.target.value })} placeholder="일정 제목 (예: 울란바토르 → 테렐지)" />
+                                                                {collapsed && eventCount > 0 && <span className="cell-muted" style={{ fontSize: 12, flex: 'none' }}>일정 {eventCount}개</span>}
+                                                                <div className="edit-move" style={{ flex: 'none' }}>
+                                                                    <button type="button" onClick={() => moveItineraryDay(dayIdx, -1)} disabled={dayIdx === 0}><Icon name="expand_less" /></button>
+                                                                    <button type="button" onClick={() => moveItineraryDay(dayIdx, 1)} disabled={dayIdx === days.length - 1}><Icon name="expand_more" /></button>
+                                                                </div>
+                                                                <button type="button" className="act-btn danger" style={{ flex: 'none' }} onClick={() => { if (window.confirm(`${dc.dayLabel || `${dayIdx + 1}일차`} 전체를 삭제할까요?`)) removeItineraryDay(dayIdx); }} title="이 일차 삭제"><Icon name="delete" /></button>
                                                             </div>
 
-                                                            {/* ★ Add an event to this specific day — inserts a timeline block
-                                                                right after this dayInfo so admin can pile on events without
-                                                                using ↑/↓ arrows. */}
-                                                            <div style={{ marginTop: 6, paddingTop: 14, borderTop: '1.5px dashed var(--border-strong)' }}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => addTimelineAfterDay(index)}
-                                                                    className="add-line"
-                                                                >
-                                                                    <Icon name="add_circle" />이 일자에 일정 항목 추가
-                                                                </button>
-                                                                <p className="muted" style={{ marginTop: 8, fontSize: 11, textAlign: 'center' }}>
-                                                                    이 버튼을 누르면 <strong style={{ color: 'var(--mrt-blue-strong)' }}>{(block.content as DayInfoContent).dayLabel || '이 일자'}</strong>의 마지막 일정으로 새 항목이 추가됩니다.
-                                                                    관광지 마스터에서 한 번에 채울 수 있어요.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        // DIVIDER BLOCK
-                                                        <div className="row" style={{ gap: 16, alignItems: 'flex-end' }}>
-                                                            <div style={{ flex: 1 }}>
-                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>스타일</label>
-                                                                <div className="row" style={{ gap: 8 }}>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => updateItineraryBlockContent(index, { ...(block.content as DividerContent), style: 'line' })}
-                                                                        className={`btn btn-sm ${(block.content as DividerContent).style === 'line' ? 'btn-ink' : 'btn-ghost'}`}
-                                                                        style={{ flex: 1 }}
-                                                                    >
-                                                                        가로선
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => updateItineraryBlockContent(index, { ...(block.content as DividerContent), style: 'space' })}
-                                                                        className={`btn btn-sm ${(block.content as DividerContent).style === 'space' ? 'btn-ink' : 'btn-ghost'}`}
-                                                                        style={{ flex: 1 }}
-                                                                    >
-                                                                        여백
-                                                                    </button>
+                                                            {!collapsed && (
+                                                                <div className="stack" style={{ gap: 12, padding: 14 }}>
+                                                                    <div className="field-row">
+                                                                        <div>
+                                                                            <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>날짜 (선택)</label>
+                                                                            <input type="text" className="inp" value={dc.dayDate || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, dayDate: e.target.value })} placeholder="05/26(화)" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>주요 일정 요약 (선택)</label>
+                                                                            <input type="text" className="inp" value={dc.description || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, description: e.target.value })} placeholder="대형마트, 테렐지 국립공원, 거북바위..." />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 6 }}>식사 정보</label>
+                                                                        <div className="meal-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                                                            <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>조식</span><input value={dc.meals?.breakfast || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, meals: { ...dc.meals, breakfast: e.target.value } })} placeholder="호텔식" /></div>
+                                                                            <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>중식</span><input value={dc.meals?.lunch || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, meals: { ...dc.meals, lunch: e.target.value } })} placeholder="현지식" /></div>
+                                                                            <div className="inp-mini"><span className="pre" style={{ fontSize: 11 }}>석식</span><input value={dc.meals?.dinner || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, meals: { ...dc.meals, dinner: e.target.value } })} placeholder="캠프식" /></div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <div className="row" style={{ marginBottom: 6 }}>
+                                                                            <label className="cell-strong" style={{ fontSize: 12.5 }}>숙소 정보</label>
+                                                                            <div className="spacer" style={{ flex: 1 }} />
+                                                                            <button type="button" onClick={() => setHotelPickerForIndex(day.dayInfoFlatIndex)} className="btn btn-ghost btn-sm"><Icon name="hotel" />호텔 마스터 선택</button>
+                                                                        </div>
+                                                                        <div className="inp-mini"><span className="pre"><Icon name="hotel" style={{ fontSize: 14 }} /></span>
+                                                                            <input value={dc.accommodation || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, accommodation: e.target.value, accommodationHotelId: undefined })} placeholder="숙소명을 입력하거나 호텔 마스터에서 선택" />
+                                                                        </div>
+                                                                        {dc.accommodationHotelId && (
+                                                                            <div className="row" style={{ gap: 4, marginTop: 6, fontSize: 11, color: 'var(--mrt-blue-strong)' }}><Icon name="link" style={{ fontSize: 14 }} />호텔 마스터와 연결되었습니다. 직접 입력하면 연결이 해제됩니다.</div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+                                                                        <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 8 }}><Icon name="timeline" style={{ fontSize: 16, verticalAlign: '-3px' }} /> 이 일차의 주요 일정</label>
+                                                                        {day.events.length === 0 && (
+                                                                            <p className="muted" style={{ fontSize: 12, padding: '2px 0 8px', margin: 0 }}>등록된 일정이 없습니다. 아래 버튼으로 추가하세요.</p>
+                                                                        )}
+                                                                        <div className="stack" style={{ gap: 10 }}>
+                                                                            {day.events.map((ev, evIdx) => (
+                                                                                <div key={ev.block.id} data-itinerary-block={ev.block.id} className="edit-row" style={{ background: 'var(--mrt-gray-50, #f8f9fa)', borderRadius: 'var(--r-md)', padding: 10 }}>
+                                                                                    <div className="edit-move">
+                                                                                        <button type="button" onClick={() => moveItineraryEvent(dayIdx, evIdx, -1)} disabled={evIdx === 0}><Icon name="expand_less" /></button>
+                                                                                        <button type="button" onClick={() => moveItineraryEvent(dayIdx, evIdx, 1)} disabled={evIdx === day.events.length - 1}><Icon name="expand_more" /></button>
+                                                                                    </div>
+                                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                                        <div className="row" style={{ gap: 8, marginBottom: 8 }}><span className="badge b-gray">{typeLabel(ev.block.type)}</span></div>
+                                                                                        {renderEventBody(ev.block, ev.flatIndex)}
+                                                                                    </div>
+                                                                                    <button type="button" className="act-btn danger" onClick={() => removeItineraryEvent(dayIdx, evIdx)} title="삭제"><Icon name="delete" /></button>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+
+                                                                        <button type="button" onClick={() => addItineraryEvent(dayIdx, 'timeline')} className="add-line" style={{ marginTop: 10 }}><Icon name="add_circle" />일정 항목 추가</button>
+
+                                                                        <div style={{ marginTop: 8 }}>
+                                                                            <button type="button" onClick={() => toggleDayAdvanced(day.dayInfo.id)} className="btn btn-ghost btn-sm" style={{ fontSize: 12 }}><Icon name={showAdv ? 'expand_less' : 'tune'} />고급 항목 (이미지·갤러리·구분선)</button>
+                                                                            {showAdv && (
+                                                                                <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                                                                                    <button type="button" onClick={() => addItineraryEvent(dayIdx, 'image')} className="chip"><Icon name="image" style={{ fontSize: 16 }} />이미지 1장</button>
+                                                                                    <button type="button" onClick={() => addItineraryEvent(dayIdx, 'slide')} className="chip"><Icon name="view_carousel" style={{ fontSize: 16 }} />갤러리</button>
+                                                                                    <button type="button" onClick={() => addItineraryEvent(dayIdx, 'divider')} className="chip"><Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선</button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div style={{ width: 140 }}>
-                                                                <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>높이 ({(block.content as DividerContent).height}px)</label>
-                                                                <input
-                                                                    type="range"
-                                                                    min="10"
-                                                                    max="120"
-                                                                    step="10"
-                                                                    value={(block.content as DividerContent).height}
-                                                                    onChange={(e) => updateItineraryBlockContent(index, { ...(block.content as DividerContent), height: parseInt(e.target.value) })}
-                                                                    style={{ width: '100%' }}
-                                                                />
-                                                            </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
-                                                <button type="button" className="act-btn danger" onClick={() => removeItineraryBlock(index)} title="삭제"><Icon name="delete" /></button>
+                                                    );
+                                                })}
+
+                                                <button type="button" onClick={addItineraryDay} className="add-line" style={{ padding: 14, fontSize: 14, fontWeight: 700, borderWidth: 1.5 }}><Icon name="add" />DAY 추가</button>
                                             </div>
-                                        ))}
-                                    </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         )}
