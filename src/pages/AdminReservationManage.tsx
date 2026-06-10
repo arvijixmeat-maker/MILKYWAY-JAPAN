@@ -995,6 +995,106 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
 
+                            {/* 담당 가이드 — 탭 이름(결제·배정)에 맞게 배정 UI 복원 */}
+                            <div className="card">
+                                <div className="card-head">
+                                    <Icon name="badge" style={{ color: 'var(--mrt-gray-600)' }} /><h2>담당 가이드</h2>
+                                    <div className="spacer" style={{ flex: 1 }} />
+                                    <button className="link-action" onClick={() => setShowGuideModal(true)}>
+                                        {reservation.assignedGuide ? '변경' : '배정'}<Icon name="chevron_right" />
+                                    </button>
+                                </div>
+                                <div className="card-pad" style={{ paddingTop: 12 }}>
+                                    {reservation.assignedGuide ? (
+                                        <div className="assign-row">
+                                            {reservation.assignedGuide.image ? (
+                                                <img className="avatar round" src={reservation.assignedGuide.image} alt={reservation.assignedGuide.name} />
+                                            ) : (
+                                                <span className="avatar round tint-blue">{getInitials(reservation.assignedGuide.name)}</span>
+                                            )}
+                                            <div style={{ minWidth: 0 }}>
+                                                <div className="cell-strong">{reservation.assignedGuide.name}</div>
+                                                <div className="cell-muted" style={{ fontSize: 12 }}>{reservation.assignedGuide.phone}</div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="assign-empty" onClick={() => setShowGuideModal(true)}>
+                                            <Icon name="person_add" />가이드를 배정하세요
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 일자별 숙소 배정 + 고객 알림 발송 */}
+                            <div className="card">
+                                <div className="card-head">
+                                    <Icon name="hotel" style={{ color: 'var(--mrt-gray-600)' }} /><h2>일자별 숙소 배정</h2>
+                                    <div className="spacer" style={{ flex: 1 }} />
+                                    <button
+                                        className="link-action"
+                                        onClick={async () => {
+                                            if (!reservation.assignedGuide && (!reservation.dailyAccommodations || reservation.dailyAccommodations.length === 0)) {
+                                                alert('배정된 가이드나 숙소가 없습니다.');
+                                                return;
+                                            }
+                                            onUpdate({
+                                                ...reservation,
+                                                areAssignmentsVisibleToUser: true,
+                                                history: [
+                                                    ...(reservation.history || []),
+                                                    { timestamp: new Date().toISOString(), type: 'modification', description: '担当ガイド・宿泊先のご案内を送信しました。' }
+                                                ]
+                                            });
+                                            try {
+                                                await sendNotificationEmail(reservation.email, 'GUIDE_ASSIGNED', {
+                                                    customerName: reservation.customerName,
+                                                    productName: reservation.productName,
+                                                    guideName: reservation.assignedGuide?.name,
+                                                    guidePhone: reservation.assignedGuide?.phone,
+                                                    userId: reservation.userId,
+                                                    reservationId: reservationNumber,
+                                                    reservationDbId: reservation.id,
+                                                });
+                                            } catch (e) { console.error('GUIDE_ASSIGNED email failed', e); }
+                                        }}
+                                        title="가이드/숙소 확정 안내를 고객에게 이메일+인앱 알림으로 보냅니다."
+                                    >
+                                        <Icon name={reservation.areAssignmentsVisibleToUser ? 'mark_email_read' : 'send'} />
+                                        {reservation.areAssignmentsVisibleToUser ? '알림 재발송' : '고객에게 알림 발송'}
+                                    </button>
+                                </div>
+                                <div className="card-pad" style={{ paddingTop: 12 }}>
+                                    <div className="stack" style={{ gap: 8 }}>
+                                        {Array.from({ length: tripDays }, (_, i) => i + 1).map((day) => {
+                                            const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
+                                            return (
+                                                <div className="accom-day" key={day}>
+                                                    <span className="th-day">{day}일차</span>
+                                                    {assigned ? (
+                                                        <div className="assign-row" style={{ flex: 1, padding: 0 }}>
+                                                            {(assigned.accommodation.images && assigned.accommodation.images[0]) ? (
+                                                                <img className="thumb" src={assigned.accommodation.images[0]} alt={assigned.accommodation.name} loading="lazy" />
+                                                            ) : (
+                                                                <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
+                                                            )}
+                                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                                                <div className="cell-strong">{assigned.accommodation.name}</div>
+                                                                <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.location || '—'}</div>
+                                                            </div>
+                                                            <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
+                                                        </div>
+                                                    ) : (
+                                                        <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
+                                                            <Icon name="add" />숙소 선택
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
                     </div>
                     )}
 
