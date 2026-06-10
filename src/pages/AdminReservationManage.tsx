@@ -760,6 +760,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     // NEXT 바 — 운영 단계 중 첫 미완료 1개만 제시 (개요 탭의 5단계 카드 그리드 대체)
     const doneCount = operationSteps.filter(s => s.done).length;
     const nextStep = operationSteps.find(s => !s.done);
+    // 여행 일수 — date 문자열의 "n박"에서 파생 (구 getTripDays 제거됨)
+    const tripDays = (() => {
+        const m = String(reservation.date || '').match(/(\d+)박/);
+        if (m) return parseInt(m[1]) + 1;
+        return Math.max((reservation.dailyAccommodations || []).length, 1);
+    })();
 
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
@@ -879,7 +885,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <span className="qtext">
                                     <span className="qt">가이드 · 숙소 배정</span>
                                     <span className="qs">
-                                        {reservation.assignedGuide ? `가이드 ${reservation.assignedGuide.name}` : '가이드 미배정'} · 숙소 {(reservation.dailyAccommodations || []).length}/{getTripDays()}일
+                                        {reservation.assignedGuide ? `가이드 ${reservation.assignedGuide.name}` : '가이드 미배정'} · 숙소 {(reservation.dailyAccommodations || []).length}/{tripDays}일
                                     </span>
                                 </span>
                                 <Icon name="chevron_right" className="arr" />
