@@ -1019,3 +1019,36 @@
 .admin-app-wrapper .step-dots .sd.on { background: var(--mrt-blue); }
 .admin-app-wrapper .step-dots .sd-n { font-size: 11px; font-weight: 700; color: var(--text-tertiary); margin-left: 3px; font-variant-numeric: tabular-nums; }
 
+/* ============ Trip.com식 주문 상세 스킨 — 밀도·플랫·오렌지 금액 ============ */
+.admin-app-wrapper .tc-anchors { display: flex; gap: 2px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--border-default); flex: none; }
+.admin-app-wrapper .tc-anchors button { border: none; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--text-tertiary); padding: 10px 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.admin-app-wrapper .tc-anchors button:hover { color: var(--text-secondary); }
+.admin-app-wrapper .tc-anchors button.active { color: #287DFA; border-bottom-color: #287DFA; }
+.admin-app-wrapper .tcom { letter-spacing: -0.01em; }
+.admin-app-wrapper .tcom .drawer-head { padding: 12px 22px; }
+.admin-app-wrapper .tcom .drawer-head .page-title { font-size: 17px; }
+.admin-app-wrapper .tcom .card { border-radius: 8px; box-shadow: none; }
+.admin-app-wrapper .tcom .card-head { padding: 9px 14px; }
+.admin-app-wrapper .tcom .card-head h2 { font-size: 13px; }
+.admin-app-wrapper .tcom .card-head .material-symbols-outlined { font-size: 17px; }
+.admin-app-wrapper .tcom .card-pad { padding: 11px 14px; }
+.admin-app-wrapper .tcom .kv { padding: 6px 0; font-size: 12.5px; }
+.admin-app-wrapper .tcom .btn { height: 32px; padding: 0 12px; font-size: 12.5px; border-radius: 6px; }
+.admin-app-wrapper .tcom .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; border-radius: 5px; }
+.admin-app-wrapper .tcom .btn .material-symbols-outlined { font-size: 16px; }
+.admin-app-wrapper .tcom .btn-blue { background: #287DFA; box-shadow: none; }
+.admin-app-wrapper .tcom .btn-blue:hover { background: #1668DC; }
+.admin-app-wrapper .tcom .btn-ink { background: #287DFA; }
+.admin-app-wrapper .tcom .btn-ink:hover { background: #1668DC; box-shadow: none; }
+.admin-app-wrapper .tcom .badge { border-radius: 4px; font-size: 11px; padding: 1px 6px; }
+.admin-app-wrapper .tcom .cell-price { color: #FF6F00; }
+.admin-app-wrapper .tcom .pay-cell { border-radius: 8px; }
+.admin-app-wrapper .tcom .inp { height: 36px; font-size: 13px; border-radius: 6px; }
+.admin-app-wrapper .tcom .next-bar { background: #EAF3FF; }
+.admin-app-wrapper .tcom .next-bar .nb-label { color: #1668DC; }
+.admin-app-wrapper .tcom .step-dots .sd.on { background: #287DFA; }
+.admin-app-wrapper .tcom .reservation-workspace-body { padding: 16px 20px 24px; }
+.admin-app-wrapper .tcom .reservation-action-rail { font-size: 12.5px; }
+.admin-app-wrapper .tcom .link-action { color: #287DFA; font-size: 12.5px; }
+.admin-app-wrapper .tcom .link-action:hover { background: #EAF3FF; }
+

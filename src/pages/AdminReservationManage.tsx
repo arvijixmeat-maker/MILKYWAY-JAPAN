@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -301,7 +301,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
     const [docEditorOpen, setDocEditorOpen] = useState(false);
     const [activeDocument, setActiveDocument] = useState<'itinerary' | 'contract'>('itinerary');
-    const [tab, setTab] = useState<'overview' | 'payment' | 'history'>('overview');
+    // Trip.com식 원페이지: 탭 대신 섹션 앵커 스크롤
+    const [activeSec, setActiveSec] = useState<'info' | 'pay' | 'assign' | 'log'>('info');
+    const bodyRef = useRef<HTMLDivElement | null>(null);
+    const scrollToSec = (id: 'info' | 'pay' | 'assign' | 'log') => {
+        setActiveSec(id);
+        bodyRef.current?.querySelector(`#sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -689,7 +695,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             icon: 'payments',
             done: editForm.depositStatus === 'paid',
             actionLabel: editForm.depositStatus === 'paid' ? '완료' : '입금 확인',
-            onAction: editForm.depositStatus === 'paid' ? () => setTab('payment') : () => { setTab('payment'); toggleDepositStatus(); },
+            onAction: editForm.depositStatus === 'paid' ? () => scrollToSec('pay') : () => { scrollToSec('pay'); toggleDepositStatus(); },
         },
         {
             title: '일정표',
@@ -713,7 +719,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             icon: 'support_agent',
             done: !!reservation.areAssignmentsVisibleToUser,
             actionLabel: guideReady ? '안내문 복사' : '가이드 배정',
-            onAction: guideReady ? () => copyCustomerMessage('final') : () => { setTab('payment'); setShowGuideModal(true); },
+            onAction: guideReady ? () => copyCustomerMessage('final') : () => { scrollToSec('assign'); setShowGuideModal(true); },
         },
     ];
 
@@ -751,10 +757,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         assignment: 'assignment_ind',
     };
 
-    const DRAWER_TABS: Array<{ id: typeof tab; label: string; icon: string }> = [
-        { id: 'overview', label: '개요', icon: 'route' },
-        { id: 'payment', label: '결제·배정', icon: 'payments' },
-        { id: 'history', label: '메모·이력', icon: 'history' },
+    // Trip.com식 섹션 앵커 (탭 대신 원페이지 스크롤)
+    const SECTION_ANCHORS: Array<{ id: 'info' | 'pay' | 'assign' | 'log'; label: string }> = [
+        { id: 'info', label: '주문 정보' },
+        { id: 'pay', label: '결제' },
+        { id: 'assign', label: '가이드·숙소' },
+        { id: 'log', label: '메모·이력' },
     ];
 
     // NEXT 바 — 운영 단계 중 첫 미완료 1개만 제시 (개요 탭의 5단계 카드 그리드 대체)
@@ -769,7 +777,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
 
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
-            <div className="drawer reservation-workspace" onClick={e => e.stopPropagation()}>
+            <div className="drawer reservation-workspace tcom" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="drawer-head">
@@ -810,28 +818,23 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                     </span>
                 </div>
 
-                {/* Tabs */}
-                <div className="drawer-tabs">
-                    {DRAWER_TABS.map(t => (
-                        <button
-                            key={t.id}
-                            type="button"
-                            className={`dtab${tab === t.id ? ' active' : ''}`}
-                            onClick={() => setTab(t.id)}
-                        >
-                            <Icon name={t.icon} />{t.label}
-                            {t.id === 'history' && memos.length > 0 && <span className="dtab-ct">{memos.length}</span>}
+                {/* 섹션 앵커 — Trip.com식 원페이지 내비게이션 */}
+                <div className="tc-anchors">
+                    {SECTION_ANCHORS.map(a => (
+                        <button key={a.id} type="button" className={activeSec === a.id ? 'active' : ''} onClick={() => scrollToSec(a.id)}>
+                            {a.label}
+                            {a.id === 'log' && memos.length > 0 && <span className="dtab-ct">{memos.length}</span>}
                         </button>
                     ))}
                 </div>
 
                 <div className="reservation-workspace-main">
                 {/* Body */}
-                <div className="drawer-body reservation-workspace-body">
-                    {tab === 'overview' && (
-                    <div className="stack" style={{ gap: 16 }}>
-                        {/* 주문 요약 — Trip.com식 정보 밀도: 첫 화면에서 클릭 없이 모든 사실 확인 */}
-                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'stretch' }}>
+                <div className="drawer-body reservation-workspace-body" ref={bodyRef}>
+                    <div className="stack" style={{ gap: 18 }}>
+                    <section id="sec-info" style={{ scrollMarginTop: 8 }}>
+                        {/* 주문 정보 — 여행/예약자 */}
+                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
                             <div className="card">
                                 <div className="card-head"><Icon name="flight_takeoff" style={{ color: 'var(--mrt-gray-600)' }} /><h2>여행 정보</h2></div>
                                 <div className="card-pad" style={{ paddingTop: 14 }}>
@@ -866,36 +869,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
                         </div>
+                    </section>
 
-                        {/* 상태 요약 — 클릭 시 해당 작업 탭으로 */}
-                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                            <button className="qlink" onClick={() => setTab('payment')}>
-                                <span className={`qi ${paidPercent >= 100 ? 'tint-green' : 'tint-amber'}`}><Icon name="payments" fill /></span>
-                                <span className="qtext">
-                                    <span className="qt">금액 · 입금</span>
-                                    <span className="qs">
-                                        예약금 {editForm.depositStatus === 'paid' ? '입금' : '미납'} · 잔금 {editForm.balanceStatus === 'paid' ? '입금' : '미납'} ({paidPercent}%)
-                                    </span>
-                                </span>
-                                <span className="qv" style={{ fontSize: 18 }}>₩{(editForm.totalAmount || 0).toLocaleString()}</span>
-                                <Icon name="chevron_right" className="arr" />
-                            </button>
-                            <button className="qlink" onClick={() => setTab('payment')}>
-                                <span className={`qi ${reservation.assignedGuide ? 'tint-green' : 'tint-blue'}`}><Icon name="support_agent" fill /></span>
-                                <span className="qtext">
-                                    <span className="qt">가이드 · 숙소 배정</span>
-                                    <span className="qs">
-                                        {reservation.assignedGuide ? `가이드 ${reservation.assignedGuide.name}` : '가이드 미배정'} · 숙소 {(reservation.dailyAccommodations || []).length}/{tripDays}일
-                                    </span>
-                                </span>
-                                <Icon name="chevron_right" className="arr" />
-                            </button>
-                        </div>
-                    </div>
-                    )}
-
-                    {tab === 'payment' && (
-                    <div className="stack" style={{ gap: 16 }}>
+                    <section id="sec-pay" style={{ scrollMarginTop: 8 }}>
+                    <div className="stack" style={{ gap: 14 }}>
                             {/* Payment with Progress Ring */}
                             <div className="card card-pad">
                                 <div className="row" style={{ marginBottom: 16, gap: 16 }}>
@@ -995,7 +972,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
 
-                            {/* 담당 가이드 — 탭 이름(결제·배정)에 맞게 배정 UI 복원 */}
+                    </div>
+                    </section>
+
+                    <section id="sec-assign" style={{ scrollMarginTop: 8 }}>
+                    <div className="stack" style={{ gap: 14 }}>
+                            {/* 담당 가이드 */}
                             <div className="card">
                                 <div className="card-head">
                                     <Icon name="badge" style={{ color: 'var(--mrt-gray-600)' }} /><h2>담당 가이드</h2>
@@ -1096,10 +1078,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                             </div>
 
                     </div>
-                    )}
+                    </section>
 
-                    {tab === 'history' && (
-                    <div className="stack" style={{ gap: 16 }}>
+                    <section id="sec-log" style={{ scrollMarginTop: 8 }}>
+                    <div className="stack" style={{ gap: 14 }}>
                             {/* Admin Memo */}
                             <div className="card">
                                 <div className="card-head">
@@ -1173,7 +1155,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 )}
                             </div>
                     </div>
-                    )}
+                    </section>
+                    </div>
                 </div>
 
                 <aside className="reservation-action-rail">
