@@ -180,7 +180,7 @@ export const EstimateDetail: React.FC = () => {
     if (!estimate) {
         return (
             <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
-                <div className="relative flex h-full min-h-screen w-full max-w-[480px] flex-col bg-gray-50 dark:bg-zinc-900 shadow-xl overflow-x-hidden items-center justify-center">
+                <div className="relative flex h-full min-h-screen w-full max-w-[920px] flex-col bg-gray-50 dark:bg-zinc-900 shadow-xl overflow-x-hidden items-center justify-center">
                     <p className="text-gray-500">お見積り情報が見つかりません。</p>
                     <button onClick={() => navigate(-1)} className="mt-4 text-primary font-bold">戻る</button>
                 </div>
@@ -213,7 +213,7 @@ export const EstimateDetail: React.FC = () => {
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
-            <div className="relative flex h-full min-h-screen w-full max-w-[480px] flex-col shadow-xl overflow-x-hidden pb-[100px]" style={{ background: '#F2F5FA' }}>
+            <div className="relative flex h-full min-h-screen w-full max-w-[920px] flex-col shadow-xl overflow-x-hidden pb-[100px]" style={{ background: '#F2F5FA' }}>
                 {/* Header */}
                 <div className="sticky top-0 z-50 flex items-center bg-white/95 backdrop-blur-sm px-4 py-4 transition-colors border-b border-slate-100">
                     <button
@@ -226,7 +226,7 @@ export const EstimateDetail: React.FC = () => {
                     <h1 className="text-lg font-black flex-1 text-center pr-8" style={{ color: DOC_NAVY }}>お見積り詳細</h1>
                 </div>
 
-                <div className="px-4 pt-4 flex flex-col gap-4">
+                <div className="px-4 pt-4 sm:px-6 flex flex-col gap-4">
                     {/* 진행 타임라인 (접수→작성→발송) */}
                     <div className="rounded-2xl bg-white px-5 py-4 shadow-[0_8px_24px_rgba(11,27,69,0.06)]">
                         <div className="relative flex justify-between items-start max-w-[300px] mx-auto">
