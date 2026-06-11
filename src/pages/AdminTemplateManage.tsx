@@ -259,6 +259,14 @@ type TemplatePreviewProps = {
     dailyAccommodations?: Array<{ day: number; accommodation: { name?: string; type?: string; location?: string } }>;
 };
 
+// 입력 내용에 맞춰 높이가 자동으로 늘어나는 textarea — 고정 rows로 위 내용이 가려지는 문제 방지
+const AutoTextarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (props) => {
+    const ref = React.useRef<HTMLTextAreaElement | null>(null);
+    const fit = () => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } };
+    React.useEffect(fit, [props.value]);
+    return <textarea ref={ref} rows={1} {...props} onInput={(e) => { fit(); props.onInput?.(e); }} style={{ ...(props.style || {}), overflow: 'hidden', resize: 'none' }} />;
+};
+
 export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true, visiblePages }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>(defaultPage);
     useEffect(() => setActivePage(defaultPage), [defaultPage]);
@@ -406,11 +414,20 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
 
                         <section className={`${card} p-5`}>
                             {secTitle('check', 'ご旅行概要')}
-                            <textarea value={settings.overview.intro} onChange={e => onDocSection('overview', { intro: e.target.value })} rows={3} className={`${fieldClass} resize-none text-[12px] font-semibold leading-relaxed text-slate-600`} />
+                            <AutoTextarea value={settings.overview.intro} onChange={e => onDocSection('overview', { intro: e.target.value })} rows={3} className={`${fieldClass} resize-none text-[12px] font-semibold leading-relaxed text-slate-600`} />
                         </section>
 
                         <section className={`${card} p-5`}>
                             {secTitle('payments', 'お支払い情報')}
+                            {customer && !customer.totalAmount && (
+                                <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+                                    <span className="material-symbols-outlined mt-px text-[17px] text-amber-500">warning</span>
+                                    <p className="text-[11.5px] font-bold leading-relaxed text-amber-700">
+                                        금액 미입력 — 아래 금액은 <b>기준요금×인원수로 임시 계산된 샘플</b>입니다.
+                                        상세 화면의 <b>「견적 작성 — 확정 일정·금액」</b>에 총 결제금액·예약금을 입력하면 자동으로 반영됩니다.
+                                    </p>
+                                </div>
+                            )}
                             <div className="grid gap-4 sm:grid-cols-[260px_1fr]">
                                 <div className="relative overflow-hidden rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg, #2F86FF 0%, #1656D6 100%)' }}>
                                     <span className="material-symbols-outlined absolute right-4 top-4 text-[34px] opacity-40">account_balance_wallet</span>
@@ -436,17 +453,17 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                     </div>
                                 </div>
                             </div>
-                            <textarea value={settings.overview.paymentNote} onChange={e => onDocSection('overview', { paymentNote: e.target.value })} rows={2} placeholder="お支払いに関する備考" className={`${fieldClass} mt-3 resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
+                            <AutoTextarea value={settings.overview.paymentNote} onChange={e => onDocSection('overview', { paymentNote: e.target.value })} rows={2} placeholder="お支払いに関する備考" className={`${fieldClass} mt-3 resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
                         </section>
 
                         <div className="grid gap-4 sm:grid-cols-2">
                             <section className={`${card} !shadow-[0_8px_24px_rgba(40,125,250,0.10)] p-5`}>
                                 {secTitle('check', '含まれるもの')}
-                                <textarea value={settings.overview.includedText} onChange={e => onDocSection('overview', { includedText: e.target.value })} rows={6} placeholder="1行に1項目" className={`${fieldClass} resize-none text-[12px] font-bold leading-[1.9] text-[#0B1B45]`} />
+                                <AutoTextarea value={settings.overview.includedText} onChange={e => onDocSection('overview', { includedText: e.target.value })} rows={6} placeholder="1行に1項目" className={`${fieldClass} resize-none text-[12px] font-bold leading-[1.9] text-[#0B1B45]`} />
                             </section>
                             <section className={`${card} !shadow-[0_8px_24px_rgba(239,68,68,0.08)] p-5`}>
                                 {secTitle('close', '含まれないもの', 'red')}
-                                <textarea value={settings.overview.excludedText} onChange={e => onDocSection('overview', { excludedText: e.target.value })} rows={6} placeholder="1行に1項目" className={`${fieldClass} resize-none text-[12px] font-bold leading-[1.9] text-slate-600`} />
+                                <AutoTextarea value={settings.overview.excludedText} onChange={e => onDocSection('overview', { excludedText: e.target.value })} rows={6} placeholder="1行に1項目" className={`${fieldClass} resize-none text-[12px] font-bold leading-[1.9] text-slate-600`} />
                             </section>
                         </div>
                     </>}
@@ -464,7 +481,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                             </div>
                             <h3 className="text-center text-[28px] font-black tracking-[0.18em]" style={{ color: DOC_NAVY }}>ご旅行契約書</h3>
                             <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em]" style={{ color: DOC_BLUE }}>Travel Contract</p>
-                            <textarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
+                            <AutoTextarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
                             <div className="mt-5 overflow-hidden rounded-xl border border-[#C7DCFF] text-xs">
                                 {[['ご旅行名', name || '銀河・大自然パッケージ'], ['ご旅行期間', tripLength], ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`], ['合計金額', `${sampleTotal.toLocaleString()}円`], ['ガイド', guideText], ['宿泊', accommodationSummary]].map(([label, value]) => (
                                     <div key={label} className="grid grid-cols-[112px_1fr] border-b border-[#C7DCFF] last:border-b-0">
@@ -489,7 +506,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                     <p className="flex items-center gap-1 text-xs font-black" style={{ color: '#1656D6' }}><span className="material-symbols-outlined text-[15px]">payments</span>お支払い</p>
                                     <input value={settings.contract.paymentMethod} onChange={e => onDocSection('contract', { paymentMethod: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} />
                                     <input value={settings.contract.paymentDeadline} onChange={e => onDocSection('contract', { paymentDeadline: e.target.value })} className={`${fieldClass} mt-1 text-[10px] font-semibold text-slate-500`} />
-                                    <textarea value={settings.contract.bankInfo} onChange={e => onDocSection('contract', { bankInfo: e.target.value })} rows={3} placeholder="振込先・お支払い案内（自由入力）" className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} />
+                                    <AutoTextarea value={settings.contract.bankInfo} onChange={e => onDocSection('contract', { bankInfo: e.target.value })} rows={3} placeholder="振込先・お支払い案内（自由入力）" className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} />
                                     <input value={settings.contract.signatureNote} onChange={e => onDocSection('contract', { signatureNote: e.target.value })} className={`${fieldClass} mt-3 text-[10px] font-semibold text-slate-500`} />
                                     <div className="mt-2 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div>
                                 </div>
@@ -528,7 +545,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                         </button>
                                     </div>
                                     <div className="px-5 pt-2">
-                                        <textarea value={day.summary || ''} onChange={e => onDayChange(dayIdx, 'summary', e.target.value)} rows={2} placeholder="이날의 여행 흐름과 고객에게 전달할 설명을 입력하세요." className={`${fieldClass} resize-y text-[12px] font-semibold leading-relaxed text-slate-500`} />
+                                        <AutoTextarea value={day.summary || ''} onChange={e => onDayChange(dayIdx, 'summary', e.target.value)} rows={2} placeholder="이날의 여행 흐름과 고객에게 전달할 설명을 입력하세요." className={`${fieldClass} resize-y text-[12px] font-semibold leading-relaxed text-slate-500`} />
                                     </div>
 
                                     <div className="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_170px]">
@@ -563,7 +580,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                                             <button onClick={() => onRemoveActivity(dayIdx, index)} className="flex-none text-slate-300 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[16px]">close</span></button>
                                                         </div>
                                                         <div className="pl-[18px]">
-                                                            <textarea value={activity.description || ''} onChange={e => onActivityChange(dayIdx, index, 'description', e.target.value)} rows={2} placeholder="상세 설명 (선택)" className={`${fieldClass} mt-1 resize-y text-[10.5px] font-semibold leading-relaxed text-slate-500`} />
+                                                            <AutoTextarea value={activity.description || ''} onChange={e => onActivityChange(dayIdx, index, 'description', e.target.value)} rows={2} placeholder="상세 설명 (선택)" className={`${fieldClass} mt-1 resize-y text-[10.5px] font-semibold leading-relaxed text-slate-500`} />
                                                             {(activity.images || []).length > 0 && (
                                                                 <div className="mt-1.5 grid grid-cols-3 gap-2">
                                                                     {(activity.images || []).slice(0, 3).map((image, imageIndex) => <img key={imageIndex} src={image} alt="" className="h-16 w-full rounded-lg object-cover" />)}
@@ -615,7 +632,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                         <div className="flex items-start gap-1 px-1">
                             <span className="pt-1 text-[11px] font-bold text-slate-400">※</span>
                             <div className="min-w-0 flex-1">
-                                <textarea value={settings.detail.note} onChange={e => onDocSection('detail', { note: e.target.value })} rows={2} className={`${fieldClass} resize-none text-[11px] font-bold leading-relaxed text-slate-400`} />
+                                <AutoTextarea value={settings.detail.note} onChange={e => onDocSection('detail', { note: e.target.value })} rows={2} className={`${fieldClass} resize-none text-[11px] font-bold leading-relaxed text-slate-400`} />
                             </div>
                         </div>
                     </>}
@@ -628,7 +645,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                         <span className="material-symbols-outlined mt-px text-[19px]" style={{ color: DOC_BLUE }}>info</span>
                                         <div className="min-w-0 flex-1">
                                             <input value={item.title} onChange={e => onGuideNotice(idx, 'title', e.target.value)} className={`${fieldClass} text-[12.5px] font-black text-[#0B1B45]`} />
-                                            <textarea value={item.body} onChange={e => onGuideNotice(idx, 'body', e.target.value)} rows={2} className={`${fieldClass} mt-1 resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
+                                            <AutoTextarea value={item.body} onChange={e => onGuideNotice(idx, 'body', e.target.value)} rows={2} className={`${fieldClass} mt-1 resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
                                         </div>
                                     </div>
                                 ))}
@@ -638,11 +655,11 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                         <div className="grid gap-4 sm:grid-cols-2">
                             <section className={`${card} p-5`}>
                                 {secTitle('gavel', '旅行条件（要約）')}
-                                <textarea value={settings.guide.conditions} onChange={e => onDocSection('guide', { conditions: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
+                                <AutoTextarea value={settings.guide.conditions} onChange={e => onDocSection('guide', { conditions: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
                             </section>
                             <section className={`${card} p-5`}>
                                 {secTitle('payments', '旅行代金のお支払い')}
-                                <textarea value={settings.guide.paymentInfo} onChange={e => onDocSection('guide', { paymentInfo: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
+                                <AutoTextarea value={settings.guide.paymentInfo} onChange={e => onDocSection('guide', { paymentInfo: e.target.value })} rows={5} className={`${fieldClass} resize-none text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
                             </section>
                         </div>
 
