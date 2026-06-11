@@ -347,7 +347,14 @@ export const EstimateDetail: React.FC = () => {
                         </DocCard>
                     )}
 
-                    <IncludeExclude included={includedList} excluded={excludedList} />
+                    {!isSent && (
+                        <DocCard>
+                            <p className="text-center text-[13px] font-black" style={{ color: DOC_NAVY }}>担当者がお見積りを作成しています</p>
+                            <p className="mt-1 text-center text-[11.5px] font-bold text-slate-500">完成次第、メールでお知らせいたします。今しばらくお待ちください。</p>
+                        </DocCard>
+                    )}
+
+                    {isSent && <IncludeExclude included={includedList} excluded={excludedList} />}
 
                     {/* 상세 일정표 */}
                     {docDays.length > 0 && (
@@ -363,14 +370,14 @@ export const EstimateDetail: React.FC = () => {
                         </>
                     )}
 
-                    <BookingSteps />
+                    {isSent && <BookingSteps />}
 
-                    <GuideTips
+                    {isSent && <GuideTips
                         notices={guideNotices}
                         emergencyPhone={ds?.guide?.emergencyPhone}
                         emergencyEmail={ds?.guide?.emergencyEmail}
                         closingMessage={ds?.guide?.closingMessage || 'モンゴルの大自然と文化を心ゆくまでお楽しみください。'}
-                    />
+                    />}
 
                     {/* ご依頼内容（고객이 보낸 요청 조건) */}
                     <DocCard>

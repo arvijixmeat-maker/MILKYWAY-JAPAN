@@ -92,9 +92,9 @@ export const TripInfoGrid: React.FC<{ items: { icon: string; label: string; valu
                     <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full" style={{ background: '#EAF3FF', color: DOC_BLUE }}>
                         <span className="material-symbols-outlined text-[22px]">{it.icon}</span>
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-bold text-slate-400">{it.label}</p>
-                        <p className="truncate text-[14.5px] font-black" style={{ color: DOC_NAVY }}>{it.value}</p>
+                        <p className="break-words text-[13px] font-black leading-snug" style={{ color: DOC_NAVY }}>{it.value}</p>
                     </div>
                 </div>
             ))}
@@ -164,9 +164,9 @@ export const IncludeExclude: React.FC<{ included: string[]; excluded: string[] }
 // ─── 예약 흐름 3단계 ───
 export const BookingSteps: React.FC = () => {
     const steps = [
-        { icon: 'edit_calendar', t: 'ご予約お申込み' },
-        { icon: 'credit_card', t: 'ご予約金のお振込', s: '（ご予約確定）' },
-        { icon: 'account_balance_wallet', t: '現地で残金お支払い', s: '（モンゴル到着後）' },
+        { icon: 'edit_calendar', t: 'ご予約申込' },
+        { icon: 'credit_card', t: '予約金お振込', s: '（ご予約確定）' },
+        { icon: 'account_balance_wallet', t: '現地で残金払い', s: '（到着後）' },
     ];
     return (
         <DocCard>
@@ -177,7 +177,7 @@ export const BookingSteps: React.FC = () => {
                         {i > 0 && <span className="material-symbols-outlined hidden text-slate-300 sm:block">chevron_right</span>}
                         <div className="rounded-2xl bg-[#F4F8FF] px-3 py-4 text-center">
                             <span className="material-symbols-outlined text-[30px]" style={{ color: DOC_BLUE }}>{st.icon}</span>
-                            <p className="mt-1 text-[12.5px] font-black" style={{ color: DOC_NAVY }}>{st.t}</p>
+                            <p className="mt-1 text-[11.5px] font-black leading-tight" style={{ color: DOC_NAVY }}>{st.t}</p>
                             {st.s && <p className="text-[10.5px] font-bold text-slate-400">{st.s}</p>}
                         </div>
                     </React.Fragment>
@@ -390,7 +390,7 @@ export const GuideTips: React.FC<{
                         <div key={i} className="rounded-2xl border border-slate-100 p-3.5 text-center">
                             <span className="material-symbols-outlined text-[26px]" style={{ color: DOC_BLUE }}>{c.icon}</span>
                             <p className="mt-1 text-[10.5px] font-black text-slate-400">{c.t}</p>
-                            <p className="break-all text-[12.5px] font-black" style={{ color: DOC_NAVY }}>{c.v}</p>
+                            <p className="break-words text-[11px] font-black leading-snug" style={{ color: DOC_NAVY }}>{c.v}</p>
                             <p className="text-[10px] font-bold text-slate-400">{c.s}</p>
                         </div>
                     ))}
