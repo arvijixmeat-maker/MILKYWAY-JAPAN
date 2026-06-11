@@ -23,8 +23,10 @@ interface Props {
     onClose: () => void;
     title: string;
     documentType?: 'itinerary' | 'contract';
-    /** 실제 고객 데이터 — TemplatePreview 상단/금액에 자동 표시 */
-    customer: {
+    /** 템플릿(프리셋) 편집 모드 — 고객 없이 샘플 표시, 전체 문서 페이지 탭 노출 */
+    templateMode?: boolean;
+    /** 실제 고객 데이터 — TemplatePreview 상단/금액에 자동 표시 (템플릿 모드에선 생략) */
+    customer?: {
         tripNumber?: string;
         period?: string;
         tripLength?: string;
@@ -46,7 +48,7 @@ interface Props {
     onAssignAccommodation?: (day: number) => void;
 }
 
-export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, documentType = 'itinerary', customer, initialContent, onSave, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation }) => {
+export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, documentType = 'itinerary', templateMode = false, customer, initialContent, onSave, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [days, setDays] = useState<TemplateDay[]>([]);
@@ -59,7 +61,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
 
     useEffect(() => {
         if (!open) return;
-        setName(initialContent?.name || customer.tripType || '');
+        setName(initialContent?.name || customer?.tripType || '');
         setDescription(initialContent?.description || '');
         setDays(Array.isArray(initialContent?.days) ? initialContent!.days : []);
         setDocSettings(mergeDocumentSettings(initialContent?.documentSettings));
@@ -93,7 +95,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     vehicleOptions: parse(item.vehicleOptions || item.vehicle_options),
                 })) as TourProduct[];
                 setProducts(mapped);
-                const target = (customer.tripType || '').replace(/\s+/g, '').toLowerCase();
+                const target = (customer?.tripType || '').replace(/\s+/g, '').toLowerCase();
                 const matched = mapped.filter(product => {
                     const productName = (product.name || '').replace(/\s+/g, '').toLowerCase();
                     return productName === target || productName.includes(target) || target.includes(productName);
@@ -105,7 +107,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 if (matched) setSelectedProductId(matched.id);
             })
             .finally(() => setLoadingProducts(false));
-    }, [open, documentType, customer.tripType, products.length]);
+    }, [open, documentType, customer?.tripType, products.length]);
 
     const textFromProductItem = (item: any) => {
         if (typeof item === 'string') return item;
@@ -179,10 +181,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         if (days.length > 0 && !window.confirm('현재 작성 중인 일정과 문서 설정을 상품 정보로 교체할까요?')) return;
         const included = (product.included || []).map(textFromProductItem).filter(Boolean);
         const excluded = (product.excluded || []).map(textFromProductItem).filter(Boolean);
-        const defaultPricing = product.pricingOptions?.find(option => option.people === customer.peopleCount)
+        const defaultPricing = product.pricingOptions?.find(option => option.people === customer?.peopleCount)
             || product.pricingOptions?.[0];
 
-        setName(product.name || customer.tripType || '');
+        setName(product.name || customer?.tripType || '');
         setDescription(product.description || '');
         setDays(importedDays);
         setSelectedDayIndex(0);
@@ -249,7 +251,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
 
     if (!open) return null;
 
-    const totalAmount = customer.totalAmount || 0;
+    const totalAmount = customer?.totalAmount || 0;
     const includedCount = docSettings.overview.included.filter(item => item.label?.trim()).length;
     const excludedCount = docSettings.overview.excludedText.split(/\r?\n/).filter(Boolean).length;
     const selectedDay = days[selectedDayIndex];
@@ -263,7 +265,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                             <span className="material-symbols-outlined">arrow_back</span>
                         </button>
                         <div className="min-w-0">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">고객 문서 편집</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{templateMode ? '일정 프리셋 편집' : '고객 문서 편집'}</p>
                             <p className="truncate text-lg font-bold text-slate-900 dark:text-white">{title}</p>
                         </div>
                     </div>
@@ -274,19 +276,19 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         </button>
                     </div>
                 </div>
-                <div className="flex flex-shrink-0 flex-col gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
+                {(customer || (documentType === 'contract' && (onAssignGuide || onAssignAccommodation))) && <div className="flex flex-shrink-0 flex-col gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
                     <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
                         <div className="rounded-2xl border border-[#BBD9FF] bg-[#EAF3FF] px-4 py-3 dark:border-teal-900 dark:bg-teal-950/20">
                             <p className="text-[10px] font-black uppercase tracking-widest text-[#1668DC]">고객</p>
-                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer.name || '고객명 없음'}</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer?.name || '고객명 없음'}</p>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">예약번호</p>
-                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer.tripNumber || '-'}</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer?.tripNumber || '-'}</p>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">여행기간</p>
-                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer.period || customer.tripLength || '-'}</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer?.period || customer?.tripLength || '-'}</p>
                         </div>
                     </div>
                     {documentType === 'contract' && (onAssignGuide || onAssignAccommodation) && (
@@ -313,7 +315,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         )}
                         </div>
                     )}
-                </div>
+                </div>}
                 {documentType === 'contract' && <div className="flex flex-shrink-0 items-center gap-2 border-b border-[#BBD9FF] bg-[#EAF3FF] px-6 py-2 text-xs font-bold text-[#287DFA] dark:border-teal-800 dark:bg-teal-900/20">
                     <span className="material-symbols-outlined text-[16px]">tips_and_updates</span>
                     <span>문서를 클릭해서 수정하고, 상단에서 담당 가이드와 일자별 숙소를 배정하면 일정표·계약서에 함께 반영됩니다.</span>
@@ -408,9 +410,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         onRemoveActivity={removeActivity}
                         onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
                                 onPickHotel={onAssignAccommodation}
-                                defaultPage="detail"
+                                defaultPage={templateMode ? 'overview' : 'detail'}
                                 focusDayIndex={selectedDayIndex}
-                                showPageTabs={false}
+                                showPageTabs={templateMode}
                             />
                         </main>
 
@@ -421,13 +423,13 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                     <span className="material-symbols-outlined text-[18px] text-[#287DFA]">calendar_month</span>
                                     <div>
                                         <p className="text-[10px] font-bold text-slate-400">여행 기간</p>
-                                        <p className="text-xs font-black text-slate-800">{customer.period || customer.tripLength || '-'}</p>
+                                        <p className="text-xs font-black text-slate-800">{customer?.period || customer?.tripLength || '-'}</p>
                                     </div>
                                 </div>
                                 <div className="mt-3 grid grid-cols-2 gap-2">
                                     <div className="rounded-lg bg-slate-50 p-2">
                                         <p className="text-[9px] font-bold text-slate-400">인원</p>
-                                        <p className="mt-1 text-xs font-black text-slate-800">{customer.headcount || '-'}</p>
+                                        <p className="mt-1 text-xs font-black text-slate-800">{customer?.headcount || '-'}</p>
                                     </div>
                                     <div className="rounded-lg bg-slate-50 p-2">
                                         <p className="text-[9px] font-bold text-slate-400">총 금액</p>
