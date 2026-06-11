@@ -481,6 +481,16 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                             </div>
                             <h3 className="text-center text-[28px] font-black tracking-[0.18em]" style={{ color: DOC_NAVY }}>ご旅行契約書</h3>
                             <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em]" style={{ color: DOC_BLUE }}>Travel Contract</p>
+                            {customer && (
+                                <div className="mx-auto mt-3 flex max-w-[560px] items-start gap-2 rounded-xl border border-[#BBD9FF] bg-[#EAF3FF] px-3.5 py-2.5">
+                                    <span className="material-symbols-outlined mt-px text-[16px]" style={{ color: '#1656D6' }}>info</span>
+                                    <p className="text-[11px] font-bold leading-relaxed" style={{ color: '#1656D6' }}>
+                                        여기서는 <b>취소규정·お支払い(계좌 포함)·문구</b>만 편집합니다.
+                                        고객이 작성한 <b>여행자 정보</b>와 배정된 <b>숙소·가이드 표</b>는 발송되는 계약서에 자동으로 합쳐집니다
+                                        — 완성본은 「작성 내용 확인」에서 보세요.
+                                    </p>
+                                </div>
+                            )}
                             <AutoTextarea value={settings.contract.intro} onChange={e => onDocSection('contract', { intro: e.target.value })} rows={3} className={`${fieldClass} mx-auto mt-4 block max-w-[520px] resize-none text-center text-[11.5px] font-semibold leading-relaxed text-slate-500`} />
                             <div className="mt-5 overflow-hidden rounded-xl border border-[#C7DCFF] text-xs">
                                 {[['ご旅行名', name || '銀河・大自然パッケージ'], ['ご旅行期間', tripLength], ['旅行代金', `${samplePrice.toLocaleString()}円（一人）`], ['合計金額', `${sampleTotal.toLocaleString()}円`], ['ガイド', guideText], ['宿泊', accommodationSummary]].map(([label, value]) => (
