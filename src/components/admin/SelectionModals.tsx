@@ -65,7 +65,7 @@ export const GuideSelectionModal: React.FC<GuideSelectionModalProps> = ({ isOpen
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[110] p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[230] p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex items-center justify-between mb-4">
@@ -189,7 +189,7 @@ export const AccommodationSelectionModal: React.FC<AccommodationSelectionModalPr
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[110] p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[230] p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex items-center justify-between mb-4">
