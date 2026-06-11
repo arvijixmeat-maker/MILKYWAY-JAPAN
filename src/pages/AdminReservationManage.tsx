@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -301,7 +301,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
     const [docEditorOpen, setDocEditorOpen] = useState(false);
     const [activeDocument, setActiveDocument] = useState<'itinerary' | 'contract'>('itinerary');
-    const [tab, setTab] = useState<'overview' | 'payment' | 'history'>('overview');
+    // Trip.com식 원페이지: 탭 대신 섹션 앵커 스크롤
+    const [activeSec, setActiveSec] = useState<'info' | 'pay' | 'assign' | 'log'>('info');
+    const bodyRef = useRef<HTMLDivElement | null>(null);
+    const scrollToSec = (id: 'info' | 'pay' | 'assign' | 'log') => {
+        setActiveSec(id);
+        bodyRef.current?.querySelector(`#sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
@@ -689,7 +695,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             icon: 'payments',
             done: editForm.depositStatus === 'paid',
             actionLabel: editForm.depositStatus === 'paid' ? '완료' : '입금 확인',
-            onAction: editForm.depositStatus === 'paid' ? () => setTab('payment') : () => { setTab('payment'); toggleDepositStatus(); },
+            onAction: editForm.depositStatus === 'paid' ? () => scrollToSec('pay') : () => { scrollToSec('pay'); toggleDepositStatus(); },
         },
         {
             title: '일정표',
@@ -713,7 +719,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             icon: 'support_agent',
             done: !!reservation.areAssignmentsVisibleToUser,
             actionLabel: guideReady ? '안내문 복사' : '가이드 배정',
-            onAction: guideReady ? () => copyCustomerMessage('final') : () => { setTab('payment'); setShowGuideModal(true); },
+            onAction: guideReady ? () => copyCustomerMessage('final') : () => { scrollToSec('assign'); setShowGuideModal(true); },
         },
     ];
 
@@ -751,10 +757,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         assignment: 'assignment_ind',
     };
 
-    const DRAWER_TABS: Array<{ id: typeof tab; label: string; icon: string }> = [
-        { id: 'overview', label: '개요', icon: 'route' },
-        { id: 'payment', label: '결제·배정', icon: 'payments' },
-        { id: 'history', label: '메모·이력', icon: 'history' },
+    // Trip.com식 섹션 앵커 (탭 대신 원페이지 스크롤)
+    const SECTION_ANCHORS: Array<{ id: 'info' | 'pay' | 'assign' | 'log'; label: string }> = [
+        { id: 'info', label: '주문 정보' },
+        { id: 'pay', label: '결제' },
+        { id: 'assign', label: '가이드·숙소' },
+        { id: 'log', label: '메모·이력' },
     ];
 
     // NEXT 바 — 운영 단계 중 첫 미완료 1개만 제시 (개요 탭의 5단계 카드 그리드 대체)
@@ -767,9 +775,17 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         return Math.max((reservation.dailyAccommodations || []).length, 1);
     })();
 
+    // 문서별 마지막 발송 일시 (history의 email 이벤트에서)
+    const lastEmailAt = (url: string, keyword: string) => {
+        const ev = [...timelineEvents].reverse().find((e: any) => e.type === 'email' && (e.detail === url || String(e.description || '').includes(keyword)));
+        return ev?.timestamp ? new Date(ev.timestamp).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    };
+    const itinerarySentAt = lastEmailAt(itineraryUrl, '日程');
+    const contractSentAt = lastEmailAt(contractUrl, '契約');
+
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
-            <div className="drawer reservation-workspace" onClick={e => e.stopPropagation()}>
+            <div className="drawer reservation-workspace tcom" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="drawer-head">
@@ -810,28 +826,23 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                     </span>
                 </div>
 
-                {/* Tabs */}
-                <div className="drawer-tabs">
-                    {DRAWER_TABS.map(t => (
-                        <button
-                            key={t.id}
-                            type="button"
-                            className={`dtab${tab === t.id ? ' active' : ''}`}
-                            onClick={() => setTab(t.id)}
-                        >
-                            <Icon name={t.icon} />{t.label}
-                            {t.id === 'history' && memos.length > 0 && <span className="dtab-ct">{memos.length}</span>}
+                {/* 섹션 앵커 — Trip.com식 원페이지 내비게이션 */}
+                <div className="tc-anchors">
+                    {SECTION_ANCHORS.map(a => (
+                        <button key={a.id} type="button" className={activeSec === a.id ? 'active' : ''} onClick={() => scrollToSec(a.id)}>
+                            {a.label}
+                            {a.id === 'log' && memos.length > 0 && <span className="dtab-ct">{memos.length}</span>}
                         </button>
                     ))}
                 </div>
 
                 <div className="reservation-workspace-main">
                 {/* Body */}
-                <div className="drawer-body reservation-workspace-body">
-                    {tab === 'overview' && (
-                    <div className="stack" style={{ gap: 16 }}>
-                        {/* 주문 요약 — Trip.com식 정보 밀도: 첫 화면에서 클릭 없이 모든 사실 확인 */}
-                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'stretch' }}>
+                <div className="drawer-body reservation-workspace-body" ref={bodyRef}>
+                    <div className="stack" style={{ gap: 18 }}>
+                    <section id="sec-info" style={{ scrollMarginTop: 8 }}>
+                        {/* 주문 정보 — 여행/예약자 */}
+                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
                             <div className="card">
                                 <div className="card-head"><Icon name="flight_takeoff" style={{ color: 'var(--mrt-gray-600)' }} /><h2>여행 정보</h2></div>
                                 <div className="card-pad" style={{ paddingTop: 14 }}>
@@ -866,36 +877,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
                         </div>
+                    </section>
 
-                        {/* 상태 요약 — 클릭 시 해당 작업 탭으로 */}
-                        <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                            <button className="qlink" onClick={() => setTab('payment')}>
-                                <span className={`qi ${paidPercent >= 100 ? 'tint-green' : 'tint-amber'}`}><Icon name="payments" fill /></span>
-                                <span className="qtext">
-                                    <span className="qt">금액 · 입금</span>
-                                    <span className="qs">
-                                        예약금 {editForm.depositStatus === 'paid' ? '입금' : '미납'} · 잔금 {editForm.balanceStatus === 'paid' ? '입금' : '미납'} ({paidPercent}%)
-                                    </span>
-                                </span>
-                                <span className="qv" style={{ fontSize: 18 }}>₩{(editForm.totalAmount || 0).toLocaleString()}</span>
-                                <Icon name="chevron_right" className="arr" />
-                            </button>
-                            <button className="qlink" onClick={() => setTab('payment')}>
-                                <span className={`qi ${reservation.assignedGuide ? 'tint-green' : 'tint-blue'}`}><Icon name="support_agent" fill /></span>
-                                <span className="qtext">
-                                    <span className="qt">가이드 · 숙소 배정</span>
-                                    <span className="qs">
-                                        {reservation.assignedGuide ? `가이드 ${reservation.assignedGuide.name}` : '가이드 미배정'} · 숙소 {(reservation.dailyAccommodations || []).length}/{tripDays}일
-                                    </span>
-                                </span>
-                                <Icon name="chevron_right" className="arr" />
-                            </button>
-                        </div>
-                    </div>
-                    )}
-
-                    {tab === 'payment' && (
-                    <div className="stack" style={{ gap: 16 }}>
+                    <section id="sec-pay" style={{ scrollMarginTop: 8 }}>
+                    <div className="stack" style={{ gap: 14 }}>
                             {/* Payment with Progress Ring */}
                             <div className="card card-pad">
                                 <div className="row" style={{ marginBottom: 16, gap: 16 }}>
@@ -996,10 +981,115 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                             </div>
 
                     </div>
-                    )}
+                    </section>
 
-                    {tab === 'history' && (
-                    <div className="stack" style={{ gap: 16 }}>
+                    <section id="sec-assign" style={{ scrollMarginTop: 8 }}>
+                    <div className="stack" style={{ gap: 14 }}>
+                            {/* 담당 가이드 */}
+                            <div className="card">
+                                <div className="card-head">
+                                    <Icon name="badge" style={{ color: 'var(--mrt-gray-600)' }} /><h2>담당 가이드</h2>
+                                    <div className="spacer" style={{ flex: 1 }} />
+                                    <button className="link-action" onClick={() => setShowGuideModal(true)}>
+                                        {reservation.assignedGuide ? '변경' : '배정'}<Icon name="chevron_right" />
+                                    </button>
+                                </div>
+                                <div className="card-pad" style={{ paddingTop: 12 }}>
+                                    {reservation.assignedGuide ? (
+                                        <div className="assign-row">
+                                            {reservation.assignedGuide.image ? (
+                                                <img className="avatar round" src={reservation.assignedGuide.image} alt={reservation.assignedGuide.name} />
+                                            ) : (
+                                                <span className="avatar round tint-blue">{getInitials(reservation.assignedGuide.name)}</span>
+                                            )}
+                                            <div style={{ minWidth: 0 }}>
+                                                <div className="cell-strong">{reservation.assignedGuide.name}</div>
+                                                <div className="cell-muted" style={{ fontSize: 12 }}>{reservation.assignedGuide.phone}</div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="assign-empty" onClick={() => setShowGuideModal(true)}>
+                                            <Icon name="person_add" />가이드를 배정하세요
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 일자별 숙소 배정 + 고객 알림 발송 */}
+                            <div className="card">
+                                <div className="card-head">
+                                    <Icon name="hotel" style={{ color: 'var(--mrt-gray-600)' }} /><h2>일자별 숙소 배정</h2>
+                                    <div className="spacer" style={{ flex: 1 }} />
+                                    <button
+                                        className="link-action"
+                                        onClick={async () => {
+                                            if (!reservation.assignedGuide && (!reservation.dailyAccommodations || reservation.dailyAccommodations.length === 0)) {
+                                                alert('배정된 가이드나 숙소가 없습니다.');
+                                                return;
+                                            }
+                                            onUpdate({
+                                                ...reservation,
+                                                areAssignmentsVisibleToUser: true,
+                                                history: [
+                                                    ...(reservation.history || []),
+                                                    { timestamp: new Date().toISOString(), type: 'modification', description: '担当ガイド・宿泊先のご案内を送信しました。' }
+                                                ]
+                                            });
+                                            try {
+                                                await sendNotificationEmail(reservation.email, 'GUIDE_ASSIGNED', {
+                                                    customerName: reservation.customerName,
+                                                    productName: reservation.productName,
+                                                    guideName: reservation.assignedGuide?.name,
+                                                    guidePhone: reservation.assignedGuide?.phone,
+                                                    userId: reservation.userId,
+                                                    reservationId: reservationNumber,
+                                                    reservationDbId: reservation.id,
+                                                });
+                                            } catch (e) { console.error('GUIDE_ASSIGNED email failed', e); }
+                                        }}
+                                        title="가이드/숙소 확정 안내를 고객에게 이메일+인앱 알림으로 보냅니다."
+                                    >
+                                        <Icon name={reservation.areAssignmentsVisibleToUser ? 'mark_email_read' : 'send'} />
+                                        {reservation.areAssignmentsVisibleToUser ? '알림 재발송' : '고객에게 알림 발송'}
+                                    </button>
+                                </div>
+                                <div className="card-pad" style={{ paddingTop: 12 }}>
+                                    <div className="stack" style={{ gap: 8 }}>
+                                        {Array.from({ length: tripDays }, (_, i) => i + 1).map((day) => {
+                                            const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
+                                            return (
+                                                <div className="accom-day" key={day}>
+                                                    <span className="th-day">{day}일차</span>
+                                                    {assigned ? (
+                                                        <div className="assign-row" style={{ flex: 1, padding: 0 }}>
+                                                            {(assigned.accommodation.images && assigned.accommodation.images[0]) ? (
+                                                                <img className="thumb" src={assigned.accommodation.images[0]} alt={assigned.accommodation.name} loading="lazy" />
+                                                            ) : (
+                                                                <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
+                                                            )}
+                                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                                                <div className="cell-strong">{assigned.accommodation.name}</div>
+                                                                <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.location || '—'}</div>
+                                                            </div>
+                                                            <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
+                                                        </div>
+                                                    ) : (
+                                                        <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
+                                                            <Icon name="add" />숙소 선택
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                    </div>
+                    </section>
+
+                    <section id="sec-log" style={{ scrollMarginTop: 8 }}>
+                    <div className="stack" style={{ gap: 14 }}>
                             {/* Admin Memo */}
                             <div className="card">
                                 <div className="card-head">
@@ -1073,7 +1163,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 )}
                             </div>
                     </div>
-                    )}
+                    </section>
+                    </div>
                 </div>
 
                 <aside className="reservation-action-rail">
@@ -1093,39 +1184,60 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <span className="action-doc-icon tint-blue"><Icon name="map" /></span>
                                 <span>
                                     <b>확정 일정표</b>
-                                    <small>{itinerarySent ? '고객 발송 완료' : itineraryReady ? '편집 및 발송 가능' : '템플릿 선택 필요'}</small>
+                                    <small>{itinerarySent ? `발송 완료${itinerarySentAt ? ` · ${itinerarySentAt}` : ''}` : itineraryReady ? '작성됨 · 발송 대기' : '템플릿 선택 또는 문서 작성 필요'}</small>
                                 </span>
                                 <Icon name={itinerarySent ? 'check_circle' : 'chevron_right'} />
                             </button>
-                            <select
-                                className="inp"
-                                value={editForm.itineraryTemplateId || ''}
-                                onChange={e => {
-                                    const newId = e.target.value || undefined;
-                                    const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
-                                    setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
-                                    onUpdate(updated);
-                                    setActiveDocument('itinerary');
-                                }}
-                            >
-                                <option value="">일정표 템플릿 선택</option>
-                                {templatesList.map((template: any) => (
-                                    <option key={template.id} value={template.id}>{template.name}</option>
-                                ))}
-                            </select>
+                            {!itinerarySent && (
+                                <select
+                                    className="inp"
+                                    value={editForm.itineraryTemplateId || ''}
+                                    onChange={e => {
+                                        const newId = e.target.value || undefined;
+                                        const updated = { ...reservation, itineraryTemplateId: newId } as Reservation;
+                                        setEditForm(prev => prev ? { ...prev, itineraryTemplateId: newId } : prev);
+                                        onUpdate(updated);
+                                        setActiveDocument('itinerary');
+                                    }}
+                                >
+                                    <option value="">일정표 템플릿 선택</option>
+                                    {templatesList.map((template: any) => (
+                                        <option key={template.id} value={template.id}>{template.name}</option>
+                                    ))}
+                                </select>
+                            )}
                             <div className="action-doc-buttons">
-                                <button className="btn btn-sm btn-blue" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
-                                    <Icon name="edit_document" />일정표 만들기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => window.open(itineraryUrl, '_blank')}>
-                                    <Icon name="visibility" />미리보기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
-                                    <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!itineraryReady || sendingItinerary} onClick={sendItineraryToCustomer}>
-                                    <Icon name="send" />발송
-                                </button>
+                                {!itinerarySent ? (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" disabled={!itineraryReady || sendingItinerary} onClick={sendItineraryToCustomer}>
+                                            <Icon name="send" />{sendingItinerary ? '발송 중' : '고객에게 발송'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />{reservation.documentContent ? '편집' : '일정표 만들기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => window.open(itineraryUrl, '_blank')}>
+                                            <Icon name="visibility" />미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={!itineraryReady} onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" onClick={() => window.open(itineraryUrl, '_blank')}>
+                                            <Icon name="visibility" />미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('itinerary'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />편집
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(itineraryUrl); setCopiedDocId('itinerary'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'itinerary' ? 'check' : 'content_copy'} />{copiedDocId === 'itinerary' ? '복사됨' : '링크'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={sendingItinerary} onClick={sendItineraryToCustomer}>
+                                            <Icon name="forward_to_inbox" />{sendingItinerary ? '발송 중' : '재발송'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </section>
 
@@ -1134,23 +1246,48 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <span className="action-doc-icon tint-purple"><Icon name="contract" /></span>
                                 <span>
                                     <b>여행 계약서</b>
-                                    <small>{contractSent ? '고객 발송 완료' : contractReady ? '편집 및 발송 가능' : '고객 이메일 필요'}</small>
+                                    <small>
+                                        {contractHasTravelers
+                                            ? `여행자 ${contractTravelers.length}명 작성 완료`
+                                            : contractSent
+                                                ? `고객 작성 대기${contractSentAt ? ` · 발송 ${contractSentAt}` : ''}`
+                                                : contractReady ? '작성·발송 가능' : '고객 이메일 필요'}
+                                    </small>
                                 </span>
-                                <Icon name={contractSent ? 'check_circle' : 'chevron_right'} />
+                                <Icon name={contractHasTravelers ? 'check_circle' : contractSent ? 'hourglass_top' : 'chevron_right'} />
                             </button>
                             <div className="action-doc-buttons">
-                                <button className="btn btn-sm btn-blue" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
-                                    <Icon name="edit_document" />계약서 만들기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => window.open(contractUrl, '_blank')}>
-                                    <Icon name="visibility" />미리보기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
-                                    <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
-                                </button>
-                                <button className="btn btn-sm btn-ghost" disabled={!contractReady || sendingContract} onClick={sendContractToCustomer}>
-                                    <Icon name="send" />발송
-                                </button>
+                                {!contractSent ? (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" disabled={!contractReady || sendingContract} onClick={sendContractToCustomer}>
+                                            <Icon name="send" />{sendingContract ? '발송 중' : '고객에게 발송'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />{reservation.documentContent ? '편집' : '계약서 만들기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => window.open(contractUrl, '_blank')}>
+                                            <Icon name="visibility" />미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" onClick={() => window.open(contractUrl, '_blank')}>
+                                            <Icon name="visibility" />{contractHasTravelers ? '작성 내용 확인' : '미리보기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
+                                            <Icon name="edit_document" />편집
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
+                                            <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={sendingContract} onClick={sendContractToCustomer}>
+                                            <Icon name="forward_to_inbox" />{sendingContract ? '발송 중' : '재발송'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </section>
 
