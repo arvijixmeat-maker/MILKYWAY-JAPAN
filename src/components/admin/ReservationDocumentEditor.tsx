@@ -69,7 +69,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     }, [open, initialContent]);
 
     useEffect(() => {
-        if (!open || documentType !== 'itinerary' || products.length > 0) return;
+        if (!open || products.length > 0) return;
         setLoadingProducts(true);
         api.products.list()
             .then((data: any) => {
@@ -321,7 +321,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     <span>문서를 클릭해서 수정하고, 상단에서 담당 가이드와 일자별 숙소를 배정하면 일정표·계약서에 함께 반영됩니다.</span>
                 </div>}
                 <div className="flex-1 overflow-hidden bg-[#F5F7FA] dark:bg-slate-900">
-                    {documentType === 'itinerary' ? (
+                    {(
                     <div className="grid h-full grid-cols-[240px_minmax(560px,1fr)_280px] overflow-hidden max-xl:grid-cols-[210px_minmax(520px,1fr)] max-lg:block max-lg:overflow-y-auto">
                         <aside className="overflow-y-auto border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 max-lg:border-b max-lg:border-r-0">
                             <div className="mb-4 rounded-xl border border-[#9CC5FF] bg-[#F5F7FA] p-3">
@@ -410,9 +410,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         onRemoveActivity={removeActivity}
                         onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
                                 onPickHotel={onAssignAccommodation}
-                                defaultPage={templateMode ? 'overview' : 'detail'}
+                                defaultPage={documentType === 'contract' ? 'contract' : 'overview'}
                                 focusDayIndex={selectedDayIndex}
-                                showPageTabs={templateMode}
+                                showPageTabs={true}
                             />
                         </main>
 
@@ -474,33 +474,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                             </div>
                         </aside>
                     </div>
-                    ) : (
-                        <div className="h-full p-4">
-                            <TemplatePreview
-                                name={name}
-                                description={description}
-                                days={days}
-                                documentSettings={docSettings}
-                                customer={customer}
-                                assignedGuide={assignedGuide}
-                                dailyAccommodations={dailyAccommodations}
-                                onNameChange={setName}
-                                onDescriptionChange={setDescription}
-                                onDocSection={updateDocSection}
-                                onIncluded={updateIncluded}
-                                onCancellation={updateCancellation}
-                                onGuideNotice={updateGuideNotice}
-                                onDayChange={updateDay}
-                                onActivityChange={updateActivity}
-                                onAddDay={addDay}
-                                onAddActivity={addActivity}
-                                onRemoveDay={removeDay}
-                                onRemoveActivity={removeActivity}
-                                onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
-                                defaultPage="contract"
-                                showPageTabs={false}
-                            />
-                        </div>
                     )}
                 </div>
             </div>
