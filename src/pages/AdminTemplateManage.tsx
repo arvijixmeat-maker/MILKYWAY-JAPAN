@@ -213,7 +213,7 @@ const ACCOM_TYPES = { '호텔': ['2성급 호텔', '3성급 호텔', '4성급 �
 
 // 모듈 스코프 컴포넌트 — 컴포넌트 내부에 정의하면 입력마다 리마운트되어 포커스·스크롤이 튐
 const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div className="mx-auto max-w-[960px] rounded-[22px] border border-[#8FE7DE] bg-white shadow-sm">{children}</div>
+    <div className="mx-auto max-w-[960px] rounded-[22px] border border-[#9CC5FF] bg-white shadow-sm">{children}</div>
 );
 
 // ─── Live Preview (editable PC document preview) ───
@@ -742,8 +742,8 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
     }, [days.length]);
 
     const selectedDay = days[selectedDayIndex];
-    const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#39C4B7] focus:ring-2 focus:ring-[#39C4B7]/15';
-    const iconButtonClass = 'flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-[#8FE7DE] hover:text-[#0F8F84] disabled:cursor-not-allowed disabled:opacity-30';
+    const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#287DFA] focus:ring-2 focus:ring-[#287DFA]/15';
+    const iconButtonClass = 'flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-[#9CC5FF] hover:text-[#1656D6] disabled:cursor-not-allowed disabled:opacity-30';
 
     return (
         <div className="grid h-full grid-cols-[230px_minmax(580px,1fr)_260px] overflow-hidden bg-[#F7FAFA] max-xl:grid-cols-[210px_minmax(520px,1fr)] max-lg:block max-lg:overflow-y-auto">
@@ -768,7 +768,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">일정 구성</p>
                         <p className="mt-1 text-base font-black text-slate-900">{days.length}일 일정</p>
                     </div>
-                    <button type="button" onClick={onAddDay} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F8F84] text-white" title="DAY 추가">
+                    <button type="button" onClick={onAddDay} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1656D6] text-white" title="DAY 추가">
                         <span className="material-symbols-outlined text-[18px]">add</span>
                     </button>
                 </div>
@@ -779,10 +779,10 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                             key={`${day.day}-${index}`}
                             type="button"
                             onClick={() => setSelectedDayIndex(index)}
-                            className={`w-full rounded-xl border p-3 text-left transition ${selectedDayIndex === index ? 'border-[#39C4B7] bg-[#EAF8F7] shadow-sm' : 'border-slate-200 bg-white hover:border-[#8FE7DE]'}`}
+                            className={`w-full rounded-xl border p-3 text-left transition ${selectedDayIndex === index ? 'border-[#287DFA] bg-[#EAF3FF] shadow-sm' : 'border-slate-200 bg-white hover:border-[#9CC5FF]'}`}
                         >
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-[#0F8F84]">DAY {day.day}</span>
+                                <span className="text-[10px] font-black text-[#1656D6]">DAY {day.day}</span>
                                 <span className="text-[9px] font-bold text-slate-400">{day.activities.length}개 일정</span>
                             </div>
                             <p className="mt-1 truncate text-xs font-black text-slate-800">{day.title || '일차 제목을 입력하세요'}</p>
@@ -790,7 +790,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                         </button>
                     ))}
                     {days.length === 0 && (
-                        <button type="button" onClick={onCreateSkeleton} className="w-full rounded-xl border-2 border-dashed border-[#8FE7DE] px-3 py-8 text-xs font-black text-[#0F8F84]">
+                        <button type="button" onClick={onCreateSkeleton} className="w-full rounded-xl border-2 border-dashed border-[#9CC5FF] px-3 py-8 text-xs font-black text-[#1656D6]">
                             일정 골격 생성
                         </button>
                     )}
@@ -799,17 +799,17 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
 
             <main className="min-w-0 overflow-y-auto p-5">
                 {!selectedDay ? (
-                    <div className="flex min-h-[420px] items-center justify-center rounded-2xl border-2 border-dashed border-[#8FE7DE] bg-white text-center">
+                    <div className="flex min-h-[420px] items-center justify-center rounded-2xl border-2 border-dashed border-[#9CC5FF] bg-white text-center">
                         <div>
-                            <span className="material-symbols-outlined text-4xl text-[#39C4B7]">calendar_add_on</span>
+                            <span className="material-symbols-outlined text-4xl text-[#287DFA]">calendar_add_on</span>
                             <p className="mt-3 text-sm font-black text-slate-800">먼저 여행 일수를 선택해 일정 골격을 생성하세요.</p>
                             <p className="mt-1 text-xs font-semibold text-slate-400">생성 후 일차별 제목, 일정, 식사와 숙소를 입력할 수 있습니다.</p>
                         </div>
                     </div>
                 ) : (
-                    <section className="overflow-hidden rounded-2xl border border-[#8FE7DE] bg-white shadow-sm">
-                        <header className="flex items-start gap-3 border-b border-[#8FE7DE] bg-[#EAF8F7]/50 p-4">
-                            <div className="flex h-14 w-16 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-[#0F8F84] to-[#39C4B7] text-white">
+                    <section className="overflow-hidden rounded-2xl border border-[#9CC5FF] bg-white shadow-sm">
+                        <header className="flex items-start gap-3 border-b border-[#9CC5FF] bg-[#EAF3FF]/50 p-4">
+                            <div className="flex h-14 w-16 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-[#1656D6] to-[#287DFA] text-white">
                                 <span className="text-xs font-black">DAY {selectedDay.day}</span>
                                 <span className="mt-0.5 text-[9px] font-bold text-white/80">{selectedDay.day}日目</span>
                             </div>
@@ -848,7 +848,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                                         ['activity', 'hiking', '체험'],
                                         ['free', 'park', '자유 일정'],
                                     ] as Array<[ActivityType, string, string]>).map(([type, icon, label]) => (
-                                        <button key={type} type="button" onClick={() => onAddActivity(selectedDayIndex, type)} className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-700 hover:border-[#39C4B7] hover:text-[#0F8F84]">
+                                        <button key={type} type="button" onClick={() => onAddActivity(selectedDayIndex, type)} className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-700 hover:border-[#287DFA] hover:text-[#1656D6]">
                                             <span className="material-symbols-outlined text-[16px]">{icon}</span>{label}
                                         </button>
                                     ))}
@@ -859,7 +859,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                                 {selectedDay.activities.map((activity, activityIdx) => (
                                     <article key={activityIdx} className="rounded-2xl border border-slate-200 bg-[#F7FAFA] p-4">
                                         <div className="flex items-start gap-3">
-                                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#EAF8F7] text-[#0F8F84]">
+                                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#EAF3FF] text-[#1656D6]">
                                                 <span className="material-symbols-outlined text-[19px]">{TYPE_MAP[activity.type || 'sightseeing']?.icon || 'place'}</span>
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -871,7 +871,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                                                 </div>
                                                 <textarea value={activity.description || ''} onChange={event => onUpdateActivity(selectedDayIndex, activityIdx, 'description', event.target.value)} rows={2} placeholder="상세 설명 (선택)" className={`${inputClass} mt-2 resize-y text-xs leading-relaxed`} />
                                                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                    <button type="button" onClick={() => onPickSpot(selectedDayIndex, activityIdx)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#8FE7DE] bg-white px-2.5 text-[10px] font-black text-[#0F8F84]"><Icon name="location_on" />관광지에서 선택</button>
+                                                    <button type="button" onClick={() => onPickSpot(selectedDayIndex, activityIdx)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#9CC5FF] bg-white px-2.5 text-[10px] font-black text-[#1656D6]"><Icon name="location_on" />관광지에서 선택</button>
                                                     <button type="button" onClick={() => onPickHotelActivity(selectedDayIndex, activityIdx)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600"><Icon name="hotel" />호텔에서 선택</button>
                                                     <label className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600">
                                                         <Icon name="add_photo_alternate" />사진 추가
@@ -898,7 +898,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                                     </article>
                                 ))}
                                 {selectedDay.activities.length === 0 && (
-                                    <button type="button" onClick={() => onAddActivity(selectedDayIndex, 'sightseeing')} className="w-full rounded-2xl border-2 border-dashed border-[#8FE7DE] py-8 text-xs font-black text-[#0F8F84] hover:bg-[#EAF8F7]">
+                                    <button type="button" onClick={() => onAddActivity(selectedDayIndex, 'sightseeing')} className="w-full rounded-2xl border-2 border-dashed border-[#9CC5FF] py-8 text-xs font-black text-[#1656D6] hover:bg-[#EAF3FF]">
                                         <Icon name="add_circle" /> 첫 일정 항목 추가
                                     </button>
                                 )}
@@ -923,7 +923,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                                 <div className="rounded-2xl border border-slate-200 p-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <p className="flex items-center gap-1.5 text-sm font-black text-slate-900"><Icon name="hotel" />숙소 정보</p>
-                                        <button type="button" onClick={() => onPickDayHotel(selectedDayIndex)} className="text-[10px] font-black text-[#0F8F84]">호텔 마스터에서 선택</button>
+                                        <button type="button" onClick={() => onPickDayHotel(selectedDayIndex)} className="text-[10px] font-black text-[#1656D6]">호텔 마스터에서 선택</button>
                                     </div>
                                     <input value={selectedDay.accommodation?.name || ''} onChange={event => onUpdateDay(selectedDayIndex, 'accommodation', { ...(selectedDay.accommodation || {}), name: event.target.value })} placeholder="호텔 또는 게르명" className={`${inputClass} mt-3`} />
                                     {selectedDay.accommodation?.location && <p className="mt-2 text-[10px] font-semibold text-slate-400">{selectedDay.accommodation.location}</p>}
@@ -939,7 +939,7 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                 <div className="mt-3 rounded-2xl border border-slate-200 p-4">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-slate-800">전체 일정</span>
-                        <span className="rounded-full bg-[#EAF8F7] px-2 py-1 text-[10px] font-black text-[#0F8F84]">{days.length}일</span>
+                        <span className="rounded-full bg-[#EAF3FF] px-2 py-1 text-[10px] font-black text-[#1656D6]">{days.length}일</span>
                     </div>
                     <dl className="mt-4 space-y-3 text-[11px]">
                         <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">주요 일정</dt><dd className="font-black text-slate-700">{days.reduce((sum, day) => sum + day.activities.length, 0)}개</dd></div>
@@ -948,14 +948,14 @@ const ProductStyleItineraryEditor: React.FC<ProductStyleItineraryEditorProps> = 
                     </dl>
                 </div>
                 {selectedDay && (
-                    <div className="mt-4 rounded-2xl border border-[#8FE7DE] bg-[#F7FAFA] p-4">
-                        <p className="text-[10px] font-black text-[#0F8F84]">현재 DAY {selectedDay.day}</p>
+                    <div className="mt-4 rounded-2xl border border-[#9CC5FF] bg-[#F7FAFA] p-4">
+                        <p className="text-[10px] font-black text-[#1656D6]">현재 DAY {selectedDay.day}</p>
                         <p className="mt-2 text-sm font-black text-slate-900">{selectedDay.title || '제목 미입력'}</p>
                         <p className="mt-1 text-[10px] font-semibold text-slate-400">{[selectedDay.date, selectedDay.region].filter(Boolean).join(' · ') || '날짜·지역 미정'}</p>
                         <div className="mt-4 space-y-2">
                             {selectedDay.activities.slice(0, 5).map((activity, index) => (
                                 <div key={index} className="flex items-start gap-2 text-[10px] font-semibold text-slate-600">
-                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#39C4B7]" />
+                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#287DFA]" />
                                     <span>{activity.title || '일정 제목 미입력'}</span>
                                 </div>
                             ))}
@@ -1023,7 +1023,7 @@ const ProductDayInfoItineraryEditor: React.FC<ProductStyleItineraryEditorProps> 
                             <button type="button" onClick={() => toggleDayCollapsed(day.day)} className="act-btn" title={collapsed ? '펼치기' : '접기'}>
                                 <Icon name={collapsed ? 'expand_more' : 'expand_less'} />
                             </button>
-                            <span className="inline-flex min-w-[68px] items-center justify-center rounded-lg bg-[#0F8F84] px-3 py-2 text-xs font-black text-white">DAY {day.day}</span>
+                            <span className="inline-flex min-w-[68px] items-center justify-center rounded-lg bg-[#1656D6] px-3 py-2 text-xs font-black text-white">DAY {day.day}</span>
                             <div className="min-w-[260px] flex-1">
                                 <input className="inp font-bold" value={day.title || ''} onChange={event => onUpdateDay(dayIdx, 'title', event.target.value)} placeholder="일정 제목 (예: 울란바토르 → 테렐지)" />
                             </div>
@@ -1136,7 +1136,7 @@ const ProductDayInfoItineraryEditor: React.FC<ProductStyleItineraryEditorProps> 
                 })}
 
                 {days.length === 0 && (
-                    <button type="button" onClick={onCreateSkeleton} className="min-h-[280px] w-full rounded-2xl border-2 border-dashed border-[#8FE7DE] bg-white text-sm font-black text-[#0F8F84]">
+                    <button type="button" onClick={onCreateSkeleton} className="min-h-[280px] w-full rounded-2xl border-2 border-dashed border-[#9CC5FF] bg-white text-sm font-black text-[#1656D6]">
                         <Icon name="calendar_add_on" /> 일정 골격 생성
                     </button>
                 )}
@@ -1432,10 +1432,10 @@ const TemplatesTab: React.FC = () => {
                         <div key={t.id} className="card" style={{ overflow: 'hidden' }}>
                             <div className="relative h-36 overflow-hidden">
                                 <img src={mongoliaHero} alt="" className="h-full w-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#0F8F84]/95 via-[#0F8F84]/65 to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B45]/95 via-[#16275F]/70 to-transparent" />
                                 <div className="absolute left-5 top-4 text-white">
                                     <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[24px]">landscape</span>
+                                        <span className="material-symbols-outlined text-[24px]">nights_stay</span>
                                         <div>
                                             <p className="text-[11px] font-black">モンゴル銀河旅行社</p>
                                             <p className="text-[8px] font-bold tracking-widest text-white/70">DOCUMENT PACKAGE</p>
@@ -1444,7 +1444,7 @@ const TemplatesTab: React.FC = () => {
                                     <h3 className="mt-4 max-w-[420px] truncate text-xl font-black tracking-tight">{t.name}</h3>
                                     {t.description && <p className="mt-1 max-w-[420px] truncate text-xs font-semibold text-white/80">{t.description}</p>}
                                 </div>
-                                <span className="absolute right-4 top-4 rounded-xl bg-white/90 px-3 py-1 text-xs font-black text-[#0F8F84] shadow-sm">{Math.max(0, t.days.length - 1)}박{t.days.length}일</span>
+                                <span className="absolute right-4 top-4 rounded-xl bg-white/90 px-3 py-1 text-xs font-black text-[#1656D6] shadow-sm">{Math.max(0, t.days.length - 1)}박{t.days.length}일</span>
                             </div>
 
                             <div className="card-pad">
@@ -1455,7 +1455,7 @@ const TemplatesTab: React.FC = () => {
                                         { icon: 'route', label: '상세일정' },
                                         { icon: 'qr_code_2', label: '안내/QR' },
                                     ].map(item => (
-                                        <div key={item.label} className="rounded-xl border border-[#8FE7DE]/80 bg-[#F7FAFA] px-2 py-2 text-center text-[#0F8F84]">
+                                        <div key={item.label} className="rounded-xl border border-[#9CC5FF]/80 bg-[#F7FAFA] px-2 py-2 text-center text-[#1656D6]">
                                             <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                                             <p className="mt-1 text-[10px] font-black">{item.label}</p>
                                         </div>
@@ -1467,7 +1467,7 @@ const TemplatesTab: React.FC = () => {
                                     <div className="space-y-1">
                                         {t.days.slice(0, 3).map(d => (
                                             <div key={d.day} className="flex items-center gap-2 text-xs text-slate-500">
-                                                <span className="flex h-7 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#39C4B7]/15 text-[11px] font-black text-[#0F8F84]">{d.day}일</span>
+                                                <span className="flex h-7 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#287DFA]/15 text-[11px] font-black text-[#1656D6]">{d.day}일</span>
                                                 <span className="truncate font-semibold">{d.region ? `${d.region} · ` : ''}{d.title || '제목 없음'}</span>
                                                 <span className="flex-shrink-0 text-slate-300">({d.activities.length})</span>
                                             </div>
