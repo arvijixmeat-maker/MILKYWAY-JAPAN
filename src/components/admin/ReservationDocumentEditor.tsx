@@ -10,6 +10,10 @@ import {
 } from '../../pages/AdminTemplateManage';
 import { api } from '../../lib/api';
 import type { DayInfoContent, DetailContentBlock, TimelineContent, TourProduct } from '../../types/product';
+import { TouristSpotPickerModal } from './TouristSpotPickerModal';
+import { HotelPickerModal } from './HotelPickerModal';
+import type { TouristSpot } from '../../types/touristSpot';
+import type { Hotel } from '../../types/hotel';
 
 export interface ReservationDocContent {
     name: string;
@@ -58,6 +62,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const [products, setProducts] = useState<TourProduct[]>([]);
     const [selectedProductId, setSelectedProductId] = useState('');
     const [loadingProducts, setLoadingProducts] = useState(false);
+    // 마스터 픽커 — 관광지(항목 채움) / 호텔(일차 숙박정보 채움)
+    const [spotTarget, setSpotTarget] = useState<{ d: number; a: number } | null>(null);
+    const [hotelDayIdx, setHotelDayIdx] = useState<number | null>(null);
 
     useEffect(() => {
         if (!open) return;
@@ -226,6 +233,20 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const removeActivity = (dayIdx: number, actIdx: number) => setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.filter((_, j) => j !== actIdx) } : x));
     const updateActivity = (dayIdx: number, actIdx: number, field: 'time' | 'title' | 'description', value: string) =>
         setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.map((a, j) => j === actIdx ? { ...a, [field]: value } : a) } : x));
+
+    // 관광지 마스터 → 해당 항목의 제목(비었을 때만)·설명·사진 채움
+    const fillItemFromSpot = (d: number, a: number, spot: TouristSpot) => setDays(prev => prev.map((day, i) => {
+        if (i !== d) return day;
+        const acts = day.activities.map((act, j) => {
+            if (j !== a) return act;
+            const keepTitle = (act.title || '').trim().length > 0;
+            const desc = [spot.description, spot.address].filter(Boolean).join('\n' + '\n');
+            return { ...act, title: keepTitle ? act.title : spot.name_kr, description: desc || act.description, images: (spot.images && spot.images.length > 0) ? [...spot.images] : act.images };
+        });
+        return { ...day, activities: acts };
+    }));
+    // 호텔 마스터 → 해당 일차의 宿泊情報 채움
+    const fillDayFromHotel = (d: number, hotel: Hotel) => setDays(prev => prev.map((day, i) => i === d ? { ...day, accommodation: { id: hotel.id, name: hotel.name_kr, location: hotel.address || '', images: hotel.images || [], description: hotel.description || '' } } : day));
 
     // ── documentSettings 핸들러 ──
     const updateDocSection = <K extends keyof DocumentSettings>(section: K, patch: Partial<DocumentSettings[K]>) =>
@@ -409,7 +430,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         onRemoveDay={removeDay}
                         onRemoveActivity={removeActivity}
                         onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
-                                onPickHotel={onAssignAccommodation}
+                                onPickSpot={(d, a) => setSpotTarget({ d, a })}
+                                onPickHotel={(dayIdx) => { if (!templateMode && onAssignAccommodation) { onAssignAccommodation(dayIdx + 1); } else { setHotelDayIdx(dayIdx); } }}
                                 defaultPage={documentType === 'contract' ? 'contract' : 'overview'}
                                 focusDayIndex={selectedDayIndex}
                                 showPageTabs={true}
@@ -477,6 +499,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     )}
                 </div>
             </div>
+
+            {/* 마스터 픽커 — 편집기(z-210) 위에 표시 */}
+            <TouristSpotPickerModal open={spotTarget !== null} onClose={() => setSpotTarget(null)} onPick={(spot) => { if (spotTarget) fillItemFromSpot(spotTarget.d, spotTarget.a, spot); setSpotTarget(null); }} />
+            <HotelPickerModal open={hotelDayIdx !== null} onClose={() => setHotelDayIdx(null)} onPick={(hotel) => { if (hotelDayIdx !== null) fillDayFromHotel(hotelDayIdx, hotel); setHotelDayIdx(null); }} />
         </div>
     );
 };

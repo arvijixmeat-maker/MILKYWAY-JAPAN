@@ -64,7 +64,7 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-6"
+            className="fixed inset-0 z-[230] bg-black/50 flex items-center justify-center p-6"
             onClick={onClose}
         >
             <div
