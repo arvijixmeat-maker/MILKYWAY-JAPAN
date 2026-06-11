@@ -419,6 +419,15 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
 
                         <section className={`${card} p-5`}>
                             {secTitle('payments', 'お支払い情報')}
+                            {customer && !customer.totalAmount && (
+                                <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+                                    <span className="material-symbols-outlined mt-px text-[17px] text-amber-500">warning</span>
+                                    <p className="text-[11.5px] font-bold leading-relaxed text-amber-700">
+                                        금액 미입력 — 아래 금액은 <b>기준요금×인원수로 임시 계산된 샘플</b>입니다.
+                                        상세 화면의 <b>「견적 작성 — 확정 일정·금액」</b>에 총 결제금액·예약금을 입력하면 자동으로 반영됩니다.
+                                    </p>
+                                </div>
+                            )}
                             <div className="grid gap-4 sm:grid-cols-[260px_1fr]">
                                 <div className="relative overflow-hidden rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg, #2F86FF 0%, #1656D6 100%)' }}>
                                     <span className="material-symbols-outlined absolute right-4 top-4 text-[34px] opacity-40">account_balance_wallet</span>
