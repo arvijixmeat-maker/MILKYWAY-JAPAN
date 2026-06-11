@@ -168,7 +168,7 @@ export const DocumentContract: React.FC = () => {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-500" />
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-[#287DFA]" />
             </div>
         );
     }
@@ -207,40 +207,40 @@ export const DocumentContract: React.FC = () => {
                 }
                 @page { margin: 12mm; }
                 .contract-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                .contract-table td, .contract-table th { border: 1px solid #b8e7e2; padding: 8px 10px; vertical-align: middle; }
-                .contract-table th { background: #DDF8F5; color: #064E48; font-weight: 800; text-align: center; font-size: 14px; padding: 10px; }
-                .contract-table td.label { background: #F7FAFA; color: #0F8F84; font-weight: 800; text-align: center; width: 140px; }
+                .contract-table td, .contract-table th { border: 1px solid #C7DCFF; padding: 8px 10px; vertical-align: middle; }
+                .contract-table th { background: #EAF3FF; color: #0B1B45; font-weight: 800; text-align: center; font-size: 14px; padding: 10px; }
+                .contract-table td.label { background: #F4F8FF; color: #1656D6; font-weight: 800; text-align: center; width: 140px; }
                 .contract-table td.value { background: #ffffff; color: #0e1a18; }
-                .contract-badge { display: inline-block; background: #0F8F84; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+                .contract-badge { display: inline-block; background: #1656D6; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
             `}</style>
 
-            <div className="min-h-screen bg-[#F7FAFA] py-8 px-4 print:bg-white print:py-0 print:px-0">
-                <div className="doc-shell max-w-3xl mx-auto bg-white rounded-[24px] border border-[#8FE7DE]/70 shadow-xl overflow-hidden print:shadow-none print:rounded-none">
-                    <div className="px-8 py-7 bg-white border-b border-[#8FE7DE]/70">
+            <div className="min-h-screen bg-[#F2F5FA] py-8 px-4 print:bg-white print:py-0 print:px-0">
+                <div className="doc-shell max-w-3xl mx-auto bg-white rounded-[24px] border border-[#9CC5FF]/70 shadow-xl overflow-hidden print:shadow-none print:rounded-none">
+                    <div className="px-8 py-7 bg-white border-b border-[#9CC5FF]/70">
                         <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-3 text-[#0F8F84]">
-                                <span className="material-symbols-outlined text-[34px]">landscape</span>
+                            <div className="flex items-center gap-3 text-[#1656D6]">
+                                <span className="material-symbols-outlined text-[34px]">nights_stay</span>
                                 <div>
                                     <p className="text-base font-black">モンゴル銀河旅行社</p>
                                     <p className="text-[10px] font-bold tracking-[0.2em]">MILKYWAY JAPAN</p>
                                 </div>
                             </div>
-                            <div className="rounded-xl bg-[#39C4B7]/10 px-4 py-3 text-right text-xs font-bold text-[#0F8F84]">
+                            <div className="rounded-xl bg-[#287DFA]/10 px-4 py-3 text-right text-xs font-bold text-[#1656D6]">
                                 <p>発行日：{fmtDate(issuedDate)}</p>
                                 <p>契約番号：{reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</p>
                             </div>
                         </div>
-                        <h1 className="mt-8 text-center text-4xl font-black tracking-[0.18em] text-[#0F8F84]">ご旅行契約書</h1>
+                        <h1 className="mt-8 text-center text-4xl font-black tracking-[0.18em] text-[#1656D6]">ご旅行契約書</h1>
                         <p className="mt-1 text-center text-sm font-semibold uppercase tracking-widest text-slate-500">Travel Contract</p>
                         <p className="mx-auto mt-5 max-w-2xl whitespace-pre-wrap text-center text-sm leading-relaxed text-slate-700">{contractSettings.intro}</p>
                     </div>
 
                     <div className="px-6 py-6">
-                        <div className="no-print mb-6 rounded-xl border-2 border-teal-300 bg-teal-50/50 p-5">
+                        <div className="no-print mb-6 rounded-xl border-2 border-[#9CC5FF] bg-[#EAF3FF]/60 p-5">
                             <div className="mb-1 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-teal-600">edit_note</span>
-                                <h2 className="text-base font-bold text-teal-800">お客様情報の確認</h2>
-                                {saved && <span className="ml-auto rounded-full bg-teal-600 px-2.5 py-0.5 text-[11px] font-bold text-white">送信済み</span>}
+                                <span className="material-symbols-outlined text-[#1656D6]">edit_note</span>
+                                <h2 className="text-base font-bold text-[#0B1B45]">お客様情報の確認</h2>
+                                {saved && <span className="ml-auto rounded-full bg-[#287DFA] px-2.5 py-0.5 text-[11px] font-bold text-white">送信済み</span>}
                             </div>
                             <p className="mb-4 text-xs text-slate-600">パスポート情報と同意内容をご確認ください。入力後、旅行会社へ送信されます。</p>
 
@@ -251,19 +251,19 @@ export const DocumentContract: React.FC = () => {
                                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                             <label className="block">
                                                 <span className="mb-1 block text-[11px] font-bold text-slate-500">氏名</span>
-                                                <input value={t.name || ''} onChange={e => updTraveler(i, 'name', e.target.value)} placeholder="山田 太郎" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                                <input value={t.name || ''} onChange={e => updTraveler(i, 'name', e.target.value)} placeholder="山田 太郎" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
                                             </label>
                                             <label className="block">
                                                 <span className="mb-1 block text-[11px] font-bold text-slate-500">パスポート表記名</span>
-                                                <input value={t.passportName || ''} onChange={e => updTraveler(i, 'passportName', e.target.value)} placeholder="YAMADA TARO" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm uppercase focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                                <input value={t.passportName || ''} onChange={e => updTraveler(i, 'passportName', e.target.value)} placeholder="YAMADA TARO" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm uppercase focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
                                             </label>
                                             <label className="block">
                                                 <span className="mb-1 block text-[11px] font-bold text-slate-500">生年月日</span>
-                                                <input type="date" value={t.birthdate || ''} onChange={e => updTraveler(i, 'birthdate', e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                                <input type="date" value={t.birthdate || ''} onChange={e => updTraveler(i, 'birthdate', e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
                                             </label>
                                             <label className="block">
                                                 <span className="mb-1 block text-[11px] font-bold text-slate-500">性別</span>
-                                                <select value={t.gender || ''} onChange={e => updTraveler(i, 'gender', e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10">
+                                                <select value={t.gender || ''} onChange={e => updTraveler(i, 'gender', e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15">
                                                     <option value="">選択</option>
                                                     <option value="男性">男性</option>
                                                     <option value="女性">女性</option>
@@ -271,30 +271,30 @@ export const DocumentContract: React.FC = () => {
                                             </label>
                                             <label className="block sm:col-span-2">
                                                 <span className="mb-1 block text-[11px] font-bold text-slate-500">電話番号</span>
-                                                <input value={t.phone || ''} onChange={e => updTraveler(i, 'phone', e.target.value)} placeholder="090-1234-5678" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                                <input value={t.phone || ''} onChange={e => updTraveler(i, 'phone', e.target.value)} placeholder="090-1234-5678" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
                                             </label>
                                         </div>
                                     </div>
                                 ))}
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => setFormTravelers(prev => [...prev, { name: '', passportName: '', birthdate: '', gender: '', phone: '' }])} className="text-xs font-bold text-teal-600 hover:text-teal-700">＋旅行者を追加</button>
+                                    <button onClick={() => setFormTravelers(prev => [...prev, { name: '', passportName: '', birthdate: '', gender: '', phone: '' }])} className="text-xs font-bold text-[#1656D6] hover:text-[#1656D6]">＋旅行者を追加</button>
                                     {formTravelers.length > 1 && <button onClick={() => setFormTravelers(prev => prev.slice(0, -1))} className="text-xs font-bold text-slate-400 hover:text-slate-600">最後を削除</button>}
                                 </div>
                             </div>
 
                             <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4">
                                 <label className="flex cursor-pointer items-start gap-2">
-                                    <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 h-4 w-4 accent-teal-600" />
-                                    <span className="text-sm text-slate-700">旅行契約内容、旅行条件、取消規定を確認し、<b className="text-teal-700">同意します。</b></span>
+                                    <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 h-4 w-4 accent-[#287DFA]" />
+                                    <span className="text-sm text-slate-700">旅行契約内容、旅行条件、取消規定を確認し、<b className="text-[#1656D6]">同意します。</b></span>
                                 </label>
                                 <div className="mt-3">
                                     <span className="mb-1 block text-[11px] font-bold text-slate-500">署名（お名前）</span>
-                                    <input value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="お名前を入力してください" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/10" />
+                                    <input value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="お名前を入力してください" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
                                 </div>
-                                <button onClick={handleCustomerSubmit} disabled={saving} className="mt-4 w-full rounded-xl bg-teal-600 py-3 text-sm font-bold text-white transition-colors hover:bg-teal-700 disabled:opacity-50">
+                                <button onClick={handleCustomerSubmit} disabled={saving} className="mt-4 w-full rounded-xl bg-[#287DFA] py-3 text-sm font-bold text-white transition-colors hover:bg-[#1656D6] disabled:opacity-50">
                                     {saving ? '送信中...' : saved ? '再送信する' : '同意して送信する'}
                                 </button>
-                                {saved && <p className="mt-2 text-center text-xs font-bold text-teal-600">契約内容が送信されました。</p>}
+                                {saved && <p className="mt-2 text-center text-xs font-bold text-[#1656D6]">契約内容が送信されました。</p>}
                             </div>
                         </div>
 
@@ -320,14 +320,14 @@ export const DocumentContract: React.FC = () => {
                         </table>
 
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                            <section className="rounded-xl border border-[#8FE7DE]/70 p-4">
-                                <h2 className="text-sm font-black text-[#0F8F84]">3. 旅行代金に含まれるもの</h2>
+                            <section className="rounded-xl border border-[#9CC5FF]/70 p-4">
+                                <h2 className="text-sm font-black text-[#1656D6]">3. 旅行代金に含まれるもの</h2>
                                 <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-relaxed text-slate-600">
                                     {(includedItems.length ? includedItems : splitLines(fallbackContract.includedText)).map((item, index) => <li key={index}>{item}</li>)}
                                 </ul>
                             </section>
-                            <section className="rounded-xl border border-[#8FE7DE]/70 p-4">
-                                <h2 className="text-sm font-black text-[#0F8F84]">4. 旅行代金に含まれないもの</h2>
+                            <section className="rounded-xl border border-[#9CC5FF]/70 p-4">
+                                <h2 className="text-sm font-black text-[#1656D6]">4. 旅行代金に含まれないもの</h2>
                                 <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-relaxed text-slate-600">
                                     {(excludedItems.length ? excludedItems : splitLines(fallbackContract.excludedText)).map((item, index) => <li key={index}>{item}</li>)}
                                 </ul>
@@ -429,7 +429,7 @@ export const DocumentContract: React.FC = () => {
                                         {contract.agreement?.agreed ? (
                                             <div>
                                                 <span className="font-bold text-slate-800">{contract.agreement.name}</span>
-                                                <span className="ml-2 text-xs text-teal-600">電子同意済み{contract.agreement.agreedAt ? `：${contract.agreement.agreedAt.split('T')[0]}` : ''}</span>
+                                                <span className="ml-2 text-xs text-[#1656D6]">電子同意済み{contract.agreement.agreedAt ? `：${contract.agreement.agreedAt.split('T')[0]}` : ''}</span>
                                             </div>
                                         ) : <span>&nbsp;</span>}
                                     </td>
@@ -446,7 +446,7 @@ export const DocumentContract: React.FC = () => {
                     <div className="no-print px-6 py-4 bg-white border-t border-slate-100 flex justify-center">
                         <button
                             onClick={() => window.print()}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#39C4B7] hover:bg-[#0F8F84] text-white text-sm font-bold transition-colors"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#287DFA] hover:bg-[#1656D6] text-white text-sm font-bold transition-colors"
                         >
                             <span className="material-symbols-outlined text-base">print</span>
                             印刷 / PDF保存

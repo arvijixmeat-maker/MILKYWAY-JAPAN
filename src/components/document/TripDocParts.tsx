@@ -290,6 +290,81 @@ export const GuideTips: React.FC<{
             </DocCard>
 
             <DocCard>
+                <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <DocSecTitle icon="partly_cloudy_day">モンゴルの気候</DocSecTitle>
+                        <div className="overflow-hidden rounded-2xl border border-slate-100">
+                            <div className="flex items-center gap-2 bg-[#FFF7E6] px-4 py-2.5">
+                                <span className="material-symbols-outlined text-[18px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>sunny</span>
+                                <p className="text-[12.5px] font-black text-amber-700">夏（6月〜8月）の平均気温</p>
+                            </div>
+                            {[
+                                { icon: 'light_mode', label: '昼間', v: '20 〜 30℃', c: '#F59E0B' },
+                                { icon: 'dark_mode', label: '夜間', v: '5 〜 15℃', c: '#6366F1' },
+                            ].map((r, i) => (
+                                <div key={i} className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
+                                    <span className="flex items-center gap-2 text-[12px] font-bold text-slate-500">
+                                        <span className="material-symbols-outlined text-[17px]" style={{ color: r.c }}>{r.icon}</span>{r.label}
+                                    </span>
+                                    <b className="text-[13px]" style={{ color: DOC_NAVY }}>{r.v}</b>
+                                </div>
+                            ))}
+                        </div>
+                        <ul className="mt-3 space-y-1.5 text-[11.5px] font-bold text-slate-500">
+                            <li>・乾燥しており、昼夜の寒暖差が大きいです。</li>
+                            <li>・朝晩は冷えるため、上着をご準備ください。</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <DocSecTitle icon="checkroom">おすすめの服装・準備物</DocSecTitle>
+                        <ul className="space-y-2">
+                            {['ウインドブレーカー / 防水ジャケット', '薄手のフリース・長袖の上下', 'サングラス・帽子', '日焼け止め・リップクリーム', '歩きやすい運動靴 / トレッキングシューズ'].map((t, i) => (
+                                <li key={i} className="flex items-start gap-2 rounded-lg bg-[#F4F8FF] px-3 py-2 text-[12px] font-bold" style={{ color: DOC_NAVY }}>
+                                    <span className="material-symbols-outlined mt-px text-[16px]" style={{ color: DOC_BLUE, fontVariationSettings: "'FILL' 1" }}>check_box</span>{t}
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="mt-3 rounded-xl bg-[#EAF3FF] p-3">
+                            <p className="text-[11px] font-black" style={{ color: '#1656D6' }}>TIP</p>
+                            <p className="mt-0.5 text-[11.5px] font-bold leading-relaxed text-slate-600">紫外線が強いため、日焼け止めとサングラスは必需品です！</p>
+                        </div>
+                    </div>
+                </div>
+            </DocCard>
+
+            <DocCard>
+                <DocSecTitle icon="luggage">持ち物チェックリスト</DocSecTitle>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-3">
+                    {['パスポート（残存6ヶ月以上）', '常備薬（胃腸薬・風邪薬など）', 'モバイルバッテリー / 充電器', '変換プラグ（220V・Cタイプ）', '洗面用具 / ウェットティッシュ', 'マイボトル / 水筒', 'カメラ / 三脚', '長袖の衣類 / 替えの服', '雨具または折りたたみ傘'].map((t, i) => (
+                        <div key={i} className="flex items-start gap-2 border-b border-slate-50 py-1.5 text-[12px] font-bold" style={{ color: DOC_NAVY }}>
+                            <span className="material-symbols-outlined mt-px text-[16px]" style={{ color: DOC_BLUE, fontVariationSettings: "'FILL' 1" }}>check_box</span>{t}
+                        </div>
+                    ))}
+                </div>
+            </DocCard>
+
+            <DocCard>
+                <DocSecTitle icon="tips_and_updates">草原の旅のヒント</DocSecTitle>
+                <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                        { icon: 'bedroom_baby', t: '乗馬体験', tips: ['長ズボンの着用がおすすめ', '運動靴またはブーツが安心', 'ガイドの案内に従ってください'] },
+                        { icon: 'nights_stay', t: '星空・天の川観察', tips: ['夜10時以降が最も鮮明です', 'スマホのライトはお控えください', '三脚と暖かい上着があると◎'] },
+                        { icon: 'cabin', t: 'ゲル宿泊', tips: ['夜は気温が下がることがあります', '暖かい寝間着をご準備ください', '電気・シャワー施設も利用可能'] },
+                    ].map((c, i) => (
+                        <div key={i} className="rounded-2xl border border-slate-100 p-4">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: '#EAF3FF', color: DOC_BLUE }}>
+                                <span className="material-symbols-outlined text-[24px]">{c.icon}</span>
+                            </span>
+                            <p className="mt-2.5 text-[13px] font-black" style={{ color: DOC_NAVY }}>{c.t}</p>
+                            <ul className="mt-1.5 space-y-1 text-[11px] font-bold leading-relaxed text-slate-500">
+                                {c.tips.map((t, j) => <li key={j}>・{t}</li>)}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            </DocCard>
+
+            <DocCard>
                 <DocSecTitle icon="handshake">現地でのマナー</DocSecTitle>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
