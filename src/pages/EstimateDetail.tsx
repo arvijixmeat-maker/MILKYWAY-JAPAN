@@ -3,6 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { BottomNav } from '../components/layout/BottomNav';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/Toast';
+import {
+    DocTopBar, DocHero, DocCard, TripInfoGrid, PaymentSummary,
+    IncludeExclude, BookingSteps, DayCard, GuideTips, DocFooter,
+    DOC_BLUE, DOC_NAVY, type DocDay,
+} from '../components/document/TripDocParts';
 
 export const EstimateDetail: React.FC = () => {
     const navigate = useNavigate();
@@ -132,8 +137,8 @@ export const EstimateDetail: React.FC = () => {
                 const createdAtRaw = data.created_at || data.createdAt;
                 const createdAtDate = createdAtRaw ? new Date(createdAtRaw) : null;
                 const createdAtStr = createdAtDate && !isNaN(createdAtDate.getTime())
-                    ? createdAtDate.toLocaleDateString('ko-KR') + ' リクエスト'
-                    : 'リクエスト';
+                    ? createdAtDate.toLocaleDateString('ja-JP')
+                    : '—';
 
                 setEstimate({
                     id: data.id,
@@ -163,6 +168,7 @@ export const EstimateDetail: React.FC = () => {
                     confirmedStartDate: data.confirmed_start_date,
                     confirmedEndDate: data.confirmed_end_date,
                     itinerary: data.itinerary || null,
+                    documentContent: data.documentContent || null,
                 });
             } catch (error) {
                 console.error('Error fetching estimate:', error);
@@ -182,347 +188,212 @@ export const EstimateDetail: React.FC = () => {
         );
     }
 
+    // ── 발송 여부/표시용 파생값 ──
+    const isSent = estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested';
+    const isWriting = estimate.adminStatus === 'processing';
+    const quoteNumber = String(estimate.id || '').slice(0, 8).toUpperCase();
+    const periodLabel = (estimate.confirmedStartDate && estimate.confirmedEndDate)
+        ? `${String(estimate.confirmedStartDate).slice(0, 10)} 〜 ${String(estimate.confirmedEndDate).slice(0, 10)}`
+        : (estimate.date || '日程調整中');
+    const ds = estimate.documentContent?.documentSettings;
+    const splitLines = (t?: string) => (t || '').split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean);
+    const includedList = splitLines(ds?.overview?.includedText).length > 0 ? splitLines(ds?.overview?.includedText)
+        : ['空港送迎・専用車', '全行程の宿泊（ホテル・ゲル）', '日程表内のお食事', '日本語ガイド', '観光入場料・各種体験'];
+    const excludedList = splitLines(ds?.overview?.excludedText).length > 0 ? splitLines(ds?.overview?.excludedText)
+        : ['国際線航空券', '海外旅行保険', '個人的な費用（お土産・飲み物など）'];
+    const notices = (ds?.guide?.notices || []).filter((n: any) => n?.title);
+    const guideNotices = notices.length > 0 ? notices : [
+        { title: '服装について', body: '朝夕は冷え込む場合があるため、羽織れる上着をご用意ください。' },
+        { title: 'お食事について', body: 'アレルギーや食事制限がある場合は事前にお知らせください。' },
+    ];
+    const docDays: DocDay[] = (estimate.itinerary && Array.isArray(estimate.itinerary.days)) ? estimate.itinerary.days : [];
+
+    const stepDone = [true, isWriting || isSent, isSent];
+    const stepLabels = ['お見積り受付', 'お見積り作成', '送信完了'];
+
     return (
         <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
-            <div className="relative flex h-full min-h-screen w-full max-w-[480px] flex-col bg-gray-50 dark:bg-zinc-900 shadow-xl overflow-x-hidden pb-[100px]">
+            <div className="relative flex h-full min-h-screen w-full max-w-[480px] flex-col shadow-xl overflow-x-hidden pb-[100px]" style={{ background: '#F2F5FA' }}>
                 {/* Header */}
-                <div className="sticky top-0 z-50 flex items-center bg-gray-50/95 dark:bg-zinc-900/95 backdrop-blur-sm px-4 py-4 transition-colors border-b border-gray-200 dark:border-zinc-800">
+                <div className="sticky top-0 z-50 flex items-center bg-white/95 backdrop-blur-sm px-4 py-4 transition-colors border-b border-slate-100">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 -ml-2 text-text-main dark:text-white hover:text-primary transition-colors"
+                        className="p-2 -ml-2 transition-colors"
+                        style={{ color: DOC_NAVY }}
                     >
                         <span className="material-symbols-outlined text-2xl">arrow_back</span>
                     </button>
-                    <h1 className="text-lg font-bold text-text-main dark:text-white flex-1 text-center pr-8">見積り詳細</h1>
+                    <h1 className="text-lg font-black flex-1 text-center pr-8" style={{ color: DOC_NAVY }}>お見積り詳細</h1>
                 </div>
 
-                <div className="px-5 pt-6 flex flex-col gap-6">
-                    {/* Timeline */}
-                    <div className="mb-2">
-                        <div className="relative flex justify-between items-start max-w-[280px] mx-auto">
-                            {/* Background Lines */}
-                            <div className="absolute top-[12px] left-0 right-0 h-[2px] bg-gray-100 dark:bg-zinc-700 z-0"></div>
-                            {/* Active Line - Dynamic width based on status */}
-                            <div
-                                className={`absolute top-[12px] left-0 h-[2px] bg-primary z-0 transition-all duration-500`}
-                                style={{
-                                    width: estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested' ? '100%' :
-                                        estimate.adminStatus === 'processing' ? '50%' : '0%'
-                                }}
-                            ></div>
-
-                            {/* Step 1: 접수 */}
-                            <div className="relative z-10 flex flex-col items-center gap-2">
-                                <div className={`size-6 rounded-full flex items-center justify-center border-4 border-white dark:border-zinc-900 shadow-sm transition-colors ${true ? 'bg-primary' : 'bg-gray-200 dark:bg-zinc-700'
-                                    }`}>
-                                    <span className="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+                <div className="px-4 pt-4 flex flex-col gap-4">
+                    {/* 진행 타임라인 (접수→작성→발송) */}
+                    <div className="rounded-2xl bg-white px-5 py-4 shadow-[0_8px_24px_rgba(11,27,69,0.06)]">
+                        <div className="relative flex justify-between items-start max-w-[300px] mx-auto">
+                            <div className="absolute top-[12px] left-0 right-0 h-[2px] bg-slate-100 z-0" />
+                            <div className="absolute top-[12px] left-0 h-[2px] z-0 transition-all duration-500" style={{ width: isSent ? '100%' : isWriting ? '50%' : '0%', background: DOC_BLUE }} />
+                            {stepLabels.map((label, i) => (
+                                <div key={label} className="relative z-10 flex flex-col items-center gap-2">
+                                    <div className="size-6 rounded-full flex items-center justify-center border-4 border-white shadow-sm" style={{ background: stepDone[i] ? DOC_BLUE : '#E2E8F0' }}>
+                                        {stepDone[i]
+                                            ? <span className="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+                                            : <div className="size-2 rounded-full bg-slate-400" />}
+                                    </div>
+                                    <span className="text-[11px] font-black" style={{ color: stepDone[i] ? DOC_BLUE : '#94A3B8' }}>{label}</span>
                                 </div>
-                                <span className={`text-[11px] font-bold ${true ? 'text-primary' : 'text-gray-400'}`}>お見積り受付</span>
-                            </div>
-
-                            {/* Step 2: 작성 */}
-                            <div className="relative z-10 flex flex-col items-center gap-2">
-                                <div className={`size-6 rounded-full flex items-center justify-center border-4 border-white dark:border-zinc-900 shadow-sm transition-colors ${estimate.adminStatus === 'processing' || estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested'
-                                    ? 'bg-primary'
-                                    : 'bg-gray-200 dark:bg-zinc-700'
-                                    }`}>
-                                    {estimate.adminStatus === 'processing' ? (
-                                        <div className="size-2 bg-white rounded-full animate-pulse"></div>
-                                    ) : (estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested') ? (
-                                        <span className="material-symbols-outlined text-white text-[12px] font-bold">check</span>
-                                    ) : (
-                                        <div className="size-2 bg-gray-400 dark:bg-zinc-500 rounded-full"></div>
-                                    )}
-                                </div>
-                                <span className={`text-[11px] font-bold ${estimate.adminStatus === 'processing' || estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested'
-                                    ? 'text-primary'
-                                    : 'text-gray-400'
-                                    }`}>お見積り作成</span>
-                            </div>
-
-                            {/* Step 3: 발송 */}
-                            <div className="relative z-10 flex flex-col items-center gap-2">
-                                <div className={`size-6 rounded-full flex items-center justify-center border-4 border-white dark:border-zinc-900 shadow-sm transition-colors ${estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested'
-                                    ? 'bg-primary'
-                                    : 'bg-gray-200 dark:bg-zinc-700'
-                                    }`}>
-                                    {(estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested') ? (
-                                        <span className="material-symbols-outlined text-white text-[12px] font-bold">check</span>
-                                    ) : (
-                                        <div className="size-2 bg-gray-400 dark:bg-zinc-500 rounded-full"></div>
-                                    )}
-                                </div>
-                                <span className={`text-[11px] font-bold ${estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested'
-                                    ? 'text-primary'
-                                    : 'text-gray-400'
-                                    }`}>送信完了</span>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Reservation Conversion Banner - Show when converted */}
+                    {/* 예약 전환 완료 배너 */}
                     {estimate.status === 'converted' && (
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-teal-500 to-emerald-500 p-[1px] shadow-xl animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="relative bg-gradient-to-br from-primary/95 via-teal-500/95 to-emerald-500/95 backdrop-blur-xl rounded-2xl p-5">
-                                {/* Decorative elements */}
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                                <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-
-                                <div className="relative z-10">
-                                    <div className="flex items-start gap-4 mb-4">
-                                        <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-white/20">
-                                            <span className="material-symbols-outlined text-2xl text-white">verified</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-lg text-white mb-0.5">ご予約を承りました！</h3>
-                                            <p className="text-white/70 text-sm">ご予約金のご入金後に最終確定となります</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/10">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="material-symbols-outlined text-white/80 text-sm">info</span>
-                                            <span className="text-white/90 text-xs font-semibold tracking-wide">次のステップ</span>
-                                        </div>
-                                        <p className="text-white text-sm leading-relaxed">
-                                            マイ予約ページから <span className="font-semibold bg-white/20 px-1.5 py-0.5 rounded">振込先口座</span> と
-                                            <span className="font-semibold bg-white/20 px-1.5 py-0.5 rounded ml-1">予約詳細</span> をご確認ください。
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        onClick={() => navigate('/mypage/reservations')}
-                                        className="w-full py-3.5 bg-white text-primary font-bold rounded-xl hover:bg-white/95 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-                                    >
-                                        <span className="material-symbols-outlined text-xl">arrow_forward</span>
-                                        マイ予約で確認する
-                                    </button>
+                        <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-xl" style={{ background: 'linear-gradient(135deg, #0B1B45 0%, #1656D6 70%, #287DFA 100%)' }}>
+                            <div className="flex items-start gap-4 mb-4">
+                                <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20">
+                                    <span className="material-symbols-outlined text-2xl">verified</span>
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-black text-lg mb-0.5">ご予約を承りました！</h3>
+                                    <p className="text-white/75 text-sm">ご予約金のご入金後に最終確定となります</p>
                                 </div>
                             </div>
+                            <button
+                                onClick={() => navigate('/mypage/reservations')}
+                                className="w-full py-3.5 bg-white font-black rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                style={{ color: '#1656D6' }}
+                            >
+                                <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                                マイ予約で確認する
+                            </button>
                         </div>
                     )}
 
-                    {/* Status & Title */}
-                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700">
-                        {/* Status Label */}
-                        <div className="flex items-center justify-between mb-3">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold ${(estimate.status === 'completed' || estimate.status === 'reservation_requested' || estimate.status === 'converted') ? 'bg-primary/10 text-primary' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'}`}>
-                                {estimate.statusLabel}
-                            </span>
+                    {/* ─── 견적서 문서 (Trip.com식 블루 디자인) ─── */}
+                    <DocTopBar docLabel="お見積" number={quoteNumber} date={estimate.requestDate} />
+                    <DocHero
+                        eyebrow="あなただけの特別な旅へ"
+                        title={estimate.title}
+                        subtitle="大切なご旅行のために、心を込めてご用意したお見積りです。"
+                        chips={[periodLabel, String(estimate.people || '')].filter(Boolean) as string[]}
+                    />
+
+                    <TripInfoGrid items={[
+                        { icon: 'person', label: 'ご旅行者名', value: `${estimate.contact?.name || '—'} 様` },
+                        { icon: 'flag', label: 'ツアー名', value: estimate.title },
+                        { icon: 'groups', label: 'ご人数', value: estimate.people || '—' },
+                        { icon: 'support_agent', label: 'ガイド', value: '日本語ガイド' },
+                        { icon: 'calendar_month', label: 'ご旅行期間', value: periodLabel },
+                        { icon: 'directions_car', label: '車両', value: estimate.vehicle || '専用車' },
+                    ]} />
+
+                    {(estimate.confirmedPrice && estimate.confirmedPrice > 0) ? (
+                        <PaymentSummary total={estimate.confirmedPrice} deposit={estimate.deposit || 0} />
+                    ) : isSent ? (
+                        <DocCard>
+                            <p className="text-center text-[13px] font-black text-amber-600">ご相談の上、金額が確定次第ご予約可能となります。</p>
+                            <p className="mt-1 text-center text-[11px] font-bold text-amber-500/80">担当者が金額を確定するとご予約ボタンが有効になります。</p>
+                        </DocCard>
+                    ) : null}
+
+                    {/* CTA — 견적서 확인 / 예약 요청 (기존 로직 그대로) */}
+                    {isSent && (
+                        <div className="grid grid-cols-1 gap-2.5">
+                            {estimate.estimateUrl && (
+                                <a
+                                    href={estimate.estimateUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-white transition-all active:scale-[0.98]"
+                                    style={{ background: DOC_NAVY }}
+                                >
+                                    <span className="material-symbols-outlined">description</span>
+                                    お見積書（添付）を確認
+                                </a>
+                            )}
+                            {estimate.status === 'answered' ? (
+                                (estimate.confirmedPrice && estimate.confirmedPrice > 0) ? (
+                                    <button
+                                        onClick={handleConfirmReservation}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-xl font-black text-white transition-all active:scale-[0.98] shadow-lg"
+                                        style={{ background: `linear-gradient(135deg, #2F86FF 0%, #1656D6 100%)`, boxShadow: '0 10px 24px rgba(40,125,250,0.35)' }}
+                                    >
+                                        <span className="material-symbols-outlined">event_available</span>
+                                        この内容で予約をリクエストする
+                                    </button>
+                                ) : null
+                            ) : (
+                                <button
+                                    onClick={handleReservationRequest}
+                                    disabled={estimate.adminStatus === 'reservation_requested' || estimate.adminStatus === 'converted'}
+                                    className={`flex items-center justify-center gap-2 py-4 rounded-xl font-black transition-all active:scale-[0.98] ${estimate.adminStatus === 'reservation_requested' || estimate.adminStatus === 'converted'
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                        : 'text-white shadow-lg'}`}
+                                    style={estimate.adminStatus === 'reservation_requested' || estimate.adminStatus === 'converted' ? undefined : { background: `linear-gradient(135deg, #2F86FF 0%, #1656D6 100%)`, boxShadow: '0 10px 24px rgba(40,125,250,0.35)' }}
+                                >
+                                    <span className="material-symbols-outlined">event_available</span>
+                                    {estimate.adminStatus === 'reservation_requested' ? 'お申し込み完了' : '予約相談を申し込む'}
+                                </button>
+                            )}
                         </div>
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-snug mb-2">{estimate.title}</h2>
-                        <p className="text-sm text-slate-400">{estimate.requestDate}</p>
+                    )}
 
-                        {/* Admin Response Section - Visible only when answered */}
-                        {(estimate.status === 'completed' || estimate.status === 'reservation_requested' || estimate.status === 'converted' || estimate.status === 'answered') && (
-                            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-zinc-700">
-                                <div className="grid grid-cols-2 gap-3 mb-3">
-                                    {estimate.estimateUrl && (
-                                        <a
-                                            href={estimate.estimateUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-md shadow-primary/20"
-                                        >
-                                            <span className="material-symbols-outlined">description</span>
-                                            見積書を確認
-                                        </a>
-                                    )}
+                    {/* 담당자 메시지 */}
+                    {estimate.adminNote && (
+                        <DocCard>
+                            <p className="mb-2 flex items-center gap-1.5 text-[13px] font-black" style={{ color: DOC_NAVY }}>
+                                <span className="material-symbols-outlined text-[18px]" style={{ color: DOC_BLUE }}>chat</span>担当者からのメッセージ
+                            </p>
+                            <div className="whitespace-pre-wrap rounded-xl bg-[#F4F8FF] p-4 text-[13px] font-semibold leading-relaxed text-slate-600">{estimate.adminNote}</div>
+                        </DocCard>
+                    )}
 
-                                    {estimate.status === 'answered' ? (
-                                        (estimate.confirmedPrice && estimate.confirmedPrice > 0) ? (
-                                            <button
-                                                onClick={handleConfirmReservation}
-                                                className={`flex items-center justify-center gap-2 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-md shadow-slate-200 dark:shadow-none ${!estimate.estimateUrl ? 'col-span-2' : ''}`}
-                                            >
-                                                <span className="material-symbols-outlined">event_available</span>
-                                                予約をリクエストする
-                                            </button>
-                                        ) : (
-                                            <div className="col-span-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 p-4 rounded-xl text-center">
-                                                <p className="text-sm text-amber-600 dark:text-amber-400 font-bold mb-1">ご相談の上、金額が確定次第ご予約可能となります。</p>
-                                                <p className="text-xs text-amber-500/70">管理者が金額を入力すると、予約ボタンが有効になります。</p>
-                                            </div>
-                                        )
-                                    ) : (
-                                        <button
-                                            onClick={handleReservationRequest}
-                                            disabled={estimate.adminStatus === 'reservation_requested' || estimate.adminStatus === 'converted'}
-                                            className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all active:scale-[0.98] shadow-md ${!estimate.estimateUrl ? 'col-span-2' : ''} ${estimate.adminStatus === 'reservation_requested' || estimate.adminStatus === 'converted'
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none border border-gray-100'
-                                                : 'bg-slate-800 hover:bg-slate-900 text-white shadow-slate-200'
-                                                }`}
-                                        >
-                                            <span className="material-symbols-outlined">event_available</span>
-                                            {estimate.adminStatus === 'reservation_requested' ? 'お申し込み完了' : '予約相談の申し込み'}
-                                        </button>
-                                    )}
+                    <IncludeExclude included={includedList} excluded={excludedList} />
+
+                    {/* 상세 일정표 */}
+                    {docDays.length > 0 && (
+                        <>
+                            <div className="mt-2 px-1">
+                                <p className="text-[11px] font-black tracking-[0.18em]" style={{ color: DOC_BLUE }}>TOUR ITINERARY</p>
+                                <div className="flex items-end justify-between">
+                                    <h2 className="text-[22px] font-black" style={{ color: DOC_NAVY }}>ご旅行日程表</h2>
+                                    <span className="rounded-full px-3 py-1 text-[12px] font-black text-white" style={{ background: DOC_BLUE }}>全{docDays.length}日間</span>
                                 </div>
-
-                                {(estimate.confirmedPrice && estimate.confirmedPrice > 0) && (
-                                    <div className="bg-gray-50 dark:bg-zinc-700/30 border border-gray-100 dark:border-zinc-700 p-4 rounded-xl space-y-3">
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-gray-500 dark:text-gray-400">確定金額合計</span>
-                                            <span className="font-bold text-gray-900 dark:text-white">{estimate.confirmedPrice.toLocaleString()}円</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-primary dark:text-primary-light font-bold">今すぐお支払いいただくご予約金</span>
-                                            <span className="font-bold text-primary dark:text-primary-light">{(estimate.deposit || 0).toLocaleString()}円</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs pt-2 border-t border-gray-200 dark:border-zinc-700">
-                                            <span className="text-gray-400">現地決済残金</span>
-                                            <span className="font-medium text-gray-600 dark:text-gray-300">{(estimate.confirmedPrice - (estimate.deposit || 0)).toLocaleString()}円</span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {estimate.adminNote && (
-                                    <div className="bg-gray-50 dark:bg-zinc-700/50 p-4 rounded-xl text-sm text-gray-600 dark:text-gray-300">
-                                        <p className="font-bold mb-1 text-gray-800 dark:text-gray-200">管理者メッセージ</p>
-                                        <div className="whitespace-pre-wrap">{estimate.adminNote}</div>
-                                    </div>
-                                )}
                             </div>
-                        )}
-                    </div>
+                            {docDays.map((day, i) => <DayCard key={i} day={{ ...day, day: day.day || i + 1 }} />)}
+                        </>
+                    )}
 
-                    {/* 맞춤 일정표 (관리자가 첨부한 경우) */}
-                    {estimate.itinerary && Array.isArray(estimate.itinerary.days) && estimate.itinerary.days.length > 0 && (
-                        <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700">
-                            <div className="mb-4 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary">map</span>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white">旅行日程</h3>
-                                <span className="ml-auto text-xs font-bold text-slate-400">全{estimate.itinerary.days.length}日間</span>
-                            </div>
-                            <div className="space-y-5">
-                                {estimate.itinerary.days.map((day: any, di: number) => (
-                                    <div key={di} className="relative">
-                                        <div className="mb-2 flex items-baseline gap-2">
-                                            <span className="inline-flex h-7 items-center rounded-lg bg-primary px-2.5 text-xs font-bold text-white">DAY {day.day || di + 1}</span>
-                                            {day.title && <span className="text-sm font-bold text-slate-900 dark:text-white">{day.title}</span>}
-                                            {day.region && <span className="text-xs text-slate-400">· {day.region}</span>}
-                                        </div>
-                                        <div className="space-y-3 border-l-2 border-dashed border-gray-200 dark:border-zinc-700 pl-4">
-                                            {(day.activities || []).map((act: any, ai: number) => {
-                                                const imgs: string[] = Array.isArray(act.images) ? act.images : (typeof act.images === 'string' && act.images.startsWith('[') ? (() => { try { return JSON.parse(act.images); } catch { return []; } })() : []);
-                                                return (
-                                                    <div key={ai} className="relative">
-                                                        <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
-                                                        <div className="flex items-baseline gap-2">
-                                                            {act.time && <span className="text-[11px] font-bold text-slate-400">{act.time}</span>}
-                                                            <p className="text-sm font-bold text-slate-900 dark:text-white">{act.title}</p>
-                                                        </div>
-                                                        {act.description && <p className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-slate-500 dark:text-slate-400">{act.description}</p>}
-                                                        {imgs.length > 0 && (
-                                                            <div className="mt-2 grid grid-cols-2 gap-2">
-                                                                {imgs.slice(0, 4).map((img: string, k: number) => (
-                                                                    <img key={k} src={img} alt={act.title || ''} loading="lazy" className="h-24 w-full rounded-lg object-cover" />
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {(day.activities || []).length === 0 && <p className="text-xs text-slate-400">調整中</p>}
-                                        </div>
-                                    </div>
+                    <BookingSteps />
+
+                    <GuideTips
+                        notices={guideNotices}
+                        emergencyPhone={ds?.guide?.emergencyPhone}
+                        emergencyEmail={ds?.guide?.emergencyEmail}
+                        closingMessage={ds?.guide?.closingMessage || 'モンゴルの大自然と文化を心ゆくまでお楽しみください。'}
+                    />
+
+                    {/* ご依頼内容（고객이 보낸 요청 조건) */}
+                    <DocCard>
+                        <p className="mb-3 flex items-center gap-1.5 text-[13px] font-black" style={{ color: DOC_NAVY }}>
+                            <span className="material-symbols-outlined text-[18px]" style={{ color: DOC_BLUE }}>fact_check</span>ご依頼内容
+                        </p>
+                        <div className="space-y-3 text-[12.5px]">
+                            <div className="flex flex-wrap gap-1.5">
+                                {[...(estimate.destinations || []), ...(estimate.themes || []), ...(estimate.accommodations || [])].map((item: string, idx: number) => (
+                                    <span key={idx} className="rounded-md bg-[#F4F8FF] px-2.5 py-1 text-[11.5px] font-bold" style={{ color: '#1656D6' }}>{item}</span>
                                 ))}
                             </div>
+                            <div className="flex justify-between border-t border-slate-100 pt-3"><span className="font-bold text-slate-400">ご希望予算（お一人）</span><b style={{ color: DOC_NAVY }}>{estimate.priceRange || '—'}</b></div>
+                            {estimate.additionalRequest && (
+                                <p className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 font-semibold leading-relaxed text-slate-600">{estimate.additionalRequest}</p>
+                            )}
+                            <div className="flex justify-between border-t border-slate-100 pt-3"><span className="font-bold text-slate-400">お名前</span><b style={{ color: DOC_NAVY }}>{estimate.contact?.name}</b></div>
+                            <div className="flex justify-between"><span className="font-bold text-slate-400">お電話</span><b style={{ color: DOC_NAVY }}>{estimate.contact?.phone}</b></div>
+                            <div className="flex justify-between"><span className="font-bold text-slate-400">メール</span><b className="break-all" style={{ color: DOC_NAVY }}>{estimate.contact?.email}</b></div>
                         </div>
-                    )}
+                    </DocCard>
 
-                    {/* Summary Info */}
-                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700 flex flex-col gap-4">
-                        <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-zinc-700/50 flex items-center justify-center text-slate-400">
-                                <span className="material-symbols-outlined text-lg">calendar_today</span>
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-bold text-slate-400 mb-0.5">旅行日程</h3>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">{estimate.date}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-zinc-700/50 flex items-center justify-center text-slate-400">
-                                <span className="material-symbols-outlined text-lg">diversity_3</span>
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-bold text-slate-400 mb-0.5">旅行人数＆タイプ</h3>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">{estimate.type} · {estimate.people}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-zinc-700/50 flex items-center justify-center text-slate-400">
-                                <span className="material-symbols-outlined text-lg">attach_money</span>
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-bold text-slate-400 mb-0.5">希望予算負担 (1人あたり)</h3>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">{estimate.priceRange} ~</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Options */}
-                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700">
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">選択オプション</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <span className="text-xs font-bold text-slate-400 block mb-1.5">希望目的地</span>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {estimate.destinations?.map((item: string, idx: number) => (
-                                        <span key={idx} className="px-2.5 py-1 bg-gray-50 dark:bg-zinc-700 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300">{item}</span>
-                                    )) || <span className="text-sm text-slate-400">選択なし</span>}
-                                </div>
-                            </div>
-                            <div>
-                                <span className="text-xs font-bold text-slate-400 block mb-1.5">旅行テーマ</span>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {estimate.themes?.map((item: string, idx: number) => (
-                                        <span key={idx} className="px-2.5 py-1 bg-gray-50 dark:bg-zinc-700 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300">{item}</span>
-                                    )) || <span className="text-sm text-slate-400">選択なし</span>}
-                                </div>
-                            </div>
-                            <div>
-                                <span className="text-xs font-bold text-slate-400 block mb-1.5">希望宿泊施設</span>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {estimate.accommodations?.map((item: string, idx: number) => (
-                                        <span key={idx} className="px-2.5 py-1 bg-gray-50 dark:bg-zinc-700 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300">{item}</span>
-                                    )) || <span className="text-sm text-slate-400">選択なし</span>}
-                                </div>
-                            </div>
-                            <div>
-                                <span className="text-xs font-bold text-slate-400 block mb-1.5">希望車両</span>
-                                <span className="px-2.5 py-1 bg-gray-50 dark:bg-zinc-700 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300">{estimate.vehicle || '選択なし'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Additional Request */}
-                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700">
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">その他ご要望</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                            {estimate.additionalRequest || 'なし'}
-                        </p>
-                    </div>
-
-                    {/* Contact Info */}
-                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-700 mb-6">
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">申込者情報</h3>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">名前</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{estimate.contact?.name}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">電話番号</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{estimate.contact?.phone}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Email</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{estimate.contact?.email}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <DocFooter />
                 </div>
 
                 <BottomNav />
