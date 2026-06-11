@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
+import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
@@ -1180,16 +1181,20 @@ const TemplatesTab: React.FC = () => {
         setIsModalOpen(false); resetForm();
     };
 
+    // RDE에 넘길 초기 내용 — 모달 오픈 시점에만 계산(편집 중 리렌더로 초기화되지 않게)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const editorInitial = useMemo<ReservationDocContent>(() => ({ name: form.name, description: form.description, days: form.days, documentSettings: form.documentSettings }), [isModalOpen]);
+
     return (
         <div>
             <div className="toolbar">
                 <div style={{ minWidth: 0 }}>
-                    <div className="cell-strong" style={{ fontSize: 14 }}>고객에게 발송할 여행 문서 디자인을 만듭니다.</div>
-                    <div className="cell-muted" style={{ fontSize: 12.5, marginTop: 2 }}>일정 내용은 문서 안에 들어가고, 고객 화면은 여행 개요·계약서·상세 일정·공통 안내 패키지로 구성됩니다.</div>
+                    <div className="cell-strong" style={{ fontSize: 14 }}>일정 프리셋(템플릿)을 만들어 견적·예약 문서에 재사용합니다.</div>
+                    <div className="cell-muted" style={{ fontSize: 12.5, marginTop: 2 }}>편집 화면은 예약 상세의 문서 편집기와 동일합니다. 문서 디자인은 브랜드 1벌로 고정되고, 여기서는 일정·포함사항·계약 조건을 편집합니다.</div>
                 </div>
                 <div className="spacer" />
                 <button className="btn btn-ink" onClick={() => { resetForm(); setIsModalOpen(true); }}>
-                    <Icon name="add" /> 문서 템플릿 추가
+                    <Icon name="add" /> 일정 프리셋 추가
                 </button>
             </div>
 
@@ -1249,7 +1254,7 @@ const TemplatesTab: React.FC = () => {
                                 </div>
 
                                 <div className="row" style={{ gap: 8 }}>
-                                    <button onClick={() => handleEdit(t)} className="btn btn-ink" style={{ flex: 1 }}>문서 디자인 수정</button>
+                                    <button onClick={() => handleEdit(t)} className="btn btn-ink" style={{ flex: 1 }}>프리셋 편집</button>
                                     <button onClick={() => handleDuplicate(t)} className="act-btn" title="이 템플릿 복제">
                                         <Icon name="content_copy" />
                                     </button>
@@ -1263,133 +1268,25 @@ const TemplatesTab: React.FC = () => {
                 </div>
             )}
 
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 p-3 sm:p-6" style={{ background: 'rgba(26,27,30,0.42)', backdropFilter: 'blur(2px)' }}>
-                    <div className="bg-white rounded-2xl w-full h-full flex flex-col overflow-hidden" style={{ boxShadow: 'var(--shadow-lg)' }}>
-
-                        {/* Sticky header */}
-                        <div className="bg-white px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-default)' }}>
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <button onClick={closeEditor} className="act-btn" title="닫기">
-                                    <Icon name="arrow_back" />
-                                </button>
-                                <div className="min-w-0 flex-1">
-                                    <div className="eyebrow" style={{ marginBottom: 2 }}><span className="dot" />{editing ? '템플릿 수정' : '새 템플릿'}</div>
-                                    <input
-                                        value={form.name}
-                                        onChange={e => setForm({ ...form, name: e.target.value })}
-                                        placeholder="템플릿 이름 (예: 고비사막 4박5일 기본형)"
-                                        className="w-full text-lg font-bold bg-transparent text-slate-900 focus:outline-none placeholder:text-slate-300"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <button onClick={closeEditor} className="btn btn-ghost">취소</button>
-                                <button onClick={handleSubmit} className="btn btn-ink">
-                                    <Icon name="check" />{editing ? '저장' : '생성'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-                            <div className="inline-flex rounded-xl bg-slate-100 p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditorMode('itinerary')}
-                                    className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-black transition ${editorMode === 'itinerary' ? 'bg-white text-[#0F8F84] shadow-sm' : 'text-slate-500'}`}
-                                >
-                                    <Icon name="route" />일정 구성
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setEditorMode('documents')}
-                                    className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-black transition ${editorMode === 'documents' ? 'bg-white text-[#0F8F84] shadow-sm' : 'text-slate-500'}`}
-                                >
-                                    <Icon name="description" />문서 디자인
-                                </button>
-                            </div>
-                            <p className="hidden text-[11px] font-semibold text-slate-400 md:block">
-                                {editorMode === 'itinerary' ? '상품관리 일정탭 방식으로 고객용 일정을 구성합니다.' : '일정표 표지, 계약서와 공통 안내 문구를 편집합니다.'}
-                            </p>
-                        </div>
-
-                        <div className="flex-1 overflow-hidden">
-                            {editorMode === 'itinerary' ? (
-                                <ProductDayInfoItineraryEditor
-                                    days={form.days}
-                                    quickDays={quickDays}
-                                    onQuickDaysChange={setQuickDays}
-                                    onCreateSkeleton={() => createBlankDays()}
-                                    onAddDay={addDay}
-                                    onUpdateDay={updateDay}
-                                    onMoveDay={moveDay}
-                                    onDuplicateDay={duplicateDay}
-                                    onRemoveDay={removeDay}
-                                    onAddActivity={addActivityTyped}
-                                    onUpdateActivity={updateActivity}
-                                    onMoveActivity={moveActivity}
-                                    onRemoveActivity={removeActivity}
-                                    onRemoveActivityImage={removeActivityImage}
-                                    onUploadActivityImages={uploadActivityImages}
-                                    onPickSpot={(d, a) => setSpotPickerTarget({ d, a })}
-                                    onPickHotelActivity={(d, a) => setHotelPickerTarget({ d, a })}
-                                    onPickDayHotel={setDayHotelTarget}
-                                />
-                            ) : (
-                            <div className="h-full overflow-hidden bg-white">
-                                <TemplatePreview
-                                    name={form.name}
-                                    description={form.description}
-                                    days={form.days}
-                                    documentSettings={form.documentSettings}
-                                    onNameChange={(value) => setForm(f => ({ ...f, name: value }))}
-                                    onDescriptionChange={(value) => setForm(f => ({ ...f, description: value }))}
-                                    onDocSection={updateDocSection}
-                                    onIncluded={updateIncluded}
-                                    onCancellation={updateCancellation}
-                                    onGuideNotice={updateGuideNotice}
-                                    onDayChange={(d, field, v) => updateDay(d, field, v)}
-                                    onActivityChange={(d, a, field, v) => field === 'time' ? updateActivity(d, a, 'time', v) : updateActivityText(d, a, field, v)}
-                                    onAddDay={addDay}
-                                    onAddActivity={(d) => addActivity(d)}
-                                    onRemoveDay={removeDay}
-                                    onRemoveActivity={removeActivity}
-                                    onDayActivitiesText={(d, text) => setForm(f => {
-                                        const days = [...f.days];
-                                        days[d] = { ...days[d], activities: parseDayActivitiesText(text) };
-                                        return { ...f, days };
-                                    })}
-                                    onPickSpot={(d, a) => setSpotPickerTarget({ d, a })}
-                                    onPickHotel={(d) => setDayHotelTarget(d)}
-                                    defaultPage="overview"
-                                    visiblePages={['overview', 'contract', 'guide']}
-                                />
-                            </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 마스터 picker — 선택 시 해당 항목의 제목·설명을 채움 */}
-                    <TouristSpotPickerModal
-                        open={spotPickerTarget !== null}
-                        onClose={() => setSpotPickerTarget(null)}
-                        onPick={(spot) => {
-                            if (spotPickerTarget) fillItemFromSpot(spotPickerTarget.d, spotPickerTarget.a, spot);
-                            setSpotPickerTarget(null);
-                        }}
-                    />
-                    <HotelPickerModal
-                        open={hotelPickerTarget !== null || dayHotelTarget !== null}
-                        onClose={() => { setHotelPickerTarget(null); setDayHotelTarget(null); }}
-                        onPick={(hotel) => {
-                            if (dayHotelTarget !== null) fillDayFromHotel(dayHotelTarget, hotel);
-                            else if (hotelPickerTarget) fillItemFromHotel(hotelPickerTarget.d, hotelPickerTarget.a, hotel);
-                            setHotelPickerTarget(null);
-                            setDayHotelTarget(null);
-                        }}
-                    />
-                </div>
-            )}
+            {/* 편집기 단일화 — 예약 상세와 동일한 문서 워크스페이스(템플릿 모드) 재사용 */}
+            <ReservationDocumentEditor
+                open={isModalOpen}
+                onClose={() => { setIsModalOpen(false); resetForm(); }}
+                title={editing ? editing.name : '새 일정 프리셋'}
+                templateMode
+                initialContent={editorInitial}
+                onSave={async (content) => {
+                    if (!content.name.trim()) { throw new Error('프리셋 이름(문서 표지 제목)을 입력하세요.'); }
+                    const payload = {
+                        name: content.name,
+                        description: encodeTemplateDescription(content.description, content.documentSettings),
+                        days: content.days,
+                    };
+                    if (editing) { await api.itineraryTemplates.update(editing.id, payload); }
+                    else { await api.itineraryTemplates.create(payload); }
+                    await load();
+                }}
+            />
         </div>
     );
 };
