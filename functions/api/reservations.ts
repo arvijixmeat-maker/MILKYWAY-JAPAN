@@ -16,6 +16,7 @@ interface Env {
     PAYPAL_CLIENT_ID: string;
     PAYPAL_SECRET_KEY: string;
     PAYPAL_BUSINESS_EMAIL: string;
+    PAYPAL_ENVIRONMENT?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -259,13 +260,18 @@ app.post('/', async (c) => {
 
     const id = body.id || crypto.randomUUID();
 
-    // Generate sequential reservation number MN001, MN002...
+    // Generate the next number from the historical maximum so deleted rows
+    // never cause a PayPal invoice number to be reused.
     let reservationNumber = '';
     try {
-        const row = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM reservations').first();
-        const next = ((row?.cnt as number) || 0) + 1;
+        const row = await c.env.DB.prepare(`
+            SELECT COALESCE(MAX(CAST(SUBSTR(reservation_number, 3) AS INTEGER)), 0) AS max_num
+            FROM reservations
+        `).first();
+        const next = Number(row?.max_num || 0) + 1;
         reservationNumber = `MN${String(next).padStart(3, '0')}`;
-    } catch {
+    } catch (numberError) {
+        console.warn('[Reservation Number] max lookup failed; using timestamp fallback', numberError);
         reservationNumber = `MN${Date.now().toString().slice(-4)}`;
     }
 
@@ -301,24 +307,45 @@ app.post('/', async (c) => {
             reservationNumber,
         }).run();
 
-        // Auto-send PayPal invoice — waitUntil so Worker doesn't kill the promise after response
-        if (c.env.PAYPAL_CLIENT_ID && c.env.PAYPAL_SECRET_KEY && c.env.PAYPAL_BUSINESS_EMAIL) {
-            const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
-            if (depositAmt > 0) {
+        const missingPayPalEnv = [
+            !c.env.PAYPAL_CLIENT_ID && 'PAYPAL_CLIENT_ID',
+            !c.env.PAYPAL_SECRET_KEY && 'PAYPAL_SECRET_KEY',
+            !c.env.PAYPAL_BUSINESS_EMAIL && 'PAYPAL_BUSINESS_EMAIL',
+        ].filter(Boolean);
+        const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
+
+        if (missingPayPalEnv.length > 0) {
+            console.warn(`[PayPal Invoice] skipped: missing ${missingPayPalEnv.join(', ')}`);
+        } else if (!customerEmail) {
+            console.warn(`[PayPal Invoice] skipped: customer email is missing (${reservationNumber})`);
+        } else if (!Number.isFinite(depositAmt) || depositAmt <= 0) {
+            console.warn(`[PayPal Invoice] skipped: deposit amount is ${depositAmt || 0} (${reservationNumber})`);
+        } else {
+            const invoicePromise = sendPayPalInvoice({
+                clientId: c.env.PAYPAL_CLIENT_ID,
+                secret: c.env.PAYPAL_SECRET_KEY,
+                businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
+                customerEmail: String(customerEmail),
+                customerName: String(customerName),
+                reservationNumber,
+                productName: String(productName),
+                depositAmount: depositAmt,
+                environment: c.env.PAYPAL_ENVIRONMENT,
+            }).then(({ invoiceId, invoiceNumber }) => {
+                console.log(`[PayPal Invoice] sent: ${invoiceNumber} (${invoiceId})`);
+            }).catch((paypalErr: any) => {
+                console.error(`[PayPal Invoice] failed: ${reservationNumber}`, paypalErr);
+            });
+
+            try {
                 c.executionCtx.waitUntil(
-                    sendPayPalInvoice({
-                        clientId: c.env.PAYPAL_CLIENT_ID,
-                        secret: c.env.PAYPAL_SECRET_KEY,
-                        businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
-                        customerEmail: String(customerEmail),
-                        customerName: String(customerName),
-                        reservationNumber,
-                        productName: String(productName),
-                        depositAmount: depositAmt,
-                    }).catch((paypalErr: any) => {
-                        console.error('[PayPal Invoice Error]', paypalErr);
-                    })
+                    invoicePromise
                 );
+            } catch (waitUntilError) {
+                // The promise has already started. Keep the successful INSERT
+                // response even if this runtime cannot register waitUntil.
+                console.warn('[PayPal Invoice] waitUntil unavailable; continuing in background', waitUntilError);
+                void invoicePromise;
             }
         }
 

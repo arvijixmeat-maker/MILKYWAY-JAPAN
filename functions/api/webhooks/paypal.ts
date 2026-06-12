@@ -11,13 +11,21 @@ interface Env {
     PAYPAL_CLIENT_ID: string;
     PAYPAL_SECRET_KEY: string;
     PAYPAL_WEBHOOK_ID: string;
+    PAYPAL_ENVIRONMENT?: string;
     RESEND_API_KEY: string;
 }
 
-const PAYPAL_API = 'https://api-m.paypal.com';
+const PAYPAL_LIVE_API = 'https://api-m.paypal.com';
+const PAYPAL_SANDBOX_API = 'https://api-m.sandbox.paypal.com';
 
-async function getAccessToken(clientId: string, secret: string): Promise<string> {
-    const res = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
+function getPayPalApi(environment?: string): string {
+    return environment?.toLowerCase() === 'sandbox'
+        ? PAYPAL_SANDBOX_API
+        : PAYPAL_LIVE_API;
+}
+
+async function getAccessToken(apiBase: string, clientId: string, secret: string): Promise<string> {
+    const res = await fetch(`${apiBase}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
             Authorization: `Basic ${btoa(`${clientId}:${secret}`)}`,
@@ -31,6 +39,7 @@ async function getAccessToken(clientId: string, secret: string): Promise<string>
 }
 
 async function verifyWebhookSignature(
+    apiBase: string,
     clientId: string,
     secret: string,
     webhookId: string,
@@ -38,8 +47,8 @@ async function verifyWebhookSignature(
     body: any,
 ): Promise<boolean> {
     try {
-        const token = await getAccessToken(clientId, secret);
-        const res = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
+        const token = await getAccessToken(apiBase, clientId, secret);
+        const res = await fetch(`${apiBase}/v1/notifications/verify-webhook-signature`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -86,6 +95,7 @@ app.post('/', async (c) => {
         };
 
         const valid = await verifyWebhookSignature(
+            getPayPalApi(c.env.PAYPAL_ENVIRONMENT),
             c.env.PAYPAL_CLIENT_ID,
             c.env.PAYPAL_SECRET_KEY,
             c.env.PAYPAL_WEBHOOK_ID,
@@ -109,11 +119,24 @@ app.post('/', async (c) => {
         }
 
         const db = drizzle(c.env.DB);
-        const reservation = await db
+        let reservation = await db
             .select()
             .from(reservations)
             .where(eq(reservations.reservationNumber, invoiceNumber))
             .get();
+
+        // Duplicate invoice recovery appends a short suffix to the PayPal
+        // invoice number. Resolve that payment back to the original booking.
+        if (!reservation) {
+            const suffixedNumber = invoiceNumber.match(/^(MN\d+)-[A-Z0-9]{6}$/i);
+            if (suffixedNumber) {
+                reservation = await db
+                    .select()
+                    .from(reservations)
+                    .where(eq(reservations.reservationNumber, suffixedNumber[1]))
+                    .get();
+            }
+        }
 
         if (reservation) {
             let history: any[] = [];
