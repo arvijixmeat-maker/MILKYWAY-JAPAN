@@ -47,16 +47,26 @@ export const ReservationComplete: React.FC = () => {
 
     if (!reservation) return null;
 
-    const { price_breakdown } = reservation;
+    const priceBreakdown = reservation.priceBreakdown || reservation.price_breakdown || {
+        total: reservation.totalPrice || reservation.totalAmount || 0,
+        deposit: reservation.depositAmount || reservation.deposit || 0,
+        local: reservation.balanceAmount || reservation.balance || 0,
+    };
+    const productName = reservation.productName || reservation.product_name || '';
+    const customerEmail =
+        reservation.customerEmail ||
+        reservation.customer_info?.email ||
+        reservation.email ||
+        '';
 
     // Desktop: render the wizard's final step. Mobile UI untouched.
     if (isDesktop) {
         return (
             <ReservationCompleteDesktop
-                productName={reservation.product_name || ''}
-                email={reservation.customer_info?.email || ''}
-                total={price_breakdown?.total || 0}
-                deposit={price_breakdown?.deposit || 0}
+                productName={productName}
+                email={customerEmail}
+                total={priceBreakdown.total || 0}
+                deposit={priceBreakdown.deposit || 0}
             />
         );
     }
@@ -92,7 +102,7 @@ export const ReservationComplete: React.FC = () => {
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-3xl p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
                         <div className="mb-6">
                             <p className="text-[13px] font-bold text-gray-400 mb-1 uppercase tracking-wider">決済する予約金額</p>
-                            <p className="text-3xl font-bold text-[#0e1a18] dark:text-white">{formatPrice(price_breakdown?.deposit)}円</p>
+                            <p className="text-3xl font-bold text-[#0e1a18] dark:text-white">{formatPrice(priceBreakdown.deposit)}円</p>
                         </div>
                         <div className="h-px bg-gray-200 dark:bg-zinc-700 w-full mb-6"></div>
                         <div className="flex flex-col gap-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
