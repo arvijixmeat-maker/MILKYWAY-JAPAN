@@ -9,6 +9,13 @@ const app = new Hono<{ Bindings: Env }>();
 const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+app.use('*', async (c, next) => {
+    await next();
+    c.header('Cache-Control', 'private, no-store, max-age=0');
+    c.header('Pragma', 'no-cache');
+    c.header('X-Robots-Tag', 'noindex, nofollow, noarchive');
+});
+
 const findPublicReservation = async (db: any, reservationId: string) => {
     if (!UUID_PATTERN.test(reservationId)) return null;
     return db.prepare('SELECT * FROM reservations WHERE id = ?').bind(reservationId).first();
