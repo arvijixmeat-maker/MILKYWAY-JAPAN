@@ -3,9 +3,10 @@ import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 
 interface SimpleSliderProps {
     images: string[];
+    altPrefix?: string;
 }
 
-export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
+export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images, altPrefix = 'モンゴル旅行ガイド' }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +50,7 @@ export const SimpleSlider: React.FC<SimpleSliderProps> = ({ images }) => {
                             <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm">
                                 <img
                                     src={optimizedUrl}
-                                    alt={`Slide ${index + 1}`}
+                                    alt={`${altPrefix} 写真${index + 1}｜モンゴル旅行ガイド`}
                                     className="absolute inset-0 w-full h-full object-cover object-center block"
                                     loading="lazy"
                                     decoding="async"
