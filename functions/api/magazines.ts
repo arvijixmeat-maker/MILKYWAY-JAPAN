@@ -53,10 +53,10 @@ app.post('/', async (c) => {
     try {
         await db.prepare(
             `INSERT INTO magazines
-                (id, title, subtitle, content, thumbnail, category, author, is_published,
+                (id, title, subtitle, content, thumbnail, category, author, author_image, is_published,
                  location_name, location_address, location_phone, location_website,
                  location_hours, map_embed_url, map_query)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             id,
             data.title,
@@ -65,6 +65,7 @@ app.post('/', async (c) => {
             data.thumbnail || '',
             data.category || '',
             data.author || '',
+            data.author_image ?? data.authorImage ?? null,
             data.is_published ?? 1,
             data.location_name ?? data.locationName ?? null,
             data.location_address ?? data.locationAddress ?? null,
@@ -92,7 +93,7 @@ app.put('/:id', async (c) => {
     try {
         await db.prepare(
             `UPDATE magazines SET
-                title=?, subtitle=?, content=?, thumbnail=?, category=?, author=?, is_published=?,
+                title=?, subtitle=?, content=?, thumbnail=?, category=?, author=?, author_image=?, is_published=?,
                 location_name=?, location_address=?, location_phone=?, location_website=?,
                 location_hours=?, map_embed_url=?, map_query=?,
                 updated_at=datetime('now')
@@ -104,6 +105,7 @@ app.put('/:id', async (c) => {
             data.thumbnail || '',
             data.category || '',
             data.author || '',
+            data.author_image ?? data.authorImage ?? null,
             data.is_published ?? 1,
             data.location_name ?? data.locationName ?? null,
             data.location_address ?? data.locationAddress ?? null,

@@ -403,8 +403,9 @@ app.get('/', async (c) => {
         }
     }
 
-    // Magazines: location/map columns for embedding Google Maps in posts
+    // Magazines: author profile and location/map columns
     const magazineLocationColumns = [
+        "author_image TEXT",
         "location_name TEXT",
         "location_address TEXT",
         "location_phone TEXT",
