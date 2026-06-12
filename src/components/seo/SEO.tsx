@@ -9,6 +9,7 @@ interface SEOProps {
     image?: string;
     url?: string;
     canonical?: string;
+    robots?: string;
     structuredData?: Record<string, any> | Record<string, any>[];
 }
 
@@ -19,6 +20,7 @@ export const SEO: React.FC<SEOProps> = ({
     image,
     url,
     canonical,
+    robots,
     structuredData
 }) => {
     const metaTitle = title
@@ -41,6 +43,7 @@ export const SEO: React.FC<SEOProps> = ({
             <title>{metaTitle}</title>
             <meta name="description" content={metaDescription} />
             <meta name="keywords" content={metaKeywords} />
+            {robots && <meta name="robots" content={robots} />}
 
             {/* Canonical URL */}
             <link rel="canonical" href={canonicalUrl} />

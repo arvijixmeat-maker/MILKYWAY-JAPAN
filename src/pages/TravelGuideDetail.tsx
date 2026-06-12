@@ -95,7 +95,15 @@ export const TravelGuideDetail: React.FC = () => {
 
     // Content Renderer
     const renderContent = (content: string) => {
-        if (!content) return <p>{t('travel_guide.detail.no_content')}</p>;
+        if (!content) {
+            return (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-6 py-12 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
+                    <span className="material-symbols-outlined text-4xl text-gray-300">article</span>
+                    <p className="mt-3 font-bold text-gray-700 dark:text-gray-200">記事を準備中です</p>
+                    <p className="mt-1 text-sm text-gray-500">公開までしばらくお待ちください。</p>
+                </div>
+            );
+        }
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, 'text/html');

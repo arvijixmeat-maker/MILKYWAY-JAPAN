@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { SEO } from '../components/seo/SEO';
 import {
     DocTopBar, DocHero, DocCard, TripInfoGrid, IncludeExclude,
     DayCard, GuideTips, DocFooter, DOC_BLUE, DOC_NAVY, type DocDay,
@@ -122,21 +123,27 @@ export const DocumentItinerary: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: '#F2F5FA' }}>
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200" style={{ borderTopColor: DOC_BLUE }} />
-            </div>
+            <>
+                <SEO title="確定日程表" description="お客様専用の旅行日程表です。" robots="noindex, nofollow" />
+                <div className="min-h-screen flex items-center justify-center" style={{ background: '#F2F5FA' }}>
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200" style={{ borderTopColor: DOC_BLUE }} />
+                </div>
+            </>
         );
     }
 
     if (error || !data) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F2F5FA' }}>
-                <div className="max-w-sm rounded-2xl bg-white p-6 text-center shadow-[0_8px_24px_rgba(11,27,69,0.08)]">
-                    <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
-                    <p className="mt-3 text-lg font-black" style={{ color: DOC_NAVY }}>日程表を表示できません</p>
-                    <p className="mt-1 text-sm text-slate-500">{error || 'URLをご確認ください。'}</p>
+            <>
+                <SEO title="確定日程表" description="お客様専用の旅行日程表です。" robots="noindex, nofollow" />
+                <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F2F5FA' }}>
+                    <div className="max-w-sm rounded-2xl bg-white p-6 text-center shadow-[0_8px_24px_rgba(11,27,69,0.08)]">
+                        <span className="material-symbols-outlined text-4xl text-slate-300">event_busy</span>
+                        <p className="mt-3 text-lg font-black" style={{ color: DOC_NAVY }}>日程表を表示できません</p>
+                        <p className="mt-1 text-sm text-slate-500">{error || 'URLをご確認ください。'}</p>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -163,6 +170,12 @@ export const DocumentItinerary: React.FC = () => {
 
     return (
         <>
+            <SEO
+                title="確定日程表"
+                description="お客様専用の旅行日程表です。"
+                robots="noindex, nofollow"
+            />
+            <>
             <style>{`
                 @media print {
                     body { background: white !important; }
@@ -244,6 +257,7 @@ export const DocumentItinerary: React.FC = () => {
                     </div>
                 </main>
             </div>
+            </>
         </>
     );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { SEO } from '../components/seo/SEO';
 import { COMPANY_INFO, CONTRACT_NOTICES, PRIVACY_NOTICES, OTHER_NOTICES } from '../constants/company';
 
 interface Traveler {
@@ -59,7 +60,7 @@ const fallbackContract: Required<ContractSettings> = {
     intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
     paymentMethod: '銀行振込',
     paymentDeadline: 'ご案内メールに記載の期日まで',
-    bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル銀河旅行社（カ',
+    bankInfo: 'お振込先は別途ご案内します。',
     includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
     excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
     cancellationRows: [
@@ -167,20 +168,26 @@ export const DocumentContract: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-[#287DFA]" />
-            </div>
+            <>
+                <SEO title="海外旅行契約書" description="お客様専用の旅行契約書です。" robots="noindex, nofollow" />
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-[#287DFA]" />
+                </div>
+            </>
         );
     }
 
     if (error || !data) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-                <div className="text-center">
-                    <p className="text-lg font-bold text-slate-800 mb-2">契約書を表示できません</p>
-                    <p className="text-sm text-slate-500">{error || 'URLをご確認ください。'}</p>
+            <>
+                <SEO title="海外旅行契約書" description="お客様専用の旅行契約書です。" robots="noindex, nofollow" />
+                <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+                    <div className="text-center">
+                        <p className="text-lg font-bold text-slate-800 mb-2">契約書を表示できません</p>
+                        <p className="text-sm text-slate-500">{error || 'URLをご確認ください。'}</p>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -198,6 +205,12 @@ export const DocumentContract: React.FC = () => {
 
     return (
         <>
+            <SEO
+                title="海外旅行契約書"
+                description="お客様専用の旅行契約書です。"
+                robots="noindex, nofollow"
+            />
+            <>
             <style>{`
                 @media print {
                     body { background: white !important; }
@@ -454,6 +467,7 @@ export const DocumentContract: React.FC = () => {
                     </div>
                 </div>
             </div>
+            </>
         </>
     );
 };

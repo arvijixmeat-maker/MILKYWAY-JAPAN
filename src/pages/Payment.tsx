@@ -13,6 +13,7 @@ export const Payment: React.FC = () => {
     const location = useLocation();
     const isDesktop = useIsDesktop();
     const [showToast, setShowToast] = useState(false);
+    const [fieldError, setFieldError] = useState<{ field: string; msg: string } | null>(null);
 
     // Customer info state
     const [customerInfo, setCustomerInfo] = useState({
@@ -73,13 +74,19 @@ export const Payment: React.FC = () => {
     const parsedDuration = reservationData?.parsedDuration;
     const priceBreakdown = reservationData?.priceBreakdown;
 
+    useEffect(() => {
+        if (!fieldError || isDesktop) return;
+        const target = document.querySelector(`[data-payment-field="${fieldError.field}"]`);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [fieldError, isDesktop]);
+
     // Safety check for 0 won payments (especially for quotes)
     useEffect(() => {
         if (priceBreakdown && priceBreakdown.total <= 0) {
-            alert(t('payment.messages.invalid_price'));
+            console.error('[payment] Invalid price breakdown', priceBreakdown);
             navigate(-1);
         }
-    }, [priceBreakdown, navigate, t]);
+    }, [priceBreakdown, navigate]);
 
     // Auto-fill customer info from quote if passed
     useEffect(() => {
@@ -110,21 +117,12 @@ export const Payment: React.FC = () => {
     const formatDate = (date: Date) => {
         if (!date) return '';
         const d = new Date(date);
-        const locale = t('reservation.date_selection.locale_date', { defaultValue: 'ko-KR' });
-        if (locale === 'ja-JP') {
-            return d.toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                weekday: 'short'
-            });
-        }
-        return d.toLocaleDateString('ko-KR', {
+        return d.toLocaleDateString('ja-JP', {
             year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
+            month: 'long',
+            day: 'numeric',
             weekday: 'short'
-        }).replace(/\. /g, '.').replace('.', '년 ').replace('.', '.').replace(' ', '(').replace(/\.$/, ')');
+        });
     };
 
     const formatPrice = (price: number) => price ? price.toLocaleString() : '0';
@@ -135,45 +133,46 @@ export const Payment: React.FC = () => {
 
         // For regular products, dates are required; for quotes, they are optional
         if (!reservationData || !product || !priceBreakdown) {
-            alert(t('payment.messages.invalid_access'));
+            setFieldError({ field: 'form', msg: '予約情報を確認できません。商品ページからもう一度お試しください。' });
             return;
         }
 
         // For regular products, require dates
         if (!isQuote && (!selectedStartDate || !parsedDuration)) {
-            alert(t('payment.messages.missing_date'));
+            setFieldError({ field: 'date', msg: '旅行日程を選択してください。' });
             return;
         }
 
         // Validate customer info
         if (!customerInfo.name.trim()) {
-            alert(t('payment.messages.missing_name'));
+            setFieldError({ field: 'name', msg: 'お名前を入力してください。' });
             return;
         }
         if (!customerInfo.phone.trim()) {
-            alert(t('payment.messages.missing_phone'));
+            setFieldError({ field: 'phone', msg: '携帯電話番号を入力してください。' });
             return;
         }
         if (!customerInfo.email.trim()) {
-            alert(t('payment.messages.missing_email'));
+            setFieldError({ field: 'email', msg: 'メールアドレスを入力してください。' });
             return;
         }
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(customerInfo.email)) {
-            alert(t('payment.messages.invalid_email'));
+            setFieldError({ field: 'email', msg: '正しいメールアドレスを入力してください。' });
             return;
         }
         if (!agreeToTerms) {
-            alert(t('payment.messages.agree_terms_required'));
+            setFieldError({ field: 'terms', msg: '利用規約と個人情報処理方針への同意が必要です。' });
             return;
         }
 
         try {
+            setFieldError(null);
             setIsProcessing(true);
             const me = await api.auth.me();
             if (!me) {
-                alert(t('payment.messages.login_required'));
+                setFieldError({ field: 'form', msg: '予約を続けるにはログインしてください。' });
                 setIsProcessing(false);
                 return;
             }
@@ -254,21 +253,7 @@ export const Payment: React.FC = () => {
             console.error('Failed to save reservation', e);
             setIsProcessing(false);
 
-            // Handle API error object (which is not an Error instance)
-            let errorMessage = 'Unknown error';
-            let errorDetails = '';
-
-            if (e instanceof Error) {
-                errorMessage = e.message;
-            } else if (typeof e === 'object' && e !== null) {
-                // API error format
-                const sbError = e as { message?: string; details?: string; hint?: string; code?: string };
-                errorMessage = sbError.message || JSON.stringify(sbError);
-                if (sbError.details) errorDetails = `\nDetails: ${sbError.details}`;
-                if (sbError.hint) errorDetails += `\nHint: ${sbError.hint}`;
-            }
-
-            alert(`${t('payment.messages.save_failed')}\n${errorMessage}${errorDetails}`);
+            setFieldError({ field: 'form', msg: '送信に失敗しました。しばらくしてからもう一度お試しください。' });
         }
     };
 
@@ -326,6 +311,7 @@ export const Payment: React.FC = () => {
                     agreeToTerms={agreeToTerms}
                     setAgreeToTerms={setAgreeToTerms}
                     isProcessing={isProcessing}
+                    fieldError={fieldError}
                     onSubmit={handlePayment}
                     onBack={() => navigate(-1)}
                 />
@@ -413,35 +399,47 @@ export const Payment: React.FC = () => {
                             </label>
                         </div>
                         <div className="space-y-5">
-                            <div>
+                            <div data-payment-field="name">
                                 <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">{t('payment.customer_name')}</label>
                                 <input
                                     value={customerInfo.name}
-                                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                                    onChange={(e) => {
+                                        setCustomerInfo({ ...customerInfo, name: e.target.value });
+                                        if (fieldError?.field === 'name') setFieldError(null);
+                                    }}
                                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm text-[#0e1a18] dark:text-white placeholder:text-gray-400 transition-all focus:bg-white dark:focus:bg-zinc-800 outline-none focus:border-primary"
                                     placeholder={t('payment.customer_name_placeholder')}
                                     type="text"
                                 />
+                                {fieldError?.field === 'name' && <p className="mt-2 text-xs font-semibold text-red-600">{fieldError.msg}</p>}
                             </div>
-                            <div>
+                            <div data-payment-field="phone">
                                 <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">{t('payment.customer_phone')}</label>
                                 <input
                                     value={customerInfo.phone}
-                                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                                    onChange={(e) => {
+                                        setCustomerInfo({ ...customerInfo, phone: e.target.value });
+                                        if (fieldError?.field === 'phone') setFieldError(null);
+                                    }}
                                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm text-[#0e1a18] dark:text-white placeholder:text-gray-400 transition-all focus:bg-white dark:focus:bg-zinc-800 outline-none focus:border-primary"
                                     placeholder="090-0000-0000"
                                     type="tel"
                                 />
+                                {fieldError?.field === 'phone' && <p className="mt-2 text-xs font-semibold text-red-600">{fieldError.msg}</p>}
                             </div>
-                            <div>
+                            <div data-payment-field="email">
                                 <label className="block text-xs font-bold text-gray-400 mb-2 ml-1">{t('payment.customer_email')}</label>
                                 <input
                                     value={customerInfo.email}
-                                    onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                                    onChange={(e) => {
+                                        setCustomerInfo({ ...customerInfo, email: e.target.value });
+                                        if (fieldError?.field === 'email') setFieldError(null);
+                                    }}
                                     className="w-full px-4 py-3.5 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm text-[#0e1a18] dark:text-white placeholder:text-gray-400 transition-all focus:bg-white dark:focus:bg-zinc-800 outline-none focus:border-primary"
                                     placeholder="example@mail.com"
                                     type="email"
                                 />
+                                {fieldError?.field === 'email' && <p className="mt-2 text-xs font-semibold text-red-600">{fieldError.msg}</p>}
                             </div>
                         </div>
                     </div>
@@ -507,6 +505,7 @@ export const Payment: React.FC = () => {
 
                 <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-gray-100 dark:border-zinc-800 p-4 pb-10 z-[60] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
                     <div
+                        data-payment-field="terms"
                         onClick={() => setAgreeToTerms(!agreeToTerms)}
                         className="flex items-center gap-2 mb-4 px-1 cursor-pointer"
                     >
@@ -516,8 +515,16 @@ export const Payment: React.FC = () => {
                             }`}>
                             {agreeToTerms && <span className="material-symbols-outlined text-white text-[16px] font-bold">check</span>}
                         </div>
-                        <p className="text-sm font-semibold text-[#0e1a18] dark:text-white">{t('payment.agree_terms')}</p>
+                        <p className="text-sm font-semibold text-[#0e1a18] dark:text-white">
+                            <a href="/terms-of-service" target="_blank" rel="noreferrer" className="underline text-teal-700" onClick={(e) => e.stopPropagation()}>利用規約</a>
+                            {' '}と
+                            <a href="/privacy-policy" target="_blank" rel="noreferrer" className="underline text-teal-700" onClick={(e) => e.stopPropagation()}>個人情報処理方針</a>
+                            に同意します
+                        </p>
                     </div>
+                    {fieldError && ['terms', 'form', 'date'].includes(fieldError.field) && (
+                        <p data-payment-field={fieldError.field} className="mb-3 px-1 text-xs font-semibold text-red-600">{fieldError.msg}</p>
+                    )}
                     <button
                         onClick={handlePayment}
                         disabled={isProcessing}

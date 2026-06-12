@@ -103,6 +103,9 @@ export const ReservationComplete: React.FC = () => {
                         <div className="mb-6">
                             <p className="text-[13px] font-bold text-gray-400 mb-1 uppercase tracking-wider">決済する予約金額</p>
                             <p className="text-3xl font-bold text-[#0e1a18] dark:text-white">{formatPrice(priceBreakdown.deposit)}円</p>
+                            <p className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                現地払い残金: {formatPrice(priceBreakdown.local)}円（モンゴル到着後にお支払い）
+                            </p>
                         </div>
                         <div className="h-px bg-gray-200 dark:bg-zinc-700 w-full mb-6"></div>
                         <div className="flex flex-col gap-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium">

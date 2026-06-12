@@ -20,6 +20,7 @@ interface PaymentDesktopProps {
     agreeToTerms: boolean;
     setAgreeToTerms: (b: boolean) => void;
     isProcessing: boolean;
+    fieldError: { field: string; msg: string } | null;
     onSubmit: () => void;
     onBack: () => void;
 }
@@ -45,19 +46,15 @@ export function PaymentDesktop({
     agreeToTerms,
     setAgreeToTerms,
     isProcessing,
+    fieldError,
     onSubmit,
     onBack,
 }: PaymentDesktopProps) {
     const cleanTitle = product.name.replace(/^\[[^\]]+\]\s*/, '');
-    const canSubmit =
-        !!customerInfo.name.trim() &&
-        !!customerInfo.phone.trim() &&
-        !!customerInfo.email.trim() &&
-        agreeToTerms &&
-        !isProcessing;
+    const canSubmit = !isProcessing;
 
     const handleSubmit = () => {
-        if (!canSubmit || isProcessing) return;
+        if (isProcessing) return;
         onSubmit();
     };
 
@@ -72,6 +69,11 @@ export function PaymentDesktop({
                 }}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {fieldError && (
+                        <div style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: 13, fontWeight: 700 }}>
+                            {fieldError.msg}
+                        </div>
+                    )}
                     {/* Selected tour info */}
                     <Card>
                         <CardHeader title="選択した旅行情報" eyebrow="Tour Info" />
@@ -588,9 +590,7 @@ export function PaymentDesktop({
                     onCta={handleSubmit}
                     canProceed={canSubmit}
                     canProceedHint={
-                        !canSubmit && !isProcessing
-                            ? '必須項目を入力し、規約に同意してください'
-                            : null
+                        fieldError?.msg || null
                     }
                 />
             </div>

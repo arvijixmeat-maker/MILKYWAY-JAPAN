@@ -96,7 +96,7 @@ export const defaultDocumentSettings = (): DocumentSettings => ({
         intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
         paymentMethod: '銀行振込',
         paymentDeadline: 'ご案内メールに記載の期日まで',
-        bankInfo: '三井住友銀行 新宿支店（普通）1234567\nモンゴル銀河旅行社（カ',
+        bankInfo: 'お振込先は別途ご案内します。',
         includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
         excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
         cancellationRows: [
