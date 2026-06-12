@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
 import { TravelMatesDesktop } from '../components/mates-desktop/TravelMatesDesktop';
+import { SEO } from '../components/seo/SEO';
 
 const TAB_EMOJI: Record<string, string> = {
     all: '🌏',
@@ -58,14 +59,30 @@ const isNewPost = (createdAt: string | undefined): boolean => {
 
 export const TravelMates: React.FC = () => {
     const isDesktop = useIsDesktop();
-    if (isDesktop) {
-        return (
+    const breadcrumbLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://mongolryokou.com/' },
+            { '@type': 'ListItem', position: 2, name: '同行者募集', item: 'https://mongolryokou.com/travel-mates' },
+        ],
+    };
+
+    return (
+        <>
+            <SEO
+                title="モンゴル旅行の同行者募集"
+                description="モンゴル旅行を一緒に楽しむ同行者を募集・検索できます。旅行日程や地域、旅行スタイルから仲間を見つけましょう。"
+                canonical="/travel-mates"
+                structuredData={breadcrumbLd}
+            />
+            {isDesktop ? (
             <DesktopLayout>
                 <TravelMatesDesktop />
             </DesktopLayout>
-        );
-    }
-    return <TravelMatesMobile />;
+            ) : <TravelMatesMobile />}
+        </>
+    );
 };
 
 const TravelMatesMobile: React.FC = () => {
@@ -104,7 +121,7 @@ const TravelMatesMobile: React.FC = () => {
                         let duration = post.duration || '';
                         const durationMatch = duration.match(/^(\d+)N\s+(\d+)D$/);
                         if (durationMatch) {
-                            duration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '박' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '일' })}`;
+                            duration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '泊' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '日' })}`;
                         } else if (duration === '1 Day') {
                             duration = t('travel_mates.detail.one_day', { defaultValue: '当日' });
                         }

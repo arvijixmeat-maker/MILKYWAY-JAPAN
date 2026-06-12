@@ -202,7 +202,7 @@ export const DayCard: React.FC<{ day: DocDay }> = ({ day }) => {
     const accImgs = normalizeImages(day.accommodation?.images);
     const meals = day.meals || {};
     return (
-        <DocCard className="!p-0 overflow-hidden">
+        <DocCard className="!p-0 overflow-hidden print:break-inside-avoid">
             <div className="flex flex-wrap items-center gap-3 px-5 pt-5 sm:px-6">
                 <span className="rounded-full px-4 py-1.5 text-[13px] font-black text-white" style={{ background: DOC_BLUE }}>DAY {day.day}</span>
                 <h4 className="min-w-0 flex-1 truncate text-[16px] font-black" style={{ color: DOC_NAVY }}>{day.title || `${day.day}日目`}</h4>

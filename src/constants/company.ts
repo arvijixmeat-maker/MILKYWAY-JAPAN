@@ -4,7 +4,7 @@
 export const COMPANY_INFO = {
     nameJa: 'モンゴル銀河旅行社',
     nameEn: 'Milkyway Japan',
-    phoneKR: '82-10-6376-7901',
+    phoneKR: '+976-9594-5838',
     phoneMGL: '976-9594-5838',
     representative: 'DAVAASUREN BOLOR',  // 担当者 (代理)
     ceo: 'DAVAASUREN BILGUUN',           // 代表者

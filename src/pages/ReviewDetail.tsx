@@ -127,7 +127,7 @@ const ReviewDetailMobile: React.FC = () => {
                 if (me) {
                     setCurrentUser({
                         id: me.id,
-                        name: me.user_metadata?.full_name || me.name || me.email?.split('@')[0] || '여행자',
+                        name: me.user_metadata?.full_name || me.name || me.email?.split('@')[0] || '旅行者',
                         image: me.user_metadata?.avatar_url || me.avatar_url,
                         role: me.role,
                     });
@@ -414,7 +414,7 @@ const ReviewDetailMobile: React.FC = () => {
                                         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                     />
                                     <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white text-sm font-bold">+{review.images.length - 2}장 더보기</span>
+                                        <span className="text-white text-sm font-bold">+{review.images.length - 2}枚を見る</span>
                                     </div>
                                 </div>
                             )}

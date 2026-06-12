@@ -150,6 +150,9 @@ export function ReservationCompleteDesktop({
                             >
                                 総旅行費用: ¥{formatPrice(total)}
                             </div>
+                            <div style={{ fontSize: 11, color: 'var(--fg-4)', marginTop: 4 }}>
+                                現地払い残金: ¥{formatPrice(Math.max(0, total - deposit))}（モンゴル到着後にお支払い）
+                            </div>
                         </div>
                     </div>
 

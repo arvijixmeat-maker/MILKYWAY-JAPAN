@@ -159,7 +159,7 @@ const TravelMateDetailMobile: React.FC = () => {
                     let localizedDuration = data.duration || '';
                     const durationMatch = localizedDuration.match(/^(\d+)N\s+(\d+)D$/);
                     if (durationMatch) {
-                        localizedDuration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '박' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '일' })}`;
+                        localizedDuration = `${durationMatch[1]}${t('travel_mates.detail.nights', { defaultValue: '泊' })} ${durationMatch[2]}${t('travel_mates.detail.days', { defaultValue: '日' })}`;
                     } else if (localizedDuration === '1 Day') {
                         localizedDuration = t('travel_mates.detail.one_day', { defaultValue: '당일치기' });
                     }

@@ -107,8 +107,8 @@ export function CustomEstimateDesktop({ contentWidth = 1280 }: { contentWidth?: 
             }
             navigate('/estimate-complete', { state: { id: data?.id || '', ...newEstimate } });
         } catch (e) {
-            console.error(e);
-            alert('見積もりリクエストの保存中にエラーが発生しました');
+            console.error('[quote create]', e);
+            alert('送信に失敗しました。しばらくしてからもう一度お試しください。');
         } finally {
             setSubmitting(false);
         }

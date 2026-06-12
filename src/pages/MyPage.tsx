@@ -155,10 +155,10 @@ const MyPageMobile: React.FC = () => {
                     allNotifications.push({
                         id: `quote-${q.id}`,
                         type: 'quote_answered',
-                        description: '견적서가 도착했습니다. 확인해보세요!',
+                        description: 'お見積もりが届きました。ご確認ください。',
                         timestamp: q.updated_at || q.created_at,
                         reservationId: q.id,
-                        productName: `${q.destination} 견적`,
+                        productName: `${q.destination} お見積もり`,
                         read: false,
                         targetPath: `/estimate/${q.id}`
                     });
@@ -191,11 +191,12 @@ const MyPageMobile: React.FC = () => {
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ko-KR', {
-            month: '2-digit',
-            day: '2-digit',
+        return date.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
             weekday: 'short'
-        }).replace(/\. /g, '.').replace(' ', '(').replace(/\.$/, ')');
+        });
     };
 
     const formatTimeAgo = (isoString: string) => {
@@ -203,10 +204,10 @@ const MyPageMobile: React.FC = () => {
         const now = new Date();
         const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-        if (diffInSeconds < 60) return '방금 전';
-        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}분 전`;
-        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}시간 전`;
-        return `${Math.floor(diffInSeconds / 86400)}일 전`;
+        if (diffInSeconds < 60) return 'たった今';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分前`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}時間前`;
+        return `${Math.floor(diffInSeconds / 86400)}日前`;
     };
 
     return (

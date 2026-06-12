@@ -14,9 +14,15 @@ export const CustomEstimate: React.FC = () => {
     const isDesktop = useIsDesktop();
     if (isDesktop) {
         return (
-            <DesktopLayout>
-                <CustomEstimateDesktop />
-            </DesktopLayout>
+            <>
+                <SEO
+                    title="モンゴルオーダーメイド見積もり｜モンゴル銀河旅行社"
+                    description="ご希望に合わせたモンゴル旅行のお見積もりを無料で承ります。"
+                />
+                <DesktopLayout>
+                    <CustomEstimateDesktop />
+                </DesktopLayout>
+            </>
         );
     }
     return <CustomEstimateMobile />;
@@ -38,6 +44,7 @@ const CustomEstimateMobile: React.FC = () => {
     const [selectedAccommodations, setSelectedAccommodations] = useState<string[]>(['4つ星ホテル', '高級ゲル']);
     const [selectedVehicle, setSelectedVehicle] = useState('スタレックス');
     const [additionalRequest, setAdditionalRequest] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const toggleSelection = (item: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
         if (list.includes(item)) {
@@ -65,12 +72,14 @@ const CustomEstimateMobile: React.FC = () => {
     }, []);
 
     const handleSubmit = async () => {
+        if (isSubmitting) return;
         if (!name || !phone || !email || !startDate || !endDate) {
             alert('必須情報をすべて入力してください。\n(旅行日程, お名前, 携帯電話番号, メールアドレス)');
             return;
         }
 
         try {
+            setIsSubmitting(true);
             const me = await api.auth.me();
 
             const newEstimate = {
@@ -93,28 +102,33 @@ const CustomEstimateMobile: React.FC = () => {
 
             const data = await api.quotes.create(newEstimate);
 
-            // Send Email Notification
-            await sendNotificationEmail(
-                newEstimate.email,
-                'QUOTE_RECEIVED',
-                {
-                    customerName: newEstimate.name,
-                    productName: `モンゴルオーダーメイド旅行 (${newEstimate.period})`
-                }
-            );
+            try {
+                await sendNotificationEmail(
+                    newEstimate.email,
+                    'QUOTE_RECEIVED',
+                    {
+                        customerName: newEstimate.name,
+                        productName: `モンゴルオーダーメイド旅行 (${newEstimate.period})`
+                    }
+                );
+            } catch (emailError) {
+                console.error('[quote notification]', emailError);
+            }
 
             navigate('/estimate-complete', { state: { id: data?.id || '', ...newEstimate } });
         } catch (error: any) {
             console.error('Failed to submit estimate:', error);
-            alert(`見積もりリクエストの保存中にエラーが発生しました。\n(${error.message || '詳細エラーなし'})`);
+            alert('送信に失敗しました。しばらくしてからもう一度お試しください。');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white pb-28">
             <SEO 
-                title={t('estimate.seo_title', '맞춤 견적 요청 | Milkyway Japan')}
-                description={t('estimate.seo_description', '몽골 여행에 대한 맞춤 견적을 요청해보세요. Milkyway Japan이 여러분의 조건에 딱 맞는 여행 일정을 제안해 드립니다.')}
+                title={t('estimate.seo_title', 'モンゴルオーダーメイド見積もり｜モンゴル銀河旅行社')}
+                description={t('estimate.seo_description', 'ご希望に合わせたモンゴル旅行のお見積もりを無料で承ります。')}
             />
             <div className="sticky top-0 z-50 flex items-center justify-between bg-white dark:bg-zinc-900 p-4 border-b border-gray-100 dark:border-zinc-800">
                 <button
@@ -480,9 +494,10 @@ const CustomEstimateMobile: React.FC = () => {
                 <div className="max-w-md mx-auto w-full flex items-center justify-end gap-4 pointer-events-auto">
                     <button
                         onClick={handleSubmit}
-                        className="bg-primary hover:bg-[#159a80] text-white font-bold py-3.5 px-8 rounded-xl shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center gap-2"
+                        disabled={isSubmitting}
+                        className="bg-primary hover:bg-[#159a80] text-white font-bold py-3.5 px-8 rounded-xl shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        <span>無料見積りをもらう ({adultCount + childCount}名)</span>
+                        <span>{isSubmitting ? '送信中…' : `無料見積りをもらう (${adultCount + childCount}名)`}</span>
                         <span className="material-symbols-outlined text-sm">send</span>
                     </button>
                 </div>

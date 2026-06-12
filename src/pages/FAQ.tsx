@@ -135,7 +135,23 @@ export const FAQPage: React.FC = () => {
                     {filteredFaqs.length === 0 ? (
                         <div className="text-center py-12">
                             <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600">help_outline</span>
-                            <p className="mt-4 text-gray-500 dark:text-gray-400">登録されたFAQはありません。</p>
+                            <p className="mt-4 text-gray-500 dark:text-gray-400">
+                                {searchQuery || selectedCategory !== 'すべて'
+                                    ? '検索条件に一致するFAQがありません。'
+                                    : '登録されたFAQはありません。'}
+                            </p>
+                            {(searchQuery || selectedCategory !== 'すべて') && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setSelectedCategory('すべて');
+                                    }}
+                                    className="mt-4 rounded-lg border border-teal-500 px-4 py-2 text-sm font-bold text-teal-600"
+                                >
+                                    検索条件をリセット
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-2">

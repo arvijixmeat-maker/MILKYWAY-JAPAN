@@ -239,7 +239,7 @@ export const Reservation: React.FC = () => {
         <div className="bg-background-light dark:bg-background-dark min-h-screen font-display">
             <SEO 
                 title={`${product?.name || ''} - ${t('reservation.title')}`}
-                description={`${product?.name || ''} 予約ページ。日程와 人数를 선택해주세요.`}
+                description={`${product?.name || ''} 予約ページ。ご希望の日程と人数をお選びください。`}
             />
             <div className="max-w-[430px] mx-auto bg-white dark:bg-zinc-900 min-h-screen flex flex-col relative overflow-x-hidden shadow-2xl">
                 {/* Header */}
@@ -277,7 +277,7 @@ export const Reservation: React.FC = () => {
                                     <span className="material-symbols-outlined text-[#0e1a18] dark:text-white">chevron_left</span>
                                 </button>
                                 <p className="text-[#0e1a18] dark:text-white text-base font-bold leading-tight flex-1 text-center">
-                                    {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
+                                    {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
                                 </p>
                                 <button
                                     onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
@@ -359,8 +359,8 @@ export const Reservation: React.FC = () => {
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('reservation.date_selection.selected_range')}</p>
                                     <p className="text-sm font-bold text-primary">
                                         {t('reservation.date_selection.selected_range_format', {
-                                            startDate: selectedStartDate.toLocaleDateString(t('reservation.date_selection.locale_date', { defaultValue: 'ko-KR' }), { month: 'long', day: 'numeric' }),
-                                            endDate: new Date(selectedStartDate.getTime() + parsedDuration.nights * 24 * 60 * 60 * 1000).toLocaleDateString(t('reservation.date_selection.locale_date', { defaultValue: 'ko-KR' }), { month: 'long', day: 'numeric' })
+                                            startDate: selectedStartDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' }),
+                                            endDate: new Date(selectedStartDate.getTime() + parsedDuration.nights * 24 * 60 * 60 * 1000).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })
                                         })}
                                         <span className="ml-2 text-xs">{t('reservation.date_selection.duration_format', { nights: parsedDuration.nights, days: parsedDuration.days })}</span>
                                     </p>

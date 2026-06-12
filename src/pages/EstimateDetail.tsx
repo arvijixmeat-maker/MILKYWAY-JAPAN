@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { BottomNav } from '../components/layout/BottomNav';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/Toast';
+import { SEO } from '../components/seo/SEO';
 import {
     DocTopBar, DocHero, DocCard, TripInfoGrid, PaymentSummary,
     IncludeExclude, BookingSteps, DayCard, GuideTips, DocFooter,
@@ -179,12 +180,15 @@ export const EstimateDetail: React.FC = () => {
 
     if (!estimate) {
         return (
-            <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
-                <div className="relative flex h-full min-h-screen w-full max-w-[920px] flex-col bg-gray-50 dark:bg-zinc-900 shadow-xl overflow-x-hidden items-center justify-center">
-                    <p className="text-gray-500">お見積り情報が見つかりません。</p>
-                    <button onClick={() => navigate(-1)} className="mt-4 text-primary font-bold">戻る</button>
+            <>
+                <SEO title="お見積もり" description="お客様専用のお見積もりページです。" robots="noindex, nofollow" />
+                <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
+                    <div className="relative flex h-full min-h-screen w-full max-w-[920px] flex-col bg-gray-50 dark:bg-zinc-900 shadow-xl overflow-x-hidden items-center justify-center">
+                        <p className="text-gray-500">お見積り情報が見つかりません。</p>
+                        <button onClick={() => navigate(-1)} className="mt-4 text-primary font-bold">戻る</button>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -212,7 +216,13 @@ export const EstimateDetail: React.FC = () => {
     const stepLabels = ['お見積り受付', 'お見積り作成', '送信完了'];
 
     return (
-        <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
+        <>
+            <SEO
+                title="お見積もり"
+                description="お客様専用のお見積もりページです。"
+                robots="noindex, nofollow"
+            />
+            <div className="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex justify-center w-full">
             <div className="relative flex h-full min-h-screen w-full max-w-[920px] flex-col shadow-xl overflow-x-hidden pb-[100px]" style={{ background: '#F2F5FA' }}>
                 {/* Header */}
                 <div className="sticky top-0 z-50 flex items-center bg-white/95 backdrop-blur-sm px-4 py-4 transition-colors border-b border-slate-100">
@@ -406,5 +416,6 @@ export const EstimateDetail: React.FC = () => {
                 <BottomNav />
             </div>
         </div>
+        </>
     );
 };
