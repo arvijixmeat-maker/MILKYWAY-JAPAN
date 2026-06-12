@@ -11,6 +11,7 @@ export const reservations = sqliteTable('reservations', {
     travelers: integer('travelers').default(1),
     startDate: text('start_date'),
     endDate: text('end_date'),
+    duration: text('duration'),
     status: text('status').default('pending_payment'),
     totalPrice: real('total_price').default(0),
     depositAmount: real('deposit_amount').default(0),

@@ -43,6 +43,7 @@ app.get('/', async (c) => {
         "are_assignments_visible_to_user INTEGER DEFAULT 0",
         "price_breakdown TEXT",                         // JSON: { total, deposit, local }
         "document_content TEXT",                         // JSON: 고객별 편집한 문서(일정·문서설정) { days, documentSettings }
+        "duration TEXT",
     ];
     for (const colDef of reservationColumns) {
         try {

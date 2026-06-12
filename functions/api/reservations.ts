@@ -197,7 +197,7 @@ app.put('/:id', async (c) => {
     // Known schema keys (from src/db/schema/reservations.ts)
     const schemaKeys = new Set([
         'id', 'type', 'productName', 'customerName', 'customerEmail', 'customerPhone',
-        'travelers', 'startDate', 'endDate', 'status', 'totalPrice', 'depositAmount',
+        'travelers', 'startDate', 'endDate', 'duration', 'status', 'totalPrice', 'depositAmount',
         'balanceAmount', 'paymentMethod', 'dailyAccommodations', 'notes', 'history',
         'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData',
         'assignedGuide', 'contractUrl', 'itineraryUrl',
@@ -281,6 +281,7 @@ app.post('/', async (c) => {
             travelers: Number(body.total_people || body.totalPeople || 1),
             startDate: (body.start_date || body.date) ? String(body.start_date || body.date) : null,
             endDate: body.end_date ? String(body.end_date) : null,
+            duration: body.duration ? String(body.duration) : null,
             status: body.status ? String(body.status) : 'pending_payment',
             totalPrice: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
             depositAmount: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
