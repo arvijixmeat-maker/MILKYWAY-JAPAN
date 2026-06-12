@@ -8,12 +8,15 @@ import type { TourProduct } from '../../types/product';
 interface RelatedToursProps {
     category?: string;
     tag?: string;
+    title?: string;
+    description?: string;
     limit?: number;
 }
 
 interface RawProduct {
     id: string;
     name?: string;
+    description?: string;
     category?: string;
     duration?: string;
     price?: number;
@@ -21,6 +24,8 @@ interface RawProduct {
     original_price?: number;
     status?: string;
     tags?: unknown;
+    pricingOptions?: unknown;
+    pricing_options?: unknown;
     mainImages?: unknown;
     main_images?: unknown;
     is_popular?: number | boolean;
@@ -44,34 +49,92 @@ const fallbackRank = (p: RawProduct): number => {
 
 const norm = (v: unknown) => String(v ?? '').toLowerCase().trim();
 
+const toArray = (v: unknown): unknown[] => {
+    if (Array.isArray(v)) return v;
+    if (typeof v !== 'string') return [];
+    try {
+        const parsed = JSON.parse(v);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return v.split(',');
+    }
+};
+
 const toStringArray = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map(norm).filter(Boolean) : [];
+    toArray(v).map(norm).filter(Boolean);
 
 const toImageArray = (v: unknown): string[] =>
-    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+    toArray(v).filter((x): x is string => typeof x === 'string' && x.length > 0);
 
-const scoreProduct = (p: RawProduct, magCategory: string, magTag: string): number => {
+const keywordAliases: Record<string, string[]> = {
+    ゴビ: ['ゴビ', '砂漠', '南部'],
+    乗馬: ['乗馬', '馬', '草原'],
+    ゲル: ['ゲル', 'キャンプ', '遊牧民'],
+    星空: ['星空', '天の川', '夜空'],
+    ナーダム: ['ナーダム', '祭り', '競馬'],
+    テレルジ: ['テレルジ', '国立公園', '亀石'],
+    ウランバートル: ['ウランバートル', '市内', '首都'],
+    フブスグル: ['フブスグル', '湖', '北部'],
+};
+
+const buildKeywords = (...values: Array<string | undefined>): string[] => {
+    const source = values.map(norm).filter(Boolean).join(' ');
+    const tokens = source
+        .split(/[\s、。・｜|/【】()[\]（）「」『』,:：!?！？]+/)
+        .filter((token) => token.length >= 2);
+
+    Object.entries(keywordAliases).forEach(([key, aliases]) => {
+        if (aliases.some((alias) => source.includes(norm(alias)))) {
+            tokens.push(key, ...aliases);
+        }
+    });
+
+    return [...new Set(tokens.map(norm).filter(Boolean))];
+};
+
+const scoreProduct = (p: RawProduct, keywords: string[], magCategory: string): number => {
     const pCategory = norm(p.category);
     const pName = norm(p.name);
+    const pDescription = norm(p.description);
     const pTags = toStringArray(p.tags);
+    const searchable = [pCategory, pName, pDescription, ...pTags].join(' ');
 
     let score = 0;
 
     if (magCategory && pCategory && magCategory === pCategory) score += 100;
 
-    const keywords = [magCategory, magTag].filter(k => k && k.length >= 2);
     for (const kw of keywords) {
+        if (!searchable.includes(kw)) continue;
+        if (pName.includes(kw)) score += 35;
         if (pCategory.includes(kw)) score += 25;
-        if (pName.includes(kw)) score += 30;
-        for (const t of pTags) {
-            if (t.includes(kw)) score += 25;
-        }
+        if (pDescription.includes(kw)) score += 12;
+        if (pTags.some((tagValue) => tagValue.includes(kw))) score += 20;
     }
 
     return score;
 };
 
-export const RelatedTours: React.FC<RelatedToursProps> = ({ category, tag, limit = 3 }) => {
+const getStartingPrice = (product: RawProduct): number => {
+    const directPrice = Number(product.price);
+    const tierPrices = toArray(product.pricingOptions ?? product.pricing_options)
+        .map((option) => {
+            if (!option || typeof option !== 'object') return 0;
+            const row = option as Record<string, unknown>;
+            return Number(row.pricePerPerson ?? row.price_per_person ?? row.price ?? 0);
+        })
+        .filter((price) => Number.isFinite(price) && price > 0);
+
+    if (tierPrices.length > 0) return Math.min(...tierPrices);
+    return Number.isFinite(directPrice) ? directPrice : 0;
+};
+
+export const RelatedTours: React.FC<RelatedToursProps> = ({
+    category,
+    tag,
+    title,
+    description,
+    limit = 3,
+}) => {
     const { t } = useTranslation();
 
     const { data: products = [] } = useQuery<RawProduct[]>({
@@ -85,7 +148,7 @@ export const RelatedTours: React.FC<RelatedToursProps> = ({ category, tag, limit
 
     const matches = useMemo(() => {
         const magCategory = norm(category);
-        const magTag = norm(tag);
+        const keywords = buildKeywords(title, category, tag, description);
 
         const eligible = products.filter((p) => {
             const imgs = toImageArray(p.mainImages ?? p.main_images);
@@ -93,7 +156,7 @@ export const RelatedTours: React.FC<RelatedToursProps> = ({ category, tag, limit
         });
 
         const scored = eligible
-            .map((p) => ({ product: p, score: scoreProduct(p, magCategory, magTag) }))
+            .map((p) => ({ product: p, score: scoreProduct(p, keywords, magCategory) }))
             .filter((r) => r.score > 0)
             .sort((a, b) => b.score - a.score);
 
@@ -108,7 +171,7 @@ export const RelatedTours: React.FC<RelatedToursProps> = ({ category, tag, limit
             .slice(0, limit - picked.length);
 
         return [...picked, ...fallback];
-    }, [products, category, tag, limit]);
+    }, [products, category, tag, title, description, limit]);
 
     if (matches.length === 0) return null;
 
@@ -131,7 +194,7 @@ export const RelatedTours: React.FC<RelatedToursProps> = ({ category, tag, limit
                     > = {
                         id: p.id,
                         name: p.name ?? '',
-                        price: p.price ?? 0,
+                        price: getStartingPrice(p),
                         originalPrice: p.originalPrice ?? p.original_price,
                         category: p.category ?? '',
                         duration: p.duration ?? '',

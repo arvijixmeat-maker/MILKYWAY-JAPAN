@@ -784,10 +784,17 @@ export function ProductDetailDesktop({
                 </div>
             )}
 
-            {galleryOpen && <GalleryLightbox images={gallery} onClose={() => setGalleryOpen(false)} />}
+            {galleryOpen && (
+                <GalleryLightbox
+                    images={gallery}
+                    altPrefix={product.name}
+                    onClose={() => setGalleryOpen(false)}
+                />
+            )}
             {timelineLightbox && (
                 <GalleryLightbox
                     images={timelineLightbox.images}
+                    altPrefix={product.name}
                     startIndex={timelineLightbox.startIndex}
                     onClose={() => setTimelineLightbox(null)}
                 />
@@ -1050,7 +1057,7 @@ function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: s
         body = (
             <PremiumImageCard
                 src={slide.images[0]}
-                alt={`${slide.title || productName} - 1`}
+                alt={`${slide.title || productName}｜モンゴル旅行・モンゴルツアー`}
                 aspectRatio="16/9"
                 title={slide.title}
                 description={slide.description}
@@ -1071,7 +1078,7 @@ function SlideBlock({ slide, productName }: { slide: DetailSlide; productName: s
                     <PremiumImageCard
                         key={i}
                         src={img}
-                        alt={`${slide.title || productName} - ${i + 1}`}
+                        alt={`${slide.title || productName} 写真${i + 1}｜モンゴル旅行・モンゴルツアー`}
                         aspectRatio="3/4"
                         title={slide.title}
                         description={slide.description}
@@ -3247,7 +3254,17 @@ function RelatedTours({ productId, category }: { productId: string; category: st
     );
 }
 
-function GalleryLightbox({ images, onClose, startIndex = 0 }: { images: string[]; onClose: () => void; startIndex?: number }) {
+function GalleryLightbox({
+    images,
+    altPrefix,
+    onClose,
+    startIndex = 0,
+}: {
+    images: string[];
+    altPrefix: string;
+    onClose: () => void;
+    startIndex?: number;
+}) {
     const [i, setI] = useState(startIndex);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -3298,7 +3315,11 @@ function GalleryLightbox({ images, onClose, startIndex = 0 }: { images: string[]
                 <button type="button" onClick={() => setI((i - 1 + images.length) % images.length)} aria-label="prev" style={lbNav('left')}>
                     <MatIcon name="chevron_left" size={28} color="#fff" />
                 </button>
-                <img src={images[i]} alt="" style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }} />
+                <img
+                    src={images[i]}
+                    alt={`${altPrefix} 写真${i + 1}｜モンゴル旅行・モンゴルツアー`}
+                    style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }}
+                />
                 <button type="button" onClick={() => setI((i + 1) % images.length)} aria-label="next" style={lbNav('right')}>
                     <MatIcon name="chevron_right" size={28} color="#fff" />
                 </button>

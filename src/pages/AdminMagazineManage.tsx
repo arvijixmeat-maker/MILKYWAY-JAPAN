@@ -15,6 +15,8 @@ interface Magazine {
     category: string;
     image: string;
     tag?: string;
+    author?: string;
+    authorImage?: string;
     isFeatured: boolean;
     isActive: boolean;
     order: number;
@@ -265,6 +267,8 @@ export const AdminMagazineManage: React.FC = () => {
         category: '여행 팁',
         image: '',
         tag: '',
+        author: '',
+        authorImage: '',
         isFeatured: false,
         isActive: true,
         order: 0,
@@ -434,6 +438,8 @@ export const AdminMagazineManage: React.FC = () => {
                     category: m.category,
                     image: m.thumbnail || m.image || '', // Map thumbnail
                     tag: m.tag,
+                    author: m.author || '',
+                    authorImage: m.author_image || m.authorImage || '',
                     isFeatured: m.is_featured,
                     isActive: m.is_active,
                     order: m.order,
@@ -515,6 +521,18 @@ export const AdminMagazineManage: React.FC = () => {
         }
     };
 
+    const handleAuthorImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const url = await uploadImage(file, 'magazine-authors');
+            setFormData(prev => ({ ...prev, authorImage: url }));
+        } catch (error) {
+            console.error('Magazine author image upload failed:', error);
+            alert('저자 사진 업로드 실패');
+        }
+    };
+
     const resetForm = () => {
         setFormData({
             title: '',
@@ -523,6 +541,8 @@ export const AdminMagazineManage: React.FC = () => {
             category: categories[0] || '여행 팁',
             image: '',
             tag: '',
+            author: '',
+            authorImage: '',
             isFeatured: false,
             isActive: true,
             order: 0
@@ -574,6 +594,8 @@ export const AdminMagazineManage: React.FC = () => {
                 category: formData.category || '여행 팁',
                 thumbnail: formData.image || '', // Map image to thumbnail
                 tag: formData.tag,
+                author: formData.author || '',
+                author_image: formData.authorImage || '',
                 is_featured: formData.isFeatured || false,
                 is_active: formData.isActive ?? true,
                 order: editingMagazine ? formData.order! : maxOrder + 1,
@@ -934,6 +956,75 @@ export const AdminMagazineManage: React.FC = () => {
                                             value={formData.tag}
                                             onChange={(e) => setFormData(prev => ({ ...prev, tag: e.target.value }))}
                                         />
+                                    </div>
+
+                                    <div className="field">
+                                        <label>저자 / 감수자</label>
+                                        <input
+                                            className="inp"
+                                            type="text"
+                                            value={formData.author || ''}
+                                            placeholder="예: Bolormaa Jambajamts"
+                                            onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="field">
+                                        <label>저자 사진</label>
+                                        <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+                                            <div
+                                                style={{
+                                                    position: 'relative',
+                                                    width: 64,
+                                                    height: 64,
+                                                    flex: '0 0 64px',
+                                                    overflow: 'hidden',
+                                                    borderRadius: '50%',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--surface-subtle)',
+                                                }}
+                                            >
+                                                {formData.authorImage ? (
+                                                    <img
+                                                        src={formData.authorImage}
+                                                        alt="저자 사진 미리보기"
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                ) : (
+                                                    <Icon
+                                                        name="person"
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '50%',
+                                                            left: '50%',
+                                                            transform: 'translate(-50%, -50%)',
+                                                            color: 'var(--text-tertiary)',
+                                                        }}
+                                                    />
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleAuthorImageUpload}
+                                                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                                                />
+                                            </div>
+                                            <div className="stack" style={{ gap: 6 }}>
+                                                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                                    정사각형 얼굴 사진을 권장합니다.
+                                                </span>
+                                                {formData.authorImage && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-ghost"
+                                                        onClick={() => setFormData(prev => ({ ...prev, authorImage: '' }))}
+                                                        style={{ alignSelf: 'flex-start', minHeight: 30, padding: '4px 10px' }}
+                                                    >
+                                                        사진 삭제
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="stack" style={{ gap: 10 }}>
