@@ -12,6 +12,12 @@ const app = new Hono<{ Bindings: Env }>();
 const FROM = 'Milkyway Japan <noreply@mongolryokou.com>';
 const SITE_URL = 'https://mongolryokou.com';
 const CONTACT_EMAIL = 'info@mongolryokou.com';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const getDocumentReservationId = (data: any): string => {
+    const candidates = [data.reservationDbId, data.reservationId];
+    return candidates.find((value) => typeof value === 'string' && UUID_PATTERN.test(value)) || '';
+};
 
 async function sendEmail(apiKey: string, to: string | string[], subject: string, html: string) {
     const res = await fetch('https://api.resend.com/emails', {
@@ -296,7 +302,7 @@ ${footer()}`);
 }
 
 function tplContractReady(data: any) {
-    const url = data.contractUrl || `${SITE_URL}/documents/contract/${data.reservationId || ''}`;
+    const url = `${SITE_URL}/documents/contract/${getDocumentReservationId(data)}`;
     return baseLayout('海外旅行契約書をご用意しました。内容をご確認ください。', `
 <div class="header">
   <p class="brand">Milkyway Japan</p>
@@ -320,7 +326,7 @@ ${footer()}`);
 }
 
 function tplItineraryReady(data: any) {
-    const url = data.itineraryUrl || `${SITE_URL}/documents/itinerary/${data.reservationId || ''}`;
+    const url = `${SITE_URL}/documents/itinerary/${getDocumentReservationId(data)}`;
     return baseLayout('確定日程表をご用意しました。集合時間、宿泊先、行程をご確認ください。', `
 <div class="header">
   <p class="brand">Milkyway Japan</p>
@@ -355,6 +361,14 @@ app.post('/', async (c) => {
         const { to, type, data = {} } = await c.req.json();
         const apiKey = c.env.RESEND_API_KEY;
         const adminEmail = c.env.ADMIN_EMAIL || 'agape_ibeel@hanpass.com';
+        if (type === 'ITINERARY_READY' || type === 'CONTRACT_READY') {
+            const documentReservationId = getDocumentReservationId(data);
+            if (!documentReservationId) {
+                return c.json({ error: 'A reservation UUID is required for customer documents' }, 400);
+            }
+            data.reservationId = documentReservationId;
+            data.reservationDbId = documentReservationId;
+        }
 
         // 이메일 키가 없어도 인앱 알림은 계속 생성해야 하므로 여기서 중단하지 않음
         if (!apiKey) {

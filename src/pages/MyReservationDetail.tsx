@@ -211,8 +211,16 @@ export const MyReservationDetail: React.FC = () => {
     const guideSpecialties = parseArr(guide?.specialties);
     const accommodations = reservation.dailyAccommodations || [];
 
-    const itineraryUrl = reservation.itineraryUrl || (reservation.itineraryTemplateId ? `/documents/itinerary/${reservation.reservationNumber || reservation.id}` : '');
-    const contractUrl = reservation.contractUrl || '';
+    const isLegacyInternalDocumentUrl = (url: string | undefined, kind: 'itinerary' | 'contract') =>
+        !!url && new RegExp(`/documents/${kind}/MN\\d+`, 'i').test(url);
+    const itineraryUrl = reservation.itineraryTemplateId
+        ? (!reservation.itineraryUrl || isLegacyInternalDocumentUrl(reservation.itineraryUrl, 'itinerary')
+            ? `/documents/itinerary/${reservation.id}`
+            : reservation.itineraryUrl)
+        : '';
+    const contractUrl = !reservation.contractUrl || isLegacyInternalDocumentUrl(reservation.contractUrl, 'contract')
+        ? `/documents/contract/${reservation.id}`
+        : reservation.contractUrl;
 
     const history = reservation.history || [];
     const visibleHistory = showAllHistory ? [...history].reverse() : [...history].reverse().slice(0, 3);

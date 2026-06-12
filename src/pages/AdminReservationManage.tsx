@@ -476,8 +476,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const paidPercent = editForm.totalAmount > 0 ? Math.round((paidAmount / editForm.totalAmount) * 100) : 0;
     const getInitials = (name: string) => (name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const reservationNumber = (reservation as any).reservationNumber || reservation.id;
-    const itineraryUrl = `${window.location.origin}/documents/itinerary/${reservationNumber}`;
-    const contractUrl = `${window.location.origin}/documents/contract/${reservationNumber}`;
+    const documentReservationId = reservation.id;
+    const itineraryUrl = `${window.location.origin}/documents/itinerary/${documentReservationId}`;
+    const contractUrl = `${window.location.origin}/documents/contract/${documentReservationId}`;
     const selectedTemplate = templatesList.find((t: any) => t.id === editForm.itineraryTemplateId);
     const itineraryReady = !!editForm.itineraryTemplateId;
     const contractTravelers = editForm.contractData?.travelers || [];
@@ -554,7 +555,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             await sendNotificationEmail(reservation.email, 'ITINERARY_READY', {
                 customerName: reservation.customerName,
                 productName: reservation.productName,
-                reservationId: reservationNumber,
+                reservationId: documentReservationId,
                 reservationDbId: reservation.id,
                 reservationNumber,
                 userId: reservation.userId,
@@ -580,7 +581,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             await sendNotificationEmail(reservation.email, 'CONTRACT_READY', {
                 customerName: reservation.customerName,
                 productName: reservation.productName,
-                reservationId: reservationNumber,
+                reservationId: documentReservationId,
                 reservationDbId: reservation.id,
                 reservationNumber,
                 userId: reservation.userId,
@@ -618,7 +619,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 send: () => sendNotificationEmail(reservation.email!, 'ITINERARY_READY', {
                     customerName: reservation.customerName,
                     productName: reservation.productName,
-                    reservationId: reservationNumber,
+                    reservationId: documentReservationId,
                     reservationDbId: reservation.id,
                     reservationNumber,
                     userId: reservation.userId,
@@ -635,7 +636,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 send: () => sendNotificationEmail(reservation.email!, 'CONTRACT_READY', {
                     customerName: reservation.customerName,
                     productName: reservation.productName,
-                    reservationId: reservationNumber,
+                    reservationId: documentReservationId,
                     reservationDbId: reservation.id,
                     reservationNumber,
                     userId: reservation.userId,
@@ -1042,7 +1043,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                     guideName: reservation.assignedGuide?.name,
                                                     guidePhone: reservation.assignedGuide?.phone,
                                                     userId: reservation.userId,
-                                                    reservationId: reservationNumber,
+                                                    reservationId: documentReservationId,
                                                     reservationDbId: reservation.id,
                                                 });
                                             } catch (e) { console.error('GUIDE_ASSIGNED email failed', e); }

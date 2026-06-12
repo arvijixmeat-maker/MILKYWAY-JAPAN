@@ -233,8 +233,9 @@ export const Payment: React.FC = () => {
                     {
                         customerName: newReservation.customer_info.name,
                         productName: newReservation.product_name,
-                        reservationId: reservationNumber,
+                        reservationId,
                         reservationDbId: reservationId,
+                        reservationNumber,
                         userId: me.id,
                         depositAmount: formatPrice(newReservation.price_breakdown.deposit),
                         customerPhone: newReservation.customer_info.phone,

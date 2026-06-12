@@ -7,6 +7,12 @@ type Env = {
 const app = new Hono<{ Bindings: Env }>();
 
 const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const findPublicReservation = async (db: any, reservationId: string) => {
+    if (!UUID_PATTERN.test(reservationId)) return null;
+    return db.prepare('SELECT * FROM reservations WHERE id = ?').bind(reservationId).first();
+};
 
 const parseNestedJson = (value: any, fallback: any = null, maxDepth = 2) => {
     if (!value) return fallback;
@@ -37,9 +43,7 @@ app.get('/itinerary/:reservationId', async (c) => {
     const reservationId = c.req.param('reservationId');
     const db = c.env.DB;
 
-    const reservation = await db.prepare(
-        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
-    ).bind(reservationId, reservationId).first();
+    const reservation = await findPublicReservation(db, reservationId);
 
     if (!reservation) {
         return c.json({ error: 'Reservation not found' }, 404);
@@ -137,9 +141,7 @@ app.get('/contract/:reservationId', async (c) => {
     const reservationId = c.req.param('reservationId');
     const db = c.env.DB;
 
-    const reservation = await db.prepare(
-        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
-    ).bind(reservationId, reservationId).first();
+    const reservation = await findPublicReservation(db, reservationId);
 
     if (!reservation) {
         return c.json({ error: 'Reservation not found' }, 404);
@@ -222,9 +224,7 @@ app.post('/contract/:reservationId/customer', async (c) => {
     const reservationId = c.req.param('reservationId');
     const db = c.env.DB;
 
-    const reservation: any = await db.prepare(
-        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
-    ).bind(reservationId, reservationId).first();
+    const reservation: any = await findPublicReservation(db, reservationId);
 
     if (!reservation) {
         return c.json({ error: 'Reservation not found' }, 404);

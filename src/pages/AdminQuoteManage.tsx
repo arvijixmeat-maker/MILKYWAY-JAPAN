@@ -141,7 +141,8 @@ export const AdminQuoteManage: React.FC = () => {
                     : (selectedRequest.document_content || null),
             });
 
-            const reservationNumber = newReservation.reservationNumber || newReservation.id?.slice(0, 8);
+            const reservationId = newReservation.id;
+            const reservationNumber = newReservation.reservationNumber || reservationId?.slice(0, 8);
 
             // 3. 견적 상태 → converted
             const requestId = selectedRequest.id;
@@ -162,7 +163,9 @@ export const AdminQuoteManage: React.FC = () => {
                     {
                         customerName: selectedRequest.name,
                         productName: `${selectedRequest.destination} 맞춤견적 (${durationText})`,
-                        reservationId: reservationNumber,
+                        reservationId,
+                        reservationDbId: reservationId,
+                        reservationNumber,
                         depositAmount: `¥${data.deposit.toLocaleString()}`,
                         customerPhone: selectedRequest.phone,
                         customerEmail: selectedRequest.email,

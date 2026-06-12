@@ -199,7 +199,7 @@ app.post('/', async (c) => {
                     tplPaymentConfirmed({
                         customerName: reservation.customerName,
                         reservationNumber: reservation.reservationNumber || invoiceNumber,
-                        reservationId: reservation.reservationNumber || invoiceNumber,
+                        reservationId: reservation.id,
                         reservationDbId: reservation.id,
                         productName: reservation.productName,
                         paymentAmount,
