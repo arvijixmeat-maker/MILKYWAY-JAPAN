@@ -225,21 +225,28 @@ export const Payment: React.FC = () => {
                 }
             }
 
-            // Send Email Notification
-            await sendNotificationEmail(
-                newReservation.customer_info.email,
-                'RESERVATION_REQUESTED',
-                {
-                    customerName: newReservation.customer_info.name,
-                    productName: newReservation.product_name,
-                    reservationId: reservationNumber,
-                    depositAmount: formatPrice(newReservation.price_breakdown.deposit),
-                    customerPhone: newReservation.customer_info.phone,
-                    customerEmail: newReservation.customer_info.email,
-                    totalAmount: formatPrice(newReservation.price_breakdown.total),
-                    localAmount: formatPrice(newReservation.price_breakdown.local),
-                }
-            );
+            // The reservation is already persisted at this point. Notification
+            // failures must not turn a successful booking into a customer-facing error.
+            try {
+                await sendNotificationEmail(
+                    newReservation.customer_info.email,
+                    'RESERVATION_REQUESTED',
+                    {
+                        customerName: newReservation.customer_info.name,
+                        productName: newReservation.product_name,
+                        reservationId: reservationNumber,
+                        reservationDbId: reservationId,
+                        userId: me.id,
+                        depositAmount: formatPrice(newReservation.price_breakdown.deposit),
+                        customerPhone: newReservation.customer_info.phone,
+                        customerEmail: newReservation.customer_info.email,
+                        totalAmount: formatPrice(newReservation.price_breakdown.total),
+                        localAmount: formatPrice(newReservation.price_breakdown.local),
+                    }
+                );
+            } catch (notificationError) {
+                console.error('Reservation created, but notification email failed:', notificationError);
+            }
 
             // Proceed to reservation complete
             navigate('/reservation-complete', { state: { reservationId }, replace: true });
@@ -261,7 +268,7 @@ export const Payment: React.FC = () => {
                 if (sbError.hint) errorDetails += `\nHint: ${sbError.hint}`;
             }
 
-            alert(`${t('payment.messages.save_failed')}${errorMessage}${errorDetails}`);
+            alert(`${t('payment.messages.save_failed')}\n${errorMessage}${errorDetails}`);
         }
     };
 

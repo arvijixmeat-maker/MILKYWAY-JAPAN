@@ -5,6 +5,7 @@ interface Env {
     PAYPAL_CLIENT_ID: string;
     PAYPAL_SECRET_KEY: string;
     PAYPAL_BUSINESS_EMAIL: string;
+    PAYPAL_ENVIRONMENT?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -35,8 +36,16 @@ app.get('/', async (c) => {
             reservationNumber: `MN-TEST-${Date.now()}`,
             productName: 'テストツアー',
             depositAmount: 1000,
+            environment: c.env.PAYPAL_ENVIRONMENT,
         });
-        return c.json({ success: true, invoiceId: result.invoiceId, clientIdPreview, secretPreview });
+        return c.json({
+            success: true,
+            invoiceId: result.invoiceId,
+            invoiceNumber: result.invoiceNumber,
+            environment: c.env.PAYPAL_ENVIRONMENT || 'live',
+            clientIdPreview,
+            secretPreview,
+        });
     } catch (e: any) {
         return c.json({ success: false, error: e.message, clientIdPreview, secretPreview }, 500);
     }

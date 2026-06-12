@@ -446,10 +446,24 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                         <span>現地お支払い残金 <small className="font-semibold text-slate-400">（ご到着後にお支払い）</small></span><b style={{ color: DOC_BLUE }}>¥{sampleLocal.toLocaleString()}</b>
                                     </div>
                                     <div className="flex items-center justify-between gap-3 px-4 py-3 text-[13px] font-bold" style={{ color: DOC_NAVY }}>
-                                        <span>基準料金 <small className="font-semibold text-slate-400">（お一人様・円）</small></span>
-                                        <div className="w-[130px] flex-none">
-                                            <input value={settings.overview.pricePerPerson} onChange={e => onDocSection('overview', { pricePerPerson: e.target.value })} placeholder="128000" className={`${fieldClass} text-right text-[13px] font-black text-[#1656D6]`} />
-                                        </div>
+                                        {customer?.totalAmount ? (
+                                            <>
+                                                <span>お一人様あたり</span>
+                                                <b className="text-[13px] font-black text-[#1656D6]">¥{samplePrice.toLocaleString()}</b>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>基準料金 <small className="font-semibold text-slate-400">（お一人様・円）</small></span>
+                                                <div className="w-[130px] flex-none">
+                                                    <input
+                                                        value={settings.overview.pricePerPerson ? Number(settings.overview.pricePerPerson.replace(/[^\d]/g, '')).toLocaleString() : ''}
+                                                        onChange={e => onDocSection('overview', { pricePerPerson: e.target.value.replace(/[^\d]/g, '') })}
+                                                        placeholder="128,000"
+                                                        className={`${fieldClass} text-right text-[13px] font-black text-[#1656D6]`}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>

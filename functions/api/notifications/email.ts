@@ -154,6 +154,37 @@ function tplReservationRequested(data: any) {
 ${footer()}`);
 }
 
+export function tplPaymentConfirmed(data: any) {
+    return baseLayout('ご予約金のご入金を確認いたしました。今後の手配についてご案内します。', `
+<div class="header">
+  <p class="brand">Milkyway Japan</p>
+  <h1>ご予約金のご入金を確認いたしました</h1>
+</div>
+<div class="body">
+  <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
+  <p>ご予約金のお支払いを確認いたしました。ありがとうございます。ご旅行の現地手配を順次進めてまいります。</p>
+  <div class="panel">
+    <p class="panel-title">ご入金内容</p>
+    <table>${fieldRows([
+        ['予約番号', data.reservationNumber || data.reservationId],
+        ['ツアー名', data.productName],
+        ['ご入金額', money(data.paymentAmount)],
+        ['現地お支払い予定額', money(data.balanceAmount)],
+    ])}</table>
+  </div>
+  <div class="notice">
+    <strong>今後の流れ</strong>
+    <ol class="steps">
+      <li>宿泊、車両、ガイドなどの現地手配を進めます。</li>
+      <li>確定日程表と海外旅行契約書を順番にご案内します。</li>
+      <li>残金のお支払い方法と期限は、ご出発前に改めてご案内します。</li>
+    </ol>
+  </div>
+  ${cta('予約状況を確認する', `${SITE_URL}/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}`)}
+</div>
+${footer()}`);
+}
+
 function tplAdminNewReservation(data: any) {
     return baseLayout('新しい予約が入りました。管理画面で内容を確認してください。', `
 <div class="header">
@@ -343,6 +374,11 @@ app.post('/', async (c) => {
                 adminHtml = tplAdminNewReservation({ ...data, customerEmail: to });
                 break;
 
+            case 'PAYMENT_CONFIRMED':
+                subject = `【ご入金確認】${data.productName || 'モンゴル旅行'}の予約金を確認しました | Milkyway Japan`;
+                html = tplPaymentConfirmed(data);
+                break;
+
             case 'QUOTE_RECEIVED':
                 subject = '【見積り受付】ご相談ありがとうございます | Milkyway Japan';
                 html = tplQuoteReceived(data);
@@ -390,13 +426,14 @@ app.post('/', async (c) => {
                 type === 'CONTRACT_READY' ? '海外旅行契約書をご用意しました。内容をご確認ください。' :
                 type === 'GUIDE_ASSIGNED' ? '担当ガイドと現地手配情報をご案内しました。' :
                 type === 'RESERVATION_REQUESTED' ? 'ご予約リクエストを受け付けました。' :
+                type === 'PAYMENT_CONFIRMED' ? 'ご予約金のご入金を確認しました。現地手配を進めます。' :
                 type === 'QUOTE_RECEIVED' ? 'お見積りリクエストを受け付けました。' :
                 type === 'ESTIMATE_COMPLETED' ? 'お見積りが完成しました。内容をご確認ください。' : '';
             const link =
                 type === 'ITINERARY_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/itinerary/${data.reservationId || ''}`) :
                 type === 'CONTRACT_READY' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : `/documents/contract/${data.reservationId || ''}`) :
                 type === 'ESTIMATE_COMPLETED' ? `/estimate/${data.quoteId || data.reservationId || ''}` :
-                type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : '/mypage/reservations') :
+                type === 'GUIDE_ASSIGNED' || type === 'RESERVATION_REQUESTED' || type === 'PAYMENT_CONFIRMED' ? (data.reservationDbId ? `/mypage/reservations/${data.reservationDbId}` : '/mypage/reservations') :
                 type === 'QUOTE_RECEIVED' ? '/mypage/estimates' : undefined;
 
             await createNotification(c.env.DB, {

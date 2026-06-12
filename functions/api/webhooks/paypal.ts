@@ -2,18 +2,30 @@ import { Hono } from 'hono';
 import { drizzle } from 'drizzle-orm/d1';
 import { reservations } from '../../../src/db/schema/reservations';
 import { eq } from 'drizzle-orm';
+import { sendEmail } from '../../lib/mailer';
+import { createNotification } from '../notifications/index';
+import { tplPaymentConfirmed } from '../notifications/email';
 
 interface Env {
     DB: D1Database;
     PAYPAL_CLIENT_ID: string;
     PAYPAL_SECRET_KEY: string;
     PAYPAL_WEBHOOK_ID: string;
+    PAYPAL_ENVIRONMENT?: string;
+    RESEND_API_KEY: string;
 }
 
-const PAYPAL_API = 'https://api-m.paypal.com';
+const PAYPAL_LIVE_API = 'https://api-m.paypal.com';
+const PAYPAL_SANDBOX_API = 'https://api-m.sandbox.paypal.com';
 
-async function getAccessToken(clientId: string, secret: string): Promise<string> {
-    const res = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
+function getPayPalApi(environment?: string): string {
+    return environment?.toLowerCase() === 'sandbox'
+        ? PAYPAL_SANDBOX_API
+        : PAYPAL_LIVE_API;
+}
+
+async function getAccessToken(apiBase: string, clientId: string, secret: string): Promise<string> {
+    const res = await fetch(`${apiBase}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
             Authorization: `Basic ${btoa(`${clientId}:${secret}`)}`,
@@ -27,6 +39,7 @@ async function getAccessToken(clientId: string, secret: string): Promise<string>
 }
 
 async function verifyWebhookSignature(
+    apiBase: string,
     clientId: string,
     secret: string,
     webhookId: string,
@@ -34,8 +47,8 @@ async function verifyWebhookSignature(
     body: any,
 ): Promise<boolean> {
     try {
-        const token = await getAccessToken(clientId, secret);
-        const res = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
+        const token = await getAccessToken(apiBase, clientId, secret);
+        const res = await fetch(`${apiBase}/v1/notifications/verify-webhook-signature`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -82,6 +95,7 @@ app.post('/', async (c) => {
         };
 
         const valid = await verifyWebhookSignature(
+            getPayPalApi(c.env.PAYPAL_ENVIRONMENT),
             c.env.PAYPAL_CLIENT_ID,
             c.env.PAYPAL_SECRET_KEY,
             c.env.PAYPAL_WEBHOOK_ID,
@@ -105,31 +119,129 @@ app.post('/', async (c) => {
         }
 
         const db = drizzle(c.env.DB);
-        const reservation = await db
+        let reservation = await db
             .select()
             .from(reservations)
             .where(eq(reservations.reservationNumber, invoiceNumber))
             .get();
 
+        // Duplicate invoice recovery appends a short suffix to the PayPal
+        // invoice number. Resolve that payment back to the original booking.
+        if (!reservation) {
+            const suffixedNumber = invoiceNumber.match(/^(MN\d+)-[A-Z0-9]{6}$/i);
+            if (suffixedNumber) {
+                reservation = await db
+                    .select()
+                    .from(reservations)
+                    .where(eq(reservations.reservationNumber, suffixedNumber[1]))
+                    .get();
+            }
+        }
+
         if (reservation) {
-            const history: any[] = reservation.history ? JSON.parse(reservation.history) : [];
-            history.push({
-                type: 'payment_confirmed',
-                date: new Date().toISOString(),
-                source: 'paypal_webhook',
-                eventId: event.id,
-            });
+            let history: any[] = [];
+            try {
+                history = reservation.history ? JSON.parse(reservation.history) : [];
+            } catch {
+                history = [];
+            }
+
+            if (event.id && history.some((item) => item.type === 'payment_confirmation_email_sent' && item.eventId === event.id)) {
+                return c.json({ received: true, note: 'duplicate event' });
+            }
+
+            const confirmedAt = new Date().toISOString();
+            const paymentAlreadyRecorded = event.id
+                ? history.some((item) => item.type === 'payment_confirmed' && item.eventId === event.id)
+                : false;
+            if (!paymentAlreadyRecorded) {
+                history.push({
+                    type: 'payment_confirmed',
+                    date: confirmedAt,
+                    source: 'paypal_webhook',
+                    eventId: event.id,
+                });
+            }
 
             await db
                 .update(reservations)
                 .set({
                     status: 'confirmed',
+                    depositStatus: 'paid',
                     history: JSON.stringify(history),
                 })
                 .where(eq(reservations.id, reservation.id))
                 .run();
 
             console.log(`[PayPal Webhook] Confirmed reservation ${invoiceNumber}`);
+
+            const rawPaymentAmount =
+                event.resource?.amount?.value
+                ?? event.resource?.payment_amount?.value
+                ?? event.resource?.detail?.payment_amount?.value;
+            const parsedPaymentAmount = Number(rawPaymentAmount);
+            const paymentAmount = Number.isFinite(parsedPaymentAmount)
+                ? parsedPaymentAmount
+                : (reservation.depositAmount || 0);
+
+            try {
+                if (!c.env.RESEND_API_KEY) {
+                    throw new Error('RESEND_API_KEY not set');
+                }
+                if (!reservation.customerEmail) {
+                    throw new Error('Customer email is missing');
+                }
+
+                await sendEmail(
+                    c.env.RESEND_API_KEY,
+                    reservation.customerEmail,
+                    `【ご入金確認】${reservation.productName || 'モンゴル旅行'}の予約金を確認しました | Milkyway Japan`,
+                    tplPaymentConfirmed({
+                        customerName: reservation.customerName,
+                        reservationNumber: reservation.reservationNumber || invoiceNumber,
+                        reservationId: reservation.reservationNumber || invoiceNumber,
+                        reservationDbId: reservation.id,
+                        productName: reservation.productName,
+                        paymentAmount,
+                        balanceAmount: reservation.balanceAmount || 0,
+                    }),
+                );
+
+                history.push({
+                    type: 'payment_confirmation_email_sent',
+                    date: new Date().toISOString(),
+                    recipient: reservation.customerEmail,
+                    eventId: event.id,
+                });
+            } catch (emailError: any) {
+                console.error(`[PayPal Webhook] Payment confirmation email failed for ${invoiceNumber}:`, emailError);
+                history.push({
+                    type: 'payment_confirmation_email_failed',
+                    date: new Date().toISOString(),
+                    reason: emailError?.message || String(emailError),
+                    eventId: event.id,
+                });
+            }
+
+            if (reservation.userId) {
+                await createNotification(c.env.DB, {
+                    userId: reservation.userId,
+                    type: 'reservation',
+                    title: 'ご予約金の入金を確認しました',
+                    message: 'ご予約金のご入金を確認しました。現地手配を進めます。',
+                    link: `/mypage/reservations/${reservation.id}`,
+                });
+            }
+
+            try {
+                await db
+                    .update(reservations)
+                    .set({ history: JSON.stringify(history) })
+                    .where(eq(reservations.id, reservation.id))
+                    .run();
+            } catch (historyError) {
+                console.error(`[PayPal Webhook] Failed to record notification history for ${invoiceNumber}:`, historyError);
+            }
         } else {
             console.warn(`[PayPal Webhook] Reservation not found for invoice ${invoiceNumber}`);
         }
