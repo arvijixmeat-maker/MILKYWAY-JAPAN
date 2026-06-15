@@ -62,6 +62,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const [products, setProducts] = useState<TourProduct[]>([]);
     const [selectedProductId, setSelectedProductId] = useState('');
     const [loadingProducts, setLoadingProducts] = useState(false);
+    // 예약 상품 일정을 자동으로 불러왔을 때 안내 배너에 표시할 상품명
+    const [autoLoadedName, setAutoLoadedName] = useState<string | null>(null);
     // 마스터 픽커 — 관광지(항목 채움) / 호텔(일차 숙박정보 채움)
     const [spotTarget, setSpotTarget] = useState<{ d: number; a: number } | null>(null);
     const [hotelDayIdx, setHotelDayIdx] = useState<number | null>(null);
@@ -73,6 +75,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         setDays(Array.isArray(initialContent?.days) ? initialContent!.days : []);
         setDocSettings(mergeDocumentSettings(initialContent?.documentSettings));
         setSelectedDayIndex(0);
+        setAutoLoadedName(null);
     }, [open, initialContent]);
 
     useEffect(() => {
@@ -111,7 +114,14 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     const bStats = getProductScheduleStats(b);
                     return (bStats.days * 1000 + bStats.activities) - (aStats.days * 1000 + aStats.activities);
                 })[0];
-                if (matched) setSelectedProductId(matched.id);
+                if (matched) {
+                    setSelectedProductId(matched.id);
+                    // 예약 일정표를 처음 여는 경우(저장된 문서 없음) 예약 상품 일정을 자동으로 불러옴
+                    const freshDoc = !initialContent || !Array.isArray(initialContent.days) || initialContent.days.length === 0;
+                    if (!templateMode && documentType === 'itinerary' && freshDoc && getProductScheduleStats(matched).days > 0) {
+                        applyProduct(matched, { auto: true });
+                    }
+                }
             })
             .finally(() => setLoadingProducts(false));
     }, [open, documentType, customer?.tripType, products.length]);
@@ -177,15 +187,15 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         return converted;
     };
 
-    const importSelectedProduct = () => {
-        const product = products.find(item => item.id === selectedProductId);
-        if (!product) return;
+    // 상품의 일정·포함/불포함·가격을 편집기에 적용. auto=true 면 빈 일정일 때만 조용히 적용(경고·확인창 없음)
+    const applyProduct = (product: TourProduct, opts?: { auto?: boolean }) => {
         const importedDays = productBlocksToDays(product.itineraryBlocks || []);
-        if (importedDays.length === 0 || importedDays.every(day => !day.title && !day.summary && day.activities.length === 0)) {
-            window.alert('이 상품은 예전 이미지형 일정만 등록되어 있어 DAY 일정으로 불러올 수 없습니다. 목록에서 DAY 개수가 표시된 동일 이름 상품을 선택해 주세요.');
+        const isEmpty = importedDays.length === 0 || importedDays.every(day => !day.title && !day.summary && day.activities.length === 0);
+        if (isEmpty) {
+            if (!opts?.auto) window.alert('이 상품은 예전 이미지형 일정만 등록되어 있어 DAY 일정으로 불러올 수 없습니다. 목록에서 DAY 개수가 표시된 동일 이름 상품을 선택해 주세요.');
             return;
         }
-        if (days.length > 0 && !window.confirm('현재 작성 중인 일정과 문서 설정을 상품 정보로 교체할까요?')) return;
+        if (!opts?.auto && days.length > 0 && !window.confirm('현재 작성 중인 일정과 문서 설정을 상품 정보로 교체할까요?')) return;
         const included = (product.included || []).map(textFromProductItem).filter(Boolean);
         const excluded = (product.excluded || []).map(textFromProductItem).filter(Boolean);
         const defaultPricing = product.pricingOptions?.find(option => option.people === customer?.peopleCount)
@@ -215,6 +225,14 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     : current.guide.paymentInfo,
             },
         }));
+        if (opts?.auto) setAutoLoadedName(product.name || customer?.tripType || '예약 상품');
+    };
+
+    const importSelectedProduct = () => {
+        const product = products.find(item => item.id === selectedProductId);
+        if (!product) return;
+        setAutoLoadedName(null);
+        applyProduct(product, { auto: false });
     };
 
     // ── Day / activity 핸들러 ──
@@ -341,6 +359,15 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     <span className="material-symbols-outlined text-[16px]">tips_and_updates</span>
                     <span>문서를 클릭해서 수정하고, 상단에서 담당 가이드와 일자별 숙소를 배정하면 일정표·계약서에 함께 반영됩니다.</span>
                 </div>}
+                {autoLoadedName && (
+                    <div className="flex flex-shrink-0 items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-6 py-2 text-xs font-bold text-emerald-700">
+                        <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                        <span>예약 상품 「{autoLoadedName}」의 일정을 자동으로 불러왔습니다 — <b>항공편 시간 등만 조정</b>하고 저장하세요.</span>
+                        <button onClick={() => setAutoLoadedName(null)} className="ml-auto text-emerald-400 hover:text-emerald-600">
+                            <span className="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                    </div>
+                )}
                 <div className="flex-1 overflow-hidden bg-[#F5F7FA] dark:bg-slate-900">
                     {(
                     <div className="grid h-full grid-cols-[240px_minmax(560px,1fr)_280px] overflow-hidden max-xl:grid-cols-[210px_minmax(520px,1fr)] max-lg:block max-lg:overflow-y-auto">
