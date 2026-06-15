@@ -479,7 +479,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const itineraryUrl = `${window.location.origin}/documents/itinerary/${reservationNumber}`;
     const contractUrl = `${window.location.origin}/documents/contract/${reservationNumber}`;
     const selectedTemplate = templatesList.find((t: any) => t.id === editForm.itineraryTemplateId);
-    const itineraryReady = !!editForm.itineraryTemplateId;
+    // 일정표 준비됨 = 템플릿 선택 OR 편집기로 직접 작성·저장된 문서 보유
+    const itineraryReady = !!editForm.itineraryTemplateId || !!reservation.documentContent;
     const contractTravelers = editForm.contractData?.travelers || [];
     const contractHasTravelers = contractTravelers.length > 0 && !!contractTravelers[0]?.name;
     // 고객이 계약서에서 직접 여행자 정보를 작성하므로, 이메일만 있으면 발송 가능
@@ -699,10 +700,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         },
         {
             title: '일정표',
-            description: itinerarySent ? '고객 발송 완료' : itineraryReady ? `${selectedTemplate?.name || '선택한 템플릿'} 발송 가능` : '일정표 템플릿 선택 필요',
+            description: itinerarySent ? '고객 발송 완료' : itineraryReady ? `${selectedTemplate?.name || (reservation.documentContent ? '작성된 문서' : '선택한 템플릿')} 발송 가능` : '템플릿 선택 또는 문서 작성 필요',
             icon: 'map',
             done: itinerarySent,
-            actionLabel: itineraryReady ? '문서 확인' : '템플릿 필요',
+            actionLabel: itineraryReady ? '문서 확인' : '일정표 작성',
             onAction: () => setActiveDocument('itinerary'),
         },
         {
