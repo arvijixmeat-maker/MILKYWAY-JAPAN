@@ -215,3 +215,19 @@ img {
         bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
+
+/* LINE quick-chat floating button (FloatingConsultation) — stacks directly ABOVE the
+   Channel Talk launcher so the two never overlap.
+   Launcher: ~54px tall, sits at bottom:24px (desktop) / bottom:100px (mobile, see above).
+   So offset = launcher-bottom + launcher-height(54) + gap(14). */
+.floating-line-btn {
+    position: fixed;
+    right: 20px;
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    z-index: 9999;
+}
+@media (max-width: 768px) {
+    .floating-line-btn {
+        bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+    }
+}
