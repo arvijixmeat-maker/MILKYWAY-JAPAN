@@ -528,6 +528,21 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         }
         return null;
     })();
+    // 일자별 숙소 배정이 비어 있어도 일정표에는 "상품 일정의 기본 숙소"가 적용된다.
+    // 그 기본 숙소(문서/템플릿 일자 숙소)를 빈 칸에 회색으로 보여줘 혼동을 없앤다.
+    const defaultAccomForDay = (day: number): { name?: string; location?: string; images?: string[] } | null => {
+        const days = (docInitialContent?.days as any[] | undefined);
+        if (!days || !days.length) return null;
+        const d = days.find((x: any) => Number(x?.day) === day) || days[day - 1];
+        const acc = d?.accommodation;
+        if (!acc) return null;
+        if (typeof acc === 'string') return { name: acc };
+        return {
+            name: acc.name,
+            location: acc.location,
+            images: Array.isArray(acc.images) ? acc.images : (acc.images ? [acc.images] : []),
+        };
+    };
     const saveDocContent = async (content: ReservationDocContent) => {
         const payload = { document_content: JSON.stringify(content) };
         if (isQuoteRes) await (api.quotes as any).update(reservation.id, payload);
@@ -1109,6 +1124,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     </button>
                                 </div>
                                 <div className="card-pad" style={{ paddingTop: 12 }}>
+                                    <p className="cell-muted" style={{ fontSize: 11.5, marginBottom: 10, lineHeight: 1.5 }}>
+                                        비워두면 <b>상품 일정의 기본 숙소</b>가 그대로 일정표에 적용됩니다. 실제 묵을 숙소를 확정하려면 날짜별로 「직접 지정」하세요.
+                                    </p>
                                     <div className="stack" style={{ gap: 8 }}>
                                         {Array.from({ length: tripDays }, (_, i) => i + 1).map((day) => {
                                             const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
@@ -1128,11 +1146,35 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                             </div>
                                                             <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
                                                         </div>
-                                                    ) : (
-                                                        <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
-                                                            <Icon name="add" />숙소 선택
-                                                        </button>
-                                                    )}
+                                                    ) : (() => {
+                                                        const def = defaultAccomForDay(day);
+                                                        if (def?.name) {
+                                                            return (
+                                                                <div className="assign-row" style={{ flex: 1, padding: 0 }}>
+                                                                    {def.images && def.images[0] ? (
+                                                                        <img className="thumb" src={def.images[0]} alt={def.name} loading="lazy" style={{ opacity: 0.7 }} />
+                                                                    ) : (
+                                                                        <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
+                                                                    )}
+                                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                                        <div className="cell-strong" style={{ color: 'var(--mrt-gray-500)' }}>
+                                                                            {def.name}
+                                                                            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'var(--mrt-gray-100)', color: 'var(--mrt-gray-500)' }}>상품 기본</span>
+                                                                        </div>
+                                                                        <div className="cell-muted" style={{ fontSize: 12 }}>{def.location || '일정표에 적용 중 · 비워두면 이대로 발송'}</div>
+                                                                    </div>
+                                                                    <button className="btn btn-sm btn-ghost" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
+                                                                        <Icon name="edit" />직접 지정
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
+                                                                <Icon name="add" />숙소 선택
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             );
                                         })}
