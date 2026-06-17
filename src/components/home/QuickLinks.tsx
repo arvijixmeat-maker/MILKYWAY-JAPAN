@@ -19,9 +19,21 @@ interface QuickLink {
     path: string;
 }
 
+// 회사 LINE 공식계정 채팅 링크 (Footer와 동일)
+const LINE_CHAT_URL = 'https://line.me/ti/p/2mQyucsGcT';
+
 export const QuickLinks: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+
+    // 퀵메뉴 클릭 — 외부 URL/전화/채널톡은 채팅을 바로 열고, 나머지는 라우팅
+    const handleClick = (path?: string) => {
+        const p = (path || '').trim();
+        if (!p || p === '#') return;
+        if (/^(https?:|tel:|mailto:)/i.test(p)) { window.open(p, '_blank', 'noopener,noreferrer'); return; }
+        if (p === 'channeltalk' || p === 'channel-talk') { window.openChannelTalk?.(); return; }
+        navigate(p);
+    };
 
     const DEFAULT_LINKS: QuickLink[] = useMemo(() => [
         { id: 'link-1', icon: 'grid_view', image: productsIcon, label: t('home.quick_links.products'), path: '/products' },
@@ -56,13 +68,23 @@ export const QuickLinks: React.FC = () => {
         gcTime: 1000 * 60 * 60 * 24,
     });
 
+    // LINE 상담 바로가기 — 이미 등록돼 있지 않으면 마지막에 추가 (누르면 LINE 채팅 바로 열림)
+    const displayLinks = useMemo(() => {
+        const hasLine = links.some((l) => /line\.(me|ee)|lin\.ee/i.test(String(l.path || '')));
+        if (hasLine) return links;
+        return [
+            ...links,
+            { id: 'link-line', icon: 'chat', image: '/assets/icons/line.webp', label: t('home.quick_links.line', 'LINEで相談'), path: LINE_CHAT_URL },
+        ];
+    }, [links, t]);
+
     return (
         <section className="px-5 py-2 mb-6 relative group">
             <div className="grid grid-cols-3 gap-4">
-                {links.map((link) => (
+                {displayLinks.map((link) => (
                     <button
                         key={link.id}
-                        onClick={() => link.path !== '#' && navigate(link.path)}
+                        onClick={() => handleClick(link.path)}
                         className={`flex flex-col items-center gap-2 group relative`}
                     >
                         <div className="w-16 h-16 flex items-center justify-center group-active:scale-95 transition-all overflow-hidden p-2">
