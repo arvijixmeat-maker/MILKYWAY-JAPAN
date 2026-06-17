@@ -483,6 +483,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const itineraryReady = !!editForm.itineraryTemplateId || !!reservation.documentContent;
     const contractTravelers = editForm.contractData?.travelers || [];
     const contractHasTravelers = contractTravelers.length > 0 && !!contractTravelers[0]?.name;
+    const contractAgreement = editForm.contractData?.agreement;
+    // 고객이 계약서에서 직접 제출한 내용(여권·항공편·동의)이 있으면 이 페이지에 바로 요약 표시
+    const contractSubmitted = contractHasTravelers || !!editForm.contractData?.customerSubmittedAt;
+    const fmtFlightLine = (f?: { date?: string; time?: string; flight?: string }) => {
+        const parts = [f?.date, f?.time, f?.flight].filter(Boolean);
+        return parts.length ? parts.join(' · ') : '미입력';
+    };
     // 고객이 계약서에서 직접 여행자 정보를 작성하므로, 이메일만 있으면 발송 가능
     const contractReady = !!reservation.email;
     const itinerarySent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === itineraryUrl || String(e.description || '').includes('日程')));
@@ -878,6 +885,53 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 </div>
                             </div>
                         </div>
+
+                        {/* 고객이 계약서에서 직접 작성·제출한 내용(여권·항공편·동의)을 이 페이지에 바로 표시 */}
+                        {contractSubmitted && (
+                            <div className="card" style={{ marginTop: 14 }}>
+                                <div className="card-head">
+                                    <Icon name="assignment_ind" style={{ color: 'var(--mrt-gray-600)' }} />
+                                    <h2>고객 제출 정보</h2>
+                                    {contractAgreement?.agreed
+                                        ? <span className="badge b-green" style={{ marginLeft: 'auto' }}>동의 완료{contractAgreement.agreedAt ? ` · ${contractAgreement.agreedAt.split('T')[0]}` : ''}</span>
+                                        : <span className="badge b-amber" style={{ marginLeft: 'auto' }}>미동의</span>}
+                                </div>
+                                <div className="card-pad" style={{ paddingTop: 14 }}>
+                                    {/* 항공편 — 송영 手配용, 가장 중요 */}
+                                    <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                                        <div className="pay-cell">
+                                            <div className="row" style={{ gap: 6, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                                                <Icon name="flight_land" /><span style={{ fontSize: 12.5, fontWeight: 700 }}>도착편 (몽골 도착)</span>
+                                            </div>
+                                            <div style={{ fontSize: 14, fontWeight: 700 }}>{fmtFlightLine(editForm.contractData?.arrival)}</div>
+                                        </div>
+                                        <div className="pay-cell">
+                                            <div className="row" style={{ gap: 6, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                                                <Icon name="flight_takeoff" /><span style={{ fontSize: 12.5, fontWeight: 700 }}>출발편 (몽골 출발)</span>
+                                            </div>
+                                            <div style={{ fontSize: 14, fontWeight: 700 }}>{fmtFlightLine(editForm.contractData?.departure)}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* 여행자별 여권 정보 */}
+                                    {contractTravelers.map((t, i) => (
+                                        <div key={i} style={{ paddingTop: i ? 10 : 0, marginTop: i ? 10 : 0, borderTop: i ? '1px solid var(--mrt-gray-100)' : 'none' }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4 }}>여행자 {i + 1}</div>
+                                            <div className="kv"><span>여권 표기명</span><b style={{ textTransform: 'uppercase', textAlign: 'right' }}>{t.passportName || '—'}</b></div>
+                                            <div className="kv"><span>이름</span><b style={{ textAlign: 'right' }}>{t.name || '—'}</b></div>
+                                            <div className="kv"><span>생년월일 · 성별</span><b style={{ textAlign: 'right' }}>{[t.birthdate, t.gender].filter(Boolean).join(' · ') || '—'}</b></div>
+                                            <div className="kv" style={{ borderBottom: 'none' }}><span>연락처</span><b style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{t.phone || '—'}</b></div>
+                                        </div>
+                                    ))}
+
+                                    {contractAgreement?.agreed && (
+                                        <div className="kv" style={{ borderBottom: 'none', borderTop: '1px solid var(--mrt-gray-100)', marginTop: 10, paddingTop: 10 }}>
+                                            <span>전자 서명</span><b style={{ textAlign: 'right' }}>{contractAgreement.name || '—'}</b>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </section>
 
                     <section id="sec-pay" style={{ scrollMarginTop: 8 }}>
