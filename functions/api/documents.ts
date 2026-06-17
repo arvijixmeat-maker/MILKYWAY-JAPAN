@@ -246,6 +246,14 @@ app.post('/contract/:reservationId/customer', async (c) => {
             phone: t.phone || '',
         }));
     }
+    // 고객이 입력한 왕복 항공편 정보 병합 — 공항 송영 手配용. 값이 있을 때만 덮어써서 관리자 입력 보존
+    const hasFlight = (f: any) => f && typeof f === 'object' && (f.date || f.time || f.flight);
+    if (hasFlight(body.arrival)) {
+        contractData.arrival = { date: body.arrival.date || '', time: body.arrival.time || '', flight: body.arrival.flight || '' };
+    }
+    if (hasFlight(body.departure)) {
+        contractData.departure = { date: body.departure.date || '', time: body.departure.time || '', flight: body.departure.flight || '' };
+    }
     if (body.agreement && body.agreement.agreed) {
         contractData.agreement = {
             agreed: true,

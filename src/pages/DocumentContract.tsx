@@ -87,6 +87,12 @@ const fmtYen = (n?: number) => {
     return `${n.toLocaleString('ja-JP')}円`;
 };
 
+// 便名 / 時刻 をまとめて表示（例：OM502 / 14:30）
+const flightLine = (f?: { time?: string; flight?: string }) => {
+    const parts = [f?.flight, f?.time].filter(Boolean);
+    return parts.length ? parts.join(' / ') : '-';
+};
+
 const parseMaybeJson = (v: any): string[] => {
     if (!v) return [];
     if (Array.isArray(v)) return v;
@@ -104,6 +110,8 @@ export const DocumentContract: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [formTravelers, setFormTravelers] = useState<Traveler[]>([]);
+    const [arrival, setArrival] = useState<{ date?: string; time?: string; flight?: string }>({});
+    const [departure, setDeparture] = useState<{ date?: string; time?: string; flight?: string }>({});
     const [agreed, setAgreed] = useState(false);
     const [signerName, setSignerName] = useState('');
     const [saving, setSaving] = useState(false);
@@ -138,6 +146,8 @@ export const DocumentContract: React.FC = () => {
             phone: existing[i]?.phone || (i === 0 ? data.reservation.customerPhone : '') || '',
         }));
         setFormTravelers(base);
+        setArrival({ date: c.arrival?.date || '', time: c.arrival?.time || '', flight: c.arrival?.flight || '' });
+        setDeparture({ date: c.departure?.date || '', time: c.departure?.time || '', flight: c.departure?.flight || '' });
         if (c.agreement?.agreed) {
             setAgreed(true);
             setSignerName(c.agreement.name || '');
@@ -155,9 +165,9 @@ export const DocumentContract: React.FC = () => {
         setSaving(true);
         try {
             const agreement = { agreed: true, name: signerName.trim(), agreedAt: new Date().toISOString() };
-            await api.documents.contract.saveCustomer(reservationId, { travelers: formTravelers, agreement });
+            await api.documents.contract.saveCustomer(reservationId, { travelers: formTravelers, arrival, departure, agreement });
             setSaved(true);
-            setData(prev => prev ? { ...prev, contract: { ...prev.contract, travelers: formTravelers, agreement } } as ContractPageData : prev);
+            setData(prev => prev ? { ...prev, contract: { ...prev.contract, travelers: formTravelers, arrival, departure, agreement } } as ContractPageData : prev);
             alert('契約内容を送信しました。');
         } catch (e: any) {
             alert('送信に失敗しました。' + (e.message || ''));
@@ -295,6 +305,51 @@ export const DocumentContract: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* フライト情報（航空券）— 送迎手配のためお客様にご記入いただく */}
+                            <div className="mt-3 rounded-lg border border-slate-200 bg-white p-4">
+                                <div className="mb-1 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[20px] text-[#1656D6]">flight</span>
+                                    <p className="text-sm font-bold text-[#0B1B45]">フライト情報（航空券）</p>
+                                </div>
+                                <p className="mb-3 text-[11px] text-slate-500">空港送迎の手配に使用します。往復のフライト日付・時刻・便名をできるだけ詳しくご記入ください。</p>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="rounded-lg bg-[#F4F8FF] p-3">
+                                        <p className="mb-2 flex items-center gap-1 text-[11px] font-bold text-[#1656D6]"><span className="material-symbols-outlined text-[16px]">flight_land</span>到着便（モンゴル着）</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <label className="block">
+                                                <span className="mb-1 block text-[10px] font-bold text-slate-500">日付</span>
+                                                <input type="date" value={arrival.date || ''} onChange={e => setArrival(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-1 block text-[10px] font-bold text-slate-500">時刻</span>
+                                                <input type="time" value={arrival.time || ''} onChange={e => setArrival(p => ({ ...p, time: e.target.value }))} className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
+                                            </label>
+                                            <label className="col-span-2 block">
+                                                <span className="mb-1 block text-[10px] font-bold text-slate-500">便名</span>
+                                                <input value={arrival.flight || ''} onChange={e => setArrival(p => ({ ...p, flight: e.target.value }))} placeholder="例：OM502（成田→ウランバートル）" className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg bg-[#F4F8FF] p-3">
+                                        <p className="mb-2 flex items-center gap-1 text-[11px] font-bold text-[#1656D6]"><span className="material-symbols-outlined text-[16px]">flight_takeoff</span>出発便（モンゴル発）</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <label className="block">
+                                                <span className="mb-1 block text-[10px] font-bold text-slate-500">日付</span>
+                                                <input type="date" value={departure.date || ''} onChange={e => setDeparture(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
+                                            </label>
+                                            <label className="block">
+                                                <span className="mb-1 block text-[10px] font-bold text-slate-500">時刻</span>
+                                                <input type="time" value={departure.time || ''} onChange={e => setDeparture(p => ({ ...p, time: e.target.value }))} className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
+                                            </label>
+                                            <label className="col-span-2 block">
+                                                <span className="mb-1 block text-[10px] font-bold text-slate-500">便名</span>
+                                                <input value={departure.flight || ''} onChange={e => setDeparture(p => ({ ...p, flight: e.target.value }))} placeholder="例：OM501（ウランバートル→成田）" className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-[#287DFA] focus:outline-none focus:ring-2 focus:ring-[#287DFA]/15" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4">
                                 <label className="flex cursor-pointer items-start gap-2">
                                     <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-1 h-4 w-4 accent-[#287DFA]" />
@@ -374,7 +429,7 @@ export const DocumentContract: React.FC = () => {
                                     </tr>
                                 ))}
                                 <tr><td className="label">到着日</td><td className="value" colSpan={2}>{fmtDate(contract.arrival?.date || reservation.startDate)}</td><td className="label">出発日</td><td className="value" colSpan={3}>{fmtDate(contract.departure?.date || reservation.endDate)}</td></tr>
-                                <tr><td className="label">到着便</td><td className="value" colSpan={2}>{contract.arrival?.flight || '-'}</td><td className="label">出発便</td><td className="value" colSpan={3}>{contract.departure?.flight || '-'}</td></tr>
+                                <tr><td className="label">到着便</td><td className="value" colSpan={2}>{flightLine(contract.arrival)}</td><td className="label">出発便</td><td className="value" colSpan={3}>{flightLine(contract.departure)}</td></tr>
                             </tbody>
                         </table>
 
