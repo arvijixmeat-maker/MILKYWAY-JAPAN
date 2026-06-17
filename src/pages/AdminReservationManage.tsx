@@ -476,8 +476,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const paidPercent = editForm.totalAmount > 0 ? Math.round((paidAmount / editForm.totalAmount) * 100) : 0;
     const getInitials = (name: string) => (name || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const reservationNumber = (reservation as any).reservationNumber || reservation.id;
-    const itineraryUrl = `${window.location.origin}/documents/itinerary/${reservationNumber}`;
-    const contractUrl = `${window.location.origin}/documents/contract/${reservationNumber}`;
+    // 보안: 고객 문서 링크는 추측 가능한 예약번호(MNxxx)가 아닌 UUID(reservation.id)로 생성
+    const itineraryUrl = `${window.location.origin}/documents/itinerary/${reservation.id}`;
+    const contractUrl = `${window.location.origin}/documents/contract/${reservation.id}`;
     const selectedTemplate = templatesList.find((t: any) => t.id === editForm.itineraryTemplateId);
     // 일정표 준비됨 = 템플릿 선택 OR 편집기로 직접 작성·저장된 문서 보유
     const itineraryReady = !!editForm.itineraryTemplateId || !!reservation.documentContent;

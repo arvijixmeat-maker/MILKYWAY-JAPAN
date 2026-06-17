@@ -296,7 +296,8 @@ ${footer()}`);
 }
 
 function tplContractReady(data: any) {
-    const url = data.contractUrl || `${SITE_URL}/documents/contract/${data.reservationId || ''}`;
+    // 보안: 링크는 UUID(reservationDbId)로 — 추측 가능한 예약번호(reservationId=MNxxx)는 URL에 쓰지 않음
+    const url = data.contractUrl || `${SITE_URL}/documents/contract/${data.reservationDbId || ''}`;
     return baseLayout('海外旅行契約書をご用意しました。内容をご確認ください。', `
 <div class="header">
   <p class="brand">Milkyway Japan</p>
@@ -320,7 +321,8 @@ ${footer()}`);
 }
 
 function tplItineraryReady(data: any) {
-    const url = data.itineraryUrl || `${SITE_URL}/documents/itinerary/${data.reservationId || ''}`;
+    // 보안: 링크는 UUID(reservationDbId)로 — 추측 가능한 예약번호(reservationId=MNxxx)는 URL에 쓰지 않음
+    const url = data.itineraryUrl || `${SITE_URL}/documents/itinerary/${data.reservationDbId || ''}`;
     return baseLayout('確定日程表をご用意しました。集合時間、宿泊先、行程をご確認ください。', `
 <div class="header">
   <p class="brand">Milkyway Japan</p>

@@ -211,8 +211,9 @@ export const MyReservationDetail: React.FC = () => {
     const guideSpecialties = parseArr(guide?.specialties);
     const accommodations = reservation.dailyAccommodations || [];
 
-    const itineraryUrl = reservation.itineraryUrl || (reservation.itineraryTemplateId ? `/documents/itinerary/${reservation.reservationNumber || reservation.id}` : '');
-    const contractUrl = reservation.contractUrl || '';
+    // 보안: 문서 링크는 항상 UUID(reservation.id)로 생성. 저장된 itineraryUrl/contractUrl(구 MNxxx 링크일 수 있음)은 "발송됨" 플래그로만 사용
+    const itineraryUrl = (reservation.itineraryUrl || reservation.itineraryTemplateId) ? `/documents/itinerary/${reservation.id}` : '';
+    const contractUrl = reservation.contractUrl ? `/documents/contract/${reservation.id}` : '';
 
     const history = reservation.history || [];
     const visibleHistory = showAllHistory ? [...history].reverse() : [...history].reverse().slice(0, 3);
