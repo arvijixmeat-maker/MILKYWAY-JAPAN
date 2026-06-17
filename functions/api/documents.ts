@@ -38,8 +38,9 @@ app.get('/itinerary/:reservationId', async (c) => {
     const db = c.env.DB;
 
     const reservation = await db.prepare(
-        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
-    ).bind(reservationId, reservationId).first();
+        // 보안: 추측 가능한 예약번호(MNxxx)가 아닌 UUID(reservation.id)로만 조회 — 열거(enumeration) 공격 차단
+        'SELECT * FROM reservations WHERE id = ?'
+    ).bind(reservationId).first();
 
     if (!reservation) {
         return c.json({ error: 'Reservation not found' }, 404);
@@ -138,8 +139,9 @@ app.get('/contract/:reservationId', async (c) => {
     const db = c.env.DB;
 
     const reservation = await db.prepare(
-        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
-    ).bind(reservationId, reservationId).first();
+        // 보안: 추측 가능한 예약번호(MNxxx)가 아닌 UUID(reservation.id)로만 조회 — 열거(enumeration) 공격 차단
+        'SELECT * FROM reservations WHERE id = ?'
+    ).bind(reservationId).first();
 
     if (!reservation) {
         return c.json({ error: 'Reservation not found' }, 404);
@@ -223,8 +225,9 @@ app.post('/contract/:reservationId/customer', async (c) => {
     const db = c.env.DB;
 
     const reservation: any = await db.prepare(
-        'SELECT * FROM reservations WHERE id = ? OR reservation_number = ?'
-    ).bind(reservationId, reservationId).first();
+        // 보안: 추측 가능한 예약번호(MNxxx)가 아닌 UUID(reservation.id)로만 조회 — 열거(enumeration) 공격 차단
+        'SELECT * FROM reservations WHERE id = ?'
+    ).bind(reservationId).first();
 
     if (!reservation) {
         return c.json({ error: 'Reservation not found' }, 404);
