@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import {
     DocTopBar, DocHero, DocCard, TripInfoGrid, IncludeExclude,
-    DayCard, GuideTips, DocFooter, DOC_BLUE, DOC_NAVY, type DocDay,
+    DayTimeline, GuideTips, DocFooter, DOC_BLUE, DOC_NAVY, type DocDay,
 } from '../components/document/TripDocParts';
 
 interface Activity {
@@ -79,6 +79,8 @@ interface ItineraryData {
     template: { id: string; name: string; description: string; days: any[]; documentSettings?: DocumentSettings } | null;
     guide: { id?: string; name: string; image?: string; phone?: string; languages?: string[] | string; specialties?: string[] | string } | null;
     days: DayData[];
+    productIncluded?: string[];
+    productExcluded?: string[];
 }
 
 const formatDate = (iso?: string) => {
@@ -157,9 +159,14 @@ export const DocumentItinerary: React.FC = () => {
     const splitItems = (t?: string) => (t || '').split(/\r?\n|、|,/).map(x => x.trim()).filter(Boolean);
     const includedList = splitItems(overview.includedText);
     const excludedList = splitItems(overview.excludedText);
-    const includedDisplay = includedList.length ? includedList
+    // 상품관리(products.included/excluded)를 단일 출처로 우선 사용 → 계약서와 동일하게 노출
+    const productInc = data.productIncluded || [];
+    const productExc = data.productExcluded || [];
+    const includedDisplay = productInc.length ? productInc
+        : includedList.length ? includedList
         : ['空港送迎・専用車', '全行程の宿泊（ホテル・ゲル）', '日程表内のお食事', '日本語ガイド', '観光入場料・各種体験'];
-    const excludedDisplay = excludedList.length ? excludedList
+    const excludedDisplay = productExc.length ? productExc
+        : excludedList.length ? excludedList
         : ['国際線航空券', '海外旅行保険', '個人的な費用（お土産・飲み物など）'];
     const notices = (guideSettings.notices || []).filter(n => n?.title);
     const guideNotices = notices.length > 0 ? notices : [
@@ -229,7 +236,7 @@ export const DocumentItinerary: React.FC = () => {
                             <p className="mt-2 text-sm font-black text-slate-500">日程は現在準備中です。</p>
                         </DocCard>
                     ) : (
-                        days.map((day, i) => <DayCard key={day.day || i} day={{ ...(day as unknown as DocDay), day: day.day || i + 1 }} />)
+                        days.map((day, i) => <DayTimeline key={day.day || i} day={{ ...(day as unknown as DocDay), day: day.day || i + 1 }} />)
                     )}
 
                     <GuideTips

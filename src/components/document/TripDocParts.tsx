@@ -263,6 +263,130 @@ export const DayCard: React.FC<{ day: DocDay }> = ({ day }) => {
     );
 };
 
+// 상품 페이지(MobileItineraryTimeline)와 동일한 "사진 타임라인" 디자인을 문서용으로 재현.
+// DocCard 한 칸 안에서 day의 activities[](제목·시각·설명·사진)를 스팟별 카드로, 숙소·식사는 스파인 행으로 노출.
+// 색상은 문서 톤(파랑)으로 통일, 인쇄 친화(no 라이트박스/스티키).
+export const DayTimeline: React.FC<{ day: DocDay }> = ({ day }) => {
+    const meals = day.meals || {};
+    const accImgs = normalizeImages(day.accommodation?.images);
+    const hasMeals = !!(meals.breakfast || meals.lunch || meals.dinner);
+
+    return (
+        <DocCard className="!p-0 overflow-hidden print:break-inside-avoid">
+            {/* Day header */}
+            <div className="flex flex-wrap items-center gap-3 px-5 pt-5 sm:px-6">
+                <span className="rounded-full px-4 py-1.5 text-[13px] font-black text-white" style={{ background: DOC_BLUE }}>DAY {day.day}</span>
+                <h4 className="min-w-0 flex-1 truncate text-[16px] font-black" style={{ color: DOC_NAVY }}>{day.title || `${day.day}日目`}</h4>
+                {day.region && (
+                    <span className="inline-flex items-center gap-1 text-[12px] font-black" style={{ color: DOC_BLUE }}>
+                        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>{day.region}
+                    </span>
+                )}
+            </div>
+            {day.summary && <p className="px-5 pt-2 text-[12px] font-semibold leading-relaxed text-slate-500 sm:px-6">{day.summary}</p>}
+
+            {/* Spine timeline */}
+            <div className="px-5 py-4 sm:px-6">
+                <div className="relative">
+                    <div className="absolute left-[15px] top-1 bottom-1 w-0.5" style={{ background: '#D7E6FF' }} aria-hidden />
+
+                    {day.activities.length === 0 && (
+                        <p className="pl-11 text-[12px] font-semibold text-slate-400">調整中</p>
+                    )}
+
+                    {day.activities.map((a, i) => {
+                        const imgs = normalizeImages(a.images);
+                        // 사진 없는 항목 = 위치/소제목 행 (카드 없이 점+텍스트)
+                        if (imgs.length === 0) {
+                            return (
+                                <div key={i} className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
+                                    <div className="flex items-start justify-center pt-1.5 relative z-10">
+                                        <span className="h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: DOC_BLUE }} />
+                                    </div>
+                                    <div className="pt-0.5 min-w-0">
+                                        {(a.title || a.time) && (
+                                            <div className="text-[14px] font-black leading-snug" style={{ color: DOC_NAVY }}>
+                                                {a.time ? <span className="text-[12px] font-bold text-slate-400">{a.time}　</span> : ''}{a.title}
+                                            </div>
+                                        )}
+                                        {a.description && <div className="mt-1 text-[12.5px] font-semibold leading-relaxed text-slate-600 whitespace-pre-wrap">{a.description}</div>}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        // 사진 있는 항목 = 스팟 카드 (사진 그리드 + 제목 + 설명)
+                        const visible = imgs.slice(0, 3);
+                        const gridCols = visible.length === 1 ? 'grid-cols-1' : visible.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
+                        return (
+                            <div key={i} className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
+                                <div className="flex justify-center pt-1.5 relative z-10">
+                                    <span className="h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: DOC_BLUE }} />
+                                </div>
+                                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3.5 print:break-inside-avoid">
+                                    {a.title && <h5 className="text-[14px] font-black leading-snug" style={{ color: DOC_NAVY }}>{a.title}</h5>}
+                                    {a.time && <div className="mt-0.5 text-[11.5px] font-bold text-slate-400">{a.time}</div>}
+                                    <div className={`mt-2.5 grid gap-1.5 ${gridCols}`}>
+                                        {visible.map((src, k) => (
+                                            <img key={k} src={src} alt={a.title || ''} loading="lazy" decoding="async" className={`w-full ${visible.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'} rounded-lg object-cover`} />
+                                        ))}
+                                    </div>
+                                    {a.description && <p className="mt-2.5 text-[12.5px] font-semibold leading-relaxed text-slate-700 whitespace-pre-wrap">{a.description}</p>}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* 숙소 */}
+                    {day.accommodation?.name && (
+                        <div className="grid grid-cols-[32px_1fr] gap-3 mb-5 last:mb-0">
+                            <div className="flex justify-center pt-1 relative z-10">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full border bg-white" style={{ borderColor: DOC_BLUE }}>
+                                    <span className="material-symbols-outlined text-[14px]" style={{ color: DOC_BLUE }}>apartment</span>
+                                </span>
+                            </div>
+                            <div className="min-w-0 rounded-xl border bg-[#F4F8FF] p-3.5" style={{ borderColor: '#D7E6FF' }}>
+                                <p className="text-[10.5px] font-black" style={{ color: DOC_BLUE }}>宿泊情報</p>
+                                <p className="text-[14px] font-black" style={{ color: DOC_NAVY }}>
+                                    {day.accommodation.name}
+                                    {day.accommodation.location && <span className="ml-2 text-[11px] font-bold text-slate-400">（{day.accommodation.location}）</span>}
+                                </p>
+                                {accImgs.length > 0 && (
+                                    <div className={`mt-2 grid gap-1.5 ${accImgs.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                        {accImgs.slice(0, 2).map((src, k) => (
+                                            <img key={k} src={src} alt={day.accommodation?.name || ''} loading="lazy" decoding="async" className={`w-full ${accImgs.length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]'} rounded-lg object-cover`} />
+                                        ))}
+                                    </div>
+                                )}
+                                {day.accommodation.description && <p className="mt-2 text-[12px] font-semibold leading-relaxed text-slate-600 whitespace-pre-wrap">{day.accommodation.description}</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 식사 */}
+                    {hasMeals && (
+                        <div className="grid grid-cols-[32px_1fr] gap-3">
+                            <div className="flex justify-center pt-1 relative z-10">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white">
+                                    <span className="material-symbols-outlined text-[14px] text-slate-500">restaurant_menu</span>
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {MEAL_DEFS.map(m => (meals as any)[m.key] ? (
+                                    <span key={m.key} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11.5px]">
+                                        <span className="material-symbols-outlined text-[16px]" style={{ color: m.color }}>{m.icon}</span>
+                                        <span className="font-black" style={{ color: m.color }}>{m.label}</span>
+                                        <span className="font-bold text-slate-600">{(meals as any)[m.key]}</span>
+                                    </span>
+                                ) : null)}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </DocCard>
+    );
+};
+
 // ─── 안내 & 팁 (공통 안내 페이지) ───
 export const GuideTips: React.FC<{
     notices: { title: string; body: string }[];

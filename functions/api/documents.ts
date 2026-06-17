@@ -31,6 +31,24 @@ const decodeTemplateDescription = (raw = '') => {
     }
 };
 
+// 예약 상품명으로 products 테이블의 포함/불포함(상품관리 입력값)을 로드.
+// 일정표·계약서가 동일한 상품 기준 포함/불포함을 노출하도록 단일 출처로 사용.
+const loadProductIncExc = async (db: any, productName?: string | null): Promise<{ included: string[]; excluded: string[] }> => {
+    const empty = { included: [], excluded: [] };
+    if (!productName) return empty;
+    try {
+        const prod: any = await db.prepare('SELECT included, excluded FROM products WHERE name = ? LIMIT 1').bind(productName).first();
+        if (!prod) return empty;
+        const arr = (v: any) => {
+            try { const p = JSON.parse(v || '[]'); return Array.isArray(p) ? p.filter((x: any) => typeof x === 'string' && x.trim()) : []; }
+            catch { return []; }
+        };
+        return { included: arr(prod.included), excluded: arr(prod.excluded) };
+    } catch {
+        return empty;
+    }
+};
+
 // GET /api/documents/itinerary/:reservationId
 // Public endpoint — no auth. Returns everything the itinerary page needs.
 app.get('/itinerary/:reservationId', async (c) => {
@@ -114,6 +132,8 @@ app.get('/itinerary/:reservationId', async (c) => {
         }
     }
 
+    const productIncExc = await loadProductIncExc(db, reservation.product_name);
+
     return c.json({
         reservation: {
             id: reservation.id,
@@ -129,6 +149,8 @@ app.get('/itinerary/:reservationId', async (c) => {
         template,
         guide: assignedGuide,
         days: mergedDays,
+        productIncluded: productIncExc.included,
+        productExcluded: productIncExc.excluded,
     });
 });
 
@@ -192,6 +214,8 @@ app.get('/contract/:reservationId', async (c) => {
             accommodation: typeof day.accommodation === 'string' ? { name: day.accommodation } : day.accommodation,
         }));
 
+    const productIncExc = await loadProductIncExc(db, reservation.product_name);
+
     return c.json({
         reservation: {
             id: reservation.id,
@@ -213,6 +237,8 @@ app.get('/contract/:reservationId', async (c) => {
         template,
         accommodations: dailyAccommodations.length > 0 ? dailyAccommodations : templateAccommodations,
         guide: assignedGuide,
+        productIncluded: productIncExc.included,
+        productExcluded: productIncExc.excluded,
     });
 });
 

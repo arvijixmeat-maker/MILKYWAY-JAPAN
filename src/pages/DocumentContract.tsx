@@ -54,6 +54,8 @@ interface ContractPageData {
     template?: { id: string; name: string; description?: string; documentSettings?: { contract?: ContractSettings } } | null;
     accommodations: Array<{ day: number; accommodation: { name: string; type?: string; location?: string } }>;
     guide: { name?: string; phone?: string; languages?: any; specialties?: any } | null;
+    productIncluded?: string[];
+    productExcluded?: string[];
 }
 
 const fallbackContract: Required<ContractSettings> = {
@@ -209,8 +211,9 @@ export const DocumentContract: React.FC = () => {
     const issuedDate = contract.issuedDate || reservation.createdAt?.split('T')[0] || '';
     const guideLanguages = parseMaybeJson(guide?.languages);
     const cancellationRows = contractSettings.cancellationRows?.length ? contractSettings.cancellationRows : fallbackContract.cancellationRows;
-    const includedItems = splitLines(contractSettings.includedText);
-    const excludedItems = splitLines(contractSettings.excludedText);
+    // 상품관리(products.included/excluded)를 단일 출처로 우선 사용 → 일정표와 동일하게 노출
+    const includedItems = (data.productIncluded && data.productIncluded.length) ? data.productIncluded : splitLines(contractSettings.includedText);
+    const excludedItems = (data.productExcluded && data.productExcluded.length) ? data.productExcluded : splitLines(contractSettings.excludedText);
     const balance = reservation.balanceAmount ?? (reservation.totalPrice - (reservation.depositAmount || 0));
 
     return (
