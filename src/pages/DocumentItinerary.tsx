@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import {
     DocTopBar, DocHero, DocCard, TripInfoGrid, IncludeExclude,
-    DayCard, GuideTips, DocFooter, DOC_BLUE, DOC_NAVY, type DocDay,
+    DayTimeline, GuideTips, DocFooter, DOC_BLUE, DOC_NAVY, type DocDay,
 } from '../components/document/TripDocParts';
 
 interface Activity {
@@ -236,7 +236,7 @@ export const DocumentItinerary: React.FC = () => {
                             <p className="mt-2 text-sm font-black text-slate-500">日程は現在準備中です。</p>
                         </DocCard>
                     ) : (
-                        days.map((day, i) => <DayCard key={day.day || i} day={{ ...(day as unknown as DocDay), day: day.day || i + 1 }} />)
+                        days.map((day, i) => <DayTimeline key={day.day || i} day={{ ...(day as unknown as DocDay), day: day.day || i + 1 }} />)
                     )}
 
                     <GuideTips
