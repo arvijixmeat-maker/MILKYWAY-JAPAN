@@ -528,6 +528,21 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         }
         return null;
     })();
+    // 일자별 숙소 배정이 비어 있어도 일정표에는 "상품 일정의 기본 숙소"가 적용된다.
+    // 그 기본 숙소(문서/템플릿 일자 숙소)를 빈 칸에 회색으로 보여줘 혼동을 없앤다.
+    const defaultAccomForDay = (day: number): { name?: string; location?: string; images?: string[] } | null => {
+        const days = (docInitialContent?.days as any[] | undefined);
+        if (!days || !days.length) return null;
+        const d = days.find((x: any) => Number(x?.day) === day) || days[day - 1];
+        const acc = d?.accommodation;
+        if (!acc) return null;
+        if (typeof acc === 'string') return { name: acc };
+        return {
+            name: acc.name,
+            location: acc.location,
+            images: Array.isArray(acc.images) ? acc.images : (acc.images ? [acc.images] : []),
+        };
+    };
     const saveDocContent = async (content: ReservationDocContent) => {
         const payload = { document_content: JSON.stringify(content) };
         if (isQuoteRes) await (api.quotes as any).update(reservation.id, payload);
@@ -776,11 +791,48 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     // NEXT 바 — 운영 단계 중 첫 미완료 1개만 제시 (개요 탭의 5단계 카드 그리드 대체)
     const doneCount = operationSteps.filter(s => s.done).length;
     const nextStep = operationSteps.find(s => !s.done);
-    // 여행 일수 — date 문자열의 "n박"에서 파생 (구 getTripDays 제거됨)
+    // 여행 일수 — 시작/종료일 차이를 1순위로(가장 정확), 없으면 "n박/n泊" 문자열, 그래도 없으면 일정 일수/배정 수
     const tripDays = (() => {
-        const m = String(reservation.date || '').match(/(\d+)박/);
+        if (!Number.isNaN(_nights) && _nights >= 1) return _nights + 1;
+        const m = String(reservation.date || '').match(/(\d+)\s*[박泊]/);
         if (m) return parseInt(m[1]) + 1;
+        const docDays = (docInitialContent?.days as any[] | undefined)?.length || 0;
+        if (docDays > 0) return docDays;
         return Math.max((reservation.dailyAccommodations || []).length, 1);
+    })();
+
+    // 숙소 선택 모달 후보 = 숙소 관리(마스터) + 이 상품 일정에 들어있는 숙소(마스터에 없을 수도).
+    // 이미지가 마스터는 JSON 문자열, 일정 스냅샷은 배열이라 _thumb로 안전하게 통일.
+    const firstAccImage = (a: any): string | undefined => {
+        if (a?.thumbnail) return a.thumbnail;
+        let imgs = a?.images;
+        if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs || '[]'); } catch { imgs = []; } }
+        return Array.isArray(imgs) ? imgs.find((x: any) => typeof x === 'string' && x) : undefined;
+    };
+    const pickerAccommodations = (() => {
+        const master = (accommodationList || []).map((a: any) => ({ ...a, _thumb: firstAccImage(a) }));
+        const masterNames = new Set(master.map((a: any) => String(a.name || '').trim()).filter(Boolean));
+        const fromItinerary: any[] = [];
+        const days = (docInitialContent?.days as any[] | undefined) || [];
+        for (const d of days) {
+            const acc = d?.accommodation;
+            if (!acc || typeof acc === 'string') continue;
+            const name = String(acc.name || '').trim();
+            if (!name || masterNames.has(name) || fromItinerary.some(x => x.name === name)) continue;
+            const images = Array.isArray(acc.images) ? acc.images : (acc.images ? [acc.images] : []);
+            fromItinerary.push({
+                id: acc.id || `itinerary-${name}`,
+                name,
+                type: acc.type,
+                location: acc.location,
+                images,
+                description: acc.description,
+                facilities: acc.facilities,
+                _thumb: firstAccImage({ images }),
+                _fromItinerary: true,
+            });
+        }
+        return [...master, ...fromItinerary];
     })();
 
     // 문서별 마지막 발송 일시 (history의 email 이벤트에서)
@@ -1109,6 +1161,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     </button>
                                 </div>
                                 <div className="card-pad" style={{ paddingTop: 12 }}>
+                                    <p className="cell-muted" style={{ fontSize: 11.5, marginBottom: 10, lineHeight: 1.5 }}>
+                                        비워두면 <b>상품 일정의 기본 숙소</b>가 그대로 일정표에 적용됩니다. 실제 묵을 숙소를 확정하려면 날짜별로 「직접 지정」하세요.
+                                    </p>
                                     <div className="stack" style={{ gap: 8 }}>
                                         {Array.from({ length: tripDays }, (_, i) => i + 1).map((day) => {
                                             const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
@@ -1128,11 +1183,35 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                             </div>
                                                             <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
                                                         </div>
-                                                    ) : (
-                                                        <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
-                                                            <Icon name="add" />숙소 선택
-                                                        </button>
-                                                    )}
+                                                    ) : (() => {
+                                                        const def = defaultAccomForDay(day);
+                                                        if (def?.name) {
+                                                            return (
+                                                                <div className="assign-row" style={{ flex: 1, padding: 0 }}>
+                                                                    {def.images && def.images[0] ? (
+                                                                        <img className="thumb" src={def.images[0]} alt={def.name} loading="lazy" style={{ opacity: 0.7 }} />
+                                                                    ) : (
+                                                                        <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
+                                                                    )}
+                                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                                        <div className="cell-strong" style={{ color: 'var(--mrt-gray-500)' }}>
+                                                                            {def.name}
+                                                                            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'var(--mrt-gray-100)', color: 'var(--mrt-gray-500)' }}>상품 기본</span>
+                                                                        </div>
+                                                                        <div className="cell-muted" style={{ fontSize: 12 }}>{def.location || '일정표에 적용 중 · 비워두면 이대로 발송'}</div>
+                                                                    </div>
+                                                                    <button className="btn btn-sm btn-ghost" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
+                                                                        <Icon name="edit" />직접 지정
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <button className="accom-empty" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}>
+                                                                <Icon name="add" />숙소 선택
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             );
                                         })}
@@ -1460,21 +1539,24 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                         <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setShowAccommodationModal(false)}><Icon name="close" /></button>
                     </div>
                     <div className="picker-list">
-                        {accommodationList.length === 0 ? (
-                            <div className="empty"><Icon name="hotel" /><p>등록된 숙소가 없습니다</p></div>
-                        ) : accommodationList.map((acc: any) => (
+                        {pickerAccommodations.length === 0 ? (
+                            <div className="empty"><Icon name="hotel" /><p>등록된 숙소가 없습니다 — 「숙소 관리」에서 먼저 추가하세요</p></div>
+                        ) : pickerAccommodations.map((acc: any) => (
                             <button
                                 key={acc.id}
                                 className="picker-item"
                                 onClick={() => { handleAccommodationAssign(acc); setShowAccommodationModal(false); }}
                             >
-                                {acc.thumbnail || (acc.images && JSON.parse(acc.images || '[]')[0]) ? (
-                                    <img className="thumb sq" src={acc.thumbnail || JSON.parse(acc.images || '[]')[0]} alt={acc.name} />
+                                {acc._thumb ? (
+                                    <img className="thumb sq" src={acc._thumb} alt={acc.name} loading="lazy" />
                                 ) : (
                                     <span className="thumb sq" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
                                 )}
                                 <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div className="cell-strong">{acc.name}</div>
+                                    <div className="cell-strong">
+                                        {acc.name}
+                                        {acc._fromItinerary && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'var(--mrt-gray-100)', color: 'var(--mrt-gray-500)' }}>이 상품 일정</span>}
+                                    </div>
                                     {acc.type && <div className="cell-muted" style={{ fontSize: 12 }}>{acc.type}</div>}
                                     {acc.location && <div className="cell-muted" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.location}</div>}
                                 </div>
