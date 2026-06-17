@@ -215,3 +215,21 @@ img {
         bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
+
+/* LINE quick-chat floating button (FloatingConsultation).
+   The Channel Talk launcher lives inside its own iframe, so its exact size/position
+   can't be read from our code to reliably stack on top of it (that caused overlap).
+   Instead we mirror it: Channel Talk = bottom-RIGHT, LINE = bottom-LEFT at the same
+   height. Symmetric, and they can never overlap regardless of the launcher's size. */
+.floating-line-btn {
+    position: fixed;
+    left: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px)); /* desktop: mirror Channel Talk's default margin */
+    z-index: 9999;
+}
+@media (max-width: 768px) {
+    .floating-line-btn {
+        left: 16px;
+        bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* mobile: level with the lifted Channel Talk launcher, above BottomNav */
+    }
+}
