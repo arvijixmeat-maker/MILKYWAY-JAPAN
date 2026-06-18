@@ -292,6 +292,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [selectedDay, setSelectedDay] = useState(1);
     const [guideList, setGuideList] = useState<any[]>([]);
     const [accommodationList, setAccommodationList] = useState<any[]>([]);
+    const [hotelList, setHotelList] = useState<any[]>([]);
     const [memoDraft, setMemoDraft] = useState('');
     const [memoFocused, setMemoFocused] = useState(false);
     const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
@@ -324,9 +325,15 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     }, [showGuideModal]);
 
     useEffect(() => {
-        if (showAccommodationModal && accommodationList.length === 0) {
+        if (!showAccommodationModal) return;
+        if (accommodationList.length === 0) {
             api.accommodations.list().then((data: any) => {
                 if (Array.isArray(data)) setAccommodationList(data);
+            }).catch(() => {});
+        }
+        if (hotelList.length === 0) {
+            api.hotels.list({ active: true }).then((data: any) => {
+                if (Array.isArray(data)) setHotelList(data);
             }).catch(() => {});
         }
     }, [showAccommodationModal]);
@@ -802,8 +809,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         return Math.max((reservation.dailyAccommodations || []).length, 1);
     })();
 
-    // 숙소 선택 모달 후보 = 숙소 관리(마스터) + 이 상품 일정에 들어있는 숙소(마스터에 없을 수도).
-    // 이미지가 마스터는 JSON 문자열, 일정 스냅샷은 배열이라 _thumb로 안전하게 통일.
+    // 숙소 선택 모달 후보 = 숙소 관리(accommodations) + 호텔 마스터(hotels) + 이 상품 일정에 들어있는 숙소.
+    // 이미지가 출처마다 JSON 문자열/배열로 달라 _thumb로 안전하게 통일.
     const firstAccImage = (a: any): string | undefined => {
         if (a?.thumbnail) return a.thumbnail;
         let imgs = a?.images;
@@ -811,17 +818,36 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         return Array.isArray(imgs) ? imgs.find((x: any) => typeof x === 'string' && x) : undefined;
     };
     const pickerAccommodations = (() => {
-        const master = (accommodationList || []).map((a: any) => ({ ...a, _thumb: firstAccImage(a) }));
-        const masterNames = new Set(master.map((a: any) => String(a.name || '').trim()).filter(Boolean));
-        const fromItinerary: any[] = [];
+        const out: any[] = (accommodationList || []).map((a: any) => ({ ...a, _thumb: firstAccImage(a) }));
+        const seen = new Set(out.map((a: any) => String(a.name || '').trim()).filter(Boolean));
+        // 호텔 마스터(hotels 테이블) — 상품관리 일정탭의 「호텔 마스터 선택」과 동일한 출처
+        for (const h of (hotelList || [])) {
+            const name = String(h.name_kr || h.name_local || '').trim();
+            if (!name || seen.has(name)) continue;
+            seen.add(name);
+            const images = Array.isArray(h.images) ? h.images : [];
+            out.push({
+                id: h.id,
+                name,
+                type: h.star_rating ? `${h.star_rating}성급` : (h.city || h.region || ''),
+                location: h.address || [h.city, h.region].filter(Boolean).join(', '),
+                images,
+                description: h.description || '',
+                facilities: Array.isArray(h.amenities) ? h.amenities : [],
+                _thumb: firstAccImage({ images }),
+                _fromHotelMaster: true,
+            });
+        }
+        // 이 상품 일정에 들어있는 숙소(마스터에 없을 수도)
         const days = (docInitialContent?.days as any[] | undefined) || [];
         for (const d of days) {
             const acc = d?.accommodation;
             if (!acc || typeof acc === 'string') continue;
             const name = String(acc.name || '').trim();
-            if (!name || masterNames.has(name) || fromItinerary.some(x => x.name === name)) continue;
+            if (!name || seen.has(name)) continue;
+            seen.add(name);
             const images = Array.isArray(acc.images) ? acc.images : (acc.images ? [acc.images] : []);
-            fromItinerary.push({
+            out.push({
                 id: acc.id || `itinerary-${name}`,
                 name,
                 type: acc.type,
@@ -833,7 +859,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 _fromItinerary: true,
             });
         }
-        return [...master, ...fromItinerary];
+        return out;
     })();
 
     // 문서별 마지막 발송 일시 (history의 email 이벤트에서)
@@ -1556,6 +1582,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                     <div className="cell-strong">
                                         {acc.name}
+                                        {acc._fromHotelMaster && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#eef4ff', color: '#1656d6' }}>호텔 마스터</span>}
                                         {acc._fromItinerary && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'var(--mrt-gray-100)', color: 'var(--mrt-gray-500)' }}>이 상품 일정</span>}
                                     </div>
                                     {acc.type && <div className="cell-muted" style={{ fontSize: 12 }}>{acc.type}</div>}
