@@ -284,9 +284,6 @@ const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Re
     );
 };
 
-// 상품명→id 캐시 — 예약 상세에서 상품명을 상품 페이지로 링크. 모달 재오픈마다 재요청하지 않도록 모듈 레벨 캐시.
-let productIdByNameCache: Record<string, string> | null = null;
-
 const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservation: Reservation | null, onClose: () => void, onUpdate: (updated: Reservation) => void }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<Reservation | null>(null);
@@ -300,7 +297,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const [memoFocused, setMemoFocused] = useState(false);
     const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
     const [templatesList, setTemplatesList] = useState<any[]>([]);
-    const [productIdByName, setProductIdByName] = useState<Record<string, string>>(productIdByNameCache || {});
     const [sendingItinerary, setSendingItinerary] = useState(false);
     const [sendingContract, setSendingContract] = useState(false);
     const [sendingAllDocs, setSendingAllDocs] = useState(false);
@@ -317,18 +313,6 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     useEffect(() => {
         api.itineraryTemplates.list().then((data: any) => {
             if (Array.isArray(data)) setTemplatesList(data);
-        }).catch(() => {});
-    }, []);
-
-    // 상품명→id 매핑 로드 (상품명 클릭 → 상품 페이지). 한 번만 요청하고 캐시 재사용.
-    useEffect(() => {
-        if (productIdByNameCache) { setProductIdByName(productIdByNameCache); return; }
-        api.products.list().then((list: any) => {
-            if (!Array.isArray(list)) return;
-            const map: Record<string, string> = {};
-            for (const p of list) { if (p?.name && p?.id) map[String(p.name).trim()] = String(p.id); }
-            productIdByNameCache = map;
-            setProductIdByName(map);
         }).catch(() => {});
     }, []);
 
@@ -1082,12 +1066,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                         )}
                                     </div>
                                     <div className="kv"><span>접수일</span><b>{reservation.bookedAt}</b></div>
-                                    <div className="kv" style={{ borderBottom: 'none' }}><span>상품</span>{(() => {
-                                        const pid = reservation.productName ? productIdByName[String(reservation.productName).trim()] : undefined;
-                                        return pid
-                                            ? <a href={`/products/${pid}`} target="_blank" rel="noopener noreferrer" title="상품 페이지 열기 (새 탭)" style={{ textAlign: 'right', whiteSpace: 'normal', fontWeight: 700, color: 'var(--mrt-blue)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>{reservation.productName}<Icon name="open_in_new" style={{ fontSize: 14 }} /></a>
-                                            : <b style={{ textAlign: 'right', whiteSpace: 'normal' }}>{reservation.productName}</b>;
-                                    })()}</div>
+                                    <div className="kv" style={{ borderBottom: 'none' }}><span>상품</span><b style={{ textAlign: 'right', whiteSpace: 'normal' }}>{reservation.productName}</b></div>
                                 </div>
                             </div>
                             <div className="card">
