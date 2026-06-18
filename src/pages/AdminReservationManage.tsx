@@ -632,7 +632,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             </tr>`).join('');
         const memoBlock = d.memos.length ? `
             <h2>메모</h2>
-            <ul style="margin:0;padding-left:18px">${d.memos.map((m) => `<li style="margin:4px 0;font-size:12.5px;line-height:1.5">${esc(m)}</li>`).join('')}</ul>` : '';
+            <ul style="margin:0;padding-left:18px">${d.memos.map((m) => `<li style="margin:4px 0;font-size:12.5px;line-height:1.5;white-space:pre-wrap">${esc(m)}</li>`).join('')}</ul>` : '';
         const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>숙소 수배 의뢰서 ${esc(d.number)}</title>
         <style>
           *{box-sizing:border-box} body{font-family:'Malgun Gothic','Noto Sans KR',-apple-system,sans-serif;color:#111;margin:0;padding:28px 32px}
