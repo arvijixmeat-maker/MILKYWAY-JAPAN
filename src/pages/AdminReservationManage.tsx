@@ -621,45 +621,58 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         const d = bookingSheet();
         const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
         const cell = (v: any) => esc(v || '-');
+        // 수배서 PDF는 현지(몽골) 담당자용 — 라벨은 몽골어. 데이터(이름·날짜·금액 등)는 원본 유지.
+        const genderMn = (g: any) => {
+            const s = String(g || '').trim();
+            if (/女|여성|female|^f$/i.test(s)) return 'Эмэгтэй';
+            if (/男|남성|male|^m$/i.test(s)) return 'Эрэгтэй';
+            return s || '-';
+        };
+        const nightsMn = tripDays > 1 ? `${tripDays - 1} шөнө ${tripDays} өдөр` : '';
+        const peopleCount = reservation.travelers || contractTravelers.length || '';
+        const peopleMn = peopleCount ? `${peopleCount} хүн` : '-';
+        const signedMn = contractAgreement?.agreed
+            ? `${contractAgreement.name || ''}${contractAgreement.agreedAt ? ` (${contractAgreement.agreedAt.split('T')[0]})` : ''}`
+            : 'Зөвшөөрөөгүй';
         const travelerRows = d.travelers.map((t, i) => `
             <tr>
                 <td class="c">${i + 1}</td>
                 <td class="up b">${cell((t.passportName || '').toUpperCase())}</td>
                 <td>${cell(t.name)}</td>
                 <td class="c">${cell(t.birthdate)}</td>
-                <td class="c">${cell(t.gender)}</td>
+                <td class="c">${esc(genderMn(t.gender))}</td>
                 <td>${cell(t.phone)}</td>
             </tr>`).join('');
         const memoBlock = d.memos.length ? `
-            <h2>메모</h2>
+            <h2>Тэмдэглэл</h2>
             <ul style="margin:0;padding-left:18px">${d.memos.map((m) => `<li style="margin:4px 0;font-size:12.5px;line-height:1.5;white-space:pre-wrap">${esc(m)}</li>`).join('')}</ul>` : '';
-        const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>숙소 수배 의뢰서 ${esc(d.number)}</title>
+        const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><title>Зочид буудлын захиалга ${esc(d.number)}</title>
         <style>
-          *{box-sizing:border-box} body{font-family:'Malgun Gothic','Noto Sans KR',-apple-system,sans-serif;color:#111;margin:0;padding:28px 32px}
+          *{box-sizing:border-box} body{font-family:'Noto Sans','Arial','Malgun Gothic',sans-serif;color:#111;margin:0;padding:28px 32px}
           h1{font-size:20px;margin:0 0 4px} .sub{color:#666;font-size:12px;margin:0 0 18px}
           .meta{width:100%;border-collapse:collapse;margin-bottom:18px}
           .meta td{border:1px solid #d7dee8;padding:8px 10px;font-size:13px}
-          .meta td.k{background:#eef4ff;color:#1656d6;font-weight:700;width:120px;white-space:nowrap}
+          .meta td.k{background:#eef4ff;color:#1656d6;font-weight:700;width:135px;white-space:nowrap}
           h2{font-size:14px;margin:18px 0 8px;color:#0b1b45;border-left:4px solid #287dfa;padding-left:8px}
           table{width:100%;border-collapse:collapse} th,td{border:1px solid #d7dee8;padding:7px 9px;font-size:12.5px;text-align:left}
           th{background:#f4f8ff;color:#0b1b45;font-weight:700} td.c{text-align:center} td.b{font-weight:700} td.up{text-transform:uppercase}
           .foot{margin-top:22px;color:#888;font-size:11px;border-top:1px solid #e5e9f0;padding-top:10px}
           @media print{body{padding:0} @page{margin:14mm}}
         </style></head><body>
-          <h1>숙소 수배 의뢰서</h1>
-          <p class="sub">Milkyway Japan · 예약번호 ${esc(d.number)}</p>
+          <h1>Зочид буудлын захиалгын хүсэлт</h1>
+          <p class="sub">Milkyway Japan · Захиалгын дугаар: ${esc(d.number)}</p>
           <table class="meta">
-            <tr><td class="k">상품명</td><td colspan="3">${esc(d.product)}</td></tr>
-            <tr><td class="k">여행 기간</td><td>${esc(d.period)}${d.nights ? ` <b>(${esc(d.nights)})</b>` : ''}</td><td class="k">인원</td><td>${esc(d.people)}</td></tr>
-            <tr><td class="k">도착편</td><td colspan="3">${esc(d.arrival)}</td></tr>
-            <tr><td class="k">출발편</td><td colspan="3">${esc(d.departure)}</td></tr>
-            <tr><td class="k">투어 비용</td><td class="b">${esc(d.total)}</td><td class="k">예약금 / 잔금</td><td>${esc(d.deposit)} / ${esc(d.balance)}</td></tr>
+            <tr><td class="k">Аяллын нэр</td><td colspan="3">${esc(d.product)}</td></tr>
+            <tr><td class="k">Аяллын хугацаа</td><td>${esc(d.period)}${nightsMn ? ` <b>(${esc(nightsMn)})</b>` : ''}</td><td class="k">Хүний тоо</td><td>${esc(peopleMn)}</td></tr>
+            <tr><td class="k">Ирэх нислэг</td><td colspan="3">${esc(d.arrival)}</td></tr>
+            <tr><td class="k">Буцах нислэг</td><td colspan="3">${esc(d.departure)}</td></tr>
+            <tr><td class="k">Аяллын төлбөр</td><td class="b">${esc(d.total)}</td><td class="k">Урьдчилгаа / Үлдэгдэл</td><td>${esc(d.deposit)} / ${esc(d.balance)}</td></tr>
           </table>
-          <h2>여행자 명단</h2>
-          <table><thead><tr><th style="width:36px">No</th><th>여권 표기명</th><th>이름</th><th style="width:120px">생년월일</th><th style="width:60px">성별</th><th style="width:150px">연락처</th></tr></thead>
+          <h2>Аялагчдын жагсаалт</h2>
+          <table><thead><tr><th style="width:36px">№</th><th>Паспортын нэр</th><th>Нэр</th><th style="width:120px">Төрсөн огноо</th><th style="width:70px">Хүйс</th><th style="width:150px">Холбоо барих</th></tr></thead>
           <tbody>${travelerRows}</tbody></table>
           ${memoBlock}
-          <p class="foot">전자 서명: ${esc(d.signed)} · 출력일 기준 정보입니다. 개인정보가 포함되어 있으니 취급에 주의해 주세요.</p>
+          <p class="foot">Цахим гарын үсэг: ${esc(signedMn)} · Хэвлэсэн өдрийн байдлаарх мэдээлэл. Хувийн мэдээлэл агуулсан тул анхааралтай хадгална уу.</p>
         </body></html>`;
         const w = window.open('', '_blank', 'width=920,height=1000');
         if (!w) { alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.'); return; }
