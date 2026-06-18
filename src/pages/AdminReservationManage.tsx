@@ -568,6 +568,100 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         setTimeout(() => setCopiedDocId(null), 1500);
     };
 
+    // ── 숙소 수배 의뢰서 (담당자에게 보낼 여행자·항공편·상품 요약) ──
+    const bookingSheet = () => {
+        const cd = editForm.contractData || {};
+        const nights = tripDays > 1 ? `${tripDays - 1}박 ${tripDays}일` : '';
+        return {
+            number: reservationNumber,
+            product: reservation.productName || '',
+            period: reservation.date || '',
+            nights,
+            people: `${reservation.travelers || contractTravelers.length || ''}名`,
+            arrival: fmtFlightLine(cd.arrival),
+            departure: fmtFlightLine(cd.departure),
+            travelers: contractTravelers,
+            accommodations: (reservation.dailyAccommodations || []).filter((a: any) => a?.accommodation?.name),
+            signed: contractAgreement?.agreed
+                ? `${contractAgreement.name || ''}${contractAgreement.agreedAt ? ` (${contractAgreement.agreedAt.split('T')[0]})` : ''}`
+                : '미동의',
+        };
+    };
+
+    const copyBookingText = async () => {
+        const d = bookingSheet();
+        const lines: string[] = [
+            `[숙소 수배 의뢰] ${d.number}`,
+            `상품: ${d.product}`,
+            `기간: ${d.period}${d.nights ? ` (${d.nights})` : ''}`,
+            `인원: ${d.people}`,
+            `도착편: ${d.arrival}`,
+            `출발편: ${d.departure}`,
+            '',
+            '◆ 여행자 명단 (여권명 / 이름 / 생년월일 / 성별 / 연락처)',
+            ...d.travelers.map((t, i) => `${i + 1}. ${(t.passportName || '-').toUpperCase()} / ${t.name || '-'} / ${t.birthdate || '-'} / ${t.gender || '-'} / ${t.phone || '-'}`),
+        ];
+        if (d.accommodations.length) {
+            lines.push('', '◆ 숙소', ...d.accommodations.map((a: any) => `${a.day}박: ${a.accommodation.name}${a.accommodation.location ? ` (${a.accommodation.location})` : ''}`));
+        }
+        await navigator.clipboard.writeText(lines.join('\n'));
+        setCopiedDocId('booking');
+        setTimeout(() => setCopiedDocId(null), 1500);
+    };
+
+    const printBookingSheet = () => {
+        const d = bookingSheet();
+        const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
+        const cell = (v: any) => esc(v || '-');
+        const travelerRows = d.travelers.map((t, i) => `
+            <tr>
+                <td class="c">${i + 1}</td>
+                <td class="up b">${cell((t.passportName || '').toUpperCase())}</td>
+                <td>${cell(t.name)}</td>
+                <td class="c">${cell(t.birthdate)}</td>
+                <td class="c">${cell(t.gender)}</td>
+                <td>${cell(t.phone)}</td>
+            </tr>`).join('');
+        const accomBlock = d.accommodations.length ? `
+            <h2>숙소</h2>
+            <table><thead><tr><th style="width:80px">박</th><th>숙소명</th><th>지역</th></tr></thead><tbody>
+            ${d.accommodations.map((a: any) => `<tr><td class="c">${esc(a.day)}박</td><td class="b">${esc(a.accommodation.name)}</td><td>${esc(a.accommodation.location || '-')}</td></tr>`).join('')}
+            </tbody></table>` : '';
+        const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>숙소 수배 의뢰서 ${esc(d.number)}</title>
+        <style>
+          *{box-sizing:border-box} body{font-family:'Malgun Gothic','Noto Sans KR',-apple-system,sans-serif;color:#111;margin:0;padding:28px 32px}
+          h1{font-size:20px;margin:0 0 4px} .sub{color:#666;font-size:12px;margin:0 0 18px}
+          .meta{width:100%;border-collapse:collapse;margin-bottom:18px}
+          .meta td{border:1px solid #d7dee8;padding:8px 10px;font-size:13px}
+          .meta td.k{background:#eef4ff;color:#1656d6;font-weight:700;width:120px;white-space:nowrap}
+          h2{font-size:14px;margin:18px 0 8px;color:#0b1b45;border-left:4px solid #287dfa;padding-left:8px}
+          table{width:100%;border-collapse:collapse} th,td{border:1px solid #d7dee8;padding:7px 9px;font-size:12.5px;text-align:left}
+          th{background:#f4f8ff;color:#0b1b45;font-weight:700} td.c{text-align:center} td.b{font-weight:700} td.up{text-transform:uppercase}
+          .foot{margin-top:22px;color:#888;font-size:11px;border-top:1px solid #e5e9f0;padding-top:10px}
+          @media print{body{padding:0} @page{margin:14mm}}
+        </style></head><body>
+          <h1>숙소 수배 의뢰서</h1>
+          <p class="sub">Milkyway Japan · 예약번호 ${esc(d.number)}</p>
+          <table class="meta">
+            <tr><td class="k">상품명</td><td colspan="3">${esc(d.product)}</td></tr>
+            <tr><td class="k">여행 기간</td><td>${esc(d.period)}${d.nights ? ` <b>(${esc(d.nights)})</b>` : ''}</td><td class="k">인원</td><td>${esc(d.people)}</td></tr>
+            <tr><td class="k">도착편</td><td colspan="3">${esc(d.arrival)}</td></tr>
+            <tr><td class="k">출발편</td><td colspan="3">${esc(d.departure)}</td></tr>
+          </table>
+          <h2>여행자 명단</h2>
+          <table><thead><tr><th style="width:36px">No</th><th>여권 표기명</th><th>이름</th><th style="width:120px">생년월일</th><th style="width:60px">성별</th><th style="width:150px">연락처</th></tr></thead>
+          <tbody>${travelerRows}</tbody></table>
+          ${accomBlock}
+          <p class="foot">전자 서명: ${esc(d.signed)} · 출력일 기준 정보입니다. 개인정보가 포함되어 있으니 취급에 주의해 주세요.</p>
+        </body></html>`;
+        const w = window.open('', '_blank', 'width=920,height=1000');
+        if (!w) { alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.'); return; }
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { try { w.print(); } catch { /* 사용자가 수동 인쇄 */ } }, 350);
+    };
+
     const sendItineraryToCustomer = async () => {
         if (!itineraryReady || !reservation.email) {
             alert(!reservation.email ? '고객 이메일이 없습니다.' : '일정표 템플릿을 먼저 선택해 주세요.');
@@ -945,9 +1039,16 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <div className="card-head">
                                     <Icon name="assignment_ind" style={{ color: 'var(--mrt-gray-600)' }} />
                                     <h2>고객 제출 정보</h2>
+                                    <div style={{ flex: 1 }} />
+                                    <button type="button" className="btn btn-sm btn-ghost" style={{ flex: 'none' }} onClick={copyBookingText} title="여행자·항공편 정보를 텍스트로 복사 (카톡·메일에 붙여넣기)">
+                                        <Icon name={copiedDocId === 'booking' ? 'check' : 'content_copy'} />{copiedDocId === 'booking' ? '복사됨' : '복사'}
+                                    </button>
+                                    <button type="button" className="btn btn-sm btn-blue" style={{ flex: 'none' }} onClick={printBookingSheet} title="숙소 수배 의뢰서를 PDF로 저장·인쇄">
+                                        <Icon name="picture_as_pdf" />수배서 PDF
+                                    </button>
                                     {contractAgreement?.agreed
-                                        ? <span className="badge b-green" style={{ marginLeft: 'auto' }}>동의 완료{contractAgreement.agreedAt ? ` · ${contractAgreement.agreedAt.split('T')[0]}` : ''}</span>
-                                        : <span className="badge b-amber" style={{ marginLeft: 'auto' }}>미동의</span>}
+                                        ? <span className="badge b-green" style={{ flex: 'none' }}>동의 완료{contractAgreement.agreedAt ? ` · ${contractAgreement.agreedAt.split('T')[0]}` : ''}</span>
+                                        : <span className="badge b-amber" style={{ flex: 'none' }}>미동의</span>}
                                 </div>
                                 <div className="card-pad" style={{ paddingTop: 14 }}>
                                     {/* 항공편 — 송영 手配용, 가장 중요 */}
