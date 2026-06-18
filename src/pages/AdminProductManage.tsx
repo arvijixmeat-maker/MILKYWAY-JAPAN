@@ -1272,6 +1272,32 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
         });
     };
 
+    // 일차 복제 — dayInfo + 하위 이벤트를 모두 새 id로 복제해 바로 아래 일차로 삽입.
+    // dayLabel은 flatten 단계에서 순서대로 재번호되므로 손대지 않는다.
+    const duplicateItineraryDay = (dayGroupIndex: number) => {
+        const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        rebuildItinerary((g) => {
+            const src = g.days[dayGroupIndex];
+            if (!src) return;
+            let n = 0;
+            const cloneBlock = (b: DetailContentBlock): DetailContentBlock => {
+                n += 1;
+                const content: any = (b.content && typeof b.content === 'object')
+                    ? JSON.parse(JSON.stringify(b.content))
+                    : b.content;
+                if (content && typeof content === 'object' && 'id' in content) {
+                    content.id = `${b.type}-${stamp}-${n}`;
+                }
+                return { ...b, id: `block-${stamp}-${n}`, content };
+            };
+            const newDay: PlainDay = {
+                dayInfo: cloneBlock(src.dayInfo),
+                events: src.events.map(cloneBlock),
+            };
+            g.days.splice(dayGroupIndex + 1, 0, newDay);
+        });
+    };
+
     const addItineraryEvent = (dayGroupIndex: number, type: 'timeline' | 'image' | 'slide' | 'divider') => {
         const block = makeItineraryBlock(type);
         rebuildItinerary((g) => { g.days[dayGroupIndex]?.events.push(block); });
@@ -2258,6 +2284,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                     <button type="button" onClick={() => moveItineraryDay(dayIdx, -1)} disabled={dayIdx === 0}><Icon name="expand_less" /></button>
                                                                     <button type="button" onClick={() => moveItineraryDay(dayIdx, 1)} disabled={dayIdx === days.length - 1}><Icon name="expand_more" /></button>
                                                                 </div>
+                                                                <button type="button" className="act-btn" style={{ flex: 'none' }} onClick={() => duplicateItineraryDay(dayIdx)} title="이 일차 복제 (식사·숙소·일정 그대로 복사)"><Icon name="content_copy" /></button>
                                                                 <button type="button" className="act-btn danger" style={{ flex: 'none' }} onClick={() => { if (window.confirm(`${dc.dayLabel || `${dayIdx + 1}일차`} 전체를 삭제할까요?`)) removeItineraryDay(dayIdx); }} title="이 일차 삭제"><Icon name="delete" /></button>
                                                             </div>
 
