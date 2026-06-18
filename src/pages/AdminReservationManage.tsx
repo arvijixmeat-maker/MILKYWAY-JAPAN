@@ -572,6 +572,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const bookingSheet = () => {
         const cd = editForm.contractData || {};
         const nights = tripDays > 1 ? `${tripDays - 1}박 ${tripDays}일` : '';
+        const total = editForm.totalAmount || 0;
+        const deposit = editForm.deposit || 0;
+        const won = (n: number) => `₩${(n || 0).toLocaleString()}`;
         return {
             number: reservationNumber,
             product: reservation.productName || '',
@@ -581,7 +584,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             arrival: fmtFlightLine(cd.arrival),
             departure: fmtFlightLine(cd.departure),
             travelers: contractTravelers,
-            accommodations: (reservation.dailyAccommodations || []).filter((a: any) => a?.accommodation?.name),
+            total: won(total),
+            deposit: won(deposit),
+            balance: won(total - deposit),
+            memos: memos.map((m: any) => String(m.description || '').trim()).filter(Boolean),
             signed: contractAgreement?.agreed
                 ? `${contractAgreement.name || ''}${contractAgreement.agreedAt ? ` (${contractAgreement.agreedAt.split('T')[0]})` : ''}`
                 : '미동의',
@@ -598,11 +604,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             `도착편: ${d.arrival}`,
             `출발편: ${d.departure}`,
             '',
+            `투어 비용: ${d.total}  /  예약금: ${d.deposit}  /  잔금: ${d.balance}`,
+            '',
             '◆ 여행자 명단 (여권명 / 이름 / 생년월일 / 성별 / 연락처)',
             ...d.travelers.map((t, i) => `${i + 1}. ${(t.passportName || '-').toUpperCase()} / ${t.name || '-'} / ${t.birthdate || '-'} / ${t.gender || '-'} / ${t.phone || '-'}`),
         ];
-        if (d.accommodations.length) {
-            lines.push('', '◆ 숙소', ...d.accommodations.map((a: any) => `${a.day}박: ${a.accommodation.name}${a.accommodation.location ? ` (${a.accommodation.location})` : ''}`));
+        if (d.memos.length) {
+            lines.push('', '◆ 메모', ...d.memos.map((m) => `- ${m}`));
         }
         await navigator.clipboard.writeText(lines.join('\n'));
         setCopiedDocId('booking');
@@ -622,11 +630,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 <td class="c">${cell(t.gender)}</td>
                 <td>${cell(t.phone)}</td>
             </tr>`).join('');
-        const accomBlock = d.accommodations.length ? `
-            <h2>숙소</h2>
-            <table><thead><tr><th style="width:80px">박</th><th>숙소명</th><th>지역</th></tr></thead><tbody>
-            ${d.accommodations.map((a: any) => `<tr><td class="c">${esc(a.day)}박</td><td class="b">${esc(a.accommodation.name)}</td><td>${esc(a.accommodation.location || '-')}</td></tr>`).join('')}
-            </tbody></table>` : '';
+        const memoBlock = d.memos.length ? `
+            <h2>메모</h2>
+            <ul style="margin:0;padding-left:18px">${d.memos.map((m) => `<li style="margin:4px 0;font-size:12.5px;line-height:1.5">${esc(m)}</li>`).join('')}</ul>` : '';
         const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>숙소 수배 의뢰서 ${esc(d.number)}</title>
         <style>
           *{box-sizing:border-box} body{font-family:'Malgun Gothic','Noto Sans KR',-apple-system,sans-serif;color:#111;margin:0;padding:28px 32px}
@@ -647,11 +653,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             <tr><td class="k">여행 기간</td><td>${esc(d.period)}${d.nights ? ` <b>(${esc(d.nights)})</b>` : ''}</td><td class="k">인원</td><td>${esc(d.people)}</td></tr>
             <tr><td class="k">도착편</td><td colspan="3">${esc(d.arrival)}</td></tr>
             <tr><td class="k">출발편</td><td colspan="3">${esc(d.departure)}</td></tr>
+            <tr><td class="k">투어 비용</td><td class="b">${esc(d.total)}</td><td class="k">예약금 / 잔금</td><td>${esc(d.deposit)} / ${esc(d.balance)}</td></tr>
           </table>
           <h2>여행자 명단</h2>
           <table><thead><tr><th style="width:36px">No</th><th>여권 표기명</th><th>이름</th><th style="width:120px">생년월일</th><th style="width:60px">성별</th><th style="width:150px">연락처</th></tr></thead>
           <tbody>${travelerRows}</tbody></table>
-          ${accomBlock}
+          ${memoBlock}
           <p class="foot">전자 서명: ${esc(d.signed)} · 출력일 기준 정보입니다. 개인정보가 포함되어 있으니 취급에 주의해 주세요.</p>
         </body></html>`;
         const w = window.open('', '_blank', 'width=920,height=1000');
