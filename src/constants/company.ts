@@ -4,16 +4,36 @@
 export const COMPANY_INFO = {
     nameJa: 'モンゴル銀河旅行社',
     nameEn: 'Milkyway Japan',
+    nameLegal: 'Mongolia Milky Way（SUUN ZAM）',  // 商号（登録名）
     phoneKR: '+976-9594-5838',
     phoneMGL: '976-9594-5838',
+    phoneSecondary: '+976-8010-7766',     // 現地オフィス第2連絡先
     representative: 'DAVAASUREN BOLOR',  // 担当者 (代理)
     ceo: 'DAVAASUREN BILGUUN',           // 代表者
     registrationNumber: '9011640064',     // 事業者登録番号
+    tourRegistrationNumber: '6124313',    // 観光事業登録番号
     registrationNote: 'Сүүнзам трэйд',
+    addressJa: 'ウランバートル市 バヤンズルフ区 DACOセンター 3階 306号室',
     email: 'info@mongolryokou.com',
     website: 'mongolryokou.com',
     stampImage: '/stamp.png',             // place the stamp image at public/stamp.png
 };
+
+// 在モンゴル日本国大使館 — 確定日程表の海外安全情報で使用
+export const EMBASSY_INFO = {
+    nameJa: '在モンゴル日本国大使館',
+    addressJa: 'Olympic Street 19A, Sukhbaatar District, Ulaanbaatar 14241, Mongolia',
+    phone: '+976-1132-1207',              // 代表電話
+    emergencyPhone: '+976-9911-4119',     // 緊急（24時間）
+};
+
+// 現地緊急通報先 — モンゴル国内
+export const LOCAL_EMERGENCY: Array<{ label: string; number: string }> = [
+    { label: '警察', number: '102' },
+    { label: '消防', number: '101' },
+    { label: '救急車', number: '103' },
+    { label: '災害・緊急', number: '105' },
+];
 
 export const CONTRACT_NOTICES = [
     '旅行中にお客様自身の過失による事故が発生した場合、旅行会社には一切の責任および損害賠償責任がないことを予めご了承ください。',
