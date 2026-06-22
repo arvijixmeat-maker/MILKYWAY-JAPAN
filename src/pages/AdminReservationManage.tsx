@@ -706,7 +706,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 travelDates: reservation.date,
                 itineraryUrl,
             });
-            onUpdate(addHistory({ type: 'email', description: '確定日程表をお客様へ送信しました。', detail: itineraryUrl }));
+            // 발송됨 플래그 저장 → 고객 마이페이지에서 確定日程表가 "발송됨"으로 표시됨(itineraryUrl을 플래그로 사용)
+            onUpdate({ ...addHistory({ type: 'email', description: '確定日程表をお客様へ送信しました。', detail: itineraryUrl }), itineraryUrl });
             alert('일정표 안내를 고객에게 발송했습니다.');
         } catch (e: any) {
             alert(`발송 실패: ${e.message || e}`);
@@ -732,7 +733,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 travelDates: reservation.date,
                 contractUrl,
             });
-            onUpdate(addHistory({ type: 'email', description: '海外旅行契約書をお客様へ送信しました。', detail: contractUrl }));
+            // 발송됨 플래그 저장 → 고객 마이페이지에서 海外旅行契約書가 "발송됨"으로 표시됨(contractUrl을 플래그로 사용)
+            onUpdate({ ...addHistory({ type: 'email', description: '海外旅行契約書をお客様へ送信しました。', detail: contractUrl }), contractUrl });
             alert('계약서 안내를 고객에게 발송했습니다.');
         } catch (e: any) {
             alert(`발송 실패: ${e.message || e}`);
@@ -808,8 +810,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                 sentHistories.push({ timestamp: new Date().toISOString(), ...job.history });
             }
 
+            // 발송한 문서만 "발송됨" 플래그 저장 → 고객 마이페이지에 발송됨으로 표시
+            const sentKeys = readyJobs.map((job) => job.key);
             onUpdate({
                 ...reservation,
+                ...(sentKeys.includes('itinerary') ? { itineraryUrl } : {}),
+                ...(sentKeys.includes('contract') ? { contractUrl } : {}),
                 history: [
                     ...(reservation.history || []),
                     ...sentHistories,
