@@ -387,13 +387,13 @@ export const DocumentContract: React.FC = () => {
         { label: '地域', value: contract.region || '-' },
         { label: 'ガイド', value: guide?.name ? `${guide.name}${guide.phone ? `（${guide.phone}）` : ''}` : '日本語ガイドが同行します' },
     ];
-    const payRows: Array<{ label: string; value: string; vStyle: React.CSSProperties }> = [
+    const payRows: Array<{ label: string; value: string; vStyle: React.CSSProperties; note?: string }> = [
         { label: '合計金額', value: fmtYen(reservation.totalPrice), vStyle: t.payStrong },
-        { label: '予約金', value: reservation.depositAmount ? fmtYen(reservation.depositAmount) : '-', vStyle: t.kvValue },
-        { label: '残金', value: fmtYen(balance), vStyle: t.payAccent },
-        { label: '支払方法', value: contractSettings.paymentMethod, vStyle: t.kvValue },
+        { label: '予約金', value: reservation.depositAmount ? fmtYen(reservation.depositAmount) : '-', vStyle: t.kvValue, note: `${contractSettings.paymentMethod}（ご予約確定時）` },
+        { label: '残金', value: fmtYen(balance), vStyle: t.payAccent, note: '現地にて現金（日本円）でお支払い' },
+        { label: '支払方法', value: `予約金：${contractSettings.paymentMethod} ／ 残金：現地にて現金（日本円）`, vStyle: t.kvValue },
         { label: '支払期限', value: contractSettings.paymentDeadline, vStyle: t.kvValue },
-        { label: 'お振込先', value: contractSettings.bankInfo, vStyle: t.kvValue },
+        { label: 'お振込先', value: contractSettings.bankInfo, vStyle: t.kvValue, note: '※ 予約金のお振込先です（残金は現地で現金払い）' },
     ];
     const termRows = [...CONTRACT_NOTICES, ...PRIVACY_NOTICES, ...OTHER_NOTICES].map((text, i) => ({ n: i + 1, text }));
     const companyRows: Array<{ label: string; value: string }> = [
@@ -579,7 +579,13 @@ export const DocumentContract: React.FC = () => {
                             <div style={t.secHead}><span style={t.secNum}>2</span><span style={t.secTitle}>お支払い条件</span></div>
                             <div style={t.kvWrap}>
                                 {payRows.map((r, i) => (
-                                    <div key={i} style={t.kvRow}><div style={t.kvLabel}>{r.label}</div><div style={r.vStyle}>{r.value}</div></div>
+                                    <div key={i} style={t.kvRow}>
+                                        <div style={t.kvLabel}>{r.label}</div>
+                                        <div style={r.note ? { ...r.vStyle, flexDirection: 'column', alignItems: 'flex-start', gap: 3 } : r.vStyle}>
+                                            <span>{r.value}</span>
+                                            {r.note && <span style={{ fontSize: m ? 11 : 12, fontWeight: 600, color: 'var(--mrt-gray-500)', lineHeight: 1.5 }}>{r.note}</span>}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         </div>
