@@ -106,10 +106,31 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 })) as TourProduct[];
                 setProducts(mapped);
                 const target = (customer?.tripType || '').replace(/\s+/g, '').toLowerCase();
+                // 예약 기간(일수) — "3泊4日"→4. 동명/유사명 상품이 여러 개일 때 예약과 같은 일정의 상품을 고르기 위해 사용
+                const targetDays = (() => {
+                    const tl = customer?.tripLength || '';
+                    const md = tl.match(/(\d+)\s*日/);
+                    if (md) return parseInt(md[1], 10);
+                    const mn = tl.match(/(\d+)\s*泊/);
+                    return mn ? parseInt(mn[1], 10) + 1 : null;
+                })();
                 const matched = mapped.filter(product => {
                     const productName = (product.name || '').replace(/\s+/g, '').toLowerCase();
                     return productName === target || productName.includes(target) || target.includes(productName);
                 }).sort((a, b) => {
+                    const an = (a.name || '').replace(/\s+/g, '').toLowerCase();
+                    const bn = (b.name || '').replace(/\s+/g, '').toLowerCase();
+                    // 1) 예약 상품명과 정확히 일치하는 상품 우선
+                    const aExact = an === target ? 1 : 0;
+                    const bExact = bn === target ? 1 : 0;
+                    if (aExact !== bExact) return bExact - aExact;
+                    // 2) 예약 기간(일수)과 같은 상품 우선 (4일 예약에 5일 상품이 잡히는 문제 방지)
+                    if (targetDays != null) {
+                        const aDay = getProductScheduleStats(a).days === targetDays ? 1 : 0;
+                        const bDay = getProductScheduleStats(b).days === targetDays ? 1 : 0;
+                        if (aDay !== bDay) return bDay - aDay;
+                    }
+                    // 3) 그 외에는 일정이 풍부한 상품 우선
                     const aStats = getProductScheduleStats(a);
                     const bStats = getProductScheduleStats(b);
                     return (bStats.days * 1000 + bStats.activities) - (aStats.days * 1000 + aStats.activities);
