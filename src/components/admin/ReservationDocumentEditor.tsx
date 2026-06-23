@@ -59,6 +59,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const [docSettings, setDocSettings] = useState<DocumentSettings>(defaultDocumentSettings());
     const [saving, setSaving] = useState(false);
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+    const [draggedDayIndex, setDraggedDayIndex] = useState<number | null>(null);
     const [products, setProducts] = useState<TourProduct[]>([]);
     const [selectedProductId, setSelectedProductId] = useState('');
     const [loadingProducts, setLoadingProducts] = useState(false);
@@ -268,6 +269,30 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         setSelectedDayIndex(current => Math.max(0, Math.min(current > idx ? current - 1 : current, next.length - 1)));
         return next;
     });
+    // 일차 순서 변경(드래그앤드랍) — 이동 후 DAY 번호를 1..N으로 재정렬
+    const moveDay = (from: number, to: number) => setDays(d => {
+        if (from === to || to < 0 || to >= d.length) return d;
+        const arr = [...d];
+        const [moved] = arr.splice(from, 1);
+        arr.splice(to, 0, moved);
+        return arr.map((x, i) => ({ ...x, day: i + 1 }));
+    });
+    const handleDayDragStart = (index: number) => setDraggedDayIndex(index);
+    const handleDayDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        if (draggedDayIndex === null || draggedDayIndex === index) return;
+        const from = draggedDayIndex;
+        moveDay(from, index);
+        // 선택된 일차가 이동에 따라 유지되도록 인덱스 보정
+        setSelectedDayIndex(sel =>
+            sel === from ? index
+                : from < sel && index >= sel ? sel - 1
+                    : from > sel && index <= sel ? sel + 1
+                        : sel
+        );
+        setDraggedDayIndex(index);
+    };
+    const handleDayDragEnd = () => setDraggedDayIndex(null);
     const addActivity = (dayIdx: number) => setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: [...x.activities, { time: '', type: 'sightseeing' as ActivityType, title: '', description: '' }] } : x));
     const removeActivity = (dayIdx: number, actIdx: number) => setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.filter((_, j) => j !== actIdx) } : x));
     const updateActivity = (dayIdx: number, actIdx: number, field: 'time' | 'title' | 'description', value: string) =>
@@ -434,25 +459,59 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                             </div>
                             <div className="space-y-2">
                                 {days.map((day, index) => (
-                                    <button
+                                    <div
                                         key={`${day.day}-${index}`}
-                                        type="button"
                                         onClick={() => setSelectedDayIndex(index)}
-                                        className={`w-full rounded-xl border p-3 text-left transition-colors ${selectedDayIndex === index ? 'border-[#287DFA] bg-[#EAF3FF] shadow-sm' : 'border-slate-200 bg-white hover:border-[#9CC5FF]'}`}
+                                        onDragOver={(e) => handleDayDragOver(e, index)}
+                                        onDrop={handleDayDragEnd}
+                                        className={`w-full cursor-pointer rounded-xl border p-3 text-left transition-colors ${selectedDayIndex === index ? 'border-[#287DFA] bg-[#EAF3FF] shadow-sm' : 'border-slate-200 bg-white hover:border-[#9CC5FF]'} ${draggedDayIndex === index ? 'opacity-50' : ''}`}
                                     >
                                         <div className="flex items-center justify-between gap-2">
-                                            <span className="text-[10px] font-black text-[#287DFA]">DAY {day.day}</span>
-                                            <span className="text-[9px] font-bold text-slate-400">{day.activities.length}개 일정</span>
+                                            <div className="flex items-center gap-1">
+                                                <span
+                                                    draggable
+                                                    onDragStart={() => handleDayDragStart(index)}
+                                                    onDragEnd={handleDayDragEnd}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    title="드래그하여 일차 순서 변경"
+                                                    className="-ml-1 flex cursor-grab items-center text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">drag_indicator</span>
+                                                </span>
+                                                <span className="text-[10px] font-black text-[#287DFA]">DAY {day.day}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[9px] font-bold text-slate-400">{day.activities.length}개 일정</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); if (window.confirm(`DAY ${day.day}을(를) 삭제할까요?`)) removeDay(index); }}
+                                                    title="DAY 삭제"
+                                                    className="flex h-6 w-6 items-center justify-center rounded-md text-slate-300 hover:bg-red-50 hover:text-red-500"
+                                                >
+                                                    <span className="material-symbols-outlined text-[15px]">delete</span>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <p className="mt-1 truncate text-xs font-black text-slate-800">{day.title || '일차 제목을 입력하세요'}</p>
-                                        <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{day.region || '지역 미정'}</p>
-                                    </button>
+                                        <input
+                                            value={day.title || ''}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => updateDay(index, 'title', e.target.value)}
+                                            placeholder="일차 제목을 입력하세요"
+                                            className="mt-1 w-full truncate border-none bg-transparent p-0 text-xs font-black text-slate-800 outline-none placeholder:font-semibold placeholder:text-slate-300 focus:ring-0"
+                                        />
+                                        <input
+                                            value={day.region || ''}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => updateDay(index, 'region', e.target.value)}
+                                            placeholder="지역 미정"
+                                            className="mt-0.5 w-full truncate border-none bg-transparent p-0 text-[10px] font-semibold text-slate-400 outline-none placeholder:text-slate-300 focus:ring-0"
+                                        />
+                                    </div>
                                 ))}
-                                {days.length === 0 && (
-                                    <button onClick={addDay} className="w-full rounded-xl border-2 border-dashed border-[#9CC5FF] px-3 py-8 text-xs font-black text-[#287DFA]">
-                                        첫 번째 DAY 추가
-                                    </button>
-                                )}
+                                <button onClick={addDay} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#9CC5FF] px-3 py-3 text-xs font-black text-[#287DFA] hover:bg-[#EAF3FF]">
+                                    <span className="material-symbols-outlined text-[16px]">add</span>
+                                    {days.length === 0 ? '첫 번째 DAY 추가' : 'DAY 추가'}
+                                </button>
                             </div>
                         </aside>
 
