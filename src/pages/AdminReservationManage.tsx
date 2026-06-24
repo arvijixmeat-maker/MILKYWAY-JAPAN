@@ -87,6 +87,12 @@ interface Reservation {
     quoteDetail?: QuoteRequest;
 }
 
+interface ProductSummary {
+    id?: string;
+    name?: string;
+    category?: string;
+}
+
 const quoteWorkflowMeta: Record<string, { label: string; hint: string; icon: string }> = {
     new: {
         label: '신규 요청',
@@ -1872,6 +1878,7 @@ export const AdminReservationManage: React.FC = () => {
 
     // Reservations State
     const [reservations, setReservations] = useState<Reservation[]>([]);
+    const [products, setProducts] = useState<ProductSummary[]>([]);
 
     const toTime = (value: any) => {
         if (!value) return 0;
@@ -1884,14 +1891,24 @@ export const AdminReservationManage: React.FC = () => {
             setReservations([]); // Clear first
 
             // Fetch reservations and quotes independently so one failure doesn't block the other
-            const [resSettled, quoteSettled] = await Promise.allSettled([
+            const [resSettled, quoteSettled, productSettled] = await Promise.allSettled([
                 api.reservations.list(),
-                api.quotes.list()
+                api.quotes.list(),
+                api.products.list()
             ]);
             const resData = resSettled.status === 'fulfilled' ? resSettled.value : null;
             const quoteData = quoteSettled.status === 'fulfilled' ? quoteSettled.value : null;
+            const productData = productSettled.status === 'fulfilled' ? productSettled.value : null;
             if (quoteSettled.status === 'rejected') console.error('[Admin] quotes fetch failed:', quoteSettled.reason);
             if (resSettled.status === 'rejected') console.error('[Admin] reservations fetch failed:', resSettled.reason);
+            if (productSettled.status === 'rejected') console.error('[Admin] products fetch failed:', productSettled.reason);
+            if (Array.isArray(productData)) {
+                setProducts(productData.map((p: any) => ({
+                    id: p.id,
+                    name: p.name,
+                    category: p.category,
+                })));
+            }
 
             const allItems: Reservation[] = [];
 
@@ -2311,6 +2328,57 @@ export const AdminReservationManage: React.FC = () => {
 
         const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
         const uniqueText = (items: any[]) => Array.from(new Set(items.map((item) => String(item || '').trim()).filter(Boolean))).join(', ');
+        const normalizeName = (value: any) => String(value || '').replace(/\s+/g, '').toLowerCase();
+        const formatFlight = (f: any, fallbackDate: string) => uniqueText([f?.date || fallbackDate, f?.time, f?.flight]);
+        const productCategoryOf = (reservation: Reservation) => {
+            const product = products.find((p) =>
+                normalizeName(p.name) === normalizeName(reservation.productName)
+                || normalizeName(reservation.productName).includes(normalizeName(p.name))
+                || normalizeName(p.name).includes(normalizeName(reservation.productName))
+            );
+            return product?.category || '';
+        };
+        const toKoreanRegion = (value: any) => {
+            const text = uniqueText(Array.isArray(value) ? value : [value]);
+            if (!text) return '';
+            const rules: Array<[RegExp, string]> = [
+                [/central|중앙|中央|テレルジ|terelj|ub|울란바토르|ウランバートル|쳉헤르|ツェンヘル|미니사막|ミニ砂漠/i, '중앙몽골'],
+                [/gobi|고비|ゴビ/i, '고비사막'],
+                [/horse|승마|乗馬/i, '승마'],
+                [/khuvsgul|huvsgul|홉스굴|フブスグル/i, '홉스굴'],
+                [/trek|트레킹|トレッキング/i, '트레킹'],
+                [/golf|골프|ゴルフ/i, '골프'],
+            ];
+            const mapped = rules.filter(([re]) => re.test(text)).map(([, label]) => label);
+            return uniqueText(mapped) || text;
+        };
+        const translateDestinationKo = (value: any) => {
+            let text = String(value || '').trim();
+            if (!text) return '';
+            const replacements: Array<[RegExp, string]> = [
+                [/ウランバートル|Ulaanbaatar|UB/gi, '울란바토르'],
+                [/テレルジ|Terelj/gi, '테렐지'],
+                [/チンギスハーン国際空港|Chinggis Khaan International Airport/gi, '칭기스칸 국제공항'],
+                [/ツェンヘル|Tsenkher|쳉헤르/gi, '쳉헤르'],
+                [/ミニ砂漠|Elsen Tasarkhai|エルセンタサルハイ/gi, '미니사막'],
+                [/カラコルム|Karakorum|Kharkhorin/gi, '카라코룸'],
+                [/ホスタイ|Hustai/gi, '호스타이'],
+                [/ゴビ|Gobi/gi, '고비사막'],
+                [/ダランザドガド|Dalanzadgad/gi, '달란자드가드'],
+                [/ヨリーンアム|Yolyn Am/gi, '욜링암'],
+                [/バヤンザグ|Bayanzag/gi, '바얀작'],
+                [/ホンゴル砂丘|Khongor/gi, '홍고르 사막'],
+                [/フブスグル|Khuvsgul|Huvsgul/gi, '홉스굴'],
+                [/乗馬|Horse Riding/gi, '승마'],
+                [/市内観光/gi, '시내 관광'],
+                [/到着/gi, '도착'],
+                [/出発/gi, '출발'],
+                [/観光/gi, '관광'],
+                [/温泉/gi, '온천'],
+            ];
+            for (const [from, to] of replacements) text = text.replace(from, to);
+            return text;
+        };
         const addDays = (date: string, offset: number) => {
             if (!date) return '';
             const base = new Date(`${date}T00:00:00`);
@@ -2359,28 +2427,33 @@ export const AdminReservationManage: React.FC = () => {
                 q?.category,
                 q?.destination,
             ];
-            const direct = uniqueText([reservation.contractData?.region, reservation.contractData?.category, ...quoteRegions]);
+            const category = productCategoryOf(reservation);
+            if (category) return toKoreanRegion(category);
+            const direct = toKoreanRegion([reservation.contractData?.region, reservation.contractData?.category, ...quoteRegions]);
             if (direct) return direct;
             const fromDays = uniqueText(days.map((day: any) => day?.region));
-            if (fromDays) return fromDays;
+            if (fromDays) return toKoreanRegion(fromDays);
             const product = reservation.productName || '';
-            return uniqueText([
+            return toKoreanRegion(uniqueText([
                 /고비|ゴビ|gobi/i.test(product) && '고비사막',
                 /승마|乗馬|horse/i.test(product) && '승마',
                 /홉스굴|フブスグル|khuvsgul/i.test(product) && '홉스굴',
                 /중앙|中央|テレルジ|terelj|쳉헤르|ツェンヘル/i.test(product) && '중앙몽골',
-            ].filter(Boolean));
+            ].filter(Boolean)));
         };
 
         const rows = confirmedReservations.flatMap((reservation) => {
             const startDate = String((reservation as any).startDate || '').slice(0, 10);
             const endDate = String((reservation as any).endDate || '').slice(0, 10);
-            const arrivalDate = reservation.contractData?.arrival?.date || startDate;
-            const departureDate = reservation.contractData?.departure?.date || endDate;
+            const arrivalFlight = formatFlight(reservation.contractData?.arrival, startDate);
+            const departureFlight = formatFlight(reservation.contractData?.departure, endDate);
             const travelPeriod = startDate && endDate ? `${startDate} ~ ${endDate}` : (startDate || reservation.date || '');
             const peopleText = reservation.totalPeople ? `${reservation.totalPeople}명` : reservation.headcount;
             const roomCountDefault = reservation.totalPeople ? `${Math.max(1, Math.ceil(reservation.totalPeople / 2))}개` : '';
             const tripDays = tripDaysOf(reservation);
+            const englishCustomerName = (reservation.contractData?.travelers || [])
+                .map((t) => t?.passportName)
+                .find(Boolean) || reservation.customerName || '';
 
             return Array.from({ length: tripDays }, (_, i) => {
                 const day = i + 1;
@@ -2389,15 +2462,15 @@ export const AdminReservationManage: React.FC = () => {
                 const fallback = defaultAccommodationOf(reservation, day);
                 const accommodation: any = assigned?.accommodation || fallback || {};
                 return {
-                    customerName: reservation.customerName || '',
-                    arrivalDate,
-                    departureDate,
+                    customerName: String(englishCustomerName).toUpperCase(),
+                    arrivalFlight,
+                    departureFlight,
                     people: peopleText || '',
                     scheduleLength: tripLengthOf(reservation),
                     travelRegion: inferRegionOf(reservation),
                     travelStartPeriod: travelPeriod,
                     day,
-                    dayDestination: uniqueText([dayContent.region, dayContent.title]) || `${day}일차`,
+                    dayDestination: translateDestinationKo(uniqueText([dayContent.region, dayContent.title]) || `${day}일차`),
                     stayDate: addDays(startDate, i),
                     hotelGrade: accommodation.type || '',
                     roomCount: roomCountDefault,
@@ -2408,8 +2481,8 @@ export const AdminReservationManage: React.FC = () => {
         });
         const headers: Array<[keyof typeof rows[number], string]> = [
             ['customerName', '고객명'],
-            ['arrivalDate', '도착일'],
-            ['departureDate', '출발일'],
+            ['arrivalFlight', '도착일 / 항공편명 / 시간'],
+            ['departureFlight', '출발일 / 항공편명 / 시간'],
             ['people', '인원수'],
             ['scheduleLength', '일정'],
             ['travelRegion', '여행지역'],
