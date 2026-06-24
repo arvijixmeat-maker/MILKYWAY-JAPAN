@@ -689,6 +689,118 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         setTimeout(() => { try { w.print(); } catch { /* 사용자가 수동 인쇄 */ } }, 350);
     };
 
+    const downloadBookingSheetExcel = () => {
+        const d = bookingSheet();
+        const startDate = String((reservation as any).startDate || '').slice(0, 10);
+        const addDays = (date: string, offset: number) => {
+            if (!date) return '';
+            const base = new Date(`${date}T00:00:00`);
+            if (Number.isNaN(base.getTime())) return '';
+            base.setDate(base.getDate() + offset);
+            return base.toISOString().slice(0, 10);
+        };
+        const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
+        const safeFile = (s: string) => s.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_').slice(0, 80);
+        const endDate = String((reservation as any).endDate || '').slice(0, 10);
+        const arrivalDate = editForm.contractData?.arrival?.date || startDate;
+        const departureDate = editForm.contractData?.departure?.date || endDate;
+        const days = (docInitialContent?.days as any[] | undefined) || [];
+        const dayByNumber = (day: number) => days.find((item: any) => Number(item?.day) === day) || days[day - 1] || {};
+        const uniqueText = (items: any[]) => Array.from(new Set(items.map((item) => String(item || '').trim()).filter(Boolean))).join(', ');
+        const inferTravelRegion = () => {
+            const q = reservation.quoteDetail as any;
+            const quoteRegions = [
+                ...(Array.isArray(q?.destinations) ? q.destinations : []),
+                ...(Array.isArray(q?.themes) ? q.themes : []),
+                q?.region,
+                q?.category,
+                q?.destination,
+            ];
+            const direct = uniqueText([editForm.contractData?.region, editForm.contractData?.category, ...quoteRegions]);
+            if (direct) return direct;
+            const fromDays = uniqueText(days.map((day: any) => day?.region));
+            if (fromDays) return fromDays;
+            const product = `${reservation.productName || ''} ${d.product || ''}`;
+            const inferred = [
+                /고비|ゴビ|gobi/i.test(product) && '고비사막',
+                /승마|乗馬|horse/i.test(product) && '승마',
+                /홉스굴|フブスグル|khuvsgul/i.test(product) && '홉스굴',
+                /중앙|中央|テレルジ|terelj|쳉헤르|ツェンヘル/i.test(product) && '중앙몽골',
+            ].filter(Boolean);
+            return uniqueText(inferred);
+        };
+        const tripRegion = inferTravelRegion();
+        const roomCountDefault = reservation.totalPeople ? `${Math.max(1, Math.ceil(reservation.totalPeople / 2))}개` : '';
+        const rows = Array.from({ length: tripDays }, (_, i) => {
+            const day = i + 1;
+            const dayContent = dayByNumber(day);
+            const assigned = reservation.dailyAccommodations?.find((item) => item.day === day);
+            const fallback = defaultAccomForDay(day);
+            const accommodation = assigned?.accommodation || fallback || {};
+            const dayDestination = uniqueText([dayContent.region, dayContent.title]) || `${day}일차`;
+            return {
+                customerName: reservation.customerName || '',
+                arrivalDate,
+                departureDate,
+                people: d.people,
+                scheduleLength: d.nights || docTripLength || '',
+                travelRegion: tripRegion,
+                travelStartPeriod: startDate && endDate ? `${startDate} ~ ${endDate}` : (startDate || d.period),
+                day,
+                dayDestination,
+                stayDate: addDays(startDate, i),
+                hotelGrade: accommodation.type || '',
+                roomCount: roomCountDefault,
+                hotelName: accommodation.name || '',
+                hotelStatus: assigned ? '확정' : '미확정',
+            };
+        });
+        const headers: Array<[keyof typeof rows[number], string]> = [
+            ['customerName', '고객명'],
+            ['arrivalDate', '도착일'],
+            ['departureDate', '출발일'],
+            ['people', '인원수'],
+            ['scheduleLength', '일정'],
+            ['travelRegion', '여행지역'],
+            ['travelStartPeriod', '여행시작기간'],
+            ['day', '일차'],
+            ['dayDestination', '일차별 여행지'],
+            ['stayDate', '숙박일'],
+            ['hotelGrade', '숙소등급'],
+            ['roomCount', '방수'],
+            ['hotelName', '호텔/숙소 이름'],
+            ['hotelStatus', '숙소 확정 여부'],
+        ];
+        const tableRows = rows.map((row) => `
+            <tr>${headers.map(([key]) => `<td>${esc(row[key])}</td>`).join('')}</tr>
+        `).join('');
+        const html = `<!doctype html><html><head><meta charset="utf-8">
+        <style>
+          table{border-collapse:collapse;font-family:Arial,'Malgun Gothic',sans-serif;font-size:11pt}
+          th{background:#0f766e;color:#fff;font-weight:700;border:1px solid #0b5f59;padding:6px 8px;white-space:nowrap}
+          td{border:1px solid #cbd5e1;padding:6px 8px;white-space:pre-wrap;vertical-align:top}
+          .meta td{background:#f8fafc;font-weight:700}
+        </style></head><body>
+          <table class="meta">
+            <tr><td>숙소 수배 시트</td><td>${esc(d.number)}</td><td>${esc(d.product)}</td><td>${esc(d.period)}</td></tr>
+          </table>
+          <br>
+          <table>
+            <thead><tr>${headers.map(([, label]) => `<th>${esc(label)}</th>`).join('')}</tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </body></html>`;
+        const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeFile(`수배서_${d.number}_${reservation.customerName || ''}`)}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    };
+
     const sendItineraryToCustomer = async () => {
         if (!itineraryReady || !reservation.email) {
             alert(!reservation.email ? '고객 이메일이 없습니다.' : '일정표 템플릿을 먼저 선택해 주세요.');
@@ -1097,6 +1209,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                     </button>
                                     <button type="button" className="btn btn-sm btn-blue" style={{ flex: 'none' }} onClick={printBookingSheet} title="숙소 수배 의뢰서를 PDF로 저장·인쇄">
                                         <Icon name="picture_as_pdf" />수배서 PDF
+                                    </button>
+                                    <button type="button" className="btn btn-sm btn-ghost" style={{ flex: 'none' }} onClick={downloadBookingSheetExcel} title="일차별 숙소 수배 정보를 Excel 파일로 다운로드">
+                                        <Icon name="table_view" />수배서 Excel
                                     </button>
                                     {contractAgreement?.agreed
                                         ? <span className="badge b-green" style={{ flex: 'none' }}>동의 완료{contractAgreement.agreedAt ? ` · ${contractAgreement.agreedAt.split('T')[0]}` : ''}</span>
