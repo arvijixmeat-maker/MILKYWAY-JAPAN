@@ -2299,6 +2299,152 @@ export const AdminReservationManage: React.FC = () => {
         };
     }, [reservations]);
 
+    const downloadConfirmedReservationsExcel = () => {
+        const confirmedReservations = reservations
+            .filter((r) => r.type !== 'quote' && r.status === 'confirmed')
+            .sort((a: any, b: any) => toTime(a.startDate) - toTime(b.startDate));
+
+        if (confirmedReservations.length === 0) {
+            alert('예약 확정 상태의 주문이 없습니다.');
+            return;
+        }
+
+        const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
+        const uniqueText = (items: any[]) => Array.from(new Set(items.map((item) => String(item || '').trim()).filter(Boolean))).join(', ');
+        const addDays = (date: string, offset: number) => {
+            if (!date) return '';
+            const base = new Date(`${date}T00:00:00`);
+            if (Number.isNaN(base.getTime())) return '';
+            base.setDate(base.getDate() + offset);
+            return base.toISOString().slice(0, 10);
+        };
+        const tripDaysOf = (reservation: Reservation) => {
+            const sd = String((reservation as any).startDate || '').slice(0, 10);
+            const ed = String((reservation as any).endDate || '').slice(0, 10);
+            if (sd && ed) {
+                const nights = Math.round((new Date(`${ed}T00:00:00`).getTime() - new Date(`${sd}T00:00:00`).getTime()) / 86400000);
+                if (!Number.isNaN(nights) && nights >= 0) return nights + 1;
+            }
+            const docDays = (reservation.documentContent?.days as any[] | undefined)?.length || 0;
+            if (docDays > 0) return docDays;
+            return Math.max((reservation.dailyAccommodations || []).length, 1);
+        };
+        const tripLengthOf = (reservation: Reservation) => {
+            const sd = String((reservation as any).startDate || '').slice(0, 10);
+            const ed = String((reservation as any).endDate || '').slice(0, 10);
+            if (sd && ed) {
+                const nights = Math.round((new Date(`${ed}T00:00:00`).getTime() - new Date(`${sd}T00:00:00`).getTime()) / 86400000);
+                if (!Number.isNaN(nights) && nights >= 0) return `${nights}박 ${nights + 1}일`;
+            }
+            return reservation.date || '';
+        };
+        const dayContentOf = (reservation: Reservation, day: number) => {
+            const days = (reservation.documentContent?.days as any[] | undefined) || [];
+            return days.find((item: any) => Number(item?.day) === day) || days[day - 1] || {};
+        };
+        const defaultAccommodationOf = (reservation: Reservation, day: number) => {
+            const dayContent = dayContentOf(reservation, day);
+            const acc = dayContent?.accommodation;
+            if (!acc) return null;
+            if (typeof acc === 'string') return { name: acc };
+            return acc;
+        };
+        const inferRegionOf = (reservation: Reservation) => {
+            const q = reservation.quoteDetail as any;
+            const days = (reservation.documentContent?.days as any[] | undefined) || [];
+            const quoteRegions = [
+                ...(Array.isArray(q?.destinations) ? q.destinations : []),
+                ...(Array.isArray(q?.themes) ? q.themes : []),
+                q?.region,
+                q?.category,
+                q?.destination,
+            ];
+            const direct = uniqueText([reservation.contractData?.region, reservation.contractData?.category, ...quoteRegions]);
+            if (direct) return direct;
+            const fromDays = uniqueText(days.map((day: any) => day?.region));
+            if (fromDays) return fromDays;
+            const product = reservation.productName || '';
+            return uniqueText([
+                /고비|ゴビ|gobi/i.test(product) && '고비사막',
+                /승마|乗馬|horse/i.test(product) && '승마',
+                /홉스굴|フブスグル|khuvsgul/i.test(product) && '홉스굴',
+                /중앙|中央|テレルジ|terelj|쳉헤르|ツェンヘル/i.test(product) && '중앙몽골',
+            ].filter(Boolean));
+        };
+
+        const rows = confirmedReservations.flatMap((reservation) => {
+            const startDate = String((reservation as any).startDate || '').slice(0, 10);
+            const endDate = String((reservation as any).endDate || '').slice(0, 10);
+            const arrivalDate = reservation.contractData?.arrival?.date || startDate;
+            const departureDate = reservation.contractData?.departure?.date || endDate;
+            const travelPeriod = startDate && endDate ? `${startDate} ~ ${endDate}` : (startDate || reservation.date || '');
+            const peopleText = reservation.totalPeople ? `${reservation.totalPeople}명` : reservation.headcount;
+            const roomCountDefault = reservation.totalPeople ? `${Math.max(1, Math.ceil(reservation.totalPeople / 2))}개` : '';
+            const tripDays = tripDaysOf(reservation);
+
+            return Array.from({ length: tripDays }, (_, i) => {
+                const day = i + 1;
+                const dayContent = dayContentOf(reservation, day);
+                const assigned = reservation.dailyAccommodations?.find((item) => item.day === day);
+                const fallback = defaultAccommodationOf(reservation, day);
+                const accommodation: any = assigned?.accommodation || fallback || {};
+                return {
+                    customerName: reservation.customerName || '',
+                    arrivalDate,
+                    departureDate,
+                    people: peopleText || '',
+                    scheduleLength: tripLengthOf(reservation),
+                    travelRegion: inferRegionOf(reservation),
+                    travelStartPeriod: travelPeriod,
+                    day,
+                    dayDestination: uniqueText([dayContent.region, dayContent.title]) || `${day}일차`,
+                    stayDate: addDays(startDate, i),
+                    hotelGrade: accommodation.type || '',
+                    roomCount: roomCountDefault,
+                    hotelName: accommodation.name || '',
+                    hotelStatus: assigned ? '확정' : '미확정',
+                };
+            });
+        });
+        const headers: Array<[keyof typeof rows[number], string]> = [
+            ['customerName', '고객명'],
+            ['arrivalDate', '도착일'],
+            ['departureDate', '출발일'],
+            ['people', '인원수'],
+            ['scheduleLength', '일정'],
+            ['travelRegion', '여행지역'],
+            ['travelStartPeriod', '여행시작기간'],
+            ['day', '일차'],
+            ['dayDestination', '일차별 여행지'],
+            ['stayDate', '숙박일'],
+            ['hotelGrade', '숙소등급'],
+            ['roomCount', '방수'],
+            ['hotelName', '호텔/숙소 이름'],
+            ['hotelStatus', '숙소 확정 여부'],
+        ];
+        const tableRows = rows.map((row) => `<tr>${headers.map(([key]) => `<td>${esc(row[key])}</td>`).join('')}</tr>`).join('');
+        const html = `<!doctype html><html><head><meta charset="utf-8">
+        <style>
+          table{border-collapse:collapse;font-family:Arial,'Malgun Gothic',sans-serif;font-size:11pt}
+          th{background:#0f766e;color:#fff;font-weight:700;border:1px solid #0b5f59;padding:6px 8px;white-space:nowrap}
+          td{border:1px solid #cbd5e1;padding:6px 8px;white-space:pre-wrap;vertical-align:top}
+          .meta td{background:#f8fafc;font-weight:700}
+        </style></head><body>
+          <table class="meta"><tr><td>예약 확정 숙소 수배 통합 시트</td><td>${confirmedReservations.length}건</td><td>${new Date().toISOString().slice(0, 10)}</td></tr></table>
+          <br>
+          <table><thead><tr>${headers.map(([, label]) => `<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>
+        </body></html>`;
+        const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `예약확정_숙소수배_${new Date().toISOString().slice(0, 10)}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    };
+
     const toggleTheme = () => {
         setIsDarkMode(!isDarkMode);
         document.documentElement.classList.toggle('dark');
@@ -2313,14 +2459,25 @@ export const AdminReservationManage: React.FC = () => {
                 isDarkMode={isDarkMode}
                 toggleTheme={toggleTheme}
                 actions={
-                    <button
-                        type="button"
-                        onClick={fetchReservations}
-                        className="btn btn-ghost"
-                    >
-                        <Icon name="refresh" />
-                        새로고침
-                    </button>
+                    <>
+                        <button
+                            type="button"
+                            onClick={downloadConfirmedReservationsExcel}
+                            className="btn btn-ink"
+                            title="예약 확정 상태의 모든 주문을 일차별 숙소 수배 Excel로 다운로드"
+                        >
+                            <Icon name="table_view" />
+                            예약확정 Excel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={fetchReservations}
+                            className="btn btn-ghost"
+                        >
+                            <Icon name="refresh" />
+                            새로고침
+                        </button>
+                    </>
                 }
             >
                 <div className="stack route-anim" style={{ gap: 18, fontFamily: 'var(--font-sans)' }}>
