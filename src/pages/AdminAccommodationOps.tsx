@@ -17,6 +17,7 @@ const WD = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
 
 interface DailyAcc {
     day: number;
+    date?: string; // 직접 편집 가능한 날짜(yyyy-mm-dd). 없으면 startDate 기준 자동
     accommodation: {
         id?: string;
         name?: string;
@@ -83,12 +84,18 @@ const monthKey = (iso?: string) => {
     if (Number.isNaN(d.getTime())) return '';
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
-const nightDate = (start?: string, dayNum?: number) => {
-    if (!start || !dayNum) return '';
+// startDate + offset일 → yyyy-mm-dd (date input용 기본값)
+const isoOffset = (start?: string, offset = 0) => {
+    if (!start) return '';
     const d = new Date(start);
     if (Number.isNaN(d.getTime())) return '';
-    d.setDate(d.getDate() + dayNum - 1);
-    return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`;
+    d.setDate(d.getDate() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const weekdayMn = (iso?: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '' : WD[d.getDay()];
 };
 const regionOf = (r: Reservation) => (r.contractData?.region || r.contractData?.category || r.productName || '-');
 const genderMn = (g?: string) => g === '男性' || g === 'male' ? 'Эрэгтэй' : g === '女性' || g === 'female' ? 'Эмэгтэй' : (g || '-');
@@ -100,7 +107,7 @@ const daysOf = (r: Reservation): DailyAcc[] => {
     if (existing.length > 0) return existing;
     const nights = nightsOf(r);
     if (nights <= 0) return [];
-    return Array.from({ length: nights }, (_, i) => ({ day: i + 1, accommodation: {} }));
+    return Array.from({ length: nights }, (_, i) => ({ day: i + 1, date: isoOffset(r.startDate, i), accommodation: {} }));
 };
 const summaryOf = (r: Reservation) => {
     const rows = daysOf(r);
@@ -188,7 +195,7 @@ export const AdminAccommodationOps: React.FC = () => {
     // ── 펼침/구체화 ──
     const openRow = (r: Reservation) => {
         if (!materialized.has(r.id)) {
-            setReservations(prev => prev.map(x => x.id === r.id ? { ...x, dailyAccommodations: daysOf(x) } : x));
+            setReservations(prev => prev.map(x => x.id === r.id ? { ...x, dailyAccommodations: daysOf(x).map((d, i) => ({ ...d, date: d.date || isoOffset(x.startDate, i) })) } : x));
             setMaterialized(prev => new Set(prev).add(r.id));
         }
         setExpanded(prev => new Set(prev).add(r.id));
@@ -197,10 +204,20 @@ export const AdminAccommodationOps: React.FC = () => {
 
     // ── 편집 ──
     const markDirty = (rId: string) => setDirty(prev => new Set(prev).add(rId));
-    const patchDay = (rId: string, day: number, patch: Partial<DailyAcc['accommodation']>) => {
+    // 인덱스 기준 편집(일차 번호·날짜를 직접 수정해도 안전)
+    const patchDay = (rId: string, idx: number, patch: Partial<DailyAcc['accommodation']>) => {
         setReservations(prev => prev.map(r => {
             if (r.id !== rId) return r;
-            const rows = (r.dailyAccommodations || []).map(d => d.day === day ? { ...d, accommodation: { ...d.accommodation, ...patch } } : d);
+            const rows = (r.dailyAccommodations || []).map((d, i) => i === idx ? { ...d, accommodation: { ...d.accommodation, ...patch } } : d);
+            return { ...r, dailyAccommodations: rows };
+        }));
+        markDirty(rId);
+    };
+    // 일차(번호)·날짜 직접 편집
+    const patchDayMeta = (rId: string, idx: number, patch: { day?: number; date?: string }) => {
+        setReservations(prev => prev.map(r => {
+            if (r.id !== rId) return r;
+            const rows = (r.dailyAccommodations || []).map((d, i) => i === idx ? { ...d, ...patch } : d);
             return { ...r, dailyAccommodations: rows };
         }));
         markDirty(rId);
@@ -209,15 +226,18 @@ export const AdminAccommodationOps: React.FC = () => {
         setReservations(prev => prev.map(r => {
             if (r.id !== rId) return r;
             const rows = [...(r.dailyAccommodations || [])];
-            rows.push({ day: rows.length + 1, accommodation: {} });
+            const maxDay = rows.reduce((m, d) => Math.max(m, d.day || 0), 0);
+            const last = rows[rows.length - 1]?.date;
+            const nextDate = last ? isoOffset(last, 1) : isoOffset(r.startDate, rows.length);
+            rows.push({ day: maxDay + 1, date: nextDate, accommodation: {} });
             return { ...r, dailyAccommodations: rows };
         }));
         markDirty(rId);
     };
-    const removeDay = (rId: string, day: number) => {
+    const removeDay = (rId: string, idx: number) => {
         setReservations(prev => prev.map(r => {
             if (r.id !== rId) return r;
-            const rows = (r.dailyAccommodations || []).filter(d => d.day !== day).map((d, i) => ({ ...d, day: i + 1 }));
+            const rows = (r.dailyAccommodations || []).filter((_, i) => i !== idx);
             return { ...r, dailyAccommodations: rows };
         }));
         markDirty(rId);
@@ -386,7 +406,7 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                 <table className="tbl" style={{ minWidth: 800 }}>
                                                                     <thead>
                                                                         <tr>
-                                                                            <th style={{ width: 110 }}>Өдөр</th>
+                                                                            <th style={{ width: 180 }}>Өдөр · Огноо</th>
                                                                             <th>Байрны нэр</th>
                                                                             <th style={{ width: 80 }}>Өрөө</th>
                                                                             <th style={{ width: 130 }}>Хүн/өрөө</th>
@@ -395,30 +415,39 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
-                                                                        {rows.map(d => {
+                                                                        {rows.map((d, idx) => {
                                                                             const acc = d.accommodation || {};
                                                                             const hasName = (acc.name || '').trim().length > 0;
                                                                             const st: BookingStatus | 'Хуваарилаагүй' = hasName ? (acc.bookingStatus || 'Илгээгээгүй') : 'Хуваарилаагүй';
                                                                             const sts = statusStyle(st);
                                                                             return (
-                                                                                <tr key={d.day}>
-                                                                                    <td style={{ fontWeight: 700 }}>Өдөр {d.day}<span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>{nightDate(r.startDate, d.day)}</span></td>
-                                                                                    <td><input className="inp" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="Зочид буудал эсвэл гэрийн нэр" onChange={e => patchDay(r.id, d.day, { name: e.target.value })} /></td>
-                                                                                    <td><input className="inp" type="number" min={0} style={{ width: 66 }} value={acc.roomCount ?? ''} placeholder="0" onChange={e => patchDay(r.id, d.day, { roomCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })} /></td>
+                                                                                <tr key={idx}>
                                                                                     <td>
-                                                                                        <select className="select" style={{ width: 120 }} value={acc.occupancy || ''} onChange={e => patchDay(r.id, d.day, { occupancy: e.target.value || undefined })}>
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                                                            <span style={{ fontSize: 11, fontWeight: 700, color: '#8A8F99' }}>Өдөр</span>
+                                                                                            <input type="number" min={1} className="inp" style={{ width: 50, padding: '0 6px' }} value={d.day} onChange={e => patchDayMeta(r.id, idx, { day: parseInt(e.target.value) || idx + 1 })} />
+                                                                                        </div>
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
+                                                                                            <input type="date" className="inp" style={{ width: 140 }} value={d.date || ''} onChange={e => patchDayMeta(r.id, idx, { date: e.target.value })} />
+                                                                                            {d.date && <span className="cell-muted" style={{ fontSize: 11 }}>{weekdayMn(d.date)}</span>}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td><input className="inp" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="Зочид буудал эсвэл гэрийн нэр" onChange={e => patchDay(r.id, idx, { name: e.target.value })} /></td>
+                                                                                    <td><input className="inp" type="number" min={0} style={{ width: 66 }} value={acc.roomCount ?? ''} placeholder="0" onChange={e => patchDay(r.id, idx, { roomCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })} /></td>
+                                                                                    <td>
+                                                                                        <select className="select" style={{ width: 120 }} value={acc.occupancy || ''} onChange={e => patchDay(r.id, idx, { occupancy: e.target.value || undefined })}>
                                                                                             {OCCUPANCY_OPTIONS.map(o => <option key={o} value={o}>{o || 'Тодорхойгүй'}</option>)}
                                                                                         </select>
                                                                                     </td>
                                                                                     <td>
                                                                                         <select className="select" style={{ width: 140, fontWeight: 700, background: sts.bg, color: sts.fg, borderColor: 'transparent' }}
                                                                                             value={hasName ? (acc.bookingStatus || 'Илгээгээгүй') : 'Илгээгээгүй'} disabled={!hasName}
-                                                                                            onChange={e => patchDay(r.id, d.day, { bookingStatus: e.target.value as BookingStatus })}>
+                                                                                            onChange={e => patchDay(r.id, idx, { bookingStatus: e.target.value as BookingStatus })}>
                                                                                             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                                                                                         </select>
                                                                                     </td>
                                                                                     <td style={{ textAlign: 'center' }}>
-                                                                                        <button type="button" className="btn btn-sm" title="Энэ өдрийг устгах" onClick={() => { if (window.confirm(`Өдөр ${d.day}-г устгах уу?`)) removeDay(r.id, d.day); }} style={{ color: '#E24B4A' }}>
+                                                                                        <button type="button" className="btn btn-sm" title="Энэ өдрийг устгах" onClick={() => { if (window.confirm(`Өдөр ${d.day}-г устгах уу?`)) removeDay(r.id, idx); }} style={{ color: '#E24B4A' }}>
                                                                                             <Icon name="delete" />
                                                                                         </button>
                                                                                     </td>
