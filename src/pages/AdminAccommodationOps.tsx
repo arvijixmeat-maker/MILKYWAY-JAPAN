@@ -4,14 +4,16 @@ import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 
 /**
- * 숙소 배정 관리 (내부 전용) — 숙소 담당 직원용.
- * 확정 예약을 한눈에 보고, 일차별로 숙소명·방수·몇인몇실·호텔 수배 상태(미발송/메일발송/회신/확정)를 관리한다.
- * 데이터는 reservations.dailyAccommodations(JSON)에 저장 — 스키마 마이그레이션 없음.
+ * Байр захиалгын удирдлага (дотоод) — байрны хариуцсан ажилтанд зориулсан, монгол хэлээр.
+ * Баталгаажсан захиалгыг нэг дороос харж, өдөр тутмын байр/өрөө/хүн/захиалгын төлвийг удирдана.
+ * Аяллын мэдээлэл (нислэг·аялагч) нь reservations.contractData-аас, байр нь dailyAccommodations(JSON)-д хадгална.
+ * Схемийн миграци шаардлагагүй.
  */
 
-type BookingStatus = '미발송' | '메일발송' | '회신' | '확정';
-const STATUS_OPTIONS: BookingStatus[] = ['미발송', '메일발송', '회신', '확정'];
-const OCCUPANCY_OPTIONS = ['', '1인1실', '2인1실', '3인1실', '4인1실', '5인1실', '6인1실'];
+type BookingStatus = 'Илгээгээгүй' | 'Имэйл илгээсэн' | 'Хариу ирсэн' | 'Баталгаажсан';
+const STATUS_OPTIONS: BookingStatus[] = ['Илгээгээгүй', 'Имэйл илгээсэн', 'Хариу ирсэн', 'Баталгаажсан'];
+const OCCUPANCY_OPTIONS = ['', '1 хүн/өрөө', '2 хүн/өрөө', '3 хүн/өрөө', '4 хүн/өрөө', '5 хүн/өрөө', '6 хүн/өрөө'];
+const WD = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
 
 interface DailyAcc {
     day: number;
@@ -23,13 +25,13 @@ interface DailyAcc {
         images?: string[];
         description?: string;
         facilities?: string[];
-        // ─── 신규(내부 숙소 관리용) ───
         roomCount?: number;
         occupancy?: string;
         bookingStatus?: BookingStatus;
     };
 }
-
+interface Traveler { name?: string; passportName?: string; birthdate?: string; gender?: string; phone?: string }
+interface Flight { date?: string; time?: string; flight?: string }
 interface Reservation {
     id: string;
     type?: string;
@@ -42,19 +44,23 @@ interface Reservation {
     travelers?: number;
     reservationNumber?: string | null;
     createdAt?: string;
-    duration?: string;
     dailyAccommodations?: DailyAcc[];
-    contractData?: { region?: string; category?: string };
-    history?: any[];
+    contractData?: {
+        region?: string; category?: string;
+        travelers?: Traveler[];
+        arrival?: Flight; departure?: Flight;
+        agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+    };
 }
 
-const statusStyle = (s?: BookingStatus | '미배정'): { bg: string; fg: string } => ({
-    '미배정': { bg: '#F1F2F4', fg: '#8A8F99' },
-    '미발송': { bg: '#EEF1F5', fg: '#5F636B' },
-    '메일발송': { bg: '#E8F2FF', fg: '#0B6FE0' },
-    '회신': { bg: '#FEF6E7', fg: '#B45309' },
-    '확정': { bg: '#E4F7EC', fg: '#0F7A43' },
-}[s || '미배정'] || { bg: '#F1F2F4', fg: '#8A8F99' });
+const statusStyle = (s?: BookingStatus | 'Хуваарилаагүй' | 'Явагдаж байна'): { bg: string; fg: string } => ({
+    'Хуваарилаагүй': { bg: '#F1F2F4', fg: '#8A8F99' },
+    'Илгээгээгүй': { bg: '#EEF1F5', fg: '#5F636B' },
+    'Имэйл илгээсэн': { bg: '#E8F2FF', fg: '#0B6FE0' },
+    'Хариу ирсэн': { bg: '#FEF6E7', fg: '#B45309' },
+    'Явагдаж байна': { bg: '#FEF6E7', fg: '#B45309' },
+    'Баталгаажсан': { bg: '#E4F7EC', fg: '#0F7A43' },
+}[s || 'Хуваарилаагүй'] || { bg: '#F1F2F4', fg: '#8A8F99' });
 
 const nightsOf = (r: Reservation): number => {
     if (!r.startDate || !r.endDate) return 0;
@@ -80,31 +86,27 @@ const nightDate = (start?: string, dayNum?: number) => {
     const d = new Date(start);
     if (Number.isNaN(d.getTime())) return '';
     d.setDate(d.getDate() + dayNum - 1);
-    const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
-    return `${d.getMonth() + 1}/${d.getDate()}(${wd})`;
+    return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`;
 };
 const regionOf = (r: Reservation) => (r.contractData?.region || r.contractData?.category || r.productName || '-');
+const genderMn = (g?: string) => g === '男性' || g === 'male' ? 'Эрэгтэй' : g === '女性' || g === 'female' ? 'Эмэгтэй' : (g || '-');
+const flightLine = (f?: Flight) => [f?.date, f?.time, f?.flight].filter(Boolean).join(' · ') || '-';
 
-// 예약의 박일수만큼 일차 행을 만들어 기존 dailyAccommodations와 병합
-const dayRowsOf = (r: Reservation): DailyAcc[] => {
-    const nights = nightsOf(r);
+// 저장된 dailyAccommodations이 있으면 그대로(추가/삭제 보존), 없으면 박일수만큼 빈 행 생성
+const daysOf = (r: Reservation): DailyAcc[] => {
     const existing = Array.isArray(r.dailyAccommodations) ? r.dailyAccommodations : [];
-    const count = Math.max(nights, existing.reduce((m, d) => Math.max(m, d.day || 0), 0));
-    if (count <= 0) return existing;
-    return Array.from({ length: count }, (_, i) => {
-        const day = i + 1;
-        const found = existing.find(d => d.day === day);
-        return found || { day, accommodation: {} };
-    });
+    if (existing.length > 0) return existing;
+    const nights = nightsOf(r);
+    if (nights <= 0) return [];
+    return Array.from({ length: nights }, (_, i) => ({ day: i + 1, accommodation: {} }));
 };
-
 const summaryOf = (r: Reservation) => {
-    const rows = dayRowsOf(r);
+    const rows = daysOf(r);
     const total = rows.length;
     const assigned = rows.filter(d => (d.accommodation?.name || '').trim()).length;
-    const confirmed = rows.filter(d => d.accommodation?.bookingStatus === '확정').length;
+    const confirmed = rows.filter(d => d.accommodation?.bookingStatus === 'Баталгаажсан').length;
     const allConfirmed = total > 0 && confirmed === total;
-    const label: BookingStatus | '미배정' | '진행중' = allConfirmed ? '확정' : (assigned > 0 || confirmed > 0) ? '진행중' as any : '미배정';
+    const label: BookingStatus | 'Хуваарилаагүй' | 'Явагдаж байна' = allConfirmed ? 'Баталгаажсан' : (assigned > 0 || confirmed > 0) ? 'Явагдаж байна' : 'Хуваарилаагүй';
     return { total, assigned, confirmed, allConfirmed, label };
 };
 
@@ -116,8 +118,8 @@ export const AdminAccommodationOps: React.FC = () => {
     const [dirty, setDirty] = useState<Set<string>>(new Set());
     const [savingId, setSavingId] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [materialized, setMaterialized] = useState<Set<string>>(new Set());
 
-    // filters
     const [q, setQ] = useState('');
     const [month, setMonth] = useState('all');
     const [region, setRegion] = useState('all');
@@ -130,8 +132,9 @@ export const AdminAccommodationOps: React.FC = () => {
             const data = await api.reservations.list();
             const arr: Reservation[] = (Array.isArray(data) ? data : []).filter((r: any) => r && r.type !== 'quote');
             setReservations(arr);
+            setMaterialized(new Set());
         } catch (e) {
-            console.error('숙소 관리 예약 로드 실패:', e);
+            console.error('Байр захиалга — ачаалал амжилтгүй:', e);
             setReservations([]);
         } finally {
             setLoading(false);
@@ -140,8 +143,7 @@ export const AdminAccommodationOps: React.FC = () => {
     useEffect(() => { load(); }, []);
 
     const base = useMemo(() => reservations.filter(r => scope === 'all' ? true
-        : (CONFIRMED_STATUSES.includes(r.status || '') || (r as any).depositStatus === 'paid')), [reservations, scope]);
-
+        : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid')), [reservations, scope]);
     const monthOptions = useMemo(() => {
         const set = new Set<string>();
         base.forEach(r => { const k = monthKey(r.startDate); if (k) set.add(k); });
@@ -152,7 +154,6 @@ export const AdminAccommodationOps: React.FC = () => {
         base.forEach(r => { const k = regionOf(r); if (k && k !== '-') set.add(k); });
         return Array.from(set).sort();
     }, [base]);
-
     const filtered = useMemo(() => {
         const needle = q.trim().toLowerCase();
         return base.filter(r => {
@@ -169,97 +170,101 @@ export const AdminAccommodationOps: React.FC = () => {
             }
             return true;
         }).sort((a, b) => {
-            // 미확정 우선 → 도착일 빠른 순
             const da = summaryOf(a).allConfirmed ? 1 : 0;
             const db = summaryOf(b).allConfirmed ? 1 : 0;
             if (da !== db) return da - db;
             return (a.startDate || '').localeCompare(b.startDate || '');
         });
     }, [base, q, month, region, confirmFilter]);
-
     const counts = useMemo(() => {
         let done = 0, pending = 0;
         filtered.forEach(r => { summaryOf(r).allConfirmed ? done++ : pending++; });
         return { total: filtered.length, done, pending };
     }, [filtered]);
 
+    // ── 펼침/구체화 ──
+    const openRow = (r: Reservation) => {
+        if (!materialized.has(r.id)) {
+            setReservations(prev => prev.map(x => x.id === r.id ? { ...x, dailyAccommodations: daysOf(x) } : x));
+            setMaterialized(prev => new Set(prev).add(r.id));
+        }
+        setExpanded(prev => new Set(prev).add(r.id));
+    };
+    const toggleExpand = (r: Reservation) => expanded.has(r.id) ? setExpanded(prev => { const n = new Set(prev); n.delete(r.id); return n; }) : openRow(r);
+
     // ── 편집 ──
+    const markDirty = (rId: string) => setDirty(prev => new Set(prev).add(rId));
     const patchDay = (rId: string, day: number, patch: Partial<DailyAcc['accommodation']>) => {
         setReservations(prev => prev.map(r => {
             if (r.id !== rId) return r;
-            const rows = dayRowsOf(r);
-            const next = rows.map(d => d.day === day ? { ...d, accommodation: { ...d.accommodation, ...patch } } : d);
-            return { ...r, dailyAccommodations: next };
+            const rows = (r.dailyAccommodations || []).map(d => d.day === day ? { ...d, accommodation: { ...d.accommodation, ...patch } } : d);
+            return { ...r, dailyAccommodations: rows };
         }));
-        setDirty(prev => new Set(prev).add(rId));
+        markDirty(rId);
     };
-    const applyFirstToAll = (rId: string) => {
+    const addDay = (rId: string) => {
         setReservations(prev => prev.map(r => {
             if (r.id !== rId) return r;
-            const rows = dayRowsOf(r);
-            const first = rows[0]?.accommodation || {};
-            const next = rows.map(d => ({ ...d, accommodation: { ...d.accommodation, roomCount: first.roomCount, occupancy: first.occupancy } }));
-            return { ...r, dailyAccommodations: next };
+            const rows = [...(r.dailyAccommodations || [])];
+            rows.push({ day: rows.length + 1, accommodation: {} });
+            return { ...r, dailyAccommodations: rows };
         }));
-        setDirty(prev => new Set(prev).add(rId));
+        markDirty(rId);
     };
-    const setAllStatus = (rId: string, status: BookingStatus) => {
+    const removeDay = (rId: string, day: number) => {
         setReservations(prev => prev.map(r => {
             if (r.id !== rId) return r;
-            const rows = dayRowsOf(r);
-            const next = rows.map(d => ({ ...d, accommodation: { ...d.accommodation, bookingStatus: status } }));
-            return { ...r, dailyAccommodations: next };
+            const rows = (r.dailyAccommodations || []).filter(d => d.day !== day).map((d, i) => ({ ...d, day: i + 1 }));
+            return { ...r, dailyAccommodations: rows };
         }));
-        setDirty(prev => new Set(prev).add(rId));
+        markDirty(rId);
     };
     const save = async (r: Reservation) => {
         setSavingId(r.id);
         try {
-            const rows = dayRowsOf(r).filter(d => (d.accommodation?.name || '').trim() || d.accommodation?.roomCount || d.accommodation?.occupancy || d.accommodation?.bookingStatus);
-            await api.reservations.update(r.id, { ...r, dailyAccommodations: rows });
+            await api.reservations.update(r.id, { ...r, dailyAccommodations: r.dailyAccommodations || [] });
             setDirty(prev => { const n = new Set(prev); n.delete(r.id); return n; });
         } catch (e: any) {
-            alert('저장 실패: ' + (e?.message || e));
+            alert('Хадгалах амжилтгүй: ' + (e?.message || e));
         } finally {
             setSavingId(null);
         }
     };
-    const toggleExpand = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
     return (
         <AdminLayout
             activePage="accommodation-ops"
-            title="숙소 배정 관리"
-            actions={<button type="button" onClick={load} className="btn"><Icon name="refresh" />새로고침</button>}
+            title="Байр захиалгын удирдлага"
+            actions={<button type="button" onClick={load} className="btn"><Icon name="refresh" />Шинэчлэх</button>}
         >
             <div className="route-anim">
                 <div className="toolbar" style={{ flexWrap: 'wrap', gap: 8 }}>
                     <label className="tb-search">
                         <Icon name="search" />
-                        <input placeholder="고객명·상품·예약번호 검색" value={q} onChange={e => setQ(e.target.value)} />
+                        <input placeholder="Үйлчлүүлэгч, аялал, захиалгын дугаараар хайх" value={q} onChange={e => setQ(e.target.value)} />
                     </label>
                     <select className="select" value={scope} onChange={e => setScope(e.target.value as any)}>
-                        <option value="confirmed">확정 예약만</option>
-                        <option value="all">전체 예약</option>
+                        <option value="confirmed">Зөвхөн баталгаажсан</option>
+                        <option value="all">Бүх захиалга</option>
                     </select>
                     <select className="select" value={month} onChange={e => setMonth(e.target.value)}>
-                        <option value="all">전체 월(도착)</option>
+                        <option value="all">Бүх сар (ирэх)</option>
                         {monthOptions.map(m => <option key={m} value={m}>{m.replace('-', '.')}</option>)}
                     </select>
                     <select className="select" value={region} onChange={e => setRegion(e.target.value)}>
-                        <option value="all">전체 지역</option>
+                        <option value="all">Бүх бүс нутаг</option>
                         {regionOptions.map(rg => <option key={rg} value={rg}>{rg}</option>)}
                     </select>
                     <select className="select" value={confirmFilter} onChange={e => setConfirmFilter(e.target.value as any)}>
-                        <option value="all">전체 상태</option>
-                        <option value="pending">미확정</option>
-                        <option value="done">확정완료</option>
+                        <option value="all">Бүх төлөв</option>
+                        <option value="pending">Батлаагүй</option>
+                        <option value="done">Баталгаажсан</option>
                     </select>
                     <div className="spacer" />
                     <span className="cell-muted" style={{ fontSize: 13 }}>
-                        표시 <b style={{ color: 'var(--text-strong)' }}>{counts.total}</b>건 ·{' '}
-                        <span style={{ color: '#B45309', fontWeight: 700 }}>미확정 {counts.pending}</span> ·{' '}
-                        <span style={{ color: '#0F7A43', fontWeight: 700 }}>확정 {counts.done}</span>
+                        Харагдаж буй <b style={{ color: 'var(--text-strong)' }}>{counts.total}</b> ·{' '}
+                        <span style={{ color: '#B45309', fontWeight: 700 }}>Батлаагүй {counts.pending}</span> ·{' '}
+                        <span style={{ color: '#0F7A43', fontWeight: 700 }}>Баталгаажсан {counts.done}</span>
                     </span>
                 </div>
 
@@ -269,113 +274,144 @@ export const AdminAccommodationOps: React.FC = () => {
                             <thead>
                                 <tr>
                                     <th style={{ width: 34 }}></th>
-                                    <th style={{ width: 92 }}>확정상태</th>
-                                    <th>고객명</th>
-                                    <th style={{ width: 200 }}>도착 ~ 출발</th>
-                                    <th style={{ width: 78 }}>박일수</th>
-                                    <th>지역</th>
-                                    <th style={{ width: 96 }}>예약일</th>
-                                    <th style={{ width: 60 }}>인원</th>
-                                    <th style={{ width: 110 }}>숙소 진행</th>
+                                    <th style={{ width: 116 }}>Төлөв</th>
+                                    <th>Үйлчлүүлэгч</th>
+                                    <th style={{ width: 200 }}>Ирэх ~ Явах</th>
+                                    <th style={{ width: 120 }}>Хоног</th>
+                                    <th>Бүс нутаг</th>
+                                    <th style={{ width: 100 }}>Захиалсан</th>
+                                    <th style={{ width: 64 }}>Хүн</th>
+                                    <th style={{ width: 130 }}>Явц</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {loading && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 28 }} className="cell-muted">불러오는 중…</td></tr>}
-                                {!loading && filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 28 }} className="cell-muted">해당 조건의 예약이 없습니다.</td></tr>}
+                                {loading && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 28 }} className="cell-muted">Ачааллаж байна…</td></tr>}
+                                {!loading && filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 28 }} className="cell-muted">Тохирох захиалга алга.</td></tr>}
                                 {!loading && filtered.map(r => {
                                     const sum = summaryOf(r);
-                                    const sty = statusStyle(sum.label as any);
+                                    const sty = statusStyle(sum.label);
                                     const open = expanded.has(r.id);
                                     const isDirty = dirty.has(r.id);
-                                    const rows = dayRowsOf(r);
+                                    const rows = open ? (r.dailyAccommodations || []) : [];
+                                    const cd = r.contractData || {};
+                                    const travelers = cd.travelers || [];
                                     return (
                                         <React.Fragment key={r.id}>
-                                            <tr style={{ cursor: 'pointer', background: open ? 'var(--surface-canvas, #F7F8FA)' : undefined }} onClick={() => toggleExpand(r.id)}>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <Icon name={open ? 'expand_more' : 'chevron_right'} />
-                                                </td>
-                                                <td>
-                                                    <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: sty.bg, color: sty.fg }}>{sum.label}</span>
-                                                </td>
-                                                <td style={{ fontWeight: 700 }}>
-                                                    {r.customerName || '-'}
-                                                    {r.reservationNumber && <span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>#{r.reservationNumber}</span>}
-                                                </td>
+                                            <tr style={{ cursor: 'pointer', background: open ? 'var(--surface-canvas, #F7F8FA)' : undefined }} onClick={() => toggleExpand(r)}>
+                                                <td style={{ textAlign: 'center' }}><Icon name={open ? 'expand_more' : 'chevron_right'} /></td>
+                                                <td><span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: sty.bg, color: sty.fg }}>{sum.label}</span></td>
+                                                <td style={{ fontWeight: 700 }}>{r.customerName || '-'}{r.reservationNumber && <span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>#{r.reservationNumber}</span>}</td>
                                                 <td>{fmtDate(r.startDate)} ~ {fmtDate(r.endDate)}</td>
-                                                <td>{nightsOf(r) > 0 ? `${nightsOf(r)}泊${nightsOf(r) + 1}日` : '-'}</td>
+                                                <td>{nightsOf(r) > 0 ? `${nightsOf(r)} шөнө ${nightsOf(r) + 1} өдөр` : '-'}</td>
                                                 <td>{regionOf(r)}</td>
                                                 <td>{fmtDate(r.createdAt)}</td>
-                                                <td>{r.travelers || '-'}名</td>
-                                                <td style={{ fontWeight: 700, color: sum.allConfirmed ? '#0F7A43' : '#B45309' }}>{sum.confirmed}/{sum.total} 확정</td>
+                                                <td>{r.travelers || '-'} хүн</td>
+                                                <td style={{ fontWeight: 700, color: sum.allConfirmed ? '#0F7A43' : '#B45309' }}>{sum.confirmed}/{sum.total} баталгаажсан</td>
                                             </tr>
                                             {open && (
                                                 <tr>
                                                     <td colSpan={9} style={{ padding: 0, background: 'var(--surface-canvas, #F7F8FA)' }}>
                                                         <div style={{ padding: '14px 18px 18px' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                                                                <b style={{ fontSize: 13 }}>일차별 숙소 수배</b>
-                                                                <button type="button" className="btn btn-sm" onClick={() => applyFirstToAll(r.id)} title="1일차 방수·인실을 전체 일차에 적용">방·인실 전체적용</button>
-                                                                <button type="button" className="btn btn-sm" onClick={() => setAllStatus(r.id, '메일발송')}>전체 메일발송</button>
-                                                                <button type="button" className="btn btn-sm" onClick={() => setAllStatus(r.id, '확정')}>전체 확정</button>
+
+                                                            {/* ── Аяллын мэдээлэл (수배서 정보) ── */}
+                                                            <div style={{ background: '#fff', border: '1px solid var(--color-border-tertiary, #E6E8EC)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
+                                                                <b style={{ fontSize: 13 }}>Аяллын мэдээлэл</b>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                                                                    <div style={{ background: 'var(--surface-canvas, #F7F8FA)', borderRadius: 8, padding: '10px 12px' }}>
+                                                                        <div className="cell-muted" style={{ fontSize: 11 }}>✈ Ирэх нислэг (Монгол ирэх)</div>
+                                                                        <div style={{ fontSize: 13, fontWeight: 700, marginTop: 3 }}>{flightLine(cd.arrival)}</div>
+                                                                    </div>
+                                                                    <div style={{ background: 'var(--surface-canvas, #F7F8FA)', borderRadius: 8, padding: '10px 12px' }}>
+                                                                        <div className="cell-muted" style={{ fontSize: 11 }}>✈ Буцах нислэг (Монголоос явах)</div>
+                                                                        <div style={{ fontSize: 13, fontWeight: 700, marginTop: 3 }}>{flightLine(cd.departure)}</div>
+                                                                    </div>
+                                                                </div>
+                                                                {travelers.length > 0 ? (
+                                                                    <div style={{ overflowX: 'auto', marginTop: 10 }}>
+                                                                        <table className="tbl" style={{ minWidth: 640 }}>
+                                                                            <thead><tr>
+                                                                                <th style={{ width: 56 }}>Аялагч</th>
+                                                                                <th>Паспортын нэр</th>
+                                                                                <th>Нэр</th>
+                                                                                <th style={{ width: 110 }}>Төрсөн огноо</th>
+                                                                                <th style={{ width: 80 }}>Хүйс</th>
+                                                                                <th style={{ width: 130 }}>Утас</th>
+                                                                            </tr></thead>
+                                                                            <tbody>
+                                                                                {travelers.map((t, i) => (
+                                                                                    <tr key={i}>
+                                                                                        <td style={{ fontWeight: 700 }}>{i + 1}</td>
+                                                                                        <td style={{ fontWeight: 700 }}>{t.passportName || '-'}</td>
+                                                                                        <td>{t.name || '-'}</td>
+                                                                                        <td>{t.birthdate || '-'}</td>
+                                                                                        <td>{genderMn(t.gender)}</td>
+                                                                                        <td>{t.phone || '-'}</td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                ) : <div className="cell-muted" style={{ fontSize: 12, marginTop: 10 }}>Аялагчийн мэдээлэл алга (гэрээ ирээгүй).</div>}
+                                                                {cd.agreement?.name && <div style={{ marginTop: 10, fontSize: 12 }}><span className="cell-muted">Цахим гарын үсэг:</span> <b>{cd.agreement.name}</b></div>}
+                                                            </div>
+
+                                                            {/* ── Өдөр тутмын байр ── */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                                                                <b style={{ fontSize: 13 }}>Өдөр тутмын байрны захиалга</b>
                                                                 <div style={{ flex: 1 }} />
-                                                                {isDirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#B45309' }}>변경됨 ·</span>}
+                                                                {isDirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#B45309' }}>Өөрчлөгдсөн ·</span>}
                                                                 <button type="button" className="btn btn-ink btn-sm" disabled={!isDirty || savingId === r.id} onClick={() => save(r)}>
-                                                                    <Icon name="save" />{savingId === r.id ? '저장중…' : '저장'}
+                                                                    <Icon name="save" />{savingId === r.id ? 'Хадгалж байна…' : 'Хадгалах'}
                                                                 </button>
                                                             </div>
                                                             <div style={{ overflowX: 'auto' }}>
-                                                                <table className="tbl" style={{ minWidth: 760 }}>
+                                                                <table className="tbl" style={{ minWidth: 800 }}>
                                                                     <thead>
                                                                         <tr>
-                                                                            <th style={{ width: 96 }}>일차</th>
-                                                                            <th>숙소 이름</th>
-                                                                            <th style={{ width: 84 }}>방수</th>
-                                                                            <th style={{ width: 120 }}>몇인몇실</th>
-                                                                            <th style={{ width: 150 }}>호텔 수배 상태</th>
+                                                                            <th style={{ width: 110 }}>Өдөр</th>
+                                                                            <th>Байрны нэр</th>
+                                                                            <th style={{ width: 80 }}>Өрөө</th>
+                                                                            <th style={{ width: 130 }}>Хүн/өрөө</th>
+                                                                            <th style={{ width: 150 }}>Захиалгын төлөв</th>
+                                                                            <th style={{ width: 44 }}></th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
                                                                         {rows.map(d => {
                                                                             const acc = d.accommodation || {};
-                                                                            const st: BookingStatus | '미배정' = (acc.name || '').trim() ? (acc.bookingStatus || '미발송') : '미배정';
+                                                                            const hasName = (acc.name || '').trim().length > 0;
+                                                                            const st: BookingStatus | 'Хуваарилаагүй' = hasName ? (acc.bookingStatus || 'Илгээгээгүй') : 'Хуваарилаагүй';
                                                                             const sts = statusStyle(st);
                                                                             return (
                                                                                 <tr key={d.day}>
-                                                                                    <td style={{ fontWeight: 700 }}>
-                                                                                        DAY {d.day}
-                                                                                        <span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>{nightDate(r.startDate, d.day)}</span>
-                                                                                    </td>
+                                                                                    <td style={{ fontWeight: 700 }}>Өдөр {d.day}<span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>{nightDate(r.startDate, d.day)}</span></td>
+                                                                                    <td><input className="inp" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="Зочид буудал эсвэл гэрийн нэр" onChange={e => patchDay(r.id, d.day, { name: e.target.value })} /></td>
+                                                                                    <td><input className="inp" type="number" min={0} style={{ width: 66 }} value={acc.roomCount ?? ''} placeholder="0" onChange={e => patchDay(r.id, d.day, { roomCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })} /></td>
                                                                                     <td>
-                                                                                        <input className="inp" style={{ width: '100%', minWidth: 180 }} value={acc.name || ''} placeholder="호텔 또는 게르명"
-                                                                                            onChange={e => patchDay(r.id, d.day, { name: e.target.value })} />
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        <input className="inp" type="number" min={0} style={{ width: 70 }} value={acc.roomCount ?? ''} placeholder="0"
-                                                                                            onChange={e => patchDay(r.id, d.day, { roomCount: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) })} />
-                                                                                    </td>
-                                                                                    <td>
-                                                                                        <select className="select" style={{ width: 110 }} value={acc.occupancy || ''} onChange={e => patchDay(r.id, d.day, { occupancy: e.target.value || undefined })}>
-                                                                                            {OCCUPANCY_OPTIONS.map(o => <option key={o} value={o}>{o || '미정'}</option>)}
+                                                                                        <select className="select" style={{ width: 120 }} value={acc.occupancy || ''} onChange={e => patchDay(r.id, d.day, { occupancy: e.target.value || undefined })}>
+                                                                                            {OCCUPANCY_OPTIONS.map(o => <option key={o} value={o}>{o || 'Тодорхойгүй'}</option>)}
                                                                                         </select>
                                                                                     </td>
                                                                                     <td>
-                                                                                        <select
-                                                                                            className="select"
-                                                                                            style={{ width: 130, fontWeight: 700, background: sts.bg, color: sts.fg, borderColor: 'transparent' }}
-                                                                                            value={(acc.name || '').trim() ? (acc.bookingStatus || '미발송') : '미발송'}
-                                                                                            disabled={!(acc.name || '').trim()}
-                                                                                            onChange={e => patchDay(r.id, d.day, { bookingStatus: e.target.value as BookingStatus })}
-                                                                                        >
+                                                                                        <select className="select" style={{ width: 140, fontWeight: 700, background: sts.bg, color: sts.fg, borderColor: 'transparent' }}
+                                                                                            value={hasName ? (acc.bookingStatus || 'Илгээгээгүй') : 'Илгээгээгүй'} disabled={!hasName}
+                                                                                            onChange={e => patchDay(r.id, d.day, { bookingStatus: e.target.value as BookingStatus })}>
                                                                                             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                                                                                         </select>
+                                                                                    </td>
+                                                                                    <td style={{ textAlign: 'center' }}>
+                                                                                        <button type="button" className="btn btn-sm" title="Энэ өдрийг устгах" onClick={() => { if (window.confirm(`Өдөр ${d.day}-г устгах уу?`)) removeDay(r.id, d.day); }} style={{ color: '#E24B4A' }}>
+                                                                                            <Icon name="delete" />
+                                                                                        </button>
                                                                                     </td>
                                                                                 </tr>
                                                                             );
                                                                         })}
-                                                                        {rows.length === 0 && <tr><td colSpan={5} className="cell-muted" style={{ textAlign: 'center', padding: 16 }}>도착·출발일이 없어 일차를 계산할 수 없습니다. 예약 정보를 확인하세요.</td></tr>}
+                                                                        {rows.length === 0 && <tr><td colSpan={6} className="cell-muted" style={{ textAlign: 'center', padding: 14 }}>Өдөр алга. ‘Өдөр нэмэх’ дарж нэмнэ үү.</td></tr>}
                                                                     </tbody>
                                                                 </table>
                                                             </div>
+                                                            <button type="button" className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => addDay(r.id)}><Icon name="add" />Өдөр нэмэх</button>
                                                         </div>
                                                     </td>
                                                 </tr>
