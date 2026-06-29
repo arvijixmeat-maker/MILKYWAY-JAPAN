@@ -45,11 +45,13 @@ interface Reservation {
     reservationNumber?: string | null;
     createdAt?: string;
     dailyAccommodations?: DailyAcc[];
+    assignedGuide?: { id?: string; name?: string; phone?: string; image?: string; kakaoId?: string; languages?: string[]; specialties?: string[] };
     contractData?: {
         region?: string; category?: string;
         travelers?: Traveler[];
         arrival?: Flight; departure?: Flight;
         agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+        vehicle?: { type?: string; phone?: string };
     };
 }
 
@@ -130,7 +132,8 @@ export const AdminAccommodationOps: React.FC = () => {
         setLoading(true);
         try {
             const data = await api.reservations.list();
-            const arr: Reservation[] = (Array.isArray(data) ? data : []).filter((r: any) => r && r.type !== 'quote');
+            // 사이트 예약 + 맞춤 견적(전환되어 type='quote'로 생성된 예약)을 모두 포함
+            const arr: Reservation[] = (Array.isArray(data) ? data : []).filter((r: any) => !!r && !!r.id);
             setReservations(arr);
             setMaterialized(new Set());
         } catch (e) {
@@ -143,7 +146,7 @@ export const AdminAccommodationOps: React.FC = () => {
     useEffect(() => { load(); }, []);
 
     const base = useMemo(() => reservations.filter(r => scope === 'all' ? true
-        : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid')), [reservations, scope]);
+        : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid' || r.type === 'quote')), [reservations, scope]);
     const monthOptions = useMemo(() => {
         const set = new Set<string>();
         base.forEach(r => { const k = monthKey(r.startDate); if (k) set.add(k); });
@@ -217,6 +220,17 @@ export const AdminAccommodationOps: React.FC = () => {
             const rows = (r.dailyAccommodations || []).filter(d => d.day !== day).map((d, i) => ({ ...d, day: i + 1 }));
             return { ...r, dailyAccommodations: rows };
         }));
+        markDirty(rId);
+    };
+    // 담당 가이드(assignedGuide)·차량(contractData.vehicle) 편집 — 기존 컬럼에 저장(마이그레이션 불필요)
+    const patchGuide = (rId: string, patch: { name?: string; phone?: string }) => {
+        setReservations(prev => prev.map(r => r.id === rId ? { ...r, assignedGuide: { ...(r.assignedGuide || {}), ...patch } } : r));
+        markDirty(rId);
+    };
+    const patchVehicle = (rId: string, patch: { type?: string; phone?: string }) => {
+        setReservations(prev => prev.map(r => r.id === rId
+            ? { ...r, contractData: { ...(r.contractData || {}), vehicle: { ...(r.contractData?.vehicle || {}), ...patch } } }
+            : r));
         markDirty(rId);
     };
     const save = async (r: Reservation) => {
@@ -300,7 +314,11 @@ export const AdminAccommodationOps: React.FC = () => {
                                             <tr style={{ cursor: 'pointer', background: open ? 'var(--surface-canvas, #F7F8FA)' : undefined }} onClick={() => toggleExpand(r)}>
                                                 <td style={{ textAlign: 'center' }}><Icon name={open ? 'expand_more' : 'chevron_right'} /></td>
                                                 <td><span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: sty.bg, color: sty.fg }}>{sum.label}</span></td>
-                                                <td style={{ fontWeight: 700 }}>{r.customerName || '-'}{r.reservationNumber && <span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>#{r.reservationNumber}</span>}</td>
+                                                <td style={{ fontWeight: 700 }}>
+                                                    {r.customerName || '-'}
+                                                    {r.type === 'quote' && <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 10, fontWeight: 800, background: '#EEEDFE', color: '#534AB7' }}>Үнийн санал</span>}
+                                                    {r.reservationNumber && <span className="cell-muted" style={{ marginLeft: 6, fontSize: 11 }}>#{r.reservationNumber}</span>}
+                                                </td>
                                                 <td>{fmtDate(r.startDate)} ~ {fmtDate(r.endDate)}</td>
                                                 <td>{nightsOf(r) > 0 ? `${nightsOf(r)} шөнө ${nightsOf(r) + 1} өдөр` : '-'}</td>
                                                 <td>{regionOf(r)}</td>
@@ -412,6 +430,29 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                 </table>
                                                             </div>
                                                             <button type="button" className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => addDay(r.id)}><Icon name="add" />Өдөр нэмэх</button>
+
+                                                            {/* ── Хариуцсан гайд ба тээвэр (가이드·차량) ── */}
+                                                            <div style={{ background: '#fff', border: '1px solid var(--color-border-tertiary, #E6E8EC)', borderRadius: 12, padding: 14, marginTop: 14 }}>
+                                                                <b style={{ fontSize: 13 }}>Хариуцсан гайд ба тээвэр</b>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10, marginTop: 10 }}>
+                                                                    <div>
+                                                                        <label className="cell-muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Гайдын нэр</label>
+                                                                        <input className="inp" style={{ width: '100%' }} value={r.assignedGuide?.name || ''} placeholder="Гайдын нэр" onChange={e => patchGuide(r.id, { name: e.target.value })} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="cell-muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Гайдын утас</label>
+                                                                        <input className="inp" style={{ width: '100%' }} value={r.assignedGuide?.phone || ''} placeholder="Гайдын утас" onChange={e => patchGuide(r.id, { phone: e.target.value })} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="cell-muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Машины төрөл</label>
+                                                                        <input className="inp" style={{ width: '100%' }} value={r.contractData?.vehicle?.type || ''} placeholder="Жишээ: Land Cruiser 76" onChange={e => patchVehicle(r.id, { type: e.target.value })} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="cell-muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Жолоочийн утас</label>
+                                                                        <input className="inp" style={{ width: '100%' }} value={r.contractData?.vehicle?.phone || ''} placeholder="Жолоочийн утас" onChange={e => patchVehicle(r.id, { phone: e.target.value })} />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>
