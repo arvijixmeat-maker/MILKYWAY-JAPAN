@@ -406,7 +406,7 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                 <table className="tbl" style={{ minWidth: 800 }}>
                                                                     <thead>
                                                                         <tr>
-                                                                            <th style={{ width: 180 }}>Өдөр · Огноо</th>
+                                                                            <th style={{ width: 240 }}>Өдөр · Огноо</th>
                                                                             <th>Байрны нэр</th>
                                                                             <th style={{ width: 80 }}>Өрөө</th>
                                                                             <th style={{ width: 130 }}>Хүн/өрөө</th>
@@ -423,13 +423,16 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                             return (
                                                                                 <tr key={idx}>
                                                                                     <td>
-                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                                                                            <span style={{ fontSize: 11, fontWeight: 700, color: '#8A8F99' }}>Өдөр</span>
-                                                                                            <input type="number" min={1} className="inp" style={{ width: 50, padding: '0 6px' }} value={d.day} onChange={e => patchDayMeta(r.id, idx, { day: parseInt(e.target.value) || idx + 1 })} />
-                                                                                        </div>
-                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
-                                                                                            <input type="date" className="inp" style={{ width: 140 }} value={d.date || ''} onChange={e => patchDayMeta(r.id, idx, { date: e.target.value })} />
-                                                                                            {d.date && <span className="cell-muted" style={{ fontSize: 11 }}>{weekdayMn(d.date)}</span>}
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none' }}>
+                                                                                                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', color: '#B4B8C0' }}>ӨДӨР</span>
+                                                                                                <input type="number" min={1} value={d.day} onChange={e => patchDayMeta(r.id, idx, { day: parseInt(e.target.value) || idx + 1 })}
+                                                                                                    style={{ width: 38, height: 28, textAlign: 'center', padding: 0, border: '1px solid #E6E8EC', borderRadius: 8, fontWeight: 800, fontSize: 14, color: '#1A8CFF', background: '#fff', outline: 'none', marginTop: 1 }} />
+                                                                                            </div>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                                                                                                <input type="date" className="inp" style={{ width: 148 }} value={d.date || ''} onChange={e => patchDayMeta(r.id, idx, { date: e.target.value })} />
+                                                                                                {d.date && <span style={{ fontSize: 11, fontWeight: 700, color: '#8A8F99', flex: 'none' }}>{weekdayMn(d.date)}</span>}
+                                                                                            </div>
                                                                                         </div>
                                                                                     </td>
                                                                                     <td><input className="inp" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="Зочид буудал эсвэл гэрийн нэр" onChange={e => patchDay(r.id, idx, { name: e.target.value })} /></td>
