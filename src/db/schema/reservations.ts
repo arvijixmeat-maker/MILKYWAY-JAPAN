@@ -32,6 +32,7 @@ export const reservations = sqliteTable('reservations', {
     balanceStatus: text('balance_status').default('unpaid'),
     areAssignmentsVisibleToUser: integer('are_assignments_visible_to_user').default(0),
     priceBreakdown: text('price_breakdown'),
+    source: text('source'),                 // 주문 경로: line | email | phone | website | visit | other
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
