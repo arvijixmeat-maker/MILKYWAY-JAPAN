@@ -463,7 +463,16 @@ export const DocumentContract: React.FC = () => {
 
                             {formTravelers.map((tv, i) => (
                                 <div key={i} style={t.formInnerCard}>
-                                    <div style={t.travLabel}>旅行者 {i + 1}</div>
+                                    <div style={{ ...t.travLabel, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span>旅行者 {i + 1}</span>
+                                        {formTravelers.length > 1 && (
+                                            <button type="button" aria-label="この旅行者を削除"
+                                                onClick={() => setFormTravelers(prev => prev.filter((_, idx) => idx !== i))}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mrt-gray-400)', fontSize: 12.5, fontWeight: 700, padding: 0, fontFamily: 'var(--font-sans)' }}>
+                                                ✕ 削除
+                                            </button>
+                                        )}
+                                    </div>
                                     <div style={t.formGrid}>
                                         <div>
                                             <label style={t.fieldLabel}>氏名</label>
@@ -494,9 +503,12 @@ export const DocumentContract: React.FC = () => {
                                 </div>
                             ))}
 
-                            <div style={t.travActions}>
-                                <button style={t.addBtn} onClick={() => setFormTravelers(prev => [...prev, { name: '', passportName: '', birthdate: '', gender: '', phone: '' }])}>＋ 旅行者を追加</button>
-                                {formTravelers.length > 1 && <button style={t.delBtn} onClick={() => setFormTravelers(prev => prev.slice(0, -1))}>最後を削除</button>}
+                            <div style={{ margin: m ? '2px 0 18px' : '4px 0 24px' }}>
+                                <button type="button"
+                                    onClick={() => setFormTravelers(prev => [...prev, { name: '', passportName: '', birthdate: '', gender: '', phone: '' }])}
+                                    style={{ width: '100%', padding: m ? '11px' : '12px', border: '1.5px dashed var(--mrt-blue)', borderRadius: 'var(--r-md)', background: 'var(--mrt-blue-50)', color: 'var(--mrt-blue-strong)', fontSize: m ? 13 : 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                                    ＋ 旅行者を追加
+                                </button>
                             </div>
 
                             <div style={t.flightHead}>
