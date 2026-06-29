@@ -21,6 +21,7 @@ interface NavItem {
 const primaryItems: NavItem[] = [
     { id: 'dashboard', icon: 'dashboard', label: '대시보드', href: '/admin' },
     { id: 'reservations', icon: 'assignment', label: '통합 예약 관리', href: '/admin/reservations' },
+    { id: 'accommodation-ops', icon: 'night_shelter', label: '숙소 배정 관리', href: '/admin/accommodation-ops' },
     { id: 'calendar', icon: 'calendar_today', label: '투어 캘린더', href: '/admin/calendar' },
     { id: 'products', icon: 'inventory_2', label: '상품 관리', href: '/admin/products' },
     { id: 'magazines', icon: 'menu_book', label: '매거진 관리', href: '/admin/magazines' },

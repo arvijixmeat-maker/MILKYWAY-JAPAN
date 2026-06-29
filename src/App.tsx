@@ -66,6 +66,7 @@ const AdminGuideManage = lazy(() => import('./pages/AdminGuideManage').then(modu
 const AdminMagazineManage = lazy(() => import('./pages/AdminMagazineManage').then(module => ({ default: module.AdminMagazineManage })))
 const AdminAccommodationManage = lazy(() => import('./pages/AdminAccommodationManage').then(module => ({ default: module.AdminAccommodationManage })))
 const AdminHotelManage = lazy(() => import('./pages/AdminHotelManage').then(module => ({ default: module.AdminHotelManage })))
+const AdminAccommodationOps = lazy(() => import('./pages/AdminAccommodationOps').then(module => ({ default: module.AdminAccommodationOps })))
 const AdminTouristSpotManage = lazy(() => import('./pages/AdminTouristSpotManage').then(module => ({ default: module.AdminTouristSpotManage })))
 const AdminTemplateManage = lazy(() => import('./pages/AdminTemplateManage').then(module => ({ default: module.AdminTemplateManage })))
 const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(module => ({ default: module.AdminReviewManage })))
@@ -145,6 +146,7 @@ function App() {
             <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
             <Route path="/admin/quotes" element={<AdminGuard><AdminQuoteManage /></AdminGuard>} />
             <Route path="/admin/reservations" element={<AdminGuard><AdminReservationManage /></AdminGuard>} />
+            <Route path="/admin/accommodation-ops" element={<AdminGuard><AdminAccommodationOps /></AdminGuard>} />
             <Route path="/admin/calendar" element={<AdminGuard><AdminCalendar /></AdminGuard>} />
             <Route path="/admin/banners" element={<AdminGuard><AdminBannerManage /></AdminGuard>} />
             <Route path="/admin/products" element={<AdminGuard><AdminProductManage /></AdminGuard>} />
