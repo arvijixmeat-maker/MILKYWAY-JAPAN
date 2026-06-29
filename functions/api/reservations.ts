@@ -203,7 +203,7 @@ app.put('/:id', async (c) => {
         'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData',
         'assignedGuide', 'contractUrl', 'itineraryUrl',
         'depositStatus', 'balanceStatus', 'areAssignmentsVisibleToUser', 'priceBreakdown',
-        'documentContent',
+        'documentContent', 'source',
         'createdAt', 'updatedAt',
     ]);
     const filtered: any = {};
@@ -289,6 +289,7 @@ app.post('/', async (c) => {
             endDate: body.end_date ? String(body.end_date) : null,
             duration: body.duration ? String(body.duration) : null,
             status: body.status ? String(body.status) : 'pending_payment',
+            source: body.source ? String(body.source) : null,
             totalPrice: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
             depositAmount: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
             balanceAmount: Number(body.price_breakdown?.local ?? body.balance ?? 0),

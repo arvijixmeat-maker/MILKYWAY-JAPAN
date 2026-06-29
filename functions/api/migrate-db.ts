@@ -44,6 +44,7 @@ app.get('/', async (c) => {
         "price_breakdown TEXT",                         // JSON: { total, deposit, local }
         "document_content TEXT",                         // JSON: 고객별 편집한 문서(일정·문서설정) { days, documentSettings }
         "duration TEXT",
+        "source TEXT",                                   // 주문 경로: line | email | phone | website | visit | other (수동 추가 시 입력)
     ];
     for (const colDef of reservationColumns) {
         try {

@@ -82,10 +82,30 @@ interface Reservation {
     phone: string;
     email: string;
     manager?: string;
+    source?: string; // 주문 경로: line | email | phone | website | visit | other
 
     // Quote Specific
     quoteDetail?: QuoteRequest;
 }
+
+const SOURCE_OPTIONS: Array<{ v: string; l: string }> = [
+    { v: 'line', l: 'LINE' },
+    { v: 'email', l: '메일' },
+    { v: 'phone', l: '전화' },
+    { v: 'website', l: '홈페이지' },
+    { v: 'visit', l: '직접방문' },
+    { v: 'other', l: '기타' },
+];
+const sourceLabel = (s?: string) => SOURCE_OPTIONS.find(o => o.v === s)?.l || (s || '');
+const sourceColor = (s?: string): { bg: string; fg: string } => ({
+    line: { bg: '#E4F7EC', fg: '#0F7A43' },
+    email: { bg: '#E8F2FF', fg: '#0B6FE0' },
+    phone: { bg: '#FEF6E7', fg: '#B45309' },
+    website: { bg: '#F1F2F4', fg: '#5F636B' },
+    visit: { bg: '#EEEDFE', fg: '#534AB7' },
+    other: { bg: '#F1F2F4', fg: '#8A8F99' },
+}[s || ''] || { bg: '#F1F2F4', fg: '#8A8F99' });
+const BLANK_ADD = { customerName: '', phone: '', email: '', source: 'line', productName: '', startDate: '', endDate: '', people: '1', totalAmount: '', deposit: '', status: 'pending_payment', notes: '' };
 
 interface ProductSummary {
     id?: string;
@@ -1870,7 +1890,12 @@ export const AdminReservationManage: React.FC = () => {
     const [filterPayment, setFilterPayment] = useState('전체 결제');
     const [filterType, setFilterType] = useState('전체 유형');
     const [filterDeparture, setFilterDeparture] = useState('');
+    const [filterSource, setFilterSource] = useState('전체 경로');
     const [convertTarget, setConvertTarget] = useState<QuoteRequest | null>(null);
+    // 수동 예약 추가(LINE·메일 등 사이트 외 주문)
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [addForm, setAddForm] = useState({ ...BLANK_ADD });
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -2253,6 +2278,35 @@ export const AdminReservationManage: React.FC = () => {
     }, []);
 
     // Filter Logic
+    const handleCreateReservation = async () => {
+        if (!addForm.customerName.trim()) { alert('고객명을 입력해 주세요.'); return; }
+        setCreating(true);
+        try {
+            const total = Number(addForm.totalAmount) || 0;
+            const deposit = Number(addForm.deposit) || 0;
+            await api.reservations.create({
+                type: 'tour',
+                product_name: addForm.productName.trim() || '맞춤 예약',
+                customer_info: { name: addForm.customerName.trim(), email: addForm.email.trim(), phone: addForm.phone.trim() },
+                total_people: Number(addForm.people) || 1,
+                start_date: addForm.startDate || null,
+                end_date: addForm.endDate || null,
+                status: addForm.status || 'pending_payment',
+                source: addForm.source,
+                price_breakdown: { total, deposit, local: Math.max(0, total - deposit) },
+                notes: addForm.notes.trim() || null,
+            });
+            setShowAddModal(false);
+            setAddForm({ ...BLANK_ADD });
+            await fetchReservations();
+            alert('예약이 추가되었습니다.');
+        } catch (e: any) {
+            alert('추가 실패: ' + (e?.message || e));
+        } finally {
+            setCreating(false);
+        }
+    };
+
     const filteredReservations = useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
         return reservations.filter(res => {
@@ -2285,10 +2339,11 @@ export const AdminReservationManage: React.FC = () => {
                 (filterPayment === '잔금 미입금' && res.balanceStatus !== 'paid') ||
                 (filterPayment === '잔금 입금' && res.balanceStatus === 'paid');
             const matchesDeparture = !filterDeparture || res.startDate === filterDeparture;
+            const matchesSource = filterSource === '전체 경로' || (res.source || '') === filterSource;
 
-            return matchesSearch && matchesStatus && matchesType && matchesPayment && matchesDeparture;
+            return matchesSearch && matchesStatus && matchesType && matchesPayment && matchesDeparture && matchesSource;
         });
-    }, [searchTerm, filterStatus, filterPayment, filterType, filterDeparture, reservations]);
+    }, [searchTerm, filterStatus, filterPayment, filterType, filterDeparture, filterSource, reservations]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredReservations.length / itemsPerPage);
@@ -2535,8 +2590,17 @@ export const AdminReservationManage: React.FC = () => {
                     <>
                         <button
                             type="button"
-                            onClick={downloadConfirmedReservationsExcel}
+                            onClick={() => { setAddForm({ ...BLANK_ADD }); setShowAddModal(true); }}
                             className="btn btn-ink"
+                            title="LINE·메일·전화 등 사이트 외 주문을 수동으로 예약에 추가"
+                        >
+                            <Icon name="add" />
+                            수동 예약 추가
+                        </button>
+                        <button
+                            type="button"
+                            onClick={downloadConfirmedReservationsExcel}
+                            className="btn btn-soft"
                             title="예약 확정 상태의 모든 주문을 일차별 숙소 수배 Excel로 다운로드"
                         >
                             <Icon name="table_view" />
@@ -2619,6 +2683,10 @@ export const AdminReservationManage: React.FC = () => {
                                 <option>잔금 입금</option>
                             </select>
                             <input type="date" value={filterDeparture} onChange={(e) => { setFilterDeparture(e.target.value); setCurrentPage(1); }} className="select" style={{ paddingRight: 13 }} />
+                            <select value={filterSource} onChange={(e) => { setFilterSource(e.target.value); setCurrentPage(1); }} className="select" title="주문 경로">
+                                <option value="전체 경로">전체 경로</option>
+                                {SOURCE_OPTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
+                            </select>
                         </div>
                         <div className="chip-row" style={{ marginTop: 14 }}>
                             {['전체 유형', '일반 상품', '맞춤 견적'].map(type => (
@@ -2665,10 +2733,15 @@ export const AdminReservationManage: React.FC = () => {
                                             <tr key={res.id} onClick={() => setSelectedReservation(res)}>
                                                 <td>
                                                     <div className="cell-mono">#{reservationNo}</div>
-                                                    <div style={{ marginTop: 3 }}>
+                                                    <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                                         <span className={`tag-type ${res.type === 'quote' ? 'quote' : 'reservation'}`}>
                                                             {res.type === 'quote' ? '맞춤견적' : '일반상품'}
                                                         </span>
+                                                        {res.source && (
+                                                            <span style={{ display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 10, fontWeight: 800, background: sourceColor(res.source).bg, color: sourceColor(res.source).fg }}>
+                                                                {sourceLabel(res.source)}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td>
@@ -2743,6 +2816,43 @@ export const AdminReservationManage: React.FC = () => {
                     </div>
                 </div>
             </AdminLayout>
+
+            {showAddModal && (
+                <div onClick={() => !creating && setShowAddModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 20px 60px rgba(0,0,0,.25)', fontFamily: 'var(--font-sans)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--text-strong)' }}>수동 예약 추가</h2>
+                            <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setShowAddModal(false)}><Icon name="close" /></button>
+                        </div>
+                        <p className="cell-muted" style={{ fontSize: 12, margin: '0 0 16px' }}>LINE·메일·전화 등 사이트 외 주문을 직접 등록합니다.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            {[
+                                { k: 'customerName', label: '고객명 *', el: <input className="inp" style={{ width: '100%' }} value={addForm.customerName} onChange={e => setAddForm(f => ({ ...f, customerName: e.target.value }))} placeholder="고객명" /> },
+                                { k: 'source', label: '주문 경로', el: <select className="select" style={{ width: '100%' }} value={addForm.source} onChange={e => setAddForm(f => ({ ...f, source: e.target.value }))}>{SOURCE_OPTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}</select> },
+                                { k: 'phone', label: '연락처', el: <input className="inp" style={{ width: '100%' }} value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="090-1234-5678" /> },
+                                { k: 'email', label: '이메일', el: <input className="inp" style={{ width: '100%' }} value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="example@mail.com" /> },
+                                { k: 'productName', label: '상품 / 투어명', full: true, el: <input className="inp" style={{ width: '100%' }} value={addForm.productName} onChange={e => setAddForm(f => ({ ...f, productName: e.target.value }))} placeholder="예: 銀河の大自然満喫ツアー (4日)" /> },
+                                { k: 'startDate', label: '여행 시작일', el: <input type="date" className="inp" style={{ width: '100%' }} value={addForm.startDate} onChange={e => setAddForm(f => ({ ...f, startDate: e.target.value }))} /> },
+                                { k: 'endDate', label: '여행 종료일', el: <input type="date" className="inp" style={{ width: '100%' }} value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} /> },
+                                { k: 'people', label: '인원', el: <input type="number" min={1} className="inp" style={{ width: '100%' }} value={addForm.people} onChange={e => setAddForm(f => ({ ...f, people: e.target.value }))} /> },
+                                { k: 'status', label: '상태', el: <select className="select" style={{ width: '100%' }} value={addForm.status} onChange={e => setAddForm(f => ({ ...f, status: e.target.value }))}><option value="pending_payment">입금 대기</option><option value="confirmed">예약 확정</option><option value="paid">결제 완료</option></select> },
+                                { k: 'totalAmount', label: '총금액 (₩)', el: <input type="number" min={0} className="inp" style={{ width: '100%' }} value={addForm.totalAmount} onChange={e => setAddForm(f => ({ ...f, totalAmount: e.target.value }))} placeholder="0" /> },
+                                { k: 'deposit', label: '예약금 (₩)', el: <input type="number" min={0} className="inp" style={{ width: '100%' }} value={addForm.deposit} onChange={e => setAddForm(f => ({ ...f, deposit: e.target.value }))} placeholder="0" /> },
+                                { k: 'notes', label: '메모', full: true, el: <textarea className="inp" style={{ width: '100%', minHeight: 60, resize: 'vertical' }} value={addForm.notes} onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))} placeholder="주문 메모 (LINE ID 등)" /> },
+                            ].map(field => (
+                                <div key={field.k} style={field.full ? { gridColumn: '1 / -1' } : undefined}>
+                                    <label className="cell-muted" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 5 }}>{field.label}</label>
+                                    {field.el}
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                            <button className="btn btn-ghost" onClick={() => setShowAddModal(false)} disabled={creating}>취소</button>
+                            <button className="btn btn-ink" onClick={handleCreateReservation} disabled={creating}><Icon name="check" />{creating ? '추가 중…' : '예약 추가'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {selectedReservation && selectedReservation.type !== 'quote' && (
                 <ReservationDetailModal
