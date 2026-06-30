@@ -136,6 +136,7 @@ export const AdminAccommodationOps: React.FC = () => {
     const [region, setRegion] = useState('all');
     const [confirmFilter, setConfirmFilter] = useState<'all' | 'pending' | 'done'>('all');
     const [scope, setScope] = useState<'confirmed' | 'all'>('confirmed');
+    const [hotels, setHotels] = useState<Array<{ id: string; name_kr?: string; name_local?: string }>>([]);
 
     const load = async () => {
         setLoading(true);
@@ -153,6 +154,12 @@ export const AdminAccommodationOps: React.FC = () => {
         }
     };
     useEffect(() => { load(); }, []);
+    // 호텔 마스터 목록 — байрны нэр 선택형(datalist)에 사용
+    useEffect(() => {
+        (api as any).hotels.list({ active: true })
+            .then((d: any) => setHotels(Array.isArray(d) ? d : []))
+            .catch(() => setHotels([]));
+    }, []);
 
     const base = useMemo(() => reservations.filter(r => scope === 'all' ? true
         : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid' || r.type === 'quote')), [reservations, scope]);
@@ -274,6 +281,13 @@ export const AdminAccommodationOps: React.FC = () => {
             actions={<button type="button" onClick={load} className="btn"><Icon name="refresh" />Шинэчлэх</button>}
         >
             <div className="route-anim">
+                {/* 호텔 마스터 — байрны нэр 입력칸의 선택 목록(datalist) */}
+                <datalist id="hotelMasterList">
+                    {hotels.map(h => {
+                        const label = h.name_kr || h.name_local || '';
+                        return label ? <option key={h.id} value={label} /> : null;
+                    })}
+                </datalist>
                 <div className="toolbar" style={{ flexWrap: 'wrap', gap: 8 }}>
                     <label className="tb-search">
                         <Icon name="search" />
@@ -405,10 +419,11 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                 </button>
                                                             </div>
                                                             <div style={{ overflowX: 'auto' }}>
-                                                                <table className="tbl" style={{ minWidth: 940 }}>
+                                                                <table className="tbl" style={{ minWidth: 1070 }}>
                                                                     <thead>
                                                                         <tr>
                                                                             <th style={{ width: 240 }}>Өдөр · Огноо</th>
+                                                                            <th style={{ width: 120 }}>Бүс / Байршил</th>
                                                                             <th>Байрны нэр</th>
                                                                             <th style={{ width: 130 }}>Зэрэглэл</th>
                                                                             <th style={{ width: 80 }}>Өрөө</th>
@@ -438,7 +453,8 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                                             </div>
                                                                                         </div>
                                                                                     </td>
-                                                                                    <td><input className="inp" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="Зочид буудал эсвэл гэрийн нэр" onChange={e => patchDay(r.id, idx, { name: e.target.value })} /></td>
+                                                                                    <td><input className="inp" style={{ width: 116 }} value={acc.location || ''} placeholder="지역 입력" onChange={e => patchDay(r.id, idx, { location: e.target.value })} /></td>
+                                                                                    <td><input className="inp" list="hotelMasterList" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="호텔 선택 또는 직접 입력" onChange={e => patchDay(r.id, idx, { name: e.target.value })} /></td>
                                                                                     <td>
                                                                                         <select className="select" style={{ width: 124 }} value={acc.type || ''} onChange={e => patchDay(r.id, idx, { type: e.target.value || undefined })}>
                                                                                             {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g || 'Тодорхойгүй'}</option>)}
@@ -465,7 +481,7 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                                 </tr>
                                                                             );
                                                                         })}
-                                                                        {rows.length === 0 && <tr><td colSpan={7} className="cell-muted" style={{ textAlign: 'center', padding: 14 }}>Өдөр алга. ‘Өдөр нэмэх’ дарж нэмнэ үү.</td></tr>}
+                                                                        {rows.length === 0 && <tr><td colSpan={8} className="cell-muted" style={{ textAlign: 'center', padding: 14 }}>Өдөр алга. ‘Өдөр нэмэх’ дарж нэмнэ үү.</td></tr>}
                                                                     </tbody>
                                                                 </table>
                                                             </div>
