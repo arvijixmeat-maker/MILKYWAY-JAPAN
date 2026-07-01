@@ -1,7 +1,10 @@
 const API_BASE = '/api';
 
 async function request(url: string, options?: RequestInit) {
-    const res = await fetch(url, options);
+    // credentials: 'include' guarantees the session cookie is sent even if the
+    // API is ever served from a different origin (previews, custom domains).
+    // Same-origin requests are unaffected.
+    const res = await fetch(url, { credentials: 'include', ...options });
     if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(err.error || `HTTP ${res.status}`);
@@ -13,7 +16,14 @@ export const api = {
     auth: {
         me: async () => {
             try {
-                const res = await fetch(`${API_BASE}/auth/me`);
+                // credentials: 'include' — always send the session cookie.
+                // cache: 'no-store' — never reuse a stale pre-login { user: null }
+                // response, which would keep the app "logged out" right after a
+                // successful login (an infinite login loop).
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    credentials: 'include',
+                    cache: 'no-store',
+                });
                 if (!res.ok) return null;
                 const data = await res.json();
                 if (data.error) return null;

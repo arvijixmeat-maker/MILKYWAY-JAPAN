@@ -253,26 +253,39 @@ app.get('/login/google/callback', async (c) => {
 
 // GET /api/auth/me
 app.get('/me', async (c) => {
-    const lucia = initializeLucia(c.env.DB);
-    const sessionId = getCookie(c, lucia.sessionCookieName);
+    // The auth state must never be cached by the browser or any proxy — a stale
+    // { user: null } served right after login is exactly what produces an
+    // infinite login loop.
+    c.header('Cache-Control', 'no-store, no-cache, must-revalidate');
 
-    if (!sessionId) {
+    try {
+        const lucia = initializeLucia(c.env.DB);
+        const sessionId = getCookie(c, lucia.sessionCookieName);
+
+        if (!sessionId) {
+            return c.json({ user: null });
+        }
+
+        const { session, user } = await lucia.validateSession(sessionId);
+
+        if (session && session.fresh) {
+            const sessionCookie = lucia.createSessionCookie(session.id);
+            c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+        }
+
+        if (!session) {
+            const sessionCookie = lucia.createBlankSessionCookie();
+            c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
+        }
+
+        return c.json({ user });
+    } catch (e: any) {
+        // Never surface a 500 here: the frontend treats a non-OK /me as
+        // "logged out" and bounces back to /login, so a transient validation
+        // error would loop the user forever. Fail soft to { user: null }.
+        console.error('/api/auth/me failed:', e?.message || e);
         return c.json({ user: null });
     }
-
-    const { session, user } = await lucia.validateSession(sessionId);
-
-    if (session && session.fresh) {
-        const sessionCookie = lucia.createSessionCookie(session.id);
-        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
-    }
-
-    if (!session) {
-        const sessionCookie = lucia.createBlankSessionCookie();
-        c.header("Set-Cookie", sessionCookie.serialize(), { append: true });
-    }
-
-    return c.json({ user });
 });
 
 // POST /api/auth/logout
