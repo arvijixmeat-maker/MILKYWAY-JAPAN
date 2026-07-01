@@ -11,8 +11,17 @@ export function initializeLucia(D1: D1Database) {
 
     return new Lucia(adapter, {
         sessionCookie: {
+            // Explicit, reliable attributes. `process.env.NODE_ENV` is NOT
+            // available in the Cloudflare Workers runtime (no nodejs_compat),
+            // so the previous `secure: process.env.NODE_ENV === 'production'`
+            // was fragile and inconsistent with the OAuth cookies, which use
+            // `c.env.ENVIRONMENT`. Every deployed environment (production and
+            // Cloudflare previews) is served over HTTPS, so Secure is correct.
+            // (Lucia always applies HttpOnly to the session cookie itself.)
             attributes: {
-                secure: process.env.NODE_ENV === 'production', // set to `true` when using HTTPS
+                secure: true,
+                sameSite: 'lax',
+                path: '/',
             },
         },
         getUserAttributes: (attributes) => {
