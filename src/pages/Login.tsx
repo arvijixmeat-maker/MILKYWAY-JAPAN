@@ -50,23 +50,30 @@ export const Login: React.FC = () => {
         const safeRedirect = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') && from !== '/login'
             ? from
             : null;
+        // Google OAuth redirect URIs are origin-sensitive. Desktop users may land
+        // on the www domain, while the production OAuth callback is registered
+        // against the apex domain. Start OAuth from the canonical production
+        // origin so PC and mobile use the same callback URL and cookies.
+        const authOrigin = window.location.hostname === 'www.mongolryokou.com'
+            ? 'https://mongolryokou.com'
+            : '';
         const url = safeRedirect
-            ? `/api/auth/login/google?redirect=${encodeURIComponent(safeRedirect)}`
-            : '/api/auth/login/google';
+            ? `${authOrigin}/api/auth/login/google?redirect=${encodeURIComponent(safeRedirect)}`
+            : `${authOrigin}/api/auth/login/google`;
         window.location.href = url;
     };
 
     return (
         <div className="relative w-full h-screen bg-black overflow-hidden font-display">
             {/* Animated Background */}
-            <div className="absolute inset-0 flex gap-4 p-4 opacity-60">
+            <div className="absolute inset-0 flex gap-4 p-4 opacity-60 pointer-events-none">
                 <ScrollingColumn images={MONGOLIA_IMAGES.slice(0, 3)} direction="up" duration="40s" />
                 <ScrollingColumn images={MONGOLIA_IMAGES.slice(3, 6)} direction="down" duration="45s" delay="-10s" />
                 <ScrollingColumn images={MONGOLIA_IMAGES.slice(6, 9)} direction="up" duration="50s" delay="-5s" />
             </div>
 
             {/* Overlay Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20 pointer-events-none" />
 
             {/* Content Content - Centered */}
             <div className="relative z-20 flex flex-col items-center justify-center h-full text-center px-6">
@@ -84,8 +91,9 @@ export const Login: React.FC = () => {
 
                 {/* Google Login Button */}
                 <button
+                    type="button"
                     onClick={handleGoogleLogin}
-                    className="w-full max-w-xs bg-white text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all py-4 rounded-full font-bold flex items-center justify-center gap-3 shadow-2xl animate-fade-in-up-delay"
+                    className="relative z-30 w-full max-w-xs bg-white text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all py-4 rounded-full font-bold flex items-center justify-center gap-3 shadow-2xl animate-fade-in-up-delay"
                 >
                     <img
                         src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
