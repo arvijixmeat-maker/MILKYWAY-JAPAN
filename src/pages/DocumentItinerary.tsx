@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { normalizeImages } from '../components/document/TripDocParts';
@@ -111,6 +111,18 @@ interface ItineraryData {
     days: DayData[];
     productIncluded?: string[];
     productExcluded?: string[];
+}
+// 가이드 控え(관리자→localStorage 전달, 고객 미노출)
+interface GuideExtra {
+    customerName?: string;
+    people?: string;
+    arrival?: string;
+    departure?: string;
+    guideName?: string;
+    guidePhone?: string;
+    vehicleType?: string;
+    vehiclePhone?: string;
+    memos?: string[];
 }
 
 const formatRange = (start?: string, end?: string) => {
@@ -261,7 +273,12 @@ const DayBody: React.FC<{ day: DayData; m: boolean }> = ({ day, m }) => {
 
 export const DocumentItinerary: React.FC = () => {
     const { reservationId } = useParams();
-    const m = useIsMobile();
+    const [searchParams] = useSearchParams();
+    const guideMode = searchParams.get('guide') === '1';
+    // 가이드 인쇄는 항상 라이트(모바일) 레이아웃 — PC 다크 히어로는 브라우저 "배경 그래픽"
+    // 옵션이 꺼지면 흰 글자가 흰 배경에 찍혀 사라진다. 라이트 레이아웃은 배경 옵션과 무관하게 안전.
+    const isMobileScreen = useIsMobile();
+    const m = guideMode ? true : isMobileScreen;
     const [data, setData] = useState<ItineraryData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -283,6 +300,37 @@ export const DocumentItinerary: React.FC = () => {
         link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap';
         document.head.appendChild(link);
     }, []);
+
+    // ── ガイド控えモード ──
+    // 관리자에서 "가이드 PDF"로 열면 ?guide=1 로 들어온다. 가이드 전용 정보(항공편·
+    // 요청메모·담당가이드·차량)는 고객용 API 응답에 포함되지 않으므로, 관리자 브라우저의
+    // localStorage 로만 전달한다(같은 origin·일회성). 고객은 이 데이터가 없어 절대 노출되지 않는다.
+    const [guideExtra, setGuideExtra] = useState<GuideExtra | null>(null);
+    useEffect(() => {
+        if (!guideMode || !reservationId) return;
+        try {
+            const raw = localStorage.getItem(`guideDoc:${reservationId}`);
+            if (raw) { setGuideExtra(JSON.parse(raw)); localStorage.removeItem(`guideDoc:${reservationId}`); }
+        } catch { /* ignore */ }
+    }, [guideMode, reservationId]);
+    // 데이터가 그려진 뒤 자동 인쇄(관리자가 바로 PDF 저장할 수 있도록). 수동 인쇄 버튼도 유지된다.
+    // lazy 이미지가 인쇄 전에 로드되도록 강제 eager + 로드 완료 대기(최대 4초 캡).
+    useEffect(() => {
+        if (searchParams.get('autoprint') !== '1' || loading || error || !data) return;
+        let printed = false;
+        const doPrint = () => { if (printed) return; printed = true; try { window.focus(); window.print(); } catch { /* 수동 인쇄 */ } };
+        const kick = window.setTimeout(() => {
+            const imgs = Array.from(document.querySelectorAll('img'));
+            imgs.forEach((im) => { try { im.loading = 'eager'; const s = im.getAttribute('src'); if (s && !im.complete) im.setAttribute('src', s); } catch { /* noop */ } });
+            const pending = imgs.filter((im) => !im.complete);
+            if (pending.length === 0) { window.setTimeout(doPrint, 300); return; }
+            let remaining = pending.length;
+            const onDone = () => { remaining -= 1; if (remaining <= 0) window.setTimeout(doPrint, 300); };
+            pending.forEach((im) => { im.addEventListener('load', onDone, { once: true }); im.addEventListener('error', onDone, { once: true }); });
+            window.setTimeout(doPrint, 4000); // 하드 캡: 일부 이미지가 안 떠도 인쇄는 진행
+        }, 500);
+        return () => window.clearTimeout(kick);
+    }, [searchParams, loading, error, data]);
 
     if (loading) {
         return (<>
@@ -354,7 +402,8 @@ export const DocumentItinerary: React.FC = () => {
             </div>
             {/* 타임라인 */}
             <div style={{ position: 'relative', marginTop: m ? 18 : 28, paddingLeft: m ? 26 : 34 }}>
-                <div style={{ position: 'absolute', left: m ? 5 : 7, top: 8, bottom: 8, width: 2, background: BORDER }} />
+                {/* 타임라인 세로 라인 — border는 인쇄 시 배경 그래픽 옵션과 무관하게 항상 찍힌다 */}
+                <div style={{ position: 'absolute', left: m ? 5 : 7, top: 8, bottom: 8, width: 0, borderLeft: `2px solid ${BORDER}` }} />
                 {days.length === 0 ? (
                     <div style={{ padding: '8px 0', fontSize: 13, color: MUTE }}>日程は現在準備中です。</div>
                 ) : days.map((day, i) => {
@@ -422,6 +471,8 @@ export const DocumentItinerary: React.FC = () => {
                 {excludedDisplay.map((t, i) => <IncludeItem key={i} ok={false} text={t} />)}
             </div>
 
+            {/* 활동 주의 + 보험 안내 — 가이드 모드에서는 숨김(안전/보험 안내 제외) */}
+            {!guideMode && (
             <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1.4fr 1fr', gap: m ? 12 : 16, marginTop: m ? 16 : 24 }}>
                 <div style={{ background: WARN_BG, borderRadius: 16, padding: m ? 16 : '22px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span style={{ fontSize: m ? 15 : 17 }}>⚠️</span><span style={{ fontSize: m ? 13.5 : 15, fontWeight: 800, color: WARN_TITLE }}>現地アクティビティ参加に関するご案内</span><span style={{ fontSize: m ? 11.5 : 12, color: WARN_SUB }}>乗馬・ラクダ乗り・サンドボード</span></div>
@@ -434,6 +485,7 @@ export const DocumentItinerary: React.FC = () => {
                     <div style={{ fontSize: m ? 12.5 : 13, color: BLUE_TX, lineHeight: 1.75, marginTop: 10 }}>万が一の事故や病気、手荷物の紛失などに備え、ご出発前に海外旅行保険へ必ずご加入いただきますようお願いいたします。</div>
                 </div>
             </div>
+            )}
         </div>
     );
 
@@ -590,31 +642,83 @@ export const DocumentItinerary: React.FC = () => {
         </div>
     );
 
+    // ─── ガイド控え(관리자 발행 시에만·상단) ───
+    const guideRows: Array<{ label: string; value?: string }> = guideExtra ? [
+        { label: 'お客様', value: guideExtra.customerName ? `${guideExtra.customerName} 様` : undefined },
+        { label: 'ご旅行期間', value: formatRange(reservation.startDate, reservation.endDate) },
+        { label: 'ご人数', value: guideExtra.people },
+        { label: '到着便', value: guideExtra.arrival },
+        { label: '出発便', value: guideExtra.departure },
+        { label: '担当ガイド', value: [guideExtra.guideName, guideExtra.guidePhone].filter(Boolean).join(' · ') || undefined },
+        { label: '車両', value: [guideExtra.vehicleType, guideExtra.vehiclePhone].filter(Boolean).join(' · ') || undefined },
+    ].filter(r => r.value) : [];
+    const guideBlock = guideExtra ? (
+        <div className="print-break" style={{ padding: m ? '16px 16px 0' : '24px 56px 0' }}>
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 14, padding: m ? '14px 15px' : '18px 22px', background: '#FBFCFE' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: m ? 10 : 12 }}>
+                    <span style={{ fontSize: m ? 14 : 16 }}>🧭</span>
+                    <span style={{ fontSize: m ? 13 : 15, fontWeight: 800, color: INK }}>ガイド控え / Гайдын мэдээлэл</span>
+                    <span style={{ fontSize: 11, color: MUTE }}>（お客様控えには表示されません）</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1fr 1fr', gap: m ? '8px' : '10px 28px' }}>
+                    {guideRows.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline', borderBottom: `1px solid ${HAIRLINE}`, paddingBottom: 7 }}>
+                            <span style={{ fontSize: 12, color: MUTE, flex: 'none', width: m ? 72 : 84 }}>{r.label}</span>
+                            <span style={{ fontSize: m ? 13 : 13.5, fontWeight: 700, color: INK }}>{r.value}</span>
+                        </div>
+                    ))}
+                </div>
+                {guideExtra.memos && guideExtra.memos.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: WARN_TITLE, marginBottom: 6 }}>⚑ ご要望・メモ（요청사항）</div>
+                        <ul style={{ margin: 0, paddingLeft: 18 }}>
+                            {guideExtra.memos.map((mm, i) => <li key={i} style={{ fontSize: 12.5, color: BODY, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{mm}</li>)}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        </div>
+    ) : null;
+
     return (
         <>
             <SEO title="確定日程表" description="お客様専用の旅行日程表です。" robots="noindex, nofollow" />
             <style>{`
-                @media print { body { background:#fff !important; } .no-print { display:none !important; } .doc-page { background:#fff !important; padding:0 !important; } .doc-card { box-shadow:none !important; } .print-break { break-inside:avoid; page-break-inside:avoid; } }
-                @page { margin:10mm; }
+                @media print {
+                    body { background:#fff !important; }
+                    .no-print { display:none !important; }
+                    .doc-page { background:#fff !important; padding:0 !important; }
+                    .doc-card { box-shadow:none !important; max-width:100% !important; width:100% !important; border-radius:0 !important; }
+                    .print-break { break-inside:avoid; page-break-inside:avoid; }
+                    /* 인쇄 시 떠 있는 채팅 위젯 숨김 (PDF에 찍히지 않도록) */
+                    .floating-line-btn, #ch-plugin-entry, #ch-plugin-launcher { display:none !important; }
+                    /* 브라우저 "배경 그래픽" 옵션이 꺼져 있어도 타임라인 라인·DAY 포인트·
+                       식사 칩·섹션 배경색이 그대로 인쇄되도록 강제 */
+                    .doc-card, .doc-card * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                }
+                @page { size: A4; margin:10mm; }
             `}</style>
 
-            <div className="doc-page jp" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: m ? '16px 12px 90px' : '40px 24px 90px', fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
-                <div className="doc-card" style={{ width: '100%', maxWidth: m ? 430 : 1120, background: '#fff', borderRadius: m ? 4 : 8, boxShadow: m ? '0 1px 3px rgba(0,0,0,.08)' : '0 4px 24px rgba(26,27,30,.10)', overflow: 'hidden' }}>
+            {/* 가이드 모드는 인쇄 전용 — 카드가 A4 전폭을 쓰도록 인라인에서 직접 전폭 렌더(CSS 오버라이드 의존 X) */}
+            <div className="doc-page jp" style={{ minHeight: '100vh', background: guideMode ? '#fff' : PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: guideMode ? '0 0 24px' : (m ? '16px 12px 90px' : '40px 24px 90px'), fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
+                <div className="doc-card" style={{ width: '100%', maxWidth: guideMode ? '100%' : (m ? 430 : 1120), background: '#fff', borderRadius: guideMode ? 0 : (m ? 4 : 8), boxShadow: guideMode ? 'none' : (m ? '0 1px 3px rgba(0,0,0,.08)' : '0 4px 24px rgba(26,27,30,.10)'), overflow: 'hidden' }}>
                     {m ? heroMobile : heroPC}
+                    {guideBlock}
                     {m ? (
                         <>
-                            {infoBlock}
+                            {/* ガイド控え가 있으면 여행기간까지 포함하므로 ご旅行情報는 중복 → 숨김 */}
+                            {!guideExtra && infoBlock}
                             <div style={{ padding: '22px 18px 8px', borderTop: `8px solid ${SECTION}` }}>{itinerary}</div>
                             {includedBlock}
-                            {safetyBlock}
+                            {!guideMode && safetyBlock}
                         </>
                     ) : (
                         <>
                             <div style={{ padding: '40px 56px 8px' }}>{itinerary}</div>
-                            {infoBlock}
+                            {!guideExtra && infoBlock}
                             <div style={{ height: 32 }} />
                             {includedBlock}
-                            {safetyBlock}
+                            {!guideMode && safetyBlock}
                         </>
                     )}
                 </div>

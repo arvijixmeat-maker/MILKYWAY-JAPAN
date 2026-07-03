@@ -715,73 +715,42 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         setTimeout(() => { try { w.print(); } catch { /* 사용자가 수동 인쇄 */ } }, 350);
     };
 
-    // ── 가이드용 안내서 PDF (확정 일정표 + 항공편 시간 + 고객명 + 메모 요청사항) ──
+    // ── 가이드용 안내서 PDF ──
+    // 고객에게 보낸 확정 일정표(DocumentItinerary)를 그대로 새 창에 열어 인쇄한다.
+    // → 고객이 받은 일정표와 100% 동일한 디자인으로 나온다.
+    // 가이드 전용 정보(항공편·요청메모·담당가이드·차량)는 고객용 API 응답에 없으므로
+    // localStorage(같은 origin·일회성)로만 전달한다 — 고객에게는 절대 노출되지 않는다.
     const printGuideSheet = () => {
         const d = bookingSheet();
-        const esc = (s: any) => String(s ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] as string));
-        const isoAdd = (iso: string, n: number) => { if (!iso) return ''; const dt = new Date(iso); if (Number.isNaN(dt.getTime())) return ''; dt.setDate(dt.getDate() + n); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; };
-        const days = (docInitialContent?.days as any[] | undefined) || [];
-        const dayByNumber = (day: number) => days.find((item: any) => Number(item?.day) === day) || days[day - 1] || {};
-        const accNameFor = (day: number) => {
-            const assigned = reservation.dailyAccommodations?.find((item) => item.day === day);
-            const acc: any = assigned?.accommodation || defaultAccomForDay(day) || {};
-            return { name: acc.name || '', grade: acc.type || '' };
+        const g: any = (reservation.assignedGuide as any) || {};
+        const v: any = (editForm.contractData as any)?.vehicle || {};
+        const payload = {
+            customerName: reservation.customerName || '',
+            people: d.people || '',
+            arrival: d.arrival || '',
+            departure: d.departure || '',
+            guideName: g.name || '',
+            guidePhone: g.phone || '',
+            vehicleType: v.type || v.name || '',
+            vehiclePhone: v.phone || '',
+            memos: d.memos || [],
         };
-        const startDate = String((reservation as any).startDate || '').slice(0, 10);
-        const count = Math.max(days.length, (reservation.dailyAccommodations || []).length, tripDays || 0);
-        const dayBlocks = Array.from({ length: count }, (_, i) => {
-            const dn = i + 1;
-            const day: any = dayByNumber(dn);
-            const acts = Array.isArray(day.activities) ? day.activities : [];
-            const meals = day.meals || {};
-            const hotel = accNameFor(dn);
-            const actLis = acts.map((a: any) => `<li>${a.time ? `<b>${esc(a.time)}</b>　` : ''}${esc(a.title || '')}${a.description ? `<div class="desc">${esc(a.description)}</div>` : ''}</li>`).join('') || '<li class="muted">—</li>';
-            const mealLine = (meals.breakfast || meals.lunch || meals.dinner) ? `<span>🍽 朝:${esc(meals.breakfast || '—')} / 昼:${esc(meals.lunch || '—')} / 夕:${esc(meals.dinner || '—')}</span>` : '';
-            const hotelLine = hotel.name ? `<span>🏨 ${esc(hotel.name)}${hotel.grade ? ` (${esc(hotel.grade)})` : ''}</span>` : '';
-            return `<div class="day">
-                <div class="dh"><span class="dn">DAY ${dn}</span><b>${esc(day.title || `${dn}日目`)}</b>${day.region ? `<span class="rg">${esc(day.region)}</span>` : ''}<span class="dd">${esc(isoAdd(startDate, i))}</span></div>
-                ${day.summary ? `<div class="dsum">${esc(day.summary)}</div>` : ''}
-                <ul class="acts">${actLis}</ul>
-                ${(hotelLine || mealLine) ? `<div class="dmeta">${hotelLine}${mealLine}</div>` : ''}
-            </div>`;
-        }).join('');
-        const memoBlock = d.memos.length ? `<h2>Үйлчлүүлэгчийн хүсэлт · Тэмдэглэл (요청사항)</h2><ul class="memos">${d.memos.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '';
-        const guideName = (reservation.assignedGuide as any)?.name ? esc((reservation.assignedGuide as any).name) : '';
-        const html = `<!doctype html><html lang="mn"><head><meta charset="utf-8"><title>Гайдын хөтөлбөр ${esc(d.number)}</title>
-        <style>
-          *{box-sizing:border-box} body{font-family:'Noto Sans','Noto Sans JP','Arial','Malgun Gothic',sans-serif;color:#111;margin:0;padding:26px 30px;font-size:13px}
-          h1{font-size:21px;margin:0 0 4px} .sub{color:#666;font-size:12px;margin:0 0 16px}
-          .meta{width:100%;border-collapse:collapse;margin-bottom:18px}
-          .meta td{border:1px solid #d7dee8;padding:7px 10px;font-size:13px}
-          .meta td.k{background:#eef4ff;color:#1656d6;font-weight:700;width:120px;white-space:nowrap}
-          h2{font-size:14px;margin:18px 0 10px;color:#0b1b45;border-left:4px solid #287dfa;padding-left:8px}
-          .day{border:1px solid #e5e9f0;border-radius:8px;padding:11px 14px;margin-bottom:9px;break-inside:avoid;page-break-inside:avoid}
-          .dh{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .dn{background:#287dfa;color:#fff;border-radius:6px;padding:2px 8px;font-weight:800;font-size:12px}
-          .dh b{font-size:15px} .rg{color:#287dfa;font-weight:700;font-size:12px} .dd{color:#888;font-size:12px;margin-left:auto}
-          .dsum{color:#555;font-size:12.5px;margin:6px 0 0}
-          .acts{margin:8px 0 0;padding-left:18px} .acts li{margin:4px 0;line-height:1.5} .acts .desc{color:#555;font-size:12px;margin-top:2px;white-space:pre-wrap} .acts .muted{color:#aaa;list-style:none;margin-left:-18px}
-          .dmeta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed #e5e9f0;font-size:12px;color:#444}
-          .memos{margin:0;padding-left:18px} .memos li{margin:4px 0;line-height:1.5;white-space:pre-wrap}
-          .foot{margin-top:22px;color:#888;font-size:11px;border-top:1px solid #e5e9f0;padding-top:10px}
-          @media print{body{padding:0} @page{margin:13mm}}
-        </style></head><body>
-          <h1>Гайдын аяллын хөтөлбөр</h1>
-          <p class="sub">Milkyway Japan · Захиалга: ${esc(d.number)}${guideName ? ` · Гайд: ${guideName}` : ''}</p>
-          <table class="meta">
-            <tr><td class="k">Үйлчлүүлэгч</td><td>${esc(reservation.customerName || '-')}</td><td class="k">Хүний тоо</td><td>${esc(d.people || '-')}</td></tr>
-            <tr><td class="k">Аялал</td><td colspan="3">${esc(d.product)}</td></tr>
-            <tr><td class="k">Хугацаа</td><td colspan="3">${esc(d.period)}${d.nights ? ` (${esc(d.nights)})` : ''}</td></tr>
-            <tr><td class="k">Ирэх нислэг</td><td>${esc(d.arrival)}</td><td class="k">Буцах нислэг</td><td>${esc(d.departure)}</td></tr>
-          </table>
-          <h2>Аяллын хөтөлбөр (확정 일정표)</h2>
-          ${dayBlocks || '<p style="color:#888">일정 데이터가 없습니다.</p>'}
-          ${memoBlock}
-          <p class="foot">Хувийн мэдээлэл агуулсан тул анхааралтай хадгална уу. · ${esc(d.number)}</p>
-        </body></html>`;
-        const w = window.open('', '_blank', 'width=920,height=1000');
-        if (!w) { alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.'); return; }
-        w.document.write(html); w.document.close(); w.focus();
-        setTimeout(() => { try { w.print(); } catch { /* 수동 인쇄 */ } }, 350);
+        try { localStorage.setItem(`guideDoc:${reservation.id}`, JSON.stringify(payload)); } catch { /* ignore */ }
+        // 새 탭/중간 페이지 없이 곧바로 인쇄창이 뜨도록, 고객 일정표 페이지를 화면 밖
+        // 숨은 iframe으로 로드해 그 안에서 인쇄한다(크로미엄은 iframe 문서만 인쇄).
+        // iframe 안의 DocumentItinerary(?guide=1&autoprint=1)가 이미지 로드 후 스스로 인쇄한다.
+        const url = `${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1`;
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        // 718px = A4(210mm) - 여백 20mm = 190mm @96dpi → 인쇄 시 축소 없이 전폭이 그대로 매핑된다.
+        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:718px;height:1200px;border:0;';
+        const cleanup = () => { try { iframe.remove(); } catch { /* noop */ } };
+        iframe.onload = () => {
+            try { iframe.contentWindow?.addEventListener('afterprint', () => window.setTimeout(cleanup, 500), { once: true }); } catch { /* noop */ }
+            window.setTimeout(cleanup, 120000); // 안전용: 2분 뒤 무조건 제거
+        };
+        iframe.src = url;
+        document.body.appendChild(iframe);
     };
 
     const downloadBookingSheetExcel = () => {
