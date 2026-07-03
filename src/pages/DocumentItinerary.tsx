@@ -698,8 +698,9 @@ export const DocumentItinerary: React.FC = () => {
                 @page { size: A4; margin:10mm; }
             `}</style>
 
-            <div className="doc-page jp" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: m ? '16px 12px 90px' : '40px 24px 90px', fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
-                <div className="doc-card" style={{ width: '100%', maxWidth: m ? 430 : 1120, background: '#fff', borderRadius: m ? 4 : 8, boxShadow: m ? '0 1px 3px rgba(0,0,0,.08)' : '0 4px 24px rgba(26,27,30,.10)', overflow: 'hidden' }}>
+            {/* 가이드 모드는 인쇄 전용 — 카드가 A4 전폭을 쓰도록 인라인에서 직접 전폭 렌더(CSS 오버라이드 의존 X) */}
+            <div className="doc-page jp" style={{ minHeight: '100vh', background: guideMode ? '#fff' : PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: guideMode ? '0 0 24px' : (m ? '16px 12px 90px' : '40px 24px 90px'), fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
+                <div className="doc-card" style={{ width: '100%', maxWidth: guideMode ? '100%' : (m ? 430 : 1120), background: '#fff', borderRadius: guideMode ? 0 : (m ? 4 : 8), boxShadow: guideMode ? 'none' : (m ? '0 1px 3px rgba(0,0,0,.08)' : '0 4px 24px rgba(26,27,30,.10)'), overflow: 'hidden' }}>
                     {m ? heroMobile : heroPC}
                     {guideBlock}
                     {m ? (

@@ -722,7 +722,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         const url = `${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1`;
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:820px;height:1200px;border:0;';
+        // 718px = A4(210mm) - 여백 20mm = 190mm @96dpi → 인쇄 시 축소 없이 전폭이 그대로 매핑된다.
+        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:718px;height:1200px;border:0;';
         const cleanup = () => { try { iframe.remove(); } catch { /* noop */ } };
         iframe.onload = () => {
             try { iframe.contentWindow?.addEventListener('afterprint', () => window.setTimeout(cleanup, 500), { once: true }); } catch { /* noop */ }
