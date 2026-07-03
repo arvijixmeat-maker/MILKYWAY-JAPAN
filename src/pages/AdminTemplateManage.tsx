@@ -238,6 +238,8 @@ type TemplatePreviewProps = {
     onDayActivitiesText?: (dayIdx: number, text: string) => void;
     onPickSpot?: (dayIdx: number, actIdx: number) => void;
     onPickHotel?: (dayIdx: number) => void;
+    /** 해당 일차의 숙소 선택 해제(확정 배정 해제 포함). 없으면 문서 내용의 숙소만 비운다. */
+    onClearHotel?: (dayIdx: number) => void;
     defaultPage?: 'overview' | 'contract' | 'detail' | 'guide';
     focusDayIndex?: number;
     showPageTabs?: boolean;
@@ -267,7 +269,7 @@ const AutoTextarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> 
     return <textarea ref={ref} rows={1} {...props} onInput={(e) => { fit(); props.onInput?.(e); }} style={{ ...(props.style || {}), overflow: 'hidden', resize: 'none' }} />;
 };
 
-export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true, visiblePages }) => {
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, onClearHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true, visiblePages }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>(defaultPage);
     useEffect(() => setActivePage(defaultPage), [defaultPage]);
     const totalDays = days.length;
@@ -638,7 +640,18 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center justify-between gap-2">
                                                 <p className="text-[10.5px] font-black" style={{ color: DOC_BLUE }}>宿泊情報</p>
-                                                {onPickHotel && <button onClick={() => onPickHotel(dayIdx)} className="text-[10px] font-black" style={{ color: '#1656D6' }}>숙소 마스터에서 선택</button>}
+                                                <div className="flex items-center gap-3">
+                                                    {onPickHotel && <button onClick={() => onPickHotel(dayIdx)} className="text-[10px] font-black" style={{ color: '#1656D6' }}>숙소 마스터에서 선택</button>}
+                                                    {(accommodation?.name || accommodation?.location || dailyAccommodations?.some(x => x.day === dayIdx + 1 && x.accommodation?.name)) && (
+                                                        <button
+                                                            onClick={() => onClearHotel ? onClearHotel(dayIdx) : onDayChange(dayIdx, 'accommodation', null)}
+                                                            className="inline-flex items-center gap-0.5 text-[10px] font-black text-slate-400 hover:text-red-500"
+                                                            title="이 일차의 숙소 선택을 해제합니다"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[13px]">close</span>선택 해제
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                             <input value={accommodation?.name || ''} onChange={e => onDayChange(dayIdx, 'accommodation', { ...(day.accommodation || {}), name: e.target.value })} placeholder="호텔 또는 게르명" className={`${fieldClass} text-[13px] font-black text-[#0B1B45]`} />
                                             {accommodation?.location && <p className="mt-0.5 text-[10px] font-semibold text-slate-400">（{accommodation.location}）</p>}
