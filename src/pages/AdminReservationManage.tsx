@@ -502,6 +502,27 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         onUpdate(updated);
     };
 
+    // 확정 숙소 배정 해제 — 해당 일차의 dailyAccommodations 항목 제거 (문서 편집기의 "선택 해제")
+    const handleAccommodationUnassign = (day: number) => {
+        if (!reservation) return;
+        const existing = (reservation.dailyAccommodations || []).find(d => d.day === day);
+        if (!existing) return;
+        const updated = {
+            ...reservation,
+            dailyAccommodations: (reservation.dailyAccommodations || []).filter(d => d.day !== day),
+            history: [
+                ...(reservation.history || []),
+                {
+                    timestamp: new Date().toISOString(),
+                    type: 'modification',
+                    description: `${day}日目の宿泊先の確定を解除しました。`,
+                    detail: `${existing.accommodation?.name || ''}`
+                }
+            ]
+        };
+        onUpdate(updated);
+    };
+
     // Derived data
     const memos = (reservation.history || []).filter((h: any) => h.type === 'admin_memo');
     const timelineEvents = (reservation.history || []).filter((h: any) => h.type !== 'admin_memo');
@@ -1917,6 +1938,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             dailyAccommodations={reservation.dailyAccommodations}
             onAssignGuide={() => setShowGuideModal(true)}
             onAssignAccommodation={(day) => { setSelectedDay(day); setShowAccommodationModal(true); }}
+            onUnassignAccommodation={handleAccommodationUnassign}
         />
     </>);
 };

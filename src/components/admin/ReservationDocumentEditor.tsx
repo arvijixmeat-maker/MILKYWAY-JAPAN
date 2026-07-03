@@ -50,9 +50,11 @@ interface Props {
     dailyAccommodations?: Array<{ day: number; accommodation: { name?: string } }>;
     onAssignGuide?: () => void;
     onAssignAccommodation?: (day: number) => void;
+    /** 확정 숙소 배정 해제 — 해당 일차의 dailyAccommodations 항목을 제거 */
+    onUnassignAccommodation?: (day: number) => void;
 }
 
-export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, documentType = 'itinerary', templateMode = false, customer, initialContent, onSave, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation }) => {
+export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, documentType = 'itinerary', templateMode = false, customer, initialContent, onSave, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation, onUnassignAccommodation }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [days, setDays] = useState<TemplateDay[]>([]);
@@ -539,6 +541,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
                                 onPickSpot={(d, a) => setSpotTarget({ d, a })}
                                 onPickHotel={(dayIdx) => { if (!templateMode && onAssignAccommodation) { onAssignAccommodation(dayIdx + 1); } else { setHotelDayIdx(dayIdx); } }}
+                                onClearHotel={(dayIdx) => {
+                                    // 문서 내용의 숙소 + (예약 모드) 확정 배정을 함께 해제
+                                    setDays(prev => prev.map((d, i) => i === dayIdx ? { ...d, accommodation: null } : d));
+                                    if (!templateMode && onUnassignAccommodation) onUnassignAccommodation(dayIdx + 1);
+                                }}
                                 defaultPage={documentType === 'contract' ? 'contract' : 'overview'}
                                 focusDayIndex={selectedDayIndex}
                                 showPageTabs={true}
