@@ -716,8 +716,20 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
             memos: d.memos || [],
         };
         try { localStorage.setItem(`guideDoc:${reservation.id}`, JSON.stringify(payload)); } catch { /* ignore */ }
-        const w = window.open(`${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1`, '_blank');
-        if (!w) { alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.'); }
+        // 새 탭/중간 페이지 없이 곧바로 인쇄창이 뜨도록, 고객 일정표 페이지를 화면 밖
+        // 숨은 iframe으로 로드해 그 안에서 인쇄한다(크로미엄은 iframe 문서만 인쇄).
+        // iframe 안의 DocumentItinerary(?guide=1&autoprint=1)가 이미지 로드 후 스스로 인쇄한다.
+        const url = `${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1`;
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:820px;height:1200px;border:0;';
+        const cleanup = () => { try { iframe.remove(); } catch { /* noop */ } };
+        iframe.onload = () => {
+            try { iframe.contentWindow?.addEventListener('afterprint', () => window.setTimeout(cleanup, 500), { once: true }); } catch { /* noop */ }
+            window.setTimeout(cleanup, 120000); // 안전용: 2분 뒤 무조건 제거
+        };
+        iframe.src = url;
+        document.body.appendChild(iframe);
     };
 
     const downloadBookingSheetExcel = () => {
