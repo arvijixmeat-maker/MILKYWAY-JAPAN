@@ -311,10 +311,22 @@ export const DocumentItinerary: React.FC = () => {
         } catch { /* ignore */ }
     }, [guideMode, reservationId]);
     // 데이터가 그려진 뒤 자동 인쇄(관리자가 바로 PDF 저장할 수 있도록). 수동 인쇄 버튼도 유지된다.
+    // lazy 이미지가 인쇄 전에 로드되도록 강제 eager + 로드 완료 대기(최대 4초 캡).
     useEffect(() => {
         if (searchParams.get('autoprint') !== '1' || loading || error || !data) return;
-        const t = setTimeout(() => { try { window.print(); } catch { /* 수동 인쇄 */ } }, 1100);
-        return () => clearTimeout(t);
+        let printed = false;
+        const doPrint = () => { if (printed) return; printed = true; try { window.print(); } catch { /* 수동 인쇄 */ } };
+        const kick = window.setTimeout(() => {
+            const imgs = Array.from(document.querySelectorAll('img'));
+            imgs.forEach((im) => { try { im.loading = 'eager'; const s = im.getAttribute('src'); if (s && !im.complete) im.setAttribute('src', s); } catch { /* noop */ } });
+            const pending = imgs.filter((im) => !im.complete);
+            if (pending.length === 0) { window.setTimeout(doPrint, 300); return; }
+            let remaining = pending.length;
+            const onDone = () => { remaining -= 1; if (remaining <= 0) window.setTimeout(doPrint, 300); };
+            pending.forEach((im) => { im.addEventListener('load', onDone, { once: true }); im.addEventListener('error', onDone, { once: true }); });
+            window.setTimeout(doPrint, 4000); // 하드 캡: 일부 이미지가 안 떠도 인쇄는 진행
+        }, 500);
+        return () => window.clearTimeout(kick);
     }, [searchParams, loading, error, data]);
 
     if (loading) {
