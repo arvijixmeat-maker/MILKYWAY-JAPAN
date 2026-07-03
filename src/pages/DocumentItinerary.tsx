@@ -402,7 +402,8 @@ export const DocumentItinerary: React.FC = () => {
             </div>
             {/* 타임라인 */}
             <div style={{ position: 'relative', marginTop: m ? 18 : 28, paddingLeft: m ? 26 : 34 }}>
-                <div style={{ position: 'absolute', left: m ? 5 : 7, top: 8, bottom: 8, width: 2, background: BORDER }} />
+                {/* 타임라인 세로 라인 — border는 인쇄 시 배경 그래픽 옵션과 무관하게 항상 찍힌다 */}
+                <div style={{ position: 'absolute', left: m ? 5 : 7, top: 8, bottom: 8, width: 0, borderLeft: `2px solid ${BORDER}` }} />
                 {days.length === 0 ? (
                     <div style={{ padding: '8px 0', fontSize: 13, color: MUTE }}>日程は現在準備中です。</div>
                 ) : days.map((day, i) => {
@@ -690,8 +691,11 @@ export const DocumentItinerary: React.FC = () => {
                     .print-break { break-inside:avoid; page-break-inside:avoid; }
                     /* 인쇄 시 떠 있는 채팅 위젯 숨김 (PDF에 찍히지 않도록) */
                     .floating-line-btn, #ch-plugin-entry, #ch-plugin-launcher { display:none !important; }
+                    /* 브라우저 "배경 그래픽" 옵션이 꺼져 있어도 타임라인 라인·DAY 포인트·
+                       식사 칩·섹션 배경색이 그대로 인쇄되도록 강제 */
+                    .doc-card, .doc-card * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 }
-                @page { margin:10mm; }
+                @page { size: A4; margin:10mm; }
             `}</style>
 
             <div className="doc-page jp" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: m ? '16px 12px 90px' : '40px 24px 90px', fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
