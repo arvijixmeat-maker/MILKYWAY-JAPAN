@@ -645,6 +645,7 @@ export const DocumentItinerary: React.FC = () => {
     // ─── ガイド控え(관리자 발행 시에만·상단) ───
     const guideRows: Array<{ label: string; value?: string }> = guideExtra ? [
         { label: 'お客様', value: guideExtra.customerName ? `${guideExtra.customerName} 様` : undefined },
+        { label: 'ご旅行期間', value: formatRange(reservation.startDate, reservation.endDate) },
         { label: 'ご人数', value: guideExtra.people },
         { label: '到着便', value: guideExtra.arrival },
         { label: '出発便', value: guideExtra.departure },
@@ -705,7 +706,8 @@ export const DocumentItinerary: React.FC = () => {
                     {guideBlock}
                     {m ? (
                         <>
-                            {infoBlock}
+                            {/* ガイド控え가 있으면 여행기간까지 포함하므로 ご旅行情報는 중복 → 숨김 */}
+                            {!guideExtra && infoBlock}
                             <div style={{ padding: '22px 18px 8px', borderTop: `8px solid ${SECTION}` }}>{itinerary}</div>
                             {includedBlock}
                             {!guideMode && safetyBlock}
@@ -713,7 +715,7 @@ export const DocumentItinerary: React.FC = () => {
                     ) : (
                         <>
                             <div style={{ padding: '40px 56px 8px' }}>{itinerary}</div>
-                            {infoBlock}
+                            {!guideExtra && infoBlock}
                             <div style={{ height: 32 }} />
                             {includedBlock}
                             {!guideMode && safetyBlock}
