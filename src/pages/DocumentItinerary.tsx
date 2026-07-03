@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { normalizeImages } from '../components/document/TripDocParts';
@@ -111,6 +111,18 @@ interface ItineraryData {
     days: DayData[];
     productIncluded?: string[];
     productExcluded?: string[];
+}
+// 가이드 控え(관리자→localStorage 전달, 고객 미노출)
+interface GuideExtra {
+    customerName?: string;
+    people?: string;
+    arrival?: string;
+    departure?: string;
+    guideName?: string;
+    guidePhone?: string;
+    vehicleType?: string;
+    vehiclePhone?: string;
+    memos?: string[];
 }
 
 const formatRange = (start?: string, end?: string) => {
@@ -283,6 +295,27 @@ export const DocumentItinerary: React.FC = () => {
         link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap';
         document.head.appendChild(link);
     }, []);
+
+    // ── ガイド控えモード ──
+    // 관리자에서 "가이드 PDF"로 열면 ?guide=1 로 들어온다. 가이드 전용 정보(항공편·
+    // 요청메모·담당가이드·차량)는 고객용 API 응답에 포함되지 않으므로, 관리자 브라우저의
+    // localStorage 로만 전달한다(같은 origin·일회성). 고객은 이 데이터가 없어 절대 노출되지 않는다.
+    const [searchParams] = useSearchParams();
+    const guideMode = searchParams.get('guide') === '1';
+    const [guideExtra, setGuideExtra] = useState<GuideExtra | null>(null);
+    useEffect(() => {
+        if (!guideMode || !reservationId) return;
+        try {
+            const raw = localStorage.getItem(`guideDoc:${reservationId}`);
+            if (raw) { setGuideExtra(JSON.parse(raw)); localStorage.removeItem(`guideDoc:${reservationId}`); }
+        } catch { /* ignore */ }
+    }, [guideMode, reservationId]);
+    // 데이터가 그려진 뒤 자동 인쇄(관리자가 바로 PDF 저장할 수 있도록). 수동 인쇄 버튼도 유지된다.
+    useEffect(() => {
+        if (searchParams.get('autoprint') !== '1' || loading || error || !data) return;
+        const t = setTimeout(() => { try { window.print(); } catch { /* 수동 인쇄 */ } }, 1100);
+        return () => clearTimeout(t);
+    }, [searchParams, loading, error, data]);
 
     if (loading) {
         return (<>
@@ -590,6 +623,43 @@ export const DocumentItinerary: React.FC = () => {
         </div>
     );
 
+    // ─── ガイド控え(관리자 발행 시에만·상단) ───
+    const guideRows: Array<{ label: string; value?: string }> = guideExtra ? [
+        { label: 'お客様', value: guideExtra.customerName ? `${guideExtra.customerName} 様` : undefined },
+        { label: 'ご人数', value: guideExtra.people },
+        { label: '到着便', value: guideExtra.arrival },
+        { label: '出発便', value: guideExtra.departure },
+        { label: '担当ガイド', value: [guideExtra.guideName, guideExtra.guidePhone].filter(Boolean).join(' · ') || undefined },
+        { label: '車両', value: [guideExtra.vehicleType, guideExtra.vehiclePhone].filter(Boolean).join(' · ') || undefined },
+    ].filter(r => r.value) : [];
+    const guideBlock = guideExtra ? (
+        <div className="print-break" style={{ padding: m ? '16px 16px 0' : '24px 56px 0' }}>
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 14, padding: m ? '14px 15px' : '18px 22px', background: '#FBFCFE' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: m ? 10 : 12 }}>
+                    <span style={{ fontSize: m ? 14 : 16 }}>🧭</span>
+                    <span style={{ fontSize: m ? 13 : 15, fontWeight: 800, color: INK }}>ガイド控え / Гайдын мэдээлэл</span>
+                    <span style={{ fontSize: 11, color: MUTE }}>（お客様控えには表示されません）</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1fr 1fr', gap: m ? '8px' : '10px 28px' }}>
+                    {guideRows.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline', borderBottom: `1px solid ${HAIRLINE}`, paddingBottom: 7 }}>
+                            <span style={{ fontSize: 12, color: MUTE, flex: 'none', width: m ? 72 : 84 }}>{r.label}</span>
+                            <span style={{ fontSize: m ? 13 : 13.5, fontWeight: 700, color: INK }}>{r.value}</span>
+                        </div>
+                    ))}
+                </div>
+                {guideExtra.memos && guideExtra.memos.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: WARN_TITLE, marginBottom: 6 }}>⚑ ご要望・メモ（요청사항）</div>
+                        <ul style={{ margin: 0, paddingLeft: 18 }}>
+                            {guideExtra.memos.map((mm, i) => <li key={i} style={{ fontSize: 12.5, color: BODY, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{mm}</li>)}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        </div>
+    ) : null;
+
     return (
         <>
             <SEO title="確定日程表" description="お客様専用の旅行日程表です。" robots="noindex, nofollow" />
@@ -601,6 +671,7 @@ export const DocumentItinerary: React.FC = () => {
             <div className="doc-page jp" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: m ? '16px 12px 90px' : '40px 24px 90px', fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
                 <div className="doc-card" style={{ width: '100%', maxWidth: m ? 430 : 1120, background: '#fff', borderRadius: m ? 4 : 8, boxShadow: m ? '0 1px 3px rgba(0,0,0,.08)' : '0 4px 24px rgba(26,27,30,.10)', overflow: 'hidden' }}>
                     {m ? heroMobile : heroPC}
+                    {guideBlock}
                     {m ? (
                         <>
                             {infoBlock}
