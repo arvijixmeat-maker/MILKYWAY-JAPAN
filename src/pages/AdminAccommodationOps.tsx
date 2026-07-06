@@ -137,6 +137,8 @@ export const AdminAccommodationOps: React.FC = () => {
     const [confirmFilter, setConfirmFilter] = useState<'all' | 'pending' | 'done'>('all');
     const [scope, setScope] = useState<'confirmed' | 'all'>('confirmed');
     const [hotels, setHotels] = useState<Array<{ id: string; name_kr?: string; name_local?: string }>>([]);
+    // 호텔 마스터에 없는 숙소를 직접 입력 중인 칸 (key = `${reservationId}:${dayIndex}`)
+    const [manualHotels, setManualHotels] = useState<Set<string>>(new Set());
 
     const load = async () => {
         setLoading(true);
@@ -154,12 +156,13 @@ export const AdminAccommodationOps: React.FC = () => {
         }
     };
     useEffect(() => { load(); }, []);
-    // 호텔 마스터 목록 — байрны нэр 선택형(datalist)에 사용
+    // 호텔 마스터 목록 — байрны нэр 셀렉트에 사용
     useEffect(() => {
         (api as any).hotels.list({ active: true })
             .then((d: any) => setHotels(Array.isArray(d) ? d : []))
             .catch(() => setHotels([]));
     }, []);
+    const hotelNames = useMemo(() => Array.from(new Set(hotels.map(h => h.name_kr || h.name_local || '').filter(Boolean))), [hotels]);
 
     const base = useMemo(() => reservations.filter(r => scope === 'all' ? true
         : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid' || r.type === 'quote')), [reservations, scope]);
@@ -281,13 +284,6 @@ export const AdminAccommodationOps: React.FC = () => {
             actions={<button type="button" onClick={load} className="btn"><Icon name="refresh" />Шинэчлэх</button>}
         >
             <div className="route-anim">
-                {/* 호텔 마스터 — байрны нэр 입력칸의 선택 목록(datalist) */}
-                <datalist id="hotelMasterList">
-                    {hotels.map(h => {
-                        const label = h.name_kr || h.name_local || '';
-                        return label ? <option key={h.id} value={label} /> : null;
-                    })}
-                </datalist>
                 <div className="toolbar" style={{ flexWrap: 'wrap', gap: 8 }}>
                     <label className="tb-search">
                         <Icon name="search" />
@@ -454,7 +450,38 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                                         </div>
                                                                                     </td>
                                                                                     <td><input className="inp" style={{ width: 116 }} value={acc.location || ''} placeholder="지역 입력" onChange={e => patchDay(r.id, idx, { location: e.target.value })} /></td>
-                                                                                    <td><input className="inp" list="hotelMasterList" style={{ width: '100%', minWidth: 200 }} value={acc.name || ''} placeholder="호텔 선택 또는 직접 입력" onChange={e => patchDay(r.id, idx, { name: e.target.value })} /></td>
+                                                                                    <td>{(() => {
+                                                                                        // 호텔 마스터에서 셀렉트로 선택. 목록에 없는 숙소만 "Гараар бичих"로 직접 입력.
+                                                                                        const mKey = `${r.id}:${idx}`;
+                                                                                        const nm = acc.name || '';
+                                                                                        const inMaster = !!nm && hotelNames.includes(nm);
+                                                                                        const manual = manualHotels.has(mKey) || (!!nm && !inMaster);
+                                                                                        if (manual) {
+                                                                                            return (
+                                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 200 }}>
+                                                                                                    <input className="inp" style={{ flex: 1, minWidth: 0 }} value={nm} placeholder="Буудлын нэр бичих"
+                                                                                                        onChange={e => { if (!manualHotels.has(mKey)) setManualHotels(prev => new Set(prev).add(mKey)); patchDay(r.id, idx, { name: e.target.value }); }} />
+                                                                                                    <button type="button" title="Жагсаалтаас сонгох"
+                                                                                                        onClick={() => { setManualHotels(prev => { const n = new Set(prev); n.delete(mKey); return n; }); patchDay(r.id, idx, { name: '' }); }}
+                                                                                                        style={{ flex: 'none', width: 30, height: 30, display: 'grid', placeItems: 'center', border: '1px solid #E6E8EC', borderRadius: 8, background: '#fff', color: '#8A8F99', cursor: 'pointer' }}>
+                                                                                                        <Icon name="checklist" />
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            );
+                                                                                        }
+                                                                                        return (
+                                                                                            <select className="select" style={{ width: '100%', minWidth: 200 }} value={inMaster ? nm : ''}
+                                                                                                onChange={e => {
+                                                                                                    const v = e.target.value;
+                                                                                                    if (v === '__manual__') { setManualHotels(prev => new Set(prev).add(mKey)); patchDay(r.id, idx, { name: '' }); return; }
+                                                                                                    patchDay(r.id, idx, { name: v });
+                                                                                                }}>
+                                                                                                <option value="">Буудал сонгох…</option>
+                                                                                                {hotelNames.map(n => <option key={n} value={n}>{n}</option>)}
+                                                                                                <option value="__manual__">✏️ Гараар бичих (жагсаалтад байхгүй)</option>
+                                                                                            </select>
+                                                                                        );
+                                                                                    })()}</td>
                                                                                     <td>
                                                                                         <select className="select" style={{ width: 124 }} value={acc.type || ''} onChange={e => patchDay(r.id, idx, { type: e.target.value || undefined })}>
                                                                                             {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g || 'Тодорхойгүй'}</option>)}
