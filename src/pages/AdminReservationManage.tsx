@@ -254,6 +254,15 @@ const STATUS_LABELS: Record<string, string> = {
     converted: '예약 전환됨',
 };
 
+// 숙소 배정 보드(Байр захиалга)의 수배 상태(몽골어 저장값) → 한국어 라벨·색.
+// 상세에서는 읽기 전용 표시만 — 상태의 원천은 보드(몽골 현지 스태프).
+const BOOKING_STATUS_KO: Record<string, { label: string; bg: string; fg: string }> = {
+    'Илгээгээгүй': { label: '수배 미발송', bg: '#EEF1F5', fg: '#5F636B' },
+    'Имэйл илгээсэн': { label: '메일 발송됨', bg: '#E8F2FF', fg: '#0B6FE0' },
+    'Хариу ирсэн': { label: '회신 수신', bg: '#FEF6E7', fg: '#B45309' },
+    'Баталгаажсан': { label: '수배 확정', bg: '#E4F7EC', fg: '#0F7A43' },
+};
+
 const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Reservation['status']) => void }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -463,17 +472,26 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
 
         const dailyAccommodations = reservation.dailyAccommodations || [];
         const existingIndex = dailyAccommodations.findIndex(d => d.day === selectedDay);
+        const prevEntry: any = existingIndex >= 0 ? dailyAccommodations[existingIndex] : null;
+        const prevAcc: any = prevEntry?.accommodation || {};
+        // 숙소가 실제로 바뀌면 수배(예약 요청)는 다시 해야 하므로 수배 상태를 초기화한다.
+        const hotelChanged = !!prevAcc.name && prevAcc.name !== accommodation.name;
 
         const newDaily = {
+            ...(prevEntry || {}), // day·date 등 메타 유지
             day: selectedDay,
             accommodation: {
+                // 숙소 배정 보드(Байр захиалга)가 관리하는 운영 필드(방·인실·수배상태)를 보존 —
+                // 통째로 교체하면 상세에서 숙소만 바꿔도 보드의 수배 진행 상황이 사라진다.
+                ...prevAcc,
                 id: accommodation.id,
                 name: accommodation.name,
                 type: accommodation.type,
                 location: accommodation.location,
                 images: accommodation.images,
                 description: accommodation.description,
-                facilities: accommodation.facilities
+                facilities: accommodation.facilities,
+                ...(hotelChanged ? { bookingStatus: 'Илгээгээгүй' } : {}),
             }
         };
 
@@ -494,7 +512,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                     timestamp: new Date().toISOString(),
                     type: 'modification',
                     description: `${selectedDay}日目の宿泊先が確定しました。`,
-                    detail: `${accommodation.name}`
+                    detail: hotelChanged
+                        ? `${accommodation.name} (숙소 변경 — 수배 상태 초기화)`
+                        : `${accommodation.name}`
                 }
             ]
         };
@@ -1508,6 +1528,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                 <div className="card-head">
                                     <Icon name="hotel" style={{ color: 'var(--mrt-gray-600)' }} /><h2>일자별 숙소 배정</h2>
                                     <div className="spacer" style={{ flex: 1 }} />
+                                    <a className="link-action" href={`/admin/accommodation-ops?open=${reservation.id}`} title="숙소 배정 보드(Байр захиалга)에서 이 예약의 수배 상태·방·인실을 관리합니다.">
+                                        <Icon name="night_shelter" />숙소 보드에서 수배 관리
+                                    </a>
                                     <button
                                         className="link-action"
                                         onClick={async () => {
@@ -1568,6 +1591,19 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                     {overNights && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 999, background: '#FFECEC', color: '#D0342C' }}>박수 초과 · 출발일</span>}
                                                                 </div>
                                                                 <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.location || '—'}</div>
+                                                                {(() => {
+                                                                    // 보드에서 관리하는 수배 진행 상황을 상세에서도 보이게 (읽기 전용)
+                                                                    const acc: any = assigned.accommodation;
+                                                                    const bs = acc.bookingStatus ? BOOKING_STATUS_KO[String(acc.bookingStatus)] : undefined;
+                                                                    const rooms = [acc.roomCount != null && acc.roomCount !== '' ? `방 ${acc.roomCount}` : '', acc.occupancy || ''].filter(Boolean).join(' · ');
+                                                                    if (!bs && !rooms) return null;
+                                                                    return (
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 4, flexWrap: 'wrap' }}>
+                                                                            {bs && <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: bs.bg, color: bs.fg }}>{bs.label}</span>}
+                                                                            {rooms && <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--mrt-gray-500)' }}>{rooms}</span>}
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                             </div>
                                                             <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
                                                             <button className="act-btn" title="배정 해제" onClick={() => handleAccommodationUnassign(day)}><Icon name="close" /></button>
@@ -2179,6 +2215,20 @@ export const AdminReservationManage: React.FC = () => {
             setReservations(prev => prev.map(x => x.id === res.id ? merge(x) : x));
         }).catch(() => { /* 재조회 실패 시 목록 데이터 그대로 사용 */ });
     };
+
+    // ?open=<reservationId> — 숙소 보드(Байр захиалга)의 「Захиалгын дэлгэрэнгүй」 링크로
+    // 진입 시 해당 예약 상세를 자동으로 연다.
+    const openedFromUrl = React.useRef(false);
+    useEffect(() => {
+        if (openedFromUrl.current || reservations.length === 0) return;
+        const openId = new URLSearchParams(window.location.search).get('open');
+        if (!openId) return;
+        const target = reservations.find(r => r.id === openId);
+        if (!target) return;
+        openedFromUrl.current = true;
+        openReservation(target);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reservations]);
 
     const handleUpdateReservation = async (updated: Reservation) => {
         try {
