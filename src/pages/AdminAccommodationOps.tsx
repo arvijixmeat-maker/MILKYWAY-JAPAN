@@ -136,7 +136,7 @@ export const AdminAccommodationOps: React.FC = () => {
     const [region, setRegion] = useState('all');
     const [confirmFilter, setConfirmFilter] = useState<'all' | 'pending' | 'done'>('all');
     const [scope, setScope] = useState<'confirmed' | 'all'>('confirmed');
-    const [hotels, setHotels] = useState<Array<{ id: string; name_kr?: string; name_local?: string }>>([]);
+    const [hotels, setHotels] = useState<Array<{ id: string; name_kr?: string; name_local?: string; region?: string; address?: string; description?: string; images?: string[]; amenities?: string[] }>>([]);
     // 호텔 마스터에 없는 숙소를 직접 입력 중인 칸 (key = `${reservationId}:${dayIndex}`)
     const [manualHotels, setManualHotels] = useState<Set<string>>(new Set());
 
@@ -163,6 +163,12 @@ export const AdminAccommodationOps: React.FC = () => {
             .catch(() => setHotels([]));
     }, []);
     const hotelNames = useMemo(() => Array.from(new Set(hotels.map(h => h.name_kr || h.name_local || '').filter(Boolean))), [hotels]);
+    // 표시명 → 호텔 마스터 레코드 (선택 시 이미지·지역·설명 등 전체 정보를 숙소에 채우기 위함)
+    const hotelByName = useMemo(() => {
+        const map = new Map<string, typeof hotels[number]>();
+        hotels.forEach(h => { const n = h.name_kr || h.name_local || ''; if (n) map.set(n, h); });
+        return map;
+    }, [hotels]);
 
     const base = useMemo(() => reservations.filter(r => scope === 'all' ? true
         : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid' || r.type === 'quote')), [reservations, scope]);
@@ -483,8 +489,19 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                                             <select className="select" style={{ width: '100%', minWidth: 200 }} value={inMaster ? nm : ''}
                                                                                                 onChange={e => {
                                                                                                     const v = e.target.value;
-                                                                                                    if (v === '__manual__') { setManualHotels(prev => new Set(prev).add(mKey)); patchDay(r.id, idx, { name: '' }); return; }
-                                                                                                    patchDay(r.id, idx, { name: v });
+                                                                                                    if (v === '__manual__') { setManualHotels(prev => new Set(prev).add(mKey)); patchDay(r.id, idx, { name: '', id: undefined, images: [] }); return; }
+                                                                                                    // 호텔 마스터에서 선택 → 이미지·지역·설명·시설까지 전체를 숙소에 채운다.
+                                                                                                    // (이름만 넣으면 예약 상세·확정 일정표에 이미지가 안 나옴)
+                                                                                                    const h = hotelByName.get(v);
+                                                                                                    const patch: Partial<DailyAcc['accommodation']> = { name: v };
+                                                                                                    if (h) {
+                                                                                                        patch.id = h.id;
+                                                                                                        patch.images = Array.isArray(h.images) ? h.images : [];
+                                                                                                        patch.description = h.description || '';
+                                                                                                        if (!acc.location && h.region) patch.location = h.region;
+                                                                                                        if (Array.isArray(h.amenities) && h.amenities.length) patch.facilities = h.amenities;
+                                                                                                    }
+                                                                                                    patchDay(r.id, idx, patch);
                                                                                                 }}>
                                                                                                 <option value="">Буудал сонгох…</option>
                                                                                                 {hotelNames.map(n => <option key={n} value={n}>{n}</option>)}
