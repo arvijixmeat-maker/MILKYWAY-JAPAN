@@ -222,6 +222,13 @@ export const AdminAccommodationOps: React.FC = () => {
 
     // ── 편집 ──
     const markDirty = (rId: string) => setDirty(prev => new Set(prev).add(rId));
+    // Хадгалах(저장) 전 새로고침·이탈 시 편집 내용이 사라지는 것을 경고 —
+    // "다 바꿨는데 어느 순간 되돌아간다"의 흔한 원인이 저장 전 이탈이다.
+    useEffect(() => {
+        const h = (e: BeforeUnloadEvent) => { if (dirty.size > 0) { e.preventDefault(); e.returnValue = ''; } };
+        window.addEventListener('beforeunload', h);
+        return () => window.removeEventListener('beforeunload', h);
+    }, [dirty]);
     // 인덱스 기준 편집(일차 번호·날짜를 직접 수정해도 안전)
     const patchDay = (rId: string, idx: number, patch: Partial<DailyAcc['accommodation']>) => {
         setReservations(prev => prev.map(r => {
@@ -372,7 +379,13 @@ export const AdminAccommodationOps: React.FC = () => {
                                                 <td>{regionOf(r)}</td>
                                                 <td>{fmtDate(r.createdAt)}</td>
                                                 <td>{r.travelers || '-'} хүн</td>
-                                                <td style={{ fontWeight: 700, color: sum.allConfirmed ? '#0F7A43' : '#B45309' }}>{sum.confirmed}/{sum.total} баталгаажсан</td>
+                                                <td style={{ fontWeight: 700, color: sum.allConfirmed ? '#0F7A43' : '#B45309' }}>
+                                                    {sum.confirmed}/{sum.total} баталгаажсан
+                                                    {/* 옛 데이터: 박수보다 행이 많으면(예: 4박인데 5행) 빈 행이 확정을 영원히 막는다 — 삭제 유도 */}
+                                                    {nightsOf(r) > 0 && sum.total > nightsOf(r) && (
+                                                        <span style={{ display: 'block', fontSize: 10, fontWeight: 800, color: '#D0342C' }}>шөнөөс {sum.total - nightsOf(r)} мөр илүү — 🗑 устгана уу</span>
+                                                    )}
+                                                </td>
                                             </tr>
                                             {open && (
                                                 <tr>
