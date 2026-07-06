@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -220,6 +220,22 @@ export const AdminAccommodationOps: React.FC = () => {
     };
     const toggleExpand = (r: Reservation) => expanded.has(r.id) ? setExpanded(prev => { const n = new Set(prev); n.delete(r.id); return n; }) : openRow(r);
 
+    // ?open=<reservationId> — 예약 상세의 「숙소 보드에서 수배 관리」 링크로 진입 시 해당 예약을 자동 펼침
+    const openedFromUrl = useRef(false);
+    useEffect(() => {
+        if (openedFromUrl.current || reservations.length === 0) return;
+        const id = new URLSearchParams(window.location.search).get('open');
+        if (!id) return;
+        const target = reservations.find(x => x.id === id);
+        if (!target) return;
+        openedFromUrl.current = true;
+        // 확정 전 예약이면 기본 필터(Зөвхөн баталгаажсан)에 걸려 안 보이므로 전체 보기로 전환
+        if (!(CONFIRMED_STATUSES.includes(target.status || '') || target.depositStatus === 'paid' || target.type === 'quote')) setScope('all');
+        openRow(target);
+        setTimeout(() => { try { document.getElementById(`acc-row-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { /* noop */ } }, 200);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reservations]);
+
     // ── 편집 ──
     const markDirty = (rId: string) => setDirty(prev => new Set(prev).add(rId));
     // Хадгалах(저장) 전 새로고침·이탈 시 편집 내용이 사라지는 것을 경고 —
@@ -229,6 +245,16 @@ export const AdminAccommodationOps: React.FC = () => {
         window.addEventListener('beforeunload', h);
         return () => window.removeEventListener('beforeunload', h);
     }, [dirty]);
+    // 일차 번호를 날짜순으로 1..N 재부여 — 2~5처럼 어긋난 옛 데이터를 예약 상세·확정 일정표와 맞춘다
+    const renumberDays = (rId: string) => {
+        setReservations(prev => prev.map(r => {
+            if (r.id !== rId) return r;
+            const rows = [...(r.dailyAccommodations || [])];
+            rows.sort((a, b) => String(a.date || '9999-99-99').localeCompare(String(b.date || '9999-99-99')) || ((a.day || 0) - (b.day || 0)));
+            return { ...r, dailyAccommodations: rows.map((d, i) => ({ ...d, day: i + 1, date: d.date || isoOffset(r.startDate, i) })) };
+        }));
+        markDirty(rId);
+    };
     // 인덱스 기준 편집(일차 번호·날짜를 직접 수정해도 안전)
     const patchDay = (rId: string, idx: number, patch: Partial<DailyAcc['accommodation']>) => {
         setReservations(prev => prev.map(r => {
@@ -366,7 +392,7 @@ export const AdminAccommodationOps: React.FC = () => {
                                     const travelers = cd.travelers || [];
                                     return (
                                         <React.Fragment key={r.id}>
-                                            <tr style={{ cursor: 'pointer', background: open ? 'var(--surface-canvas, #F7F8FA)' : undefined }} onClick={() => toggleExpand(r)}>
+                                            <tr id={`acc-row-${r.id}`} style={{ cursor: 'pointer', background: open ? 'var(--surface-canvas, #F7F8FA)' : undefined }} onClick={() => toggleExpand(r)}>
                                                 <td style={{ textAlign: 'center' }}><Icon name={open ? 'expand_more' : 'chevron_right'} /></td>
                                                 <td><span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 999, fontSize: 12, fontWeight: 800, background: sty.bg, color: sty.fg }}>{sum.label}</span></td>
                                                 <td style={{ fontWeight: 700 }}>
@@ -437,7 +463,13 @@ export const AdminAccommodationOps: React.FC = () => {
                                                             {/* ── Өдөр тутмын байр ── */}
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
                                                                 <b style={{ fontSize: 13 }}>Өдөр тутмын байрны захиалга</b>
+                                                                <a className="btn btn-sm" href={`/admin/reservations?open=${r.id}`} title="통합 예약 관리에서 이 예약 상세를 엽니다.">
+                                                                    <Icon name="assignment" />Захиалгын дэлгэрэнгүй
+                                                                </a>
                                                                 <div style={{ flex: 1 }} />
+                                                                <button type="button" className="btn btn-sm" title="일차 번호를 날짜순으로 1..N 재정렬합니다." onClick={() => renumberDays(r.id)}>
+                                                                    <Icon name="format_list_numbered" />Огноогоор цэгцлэх
+                                                                </button>
                                                                 {isDirty && <span style={{ fontSize: 12, fontWeight: 700, color: '#B45309' }}>Өөрчлөгдсөн ·</span>}
                                                                 <button type="button" className="btn btn-ink btn-sm" disabled={!isDirty || savingId === r.id} onClick={() => save(r)}>
                                                                     <Icon name="save" />{savingId === r.id ? 'Хадгалж байна…' : 'Хадгалах'}
