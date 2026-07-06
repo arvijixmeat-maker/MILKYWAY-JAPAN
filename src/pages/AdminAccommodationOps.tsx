@@ -268,7 +268,17 @@ export const AdminAccommodationOps: React.FC = () => {
     const save = async (r: Reservation) => {
         setSavingId(r.id);
         try {
-            await api.reservations.update(r.id, { ...r, dailyAccommodations: r.dailyAccommodations || [] });
+            // 전체 객체를 보내면 이 화면이 로드된 뒤 다른 곳(예약 상세·고객 계약서)에서 바뀐
+            // 필드를 오래된 복사본으로 덮어쓴다. 최신본을 다시 읽어, 이 보드가 편집하는
+            // 필드(숙소 배정·가이드·차량)만 얹어 부분 저장한다.
+            let fresh: any = null;
+            try { fresh = await api.reservations.get(r.id); } catch { fresh = null; }
+            const payload: any = {
+                dailyAccommodations: r.dailyAccommodations || [],
+                assignedGuide: { ...((fresh?.assignedGuide) || {}), ...(r.assignedGuide || {}) },
+                contractData: { ...((fresh?.contractData) || (r.contractData || {})), vehicle: r.contractData?.vehicle },
+            };
+            await api.reservations.update(r.id, payload);
             setDirty(prev => { const n = new Set(prev); n.delete(r.id); return n; });
         } catch (e: any) {
             alert('Хадгалах амжилтгүй: ' + (e?.message || e));

@@ -2126,6 +2126,27 @@ export const AdminReservationManage: React.FC = () => {
         }
     };
     // End of fetchReservations
+
+    // 상세를 열 때 해당 예약을 서버에서 재조회 — 숙소 배정 보드 등 다른 화면에서
+    // 방금 저장한 배정·가이드·계약 데이터가 목록 로드 시점보다 새것일 수 있다.
+    const openReservation = (res: Reservation) => {
+        setSelectedReservation(res);
+        if (res.type === 'quote') return;
+        api.reservations.get(res.id).then((fresh: any) => {
+            if (!fresh || !fresh.id) return;
+            const merge = (x: Reservation): Reservation => ({
+                ...x,
+                dailyAccommodations: fresh.dailyAccommodations ?? x.dailyAccommodations,
+                assignedGuide: fresh.assignedGuide ?? x.assignedGuide,
+                contractData: fresh.contractData ?? x.contractData,
+                history: fresh.history ?? x.history,
+                status: fresh.status ?? x.status,
+            });
+            setSelectedReservation(prev => (prev && prev.id === res.id) ? merge(prev) : prev);
+            setReservations(prev => prev.map(x => x.id === res.id ? merge(x) : x));
+        }).catch(() => { /* 재조회 실패 시 목록 데이터 그대로 사용 */ });
+    };
+
     const handleUpdateReservation = async (updated: Reservation) => {
         try {
             // Find old reservation from local state instead of fetching
@@ -2175,6 +2196,9 @@ export const AdminReservationManage: React.FC = () => {
             }
 
             // Prepare update object (Map camelCase back to snake_case for DB)
+            // 숙소 배정·가이드·계약 데이터는 이 모달에서 실제로 바뀐 경우에만 전송한다.
+            // (PUT은 보낸 키만 갱신하는 부분 업데이트) — 항상 보내면 숙소 배정 보드 등
+            // 다른 화면이 저장한 최신 값을 이 페이지의 오래된 복사본으로 덮어써 버린다.
             const updatePayload: any = {
                 status: updated.status,
                 deposit_status: updated.depositStatus,
@@ -2182,9 +2206,9 @@ export const AdminReservationManage: React.FC = () => {
                 contract_url: updated.contractUrl,
                 itinerary_url: updated.itineraryUrl,
                 itinerary_template_id: updated.itineraryTemplateId,
-                contract_data: updated.contractData,
-                assigned_guide: updated.assignedGuide,
-                daily_accommodations: updated.dailyAccommodations,
+                ...(updated.contractData !== oldReservation.contractData ? { contract_data: updated.contractData } : {}),
+                ...(updated.assignedGuide !== oldReservation.assignedGuide ? { assigned_guide: updated.assignedGuide } : {}),
+                ...(updated.dailyAccommodations !== oldReservation.dailyAccommodations ? { daily_accommodations: updated.dailyAccommodations } : {}),
                 history: history,
                 are_assignments_visible_to_user: updated.areAssignmentsVisibleToUser,
                 total_people: updated.totalPeople,
@@ -2793,7 +2817,7 @@ export const AdminReservationManage: React.FC = () => {
                                         const reservationNo = res.reservationNumber || res.id.slice(0, 8).toUpperCase();
                                         const statusTone = STATUS_TONE[res.status] || 'b-gray';
                                         return (
-                                            <tr key={res.id} onClick={() => setSelectedReservation(res)}>
+                                            <tr key={res.id} onClick={() => openReservation(res)}>
                                                 <td>
                                                     <div className="cell-mono">#{reservationNo}</div>
                                                     <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -2834,7 +2858,7 @@ export const AdminReservationManage: React.FC = () => {
                                                                 if (nextAction.nextStatus) {
                                                                     handleStatusChange(res.id, nextAction.nextStatus, res.type);
                                                                 } else {
-                                                                    setSelectedReservation(res);
+                                                                    openReservation(res);
                                                                 }
                                                             }}
                                                             title={nextAction.description}
@@ -2842,7 +2866,7 @@ export const AdminReservationManage: React.FC = () => {
                                                             <Icon name={nextAction.icon} />
                                                             {nextAction.label}
                                                         </button>
-                                                        <button className="act-btn" title="상세" onClick={() => setSelectedReservation(res)}>
+                                                        <button className="act-btn" title="상세" onClick={() => openReservation(res)}>
                                                             <Icon name="visibility" />
                                                         </button>
                                                         <button className="act-btn danger" title="삭제" onClick={() => handleDelete(res.id, res.type)}>
