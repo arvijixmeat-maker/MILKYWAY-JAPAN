@@ -45,6 +45,7 @@ app.get('/', async (c) => {
         "document_content TEXT",                         // JSON: 고객별 편집한 문서(일정·문서설정) { days, documentSettings }
         "duration TEXT",
         "source TEXT",                                   // 주문 경로: line | email | phone | website | visit | other (수동 추가 시 입력)
+        "product_id TEXT",                               // 예약한 상품 ID — 상품 이미지·정보 정확 연결용 (동명 상품 혼동 방지)
     ];
     for (const colDef of reservationColumns) {
         try {

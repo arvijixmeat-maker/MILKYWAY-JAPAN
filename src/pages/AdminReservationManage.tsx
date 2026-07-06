@@ -13,6 +13,7 @@ interface Reservation {
     id: string;
     type: 'product' | 'quote';
     productName: string;
+    productId?: string; // 예약한 상품 ID (신규 예약부터 저장 — 동명 상품 혼동 방지)
     customerName: string;
     date: string;
     bookedAt: string;
@@ -1233,16 +1234,21 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
     const itinerarySentAt = lastEmailAt(itineraryUrl, '日程');
     const contractSentAt = lastEmailAt(contractUrl, '契約');
 
-    // 예약된 상품의 대표 이미지 — 예약에는 productId가 없어 상품명 유사 매칭으로 찾는다.
-    // 수동 예약(자유 입력 상품명) 등 매칭 실패 시에는 이미지 없이 기존처럼 표시.
+    // 예약된 상품의 대표 이미지.
+    // 1순위: 예약에 저장된 상품 ID 정확 매칭 (신규 예약부터 저장됨).
+    // 2순위(과거 예약): 상품명이 '유일하게' 정확히 일치할 때만 —
+    //   동명 상품(예: 銀河の大自然満喫ツアー 4일/5일)이 있으면 추측하지 않고 이미지 생략.
+    // 수동 예약(자유 입력 상품명)은 대부분 미매칭 → 이미지 없이 기존 그대로.
     const productImage = (() => {
-        const norm = (v: any) => String(v || '').replace(/\s+/g, '').toLowerCase();
-        const rn = norm(reservation.productName);
-        if (!rn) return undefined;
-        const p = products.find(x => {
-            const pn = norm(x.name);
-            return !!pn && (pn === rn || rn.includes(pn) || pn.includes(rn));
-        });
+        let p = reservation.productId ? products.find(x => x.id === reservation.productId) : undefined;
+        if (!p) {
+            const norm = (v: any) => String(v || '').replace(/\s+/g, '').toLowerCase();
+            const rn = norm(reservation.productName);
+            if (rn) {
+                const exact = products.filter(x => norm(x.name) === rn);
+                if (exact.length === 1) p = exact[0];
+            }
+        }
         if (!p) return undefined;
         let imgs: any = p.mainImages;
         if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs || '[]'); } catch { imgs = []; } }
@@ -2107,6 +2113,7 @@ export const AdminReservationManage: React.FC = () => {
                     reservationNumber: r.reservationNumber || r.reservation_number || null,
                     type: r.type || 'product',
                     productName: r.productName || r.product_name,
+                    productId: r.productId || r.product_id,
                     customerName: r.customerName || r.customer_name || r.customer_info?.name || 'Unknown',
                     country: r.country || r.customerCountry || r.customer_country || r.customer_info?.country || '일본',
                     startDate,
