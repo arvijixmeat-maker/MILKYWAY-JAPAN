@@ -816,7 +816,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         };
         const tripRegion = inferTravelRegion();
         const roomCountDefault = reservation.totalPeople ? `${Math.max(1, Math.ceil(reservation.totalPeople / 2))}개` : '';
-        const rows = Array.from({ length: tripDays }, (_, i) => {
+        // 숙소 수배서는 숙박 박수 기준(마지막 날=출발일 제외). 박수를 넘는 저장 데이터가 있으면 그대로 포함해 유실 방지.
+        const rows = Array.from({ length: accomRowCount }, (_, i) => {
             const day = i + 1;
             const dayContent = dayByNumber(day);
             const assigned = reservation.dailyAccommodations?.find((item) => item.day === day);
@@ -1125,6 +1126,29 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
         if (docDays > 0) return docDays;
         return Math.max((reservation.dailyAccommodations || []).length, 1);
     })();
+    // 숙박 박수 — 4泊5日이면 숙소는 4박(1~4일차 밤). 마지막 날(출발일)에는 숙소 슬롯이 없어야
+    // 숙소 배정 보드(Байр захиалга, 박수 기준)와 일차가 일치한다.
+    const stayNights = (() => {
+        if (!Number.isNaN(_nights) && _nights >= 1) return _nights;
+        const m = String(reservation.date || '').match(/(\d+)\s*[박泊]/);
+        if (m) return parseInt(m[1]);
+        const docDays = (docInitialContent?.days as any[] | undefined)?.length || 0;
+        if (docDays > 1) return docDays - 1;
+        return Math.max((reservation.dailyAccommodations || []).length, 1);
+    })();
+    // 이미 박수를 넘는 일차(예: 5일차)에 저장된 배정이 있으면 숨기지 않고 경고와 함께 보여준다.
+    const storedAccomMaxDay = Math.max(0, ...(reservation.dailyAccommodations || []).map(d => Number(d.day) || 0));
+    const accomRowCount = Math.max(stayNights, storedAccomMaxDay);
+    // 일차별 숙박 날짜 (n일차 밤 = 시작일 + n-1)
+    const stayDateLabel = (day: number): string => {
+        const sd = String((reservation as any).startDate || '').slice(0, 10);
+        if (!sd) return '';
+        const dt = new Date(`${sd}T00:00:00`);
+        if (Number.isNaN(dt.getTime())) return '';
+        dt.setDate(dt.getDate() + day - 1);
+        const wd = ['일', '월', '화', '수', '목', '금', '토'][dt.getDay()];
+        return `${dt.getMonth() + 1}/${dt.getDate()}(${wd})`;
+    };
 
     // 숙소 선택 모달 후보 = 숙소 관리(accommodations) + 호텔 마스터(hotels) + 이 상품 일정에 들어있는 숙소.
     // 이미지가 출처마다 JSON 문자열/배열로 달라 _thumb로 안전하게 통일.
@@ -1522,11 +1546,15 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                         비워두면 <b>상품 일정의 기본 숙소</b>가 그대로 일정표에 적용됩니다. 실제 묵을 숙소를 확정하려면 날짜별로 「직접 지정」하세요.
                                     </p>
                                     <div className="stack" style={{ gap: 8 }}>
-                                        {Array.from({ length: tripDays }, (_, i) => i + 1).map((day) => {
+                                        {Array.from({ length: accomRowCount }, (_, i) => i + 1).map((day) => {
                                             const assigned = reservation.dailyAccommodations?.find(d => d.day === day);
+                                            const overNights = day > stayNights; // 출발일 이후 — 숙박이 없어야 하는 일차
                                             return (
                                                 <div className="accom-day" key={day}>
-                                                    <span className="th-day">{day}일차</span>
+                                                    <span className="th-day" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+                                                        <span>{day}일차</span>
+                                                        {stayDateLabel(day) && <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--mrt-gray-400)' }}>{stayDateLabel(day)} 밤</span>}
+                                                    </span>
                                                     {assigned ? (
                                                         <div className="assign-row" style={{ flex: 1, padding: 0 }}>
                                                             {(assigned.accommodation.images && assigned.accommodation.images[0]) ? (
@@ -1535,12 +1563,17 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
                                                                 <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><Icon name="hotel" /></span>
                                                             )}
                                                             <div style={{ minWidth: 0, flex: 1 }}>
-                                                                <div className="cell-strong">{assigned.accommodation.name}</div>
+                                                                <div className="cell-strong">
+                                                                    {assigned.accommodation.name}
+                                                                    {overNights && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 999, background: '#FFECEC', color: '#D0342C' }}>박수 초과 · 출발일</span>}
+                                                                </div>
                                                                 <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.location || '—'}</div>
                                                             </div>
                                                             <button className="act-btn" title="변경" onClick={() => { setSelectedDay(day); setShowAccommodationModal(true); }}><Icon name="edit" /></button>
+                                                            <button className="act-btn" title="배정 해제" onClick={() => handleAccommodationUnassign(day)}><Icon name="close" /></button>
                                                         </div>
                                                     ) : (() => {
+                                                        if (overNights) return <div className="cell-muted" style={{ flex: 1, fontSize: 12, alignSelf: 'center' }}>출발일 — 숙박 없음</div>;
                                                         const def = defaultAccomForDay(day);
                                                         if (def?.name) {
                                                             return (
@@ -2569,11 +2602,14 @@ export const AdminReservationManage: React.FC = () => {
             const peopleText = reservation.totalPeople ? `${reservation.totalPeople}명` : reservation.headcount;
             const roomCountDefault = reservation.totalPeople ? `${Math.max(1, Math.ceil(reservation.totalPeople / 2))}개` : '';
             const tripDays = tripDaysOf(reservation);
+            // 숙박 박수 기준(출발일 제외). 박수를 넘는 일차에 저장된 배정이 있으면 유실 없이 포함.
+            const storedMaxDay = Math.max(0, ...(reservation.dailyAccommodations || []).map((item) => Number(item.day) || 0));
+            const stayNights = Math.max(tripDays > 1 ? tripDays - 1 : tripDays, storedMaxDay);
             const englishCustomerName = (reservation.contractData?.travelers || [])
                 .map((t) => t?.passportName)
                 .find(Boolean) || reservation.customerName || '';
 
-            return Array.from({ length: tripDays }, (_, i) => {
+            return Array.from({ length: stayNights }, (_, i) => {
                 const day = i + 1;
                 const dayContent = dayContentOf(reservation, day);
                 const assigned = reservation.dailyAccommodations?.find((item) => item.day === day);
