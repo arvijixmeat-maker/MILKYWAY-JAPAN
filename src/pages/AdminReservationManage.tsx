@@ -111,6 +111,8 @@ interface ProductSummary {
     id?: string;
     name?: string;
     category?: string;
+    thumbnail?: string;
+    mainImages?: any; // API가 mainImages/main_images 두 표기를 모두 내려줌 (배열 또는 JSON 문자열)
 }
 
 const quoteWorkflowMeta: Record<string, { label: string; hint: string; icon: string }> = {
@@ -319,7 +321,7 @@ const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Re
     );
 };
 
-const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservation: Reservation | null, onClose: () => void, onUpdate: (updated: Reservation) => void }) => {
+const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] }: { reservation: Reservation | null, onClose: () => void, onUpdate: (updated: Reservation) => void, products?: ProductSummary[] }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<Reservation | null>(null);
     const [showGuideModal, setShowGuideModal] = useState(false);
@@ -1231,12 +1233,32 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const itinerarySentAt = lastEmailAt(itineraryUrl, '日程');
     const contractSentAt = lastEmailAt(contractUrl, '契約');
 
+    // 예약된 상품의 대표 이미지 — 예약에는 productId가 없어 상품명 유사 매칭으로 찾는다.
+    // 수동 예약(자유 입력 상품명) 등 매칭 실패 시에는 이미지 없이 기존처럼 표시.
+    const productImage = (() => {
+        const norm = (v: any) => String(v || '').replace(/\s+/g, '').toLowerCase();
+        const rn = norm(reservation.productName);
+        if (!rn) return undefined;
+        const p = products.find(x => {
+            const pn = norm(x.name);
+            return !!pn && (pn === rn || rn.includes(pn) || pn.includes(rn));
+        });
+        if (!p) return undefined;
+        let imgs: any = p.mainImages;
+        if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs || '[]'); } catch { imgs = []; } }
+        return p.thumbnail || (Array.isArray(imgs) && imgs.length ? imgs[0] : undefined);
+    })();
+
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
             <div className="drawer reservation-workspace tcom" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="drawer-head">
+                    {productImage && (
+                        <img src={productImage} alt={reservation.productName} loading="lazy"
+                            style={{ width: 52, height: 52, flex: 'none', borderRadius: 12, objectFit: 'cover', border: '1px solid var(--mrt-gray-200, #E6E8EC)' }} />
+                    )}
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="row" style={{ gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
                             <span className={`tag-type ${reservation.type !== 'quote' ? 'reservation' : 'quote'}`}>
@@ -2064,6 +2086,8 @@ export const AdminReservationManage: React.FC = () => {
                     id: p.id,
                     name: p.name,
                     category: p.category,
+                    thumbnail: p.thumbnail,
+                    mainImages: p.mainImages ?? p.main_images,
                 })));
             }
 
@@ -3032,6 +3056,7 @@ export const AdminReservationManage: React.FC = () => {
                     reservation={selectedReservation}
                     onClose={() => setSelectedReservation(null)}
                     onUpdate={handleUpdateReservation}
+                    products={products}
                 />
             )}
 
