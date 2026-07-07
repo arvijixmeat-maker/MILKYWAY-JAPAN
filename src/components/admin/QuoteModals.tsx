@@ -491,6 +491,32 @@ export const QuoteDetailModal: React.FC<{
 
     const handleSend = () => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId);
     const estimatePageUrl = `${window.location.origin}/estimate/${request.id}`;
+    const quoteSent = request.status === 'answered';
+    const hasQuoteItinerary = (docInitialContent?.days?.length ?? 0) > 0;
+    const quoteDocStatusText = quoteSent
+        ? '발송 완료 · 재발송 가능'
+        : canSendEstimate
+            ? hasQuoteItinerary ? '작성됨 · 발송 대기' : '금액만 발송 가능'
+            : '확정 일정·금액 입력 필요';
+    const copyEstimatePageUrl = async () => {
+        await navigator.clipboard.writeText(estimatePageUrl);
+        setCopiedEstimateUrl(true);
+        setTimeout(() => setCopiedEstimateUrl(false), 1500);
+    };
+    const copyEstimateCustomerMessage = async () => {
+        const message = [
+            `${request.name}様`,
+            '',
+            'お見積りのご用意ができました。',
+            '下記リンクより日程・料金をご確認ください。',
+            estimatePageUrl,
+            '',
+            '内容に問題がなければ、ページ内の予約相談へお進みください。',
+        ].join('\n');
+        await navigator.clipboard.writeText(message);
+        setCopiedEstimateUrl(true);
+        setTimeout(() => setCopiedEstimateUrl(false), 1500);
+    };
     const statusTone: Record<string, string> = { new: 'b-red', processing: 'b-amber', answered: 'b-blue', reservation_requested: 'b-purple', converted: 'b-gray', completed: 'b-green' };
     const nextAction = (() => {
         if (request.status === 'converted' || request.status === 'completed') return null;
@@ -689,14 +715,16 @@ export const QuoteDetailModal: React.FC<{
                     </div>
                 </div>
 
-                {/* 우측 액션 레일 — 견적 발송 작업의 단일 면 */}
+                {/* 우측 액션 레일 — 확정 문서 발송과 같은 문서 단위 흐름 */}
                 <aside className="reservation-action-rail">
                     <div className="action-rail-head">
                         <div>
-                            <span className="action-rail-eyebrow">ESTIMATE</span>
-                            <h2>견적서와 고객 발송</h2>
+                            <span className="action-rail-eyebrow">DOCUMENTS</span>
+                            <h2>문서와 고객 발송</h2>
                         </div>
-                        <span className={`badge ${statusTone[request.status] || 'b-gray'}`}>{statusMeta.label}</span>
+                        <span className={`badge ${quoteSent ? 'b-green' : canSendEstimate ? 'b-blue' : 'b-amber'}`}>
+                            {quoteSent ? '1/1 완료' : '0/1 대기'}
+                        </span>
                     </div>
 
                     <div className="action-rail-stack">
@@ -705,45 +733,56 @@ export const QuoteDetailModal: React.FC<{
                                 <span className="action-doc-icon tint-blue"><span className="material-symbols-outlined">request_quote</span></span>
                                 <span>
                                     <b>견적 제안서</b>
-                                    <small>{request.status === 'answered' ? '발송 완료 · 재발송 가능' : canSendEstimate ? '발송 준비 완료' : '확정 일정·금액 입력 필요'}</small>
+                                    <small>{quoteDocStatusText}</small>
                                 </span>
-                                <span className="material-symbols-outlined">{request.status === 'answered' ? 'check_circle' : 'chevron_right'}</span>
+                                <span className="material-symbols-outlined">{quoteSent ? 'check_circle' : 'chevron_right'}</span>
                             </button>
-                            <select className="inp" value={itineraryTemplateId} onChange={(e) => {
-                                const v = e.target.value;
-                                setItineraryTemplateId(v);
-                                // 선택 즉시 서버 저장 — 「발송 처리」 전이라도 고객 화면 미리보기에
-                                // 템플릿 일정이 바로 반영되도록 (기존엔 발송 때만 저장돼 미리보기가 準備中로 나옴)
-                                onUpdateQuote(request.id, { itineraryTemplateId: v } as any);
-                            }}>
-                                <option value="">일정표 없음 (비용만 안내)</option>
-                                {templatesList.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
-                            </select>
+                            {!quoteSent && (
+                                <select className="inp" value={itineraryTemplateId} onChange={(e) => handleTemplateChange(e.target.value)}>
+                                    <option value="">일정표 없음 (비용만 안내)</option>
+                                    {templatesList.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                                </select>
+                            )}
                             <div className="action-doc-buttons">
-                                <button className="btn btn-sm btn-blue" disabled={!canSendEstimate} onClick={handleSend} title={!canSendEstimate ? '확정 일정과 금액·예약금을 입력하면 발송할 수 있습니다.' : undefined}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span>{request.status === 'answered' ? '재발송 처리' : '견적서 발송 처리'}
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '문서 편집' : '문서 만들기'}
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => {
-                                    // 실제로 렌더될 일정(문서 편집본 또는 선택 템플릿)이 하나도 없을 때만 안내.
-                                    // docInitialContent는 저장 시 즉시 갱신되는 quoteDocumentContent를 반영하므로
-                                    // 상품 적용·저장 후에는 오탐이 나지 않는다.
-                                    const hasItinerary = (docInitialContent?.days?.length ?? 0) > 0;
-                                    if (!hasItinerary) {
-                                        if (window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 상태 그대로 미리보기를 엽니다)')) {
-                                            setDocEditorOpen(true);
-                                            return;
-                                        }
-                                    }
-                                    window.open(estimatePageUrl, '_blank');
-                                }}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>고객 화면 미리보기
-                                </button>
-                                <button className="btn btn-sm btn-ghost" onClick={async () => { await navigator.clipboard.writeText(estimatePageUrl); setCopiedEstimateUrl(true); setTimeout(() => setCopiedEstimateUrl(false), 1500); }}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{copiedEstimateUrl ? 'check' : 'content_copy'}</span>{copiedEstimateUrl ? '복사됨' : '견적 페이지 링크'}
-                                </button>
+                                {!quoteSent ? (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" disabled={!canSendEstimate} onClick={handleSend} title={!canSendEstimate ? '확정 일정과 금액·예약금을 입력하면 발송할 수 있습니다.' : undefined}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span>고객에게 발송
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '편집' : '견적서 만들기'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" disabled={!canSendEstimate} onClick={() => {
+                                            if (!hasQuoteItinerary) {
+                                                if (window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 상태 그대로 미리보기를 엽니다)')) {
+                                                    setDocEditorOpen(true);
+                                                    return;
+                                                }
+                                            }
+                                            window.open(estimatePageUrl, '_blank');
+                                        }}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={copyEstimatePageUrl}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{copiedEstimateUrl ? 'check' : 'content_copy'}</span>{copiedEstimateUrl ? '복사됨' : '링크'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button className="btn btn-sm btn-blue" onClick={() => window.open(estimatePageUrl, '_blank')}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>미리보기
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>편집
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={copyEstimatePageUrl}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{copiedEstimateUrl ? 'check' : 'content_copy'}</span>{copiedEstimateUrl ? '복사됨' : '링크'}
+                                        </button>
+                                        <button className="btn btn-sm btn-ghost" onClick={handleSend}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>forward_to_inbox</span>재발송
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </section>
 
@@ -752,6 +791,20 @@ export const QuoteDetailModal: React.FC<{
                                 <span className="material-symbols-outlined" style={{ fontSize: 17 }}>sync_alt</span>예약으로 전환
                             </button>
                         )}
+                    </div>
+
+                    <div className="action-rail-group">
+                        <h3>고객 공유</h3>
+                        <button className="action-link" onClick={copyEstimateCustomerMessage}>
+                            <span className="material-symbols-outlined">content_copy</span>
+                            <span><b>고객 안내문 복사</b><small>견적 페이지 링크와 확인 안내를 함께 복사합니다.</small></span>
+                            <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                        <button className="action-link" onClick={copyEstimatePageUrl}>
+                            <span className="material-symbols-outlined">link</span>
+                            <span><b>고객 페이지 링크</b><small>고객이 견적 내용과 일정을 확인하는 페이지입니다.</small></span>
+                            <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
                     </div>
 
                     <div className="action-rail-group">
