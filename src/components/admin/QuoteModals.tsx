@@ -495,6 +495,8 @@ export const QuoteDetailModal: React.FC<{
     const hasQuoteItinerary = (docInitialContent?.days?.length ?? 0) > 0;
     const quoteDocStatusText = quoteSent
         ? '발송 완료 · 재발송 가능'
+        : hasQuoteItinerary && !canSendEstimate
+            ? '일정 작성됨 · 금액 입력 필요'
         : canSendEstimate
             ? hasQuoteItinerary ? '작성됨 · 발송 대기' : '금액만 발송 가능'
             : '확정 일정·금액 입력 필요';
@@ -752,7 +754,7 @@ export const QuoteDetailModal: React.FC<{
                                         <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
                                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '편집' : '견적서 만들기'}
                                         </button>
-                                        <button className="btn btn-sm btn-ghost" disabled={!canSendEstimate} onClick={() => {
+                                        <button className="btn btn-sm btn-ghost" onClick={() => {
                                             if (!hasQuoteItinerary) {
                                                 if (window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 상태 그대로 미리보기를 엽니다)')) {
                                                     setDocEditorOpen(true);
