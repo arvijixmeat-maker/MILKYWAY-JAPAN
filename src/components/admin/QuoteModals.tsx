@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-import { GuideSelectionModal, AccommodationSelectionModal } from './SelectionModals';
-import { sendNotificationEmail } from '../../lib/email';
 import { api } from '../../lib/api';
 import { ReservationDocumentEditor, type ReservationDocContent } from './ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from '../../pages/AdminTemplateManage';
@@ -48,6 +46,32 @@ const formatNumber = (num: number | string) => {
 
 const unformatNumber = (str: string) => {
     return parseInt(str.replace(/,/g, '')) || 0;
+};
+
+const parsePeopleCount = (value?: string) => {
+    const parsed = parseInt(String(value || '').replace(/[^0-9]/g, ''), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+};
+
+const parseDocumentPricePerPerson = (content?: ReservationDocContent | null) => {
+    const raw = content?.documentSettings?.overview?.pricePerPerson;
+    const parsed = typeof raw === 'string' ? parseInt(raw.replace(/[^\d]/g, ''), 10) : Number(raw || 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const syncDocumentPrice = (content: ReservationDocContent | null, pricePerPerson: number): ReservationDocContent | null => {
+    if (!content) return content;
+    const settings = mergeDocumentSettings(content.documentSettings);
+    return {
+        ...content,
+        documentSettings: {
+            ...settings,
+            overview: {
+                ...settings.overview,
+                pricePerPerson: pricePerPerson > 0 ? String(pricePerPerson) : settings.overview.pricePerPerson,
+            },
+        },
+    };
 };
 
 const normalizeDocumentContent = (value: any): ReservationDocContent | null => {
@@ -254,9 +278,9 @@ export const QuoteDetailModal: React.FC<{
         normalizeDocumentContent(request?.documentContent || request?.document_content)
     );
     const [docEditorOpen, setDocEditorOpen] = useState(false);
-    const [activeSec, setActiveSec] = useState<'info' | 'quote' | 'assign'>('info');
+    const [activeSec, setActiveSec] = useState<'info' | 'quote'>('info');
     const bodyRef = useRef<HTMLDivElement | null>(null);
-    const scrollToSec = (id: 'info' | 'quote' | 'assign') => {
+    const scrollToSec = (id: 'info' | 'quote') => {
         setActiveSec(id);
         bodyRef.current?.querySelector(`#qsec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
@@ -266,25 +290,18 @@ export const QuoteDetailModal: React.FC<{
 
     // --- Added for Centralized UI Integration ---
     const [priceDetail, setPriceDetail] = useState({
-        totalAmount: request?.confirmed_price || 0,
+        totalAmount: request?.confirmed_price || ((parseDocumentPricePerPerson(normalizeDocumentContent(request?.documentContent || request?.document_content)) || 0) * parsePeopleCount(request?.headcount)),
         deposit: request?.deposit || 0,
         depositStatus: request?.deposit_status || 'unpaid',
-        balanceStatus: request?.balance_status || 'unpaid'
+        balanceStatus: request?.balance_status || 'unpaid',
+        pricePerPerson: parseDocumentPricePerPerson(normalizeDocumentContent(request?.documentContent || request?.document_content)) || 0,
+        peopleCount: parsePeopleCount(request?.headcount),
+        manualTotal: Boolean(request?.confirmed_price)
     });
-    const [assignedGuide, setAssignedGuide] = useState<any>(null);
-    const [dailyAccommodations, setDailyAccommodations] = useState<any[]>([]);
 
     // Confirmed Dates
     const [confirmedStartDate, setConfirmedStartDate] = useState(request?.confirmed_start_date || '');
     const [confirmedEndDate, setConfirmedEndDate] = useState(request?.confirmed_end_date || '');
-
-    // UI Toggles
-    const [showGuideModal, setShowGuideModal] = useState(false);
-    const [showAccommodationModal, setShowAccommodationModal] = useState(false);
-    const [selectedDay, setSelectedDay] = useState(1);
-    const [extraDays, setExtraDays] = useState(0);
-
-    const getTripDays = () => (1 + extraDays);
 
     // Edit Mode State
     const [isEditing, setIsEditing] = useState(false);
@@ -315,60 +332,26 @@ export const QuoteDetailModal: React.FC<{
                 confirmedPrice: request.confirmed_price || 0,
                 deposit: request.deposit || 0
             });
+            const content = normalizeDocumentContent(request.documentContent || request.document_content);
+            const peopleCount = parsePeopleCount(request.headcount);
+            const pricePerPerson = parseDocumentPricePerPerson(content) || (request.confirmed_price && peopleCount ? Math.round(request.confirmed_price / peopleCount) : 0);
+            const calculatedTotal = pricePerPerson * peopleCount;
             // Reset priceDetail when request changes
             setPriceDetail({
-                totalAmount: request.confirmed_price || 0,
+                totalAmount: request.confirmed_price || calculatedTotal,
                 deposit: request.deposit || 0,
                 depositStatus: request.deposit_status || 'unpaid',
-                balanceStatus: request.balance_status || 'unpaid'
+                balanceStatus: request.balance_status || 'unpaid',
+                pricePerPerson,
+                peopleCount,
+                manualTotal: Boolean(request.confirmed_price && calculatedTotal && request.confirmed_price !== calculatedTotal)
             });
             setConfirmedStartDate(request.confirmed_start_date || '');
             setConfirmedEndDate(request.confirmed_end_date || '');
             setItineraryTemplateId(request.itineraryTemplateId || request.itinerary_template_id || '');
-            setQuoteDocumentContent(normalizeDocumentContent(request.documentContent || request.document_content));
+            setQuoteDocumentContent(content);
         }
     }, [request]);
-
-    const handleGuideAssign = (guide: any) => {
-        setAssignedGuide({ ...guide });
-    };
-
-    const handleAccommodationAssign = (accommodation: any) => {
-        const existingIndex = dailyAccommodations.findIndex(d => d.day === selectedDay);
-        const newDaily = {
-            day: selectedDay,
-            accommodation: {
-                id: accommodation.id,
-                name: accommodation.name,
-                type: accommodation.type
-            }
-        };
-        const updated = existingIndex >= 0
-            ? dailyAccommodations.map((d, i) => i === existingIndex ? newDaily : d)
-            : [...dailyAccommodations, newDaily].sort((a, b) => a.day - b.day);
-        setDailyAccommodations(updated);
-    };
-
-    const handleSendGuideInfo = async () => {
-        if (!assignedGuide || !request) return;
-        if (!confirm('가이드 배정 정보를 고객에게 이메일로 발송하시겠습니까?')) return;
-        try {
-            await sendNotificationEmail(
-                request.email,
-                'GUIDE_ASSIGNED',
-                {
-                    customerName: request.name,
-                    productName: request.destination,
-                    guideName: assignedGuide.name,
-                    guidePhone: assignedGuide.phone
-                }
-            );
-            alert('가이드 배정 정보가 발송되었습니다.');
-        } catch (e) {
-            console.error(e);
-            alert('발송 실패');
-        }
-    };
 
     const handleSaveEdit = async () => {
         if (!request) return;
@@ -382,7 +365,39 @@ export const QuoteDetailModal: React.FC<{
     if (!request) return null;
 
     // 문서 편집기 (견적용) — 고객 데이터 자동 채움, document_content 저장
-    const quotePeople = parseInt(String(request.headcount || '').replace(/[^0-9]/g, '')) || 0;
+    const quotePeople = priceDetail.peopleCount || parsePeopleCount(request.headcount);
+    const quoteBalance = Math.max(0, (priceDetail.totalAmount || 0) - (priceDetail.deposit || 0));
+    const updatePricePerPerson = (nextPricePerPerson: number) => {
+        setPriceDetail(prev => {
+            const peopleCount = prev.peopleCount || 1;
+            const nextTotal = nextPricePerPerson * peopleCount;
+            return {
+                ...prev,
+                pricePerPerson: nextPricePerPerson,
+                totalAmount: prev.manualTotal ? prev.totalAmount : nextTotal,
+                deposit: prev.deposit ? prev.deposit : Math.floor(nextTotal * 0.1),
+            };
+        });
+    };
+    const updatePeopleCount = (nextPeopleCount: number) => {
+        setPriceDetail(prev => {
+            const peopleCount = Math.max(1, nextPeopleCount || 1);
+            const nextTotal = (prev.pricePerPerson || 0) * peopleCount;
+            return {
+                ...prev,
+                peopleCount,
+                totalAmount: prev.manualTotal ? prev.totalAmount : nextTotal,
+                deposit: prev.deposit ? prev.deposit : Math.floor(nextTotal * 0.1),
+            };
+        });
+    };
+    const updateManualTotal = (manualTotal: boolean) => {
+        setPriceDetail(prev => ({
+            ...prev,
+            manualTotal,
+            totalAmount: manualTotal ? prev.totalAmount : (prev.pricePerPerson || 0) * (prev.peopleCount || 1),
+        }));
+    };
     const docTripLength = (() => {
         if (!confirmedStartDate || !confirmedEndDate) return '';
         const s = new Date(confirmedStartDate); const e = new Date(confirmedEndDate);
@@ -400,7 +415,7 @@ export const QuoteDetailModal: React.FC<{
         tripType: request.destination,
         totalAmount: priceDetail.totalAmount || undefined,
         deposit: priceDetail.deposit || undefined,
-        localAmount: priceDetail.totalAmount ? (priceDetail.totalAmount - (priceDetail.deposit || 0)) : undefined,
+        localAmount: priceDetail.totalAmount ? quoteBalance : undefined,
         peopleCount: quotePeople || undefined,
     };
     const templateToDocumentContent = (templateId: string): ReservationDocContent | null => {
@@ -419,15 +434,33 @@ export const QuoteDetailModal: React.FC<{
     const docInitialContent: ReservationDocContent | null = (() => {
         const dc = quoteDocumentContent;
         if (dc && (Array.isArray(dc.days) || dc.documentSettings)) {
-            return { name: dc.name || '', description: dc.description || '', days: dc.days || [], documentSettings: mergeDocumentSettings(dc.documentSettings) };
+            return syncDocumentPrice({ name: dc.name || '', description: dc.description || '', days: dc.days || [], documentSettings: mergeDocumentSettings(dc.documentSettings) }, priceDetail.pricePerPerson);
         }
-        return templateToDocumentContent(itineraryTemplateId);
+        return syncDocumentPrice(templateToDocumentContent(itineraryTemplateId), priceDetail.pricePerPerson);
     })();
     const saveQuoteDoc = async (content: ReservationDocContent) => {
-        setQuoteDocumentContent(content);
+        const incomingPricePerPerson = parseDocumentPricePerPerson(content);
+        const syncedPricePerPerson = incomingPricePerPerson || priceDetail.pricePerPerson;
+        const syncedContent = syncDocumentPrice(content, syncedPricePerPerson) || content;
+        const peopleCount = priceDetail.peopleCount || quotePeople || 1;
+        const nextTotal = incomingPricePerPerson > 0 && !priceDetail.manualTotal
+            ? incomingPricePerPerson * peopleCount
+            : priceDetail.totalAmount;
+        const nextDeposit = priceDetail.deposit || Math.floor(nextTotal * 0.1);
+        if (incomingPricePerPerson > 0 && incomingPricePerPerson !== priceDetail.pricePerPerson) {
+            setPriceDetail(prev => ({
+                ...prev,
+                pricePerPerson: incomingPricePerPerson,
+                totalAmount: nextTotal,
+                deposit: nextDeposit,
+            }));
+        }
+        setQuoteDocumentContent(syncedContent);
         await onUpdateQuote(request.id, {
             itineraryTemplateId,
-            documentContent: content,
+            documentContent: syncedContent,
+            confirmed_price: nextTotal,
+            deposit: nextDeposit,
         } as any);
         // 저장 검증 — 서버에 실제로 일정이 남았는지 재조회로 확인.
         // 세션 만료(401)·마이그레이션 누락 등으로 조용히 실패하면 고객 미리보기에
@@ -440,13 +473,36 @@ export const QuoteDetailModal: React.FC<{
             }
         } catch { /* 재조회 실패는 무시 — 저장 실패는 위 update 에러로 이미 드러남 */ }
     };
+    const saveQuoteBasics = async () => {
+        const syncedContent = syncDocumentPrice(quoteDocumentContent, priceDetail.pricePerPerson);
+        if (syncedContent) setQuoteDocumentContent(syncedContent);
+        await onUpdateQuote(request.id, {
+            confirmed_price: priceDetail.totalAmount,
+            deposit: priceDetail.deposit,
+            confirmed_start_date: confirmedStartDate,
+            confirmed_end_date: confirmedEndDate,
+            itineraryTemplateId,
+            documentContent: syncedContent,
+        } as any);
+    };
     const handleTemplateChange = async (templateId: string) => {
         setItineraryTemplateId(templateId);
         const content = templateId ? templateToDocumentContent(templateId) : null;
-        setQuoteDocumentContent(content);
+        const incomingPricePerPerson = parseDocumentPricePerPerson(content);
+        const syncedContent = syncDocumentPrice(content, incomingPricePerPerson || priceDetail.pricePerPerson);
+        if (incomingPricePerPerson > 0) {
+            const nextTotal = incomingPricePerPerson * (priceDetail.peopleCount || quotePeople || 1);
+            setPriceDetail(prev => ({
+                ...prev,
+                pricePerPerson: incomingPricePerPerson,
+                totalAmount: prev.manualTotal ? prev.totalAmount : nextTotal,
+                deposit: prev.deposit ? prev.deposit : Math.floor(nextTotal * 0.1),
+            }));
+        }
+        setQuoteDocumentContent(syncedContent);
         await onUpdateQuote(request.id, {
             itineraryTemplateId: templateId,
-            documentContent: content,
+            documentContent: syncedContent,
         } as any);
     };
 
@@ -489,7 +545,19 @@ export const QuoteDetailModal: React.FC<{
         },
     ];
 
-    const handleSend = () => onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId);
+    const handleSend = async () => {
+        const syncedContent = syncDocumentPrice(quoteDocumentContent, priceDetail.pricePerPerson);
+        if (syncedContent) setQuoteDocumentContent(syncedContent);
+        await onUpdateQuote(request.id, {
+            confirmed_price: priceDetail.totalAmount,
+            deposit: priceDetail.deposit,
+            confirmed_start_date: confirmedStartDate,
+            confirmed_end_date: confirmedEndDate,
+            itineraryTemplateId,
+            documentContent: syncedContent,
+        } as any);
+        onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId);
+    };
     const estimatePageUrl = `${window.location.origin}/estimate/${request.id}`;
     const quoteSent = request.status === 'answered';
     const hasQuoteItinerary = (docInitialContent?.days?.length ?? 0) > 0;
@@ -568,7 +636,7 @@ export const QuoteDetailModal: React.FC<{
 
                 {/* 섹션 앵커 */}
                 <div className="tc-anchors">
-                    {([['info', '요청 정보'], ['quote', '견적 작성'], ['assign', '가이드·숙소']] as const).map(([id, label]) => (
+                    {([['info', '요청 정보'], ['quote', '견적 제안서 작성']] as const).map(([id, label]) => (
                         <button key={id} type="button" className={activeSec === id ? 'active' : ''} onClick={() => scrollToSec(id)}>{label}</button>
                     ))}
                 </div>
@@ -616,7 +684,12 @@ export const QuoteDetailModal: React.FC<{
 
                     <section id="qsec-quote" style={{ scrollMarginTop: 8 }}>
                         <div className="card">
-                            <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>edit_note</span><h2>견적 작성 — 확정 일정·금액</h2></div>
+                            <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>edit_note</span><h2>견적 제안서 작성 — 일정·금액</h2>
+                                <div className="spacer" style={{ flex: 1 }} />
+                                <button className="btn btn-sm btn-ghost" onClick={saveQuoteBasics}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>일정·금액 저장
+                                </button>
+                            </div>
                             <div className="card-pad" style={{ paddingTop: 12 }}>
                                 <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                     <label className="field" style={{ marginBottom: 0 }}><span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: 5 }}>시작일</span>
@@ -626,10 +699,35 @@ export const QuoteDetailModal: React.FC<{
                                 </div>
                                 <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
                                     <div className="pay-cell">
-                                        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>총 결제금액</span></div>
+                                        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>1인 기준가</span></div>
+                                        <div className="row" style={{ gap: 4 }}>
+                                            <input type="text" className="inp" style={{ textAlign: 'right', fontWeight: 800 }} value={formatNumber(priceDetail.pricePerPerson)} placeholder="0"
+                                                onChange={(e) => updatePricePerPerson(unformatNumber(e.target.value))} />
+                                            <span className="cell-muted" style={{ fontSize: 12, flex: 'none' }}>엔</span>
+                                        </div>
+                                    </div>
+                                    <div className="pay-cell">
+                                        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>인원</span></div>
+                                        <div className="row" style={{ gap: 4 }}>
+                                            <input type="number" min={1} className="inp" style={{ textAlign: 'right', fontWeight: 800 }} value={priceDetail.peopleCount}
+                                                onChange={(e) => updatePeopleCount(Number(e.target.value))} />
+                                            <span className="cell-muted" style={{ fontSize: 12, flex: 'none' }}>명</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                                    <div className="pay-cell">
+                                        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                                            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>총 견적금액</span>
+                                            <label className="row" style={{ gap: 5, fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)' }}>
+                                                <input type="checkbox" checked={priceDetail.manualTotal} onChange={(e) => updateManualTotal(e.target.checked)} />
+                                                직접 입력
+                                            </label>
+                                        </div>
                                         <div className="row" style={{ gap: 4 }}>
                                             <input type="text" className="inp" style={{ textAlign: 'right', fontWeight: 800 }} value={formatNumber(priceDetail.totalAmount)} placeholder="0"
-                                                onChange={(e) => { const total = unformatNumber(e.target.value); setPriceDetail(prev => ({ ...prev, totalAmount: total, deposit: prev.deposit ? prev.deposit : Math.floor(total * 0.1) })); }} />
+                                                disabled={!priceDetail.manualTotal}
+                                                onChange={(e) => setPriceDetail(prev => ({ ...prev, totalAmount: unformatNumber(e.target.value) }))} />
                                             <span className="cell-muted" style={{ fontSize: 12, flex: 'none' }}>엔</span>
                                         </div>
                                     </div>
@@ -644,73 +742,9 @@ export const QuoteDetailModal: React.FC<{
                                 </div>
                                 <div className="row" style={{ justifyContent: 'space-between', marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--mrt-gray-50)' }}>
                                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>예상 잔금 (현지 결제)</span>
-                                    <b className="cell-price" style={{ fontSize: 15 }}>{(priceDetail.totalAmount - priceDetail.deposit).toLocaleString()}엔</b>
+                                    <b className="cell-price" style={{ fontSize: 15 }}>{quoteBalance.toLocaleString()}엔</b>
                                 </div>
                             </div>
-                        </div>
-                    </section>
-
-                    <section id="qsec-assign" style={{ scrollMarginTop: 8 }}>
-                        <div className="stack" style={{ gap: 14 }}>
-                        <div className="card">
-                            <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>badge</span><h2>담당 가이드</h2>
-                                <div className="spacer" style={{ flex: 1 }} />
-                                <button className="link-action" onClick={() => setShowGuideModal(true)}>{assignedGuide ? '변경' : '배정'}<span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span></button>
-                            </div>
-                            <div className="card-pad" style={{ paddingTop: 12 }}>
-                                {assignedGuide ? (
-                                    <div className="assign-row">
-                                        <span className="avatar round tint-blue"><span className="material-symbols-outlined">person</span></span>
-                                        <div style={{ minWidth: 0 }}>
-                                            <div className="cell-strong">{assignedGuide.name}</div>
-                                            <div className="cell-muted" style={{ fontSize: 12 }}>{assignedGuide.phone}</div>
-                                        </div>
-                                        <button className="btn btn-sm btn-ghost" style={{ marginLeft: 'auto' }} onClick={handleSendGuideInfo}>정보 발송</button>
-                                    </div>
-                                ) : (
-                                    <div className="assign-empty" onClick={() => setShowGuideModal(true)}>
-                                        <span className="material-symbols-outlined">person_add</span>가이드를 배정하세요
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="card">
-                            <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>hotel</span><h2>일자별 숙소 배정</h2>
-                                <div className="spacer" style={{ flex: 1 }} />
-                                <span className="row" style={{ gap: 4 }}>
-                                    <button className="act-btn" style={{ width: 26, height: 26 }} onClick={() => setExtraDays(Math.max(0, extraDays - 1))}><span className="material-symbols-outlined" style={{ fontSize: 15 }}>remove</span></button>
-                                    <span className="cell-mono" style={{ fontSize: 12 }}>{getTripDays()}일차</span>
-                                    <button className="act-btn" style={{ width: 26, height: 26 }} onClick={() => setExtraDays(extraDays + 1)}><span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span></button>
-                                </span>
-                            </div>
-                            <div className="card-pad" style={{ paddingTop: 12 }}>
-                                <div className="stack" style={{ gap: 8 }}>
-                                    {Array.from({ length: getTripDays() }).map((_, i) => {
-                                        const dayNum = i + 1;
-                                        const assigned = dailyAccommodations.find(d => d.day === dayNum);
-                                        return (
-                                            <div className="accom-day" key={dayNum}>
-                                                <span className="th-day">{dayNum}일차</span>
-                                                {assigned ? (
-                                                    <div className="assign-row" style={{ flex: 1, padding: 0 }}>
-                                                        <span className="thumb" style={{ display: 'grid', placeItems: 'center', color: 'var(--mrt-gray-400)' }}><span className="material-symbols-outlined">hotel</span></span>
-                                                        <div style={{ minWidth: 0, flex: 1 }}>
-                                                            <div className="cell-strong">{assigned.accommodation.name}</div>
-                                                            <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.type || '—'}</div>
-                                                        </div>
-                                                        <button className="act-btn" title="변경" onClick={() => { setSelectedDay(dayNum); setShowAccommodationModal(true); }}><span className="material-symbols-outlined" style={{ fontSize: 17 }}>edit</span></button>
-                                                    </div>
-                                                ) : (
-                                                    <button className="accom-empty" onClick={() => { setSelectedDay(dayNum); setShowAccommodationModal(true); }}>
-                                                        <span className="material-symbols-outlined" style={{ fontSize: 17 }}>add</span>숙소 선택
-                                                    </button>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
                         </div>
                     </section>
 
@@ -855,22 +889,6 @@ export const QuoteDetailModal: React.FC<{
                 onSave={saveQuoteDoc}
             />
 
-            {/* Selection Modals */}
-            {showGuideModal && (
-                <GuideSelectionModal
-                    isOpen={showGuideModal}
-                    onClose={() => setShowGuideModal(false)}
-                    onSelect={handleGuideAssign}
-                />
-            )}
-            {showAccommodationModal && (
-                <AccommodationSelectionModal
-                    isOpen={showAccommodationModal}
-                    day={selectedDay}
-                    onClose={() => setShowAccommodationModal(false)}
-                    onSelect={handleAccommodationAssign}
-                />
-            )}
     </>
     );
 };

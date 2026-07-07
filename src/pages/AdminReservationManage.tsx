@@ -3084,6 +3084,8 @@ export const AdminReservationManage: React.FC = () => {
                                 accommodations: updates.accommodations,
                                 vehicle: updates.vehicle,
                                 confirmed_price: updates.confirmed_price,
+                                confirmed_start_date: updates.confirmed_start_date,
+                                confirmed_end_date: updates.confirmed_end_date,
                                 deposit: updates.deposit,
                                 itinerary_template_id: updates.itineraryTemplateId,
                                 document_content: updates.documentContent,
