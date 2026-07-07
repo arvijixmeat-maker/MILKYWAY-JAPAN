@@ -699,7 +699,13 @@ export const QuoteDetailModal: React.FC<{
                                 </span>
                                 <span className="material-symbols-outlined">{request.status === 'answered' ? 'check_circle' : 'chevron_right'}</span>
                             </button>
-                            <select className="inp" value={itineraryTemplateId} onChange={(e) => setItineraryTemplateId(e.target.value)}>
+                            <select className="inp" value={itineraryTemplateId} onChange={(e) => {
+                                const v = e.target.value;
+                                setItineraryTemplateId(v);
+                                // 선택 즉시 서버 저장 — 「발송 처리」 전이라도 고객 화면 미리보기에
+                                // 템플릿 일정이 바로 반영되도록 (기존엔 발송 때만 저장돼 미리보기가 準備中로 나옴)
+                                onUpdateQuote(request.id, { itineraryTemplateId: v } as any);
+                            }}>
                                 <option value="">일정표 없음 (비용만 안내)</option>
                                 {templatesList.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
                             </select>
@@ -710,7 +716,17 @@ export const QuoteDetailModal: React.FC<{
                                 <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
                                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '문서 편집' : '문서 만들기'}
                                 </button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => window.open(estimatePageUrl, '_blank')}>
+                                <button className="btn btn-sm btn-ghost" onClick={() => {
+                                    // 일정이 하나도 없으면 고객 화면에 "準備中"만 뜬다 — 미리보기 전에 안내
+                                    const hasDoc = !!(request.documentContent || request.document_content);
+                                    if (!hasDoc && !itineraryTemplateId) {
+                                        if (window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 상태 그대로 미리보기를 엽니다)')) {
+                                            setDocEditorOpen(true);
+                                            return;
+                                        }
+                                    }
+                                    window.open(estimatePageUrl, '_blank');
+                                }}>
                                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>고객 화면 미리보기
                                 </button>
                                 <button className="btn btn-sm btn-ghost" onClick={async () => { await navigator.clipboard.writeText(estimatePageUrl); setCopiedEstimateUrl(true); setTimeout(() => setCopiedEstimateUrl(false), 1500); }}>
