@@ -23,6 +23,36 @@ export const EstimateDetail: React.FC = () => {
     const [estimate, setEstimate] = useState<any>(null);
     const { showToast, showConfirm } = useToast();
     const m = useIsMobile();
+    const parseMoney = (value: any) => {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        const n = Number(String(value || '').replace(/[^\d]/g, ''));
+        return Number.isFinite(n) ? n : 0;
+    };
+    const parsePeopleCount = (value: any) => {
+        const matches = String(value || '').match(/\d+/g);
+        if (!matches || matches.length === 0) return 1;
+        return Math.max(1, matches.reduce((sum, num) => sum + parseInt(num, 10), 0));
+    };
+    const getEstimatePricing = (source: any) => {
+        const settings = source?.documentContent?.documentSettings;
+        const peopleCount = parsePeopleCount(source?.people);
+        const confirmedTotal = parseMoney(source?.confirmedPrice);
+        const pricePerPerson = parseMoney(settings?.overview?.pricePerPerson);
+        const productTotal = pricePerPerson > 0 ? pricePerPerson * peopleCount : 0;
+        const total = confirmedTotal > 0 ? confirmedTotal : productTotal;
+        const paymentInfo = String(settings?.guide?.paymentInfo || '');
+        const guideAmounts = paymentInfo.match(/\d[\d,]{3,}/g)?.map(parseMoney).filter(Boolean) || [];
+        const explicitDeposit = parseMoney(source?.deposit);
+        const deposit = explicitDeposit > 0 ? explicitDeposit : (guideAmounts[0] || (total > 0 ? Math.floor(total * 0.1) : 0));
+        return {
+            total,
+            deposit,
+            local: Math.max(0, total - deposit),
+            peopleCount,
+            pricePerPerson,
+            isProductEstimate: confirmedTotal <= 0 && productTotal > 0,
+        };
+    };
 
     const handleReservationRequest = async () => {
         const confirmed = await showConfirm({
@@ -68,23 +98,7 @@ export const EstimateDetail: React.FC = () => {
             }
 
             // Navigate to payment page with quote data
-            // Parse people count: "성인 3명, 아동 3명" → 3 + 3 = 6
-            let totalPeopleCount = 2; // default
-            if (estimate.people) {
-                const peopleStr = String(estimate.people);
-                const matches = peopleStr.match(/\d+/g); // Extract all numbers
-                if (matches && matches.length > 0) {
-                    totalPeopleCount = matches.reduce((sum, num) => sum + parseInt(num), 0);
-                }
-            }
-
-            // Use confirmed price from admin if available
-            const confirmedTotalPrice = estimate.confirmedPrice || 0;
-            // Use admin set deposit if available, otherwise 10% default
-            const depositAmount = (estimate.deposit !== undefined && estimate.deposit !== null)
-                ? estimate.deposit
-                : Math.floor(confirmedTotalPrice * 0.1);
-            const localAmount = confirmedTotalPrice - depositAmount;
+            const pricing = getEstimatePricing(estimate);
 
             navigate('/payment', {
                 state: {
@@ -94,13 +108,13 @@ export const EstimateDetail: React.FC = () => {
                         id: id,
                         name: estimate.title || `${estimate.destinations?.[0] || 'オーダーメイド'} 旅行`,
                         duration: estimate.date || '',
-                        price: confirmedTotalPrice,
+                        price: pricing.total,
                     },
-                    totalPeople: totalPeopleCount,
+                    totalPeople: pricing.peopleCount,
                     priceBreakdown: {
-                        total: confirmedTotalPrice,
-                        deposit: depositAmount,
-                        local: localAmount
+                        total: pricing.total,
+                        deposit: pricing.deposit,
+                        local: pricing.local
                     },
                     customerInfo: {
                         name: estimate.contact?.name || '',
@@ -293,25 +307,37 @@ export const EstimateDetail: React.FC = () => {
     ) : null;
 
     // ─── 요금 카드 ───
-    const total = Number(estimate.confirmedPrice || 0);
-    const deposit = Number(estimate.deposit || 0);
+    const pricing = getEstimatePricing(estimate);
+    const total = pricing.total;
+    const deposit = pricing.deposit;
     const priceBlock = (total > 0) ? (
         <div style={{ padding: sectionPad, borderTop: m ? `8px solid ${SECTION}` : `1px solid #EDEFF2` }}>
             <div style={eyebrowStyle(BLUE, m)}>PRICE</div>
             <h2 style={h2Style(m)}>お見積り金額</h2>
             <div style={{ marginTop: m ? 14 : 20, background: SECTION, borderRadius: 16, padding: m ? 16 : '22px 26px' }}>
+                {pricing.isProductEstimate && (
+                    <div style={{ marginBottom: m ? 12 : 16, padding: m ? '10px 12px' : '12px 14px', borderRadius: 12, background: '#FFF7ED', color: '#B45309', fontSize: m ? 11.5 : 12.5, fontWeight: 800, lineHeight: 1.6 }}>
+                        商品から読み込んだ基準料金をもとにした概算です。正式な確定金額は担当者が確認後にご案内します。
+                    </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: 13, color: MUTE, fontWeight: 700 }}>総額</span>
                     <span style={{ fontSize: m ? 24 : 30, fontWeight: 900, color: INK, letterSpacing: '-0.02em' }}>{yen(total)}</span>
                 </div>
                 <div style={{ height: 1, background: BORDER, margin: m ? '12px 0' : '16px 0' }} />
+                {pricing.pricePerPerson > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                        <span style={{ fontSize: 12.5, color: MUTE }}>基準料金（お一人様）</span>
+                        <span style={{ fontSize: m ? 15 : 17, fontWeight: 800, color: BLUE_DK }}>{yen(pricing.pricePerPerson)}</span>
+                    </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: 12.5, color: MUTE }}>ご予約金（銀行振込）</span>
                     <span style={{ fontSize: m ? 15 : 17, fontWeight: 800, color: BLUE_DK }}>{yen(deposit)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 }}>
                     <span style={{ fontSize: 12.5, color: MUTE }}>残金（現地にて現金・日本円）</span>
-                    <span style={{ fontSize: m ? 15 : 17, fontWeight: 800, color: INK }}>{yen(total - deposit)}</span>
+                    <span style={{ fontSize: m ? 15 : 17, fontWeight: 800, color: INK }}>{yen(pricing.local)}</span>
                 </div>
             </div>
         </div>

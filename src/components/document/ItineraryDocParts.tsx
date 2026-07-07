@@ -149,7 +149,7 @@ export const DayBody: React.FC<{ day: DayData; m: boolean }> = ({ day, m }) => {
             </div>
 
             {/* 숙소 + 식사 */}
-            <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1fr 1fr', gap: m ? 10 : 14, marginTop: 16, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: m ? 10 : 12, marginTop: 16, alignItems: 'start' }}>
                 {day.accommodation?.name ? (
                     <div style={{ background: SECTION, borderRadius: 13, padding: m ? 12 : '13px 15px' }}>
                         <div style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
@@ -172,11 +172,11 @@ export const DayBody: React.FC<{ day: DayData; m: boolean }> = ({ day, m }) => {
                         </div>
                     </div>
                 ) : <div />}
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
                     {meals.map(mm => {
                         const v = (day.meals as any)?.[mm.k];
                         return (
-                            <span key={mm.k} style={{ flex: 1, textAlign: 'center', padding: m ? '7px 0' : '8px 0', background: v ? BLUE_BG : SECTION, borderRadius: 10, fontSize: m ? 11.5 : 12.5, color: v ? BLUE_DK : FAINT, fontWeight: v ? 700 : 400 }}>
+                            <span key={mm.k} style={{ textAlign: 'center', padding: m ? '7px 0' : '8px 0', background: v ? BLUE_BG : SECTION, borderRadius: 10, fontSize: m ? 11.5 : 12.5, color: v ? BLUE_DK : FAINT, fontWeight: v ? 700 : 400 }}>
                                 {mm.l} {v || '—'}
                             </span>
                         );
