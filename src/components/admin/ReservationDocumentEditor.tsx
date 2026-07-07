@@ -325,6 +325,12 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         setDocSettings(s => ({ ...s, guide: { ...s.guide, notices: s.guide.notices.map((n, i) => i === idx ? { ...n, [field]: value } : n) } }));
 
     const handleSave = async () => {
+        // 빈 일정 저장 방지 — 이대로 저장되면 고객 화면에 「日程は現在準備中です」만 떠서
+        // "저장했는데 일정표가 안 나온다"로 이어진다.
+        if (!templateMode && documentType === 'itinerary' && days.length === 0) {
+            const ok = window.confirm('일정(DAY)이 하나도 없습니다.\n이대로 저장하면 고객 화면에는 「日程は現在準備中です」로 표시됩니다.\n\n계속 저장할까요?\n(취소 후 좌측 「선택 상품 적용」을 누르면 상품 일정이 채워집니다)');
+            if (!ok) return;
+        }
         setSaving(true);
         try {
             await onSave({ name, description, days, documentSettings: docSettings });
@@ -430,7 +436,21 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                 </div>
                                 <select
                                     value={selectedProductId}
-                                    onChange={event => setSelectedProductId(event.target.value)}
+                                    onChange={event => {
+                                        const v = event.target.value;
+                                        setSelectedProductId(v);
+                                        // 일정이 비어 있으면 선택 즉시 자동 적용 — "선택하고 저장"만 해도
+                                        // 일정이 들어가도록. (기존엔 「선택 상품 적용」을 따로 눌러야 해서
+                                        // 빈 일정이 저장되고 고객 화면에 準備中만 뜨는 실수가 잦았다)
+                                        if (v) {
+                                            const p = products.find(item => item.id === v);
+                                            const empty = days.length === 0 || days.every(d => !d.title && !(d.activities?.length));
+                                            if (p && empty && getProductScheduleStats(p).days > 0) {
+                                                setAutoLoadedName(null);
+                                                applyProduct(p, { auto: true });
+                                            }
+                                        }
+                                    }}
                                     className="mt-3 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700 outline-none focus:border-[#287DFA]"
                                     disabled={loadingProducts}
                                 >
