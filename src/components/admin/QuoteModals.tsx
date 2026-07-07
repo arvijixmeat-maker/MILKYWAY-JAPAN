@@ -525,15 +525,26 @@ export const QuoteDetailModal: React.FC<{
 
     const currentStepIndex = Math.max(0, workflowSteps.findIndex((step) => step.key === request.status));
     const statusMeta = quoteStatusMeta[request.status] || quoteStatusMeta.new;
+    const hasQuoteItinerary = (docInitialContent?.days?.length ?? 0) > 0;
+    const hasQuoteSchedule = hasQuoteItinerary || Boolean(confirmedStartDate && confirmedEndDate);
+    const effectivePricePerPerson = priceDetail.pricePerPerson || parseDocumentPricePerPerson(docInitialContent);
+    const effectiveTotalAmount = priceDetail.totalAmount || (effectivePricePerPerson * (priceDetail.peopleCount || quotePeople || 1));
+    const effectiveDeposit = priceDetail.deposit || (effectiveTotalAmount > 0 ? Math.floor(effectiveTotalAmount * 0.1) : 0);
+    const missingSendItems = [
+        !request.destination || !request.headcount || !request.period ? '여행 조건' : '',
+        !hasQuoteSchedule ? '제안 일정 또는 시작/종료일' : '',
+        effectiveTotalAmount <= 0 ? '총 견적금액' : '',
+        effectiveTotalAmount < effectiveDeposit ? '예약금이 총액보다 작거나 같아야 함' : '',
+    ].filter(Boolean);
     const checklistItems = [
         { label: '여행 조건 확인', done: Boolean(request.destination && request.headcount && request.period) },
-        { label: '확정 일정 입력', done: Boolean(confirmedStartDate && confirmedEndDate) },
-        { label: '금액/예약금 입력', done: priceDetail.totalAmount > 0 && priceDetail.deposit >= 0 },
+        { label: '제안 일정 확인', done: hasQuoteSchedule },
+        { label: '금액/예약금 입력', done: effectiveTotalAmount > 0 && effectiveTotalAmount >= effectiveDeposit },
         { label: '견적서 링크', done: Boolean(estimateUrl), optional: true },
         { label: '고객 안내문', done: Boolean(adminNote.trim()), optional: true },
     ];
-    // 발송 필수 = 일정·금액·예약금만. 견적서 링크/안내문은 선택(고객은 시스템 견적 페이지로 받음).
-    const canSendEstimate = checklistItems.filter((item) => !item.optional).every((item) => item.done) && priceDetail.totalAmount >= priceDetail.deposit;
+    // 발송 필수 = 여행 조건 + 제안 일정(문서 일정 또는 날짜) + 금액. 견적서 링크/안내문은 선택.
+    const canSendEstimate = missingSendItems.length === 0;
     const quickNotes = [
         {
             label: '기본 안내',
@@ -546,25 +557,35 @@ export const QuoteDetailModal: React.FC<{
     ];
 
     const handleSend = async () => {
-        const syncedContent = syncDocumentPrice(quoteDocumentContent, priceDetail.pricePerPerson);
+        if (!canSendEstimate) {
+            alert(`견적 발송 전에 아래 항목을 확인해 주세요.\n\n- ${missingSendItems.join('\n- ')}`);
+            scrollToSec('quote');
+            return;
+        }
+        const normalizedPriceDetail = {
+            ...priceDetail,
+            pricePerPerson: effectivePricePerPerson,
+            totalAmount: effectiveTotalAmount,
+            deposit: effectiveDeposit,
+        };
+        const syncedContent = syncDocumentPrice(quoteDocumentContent, normalizedPriceDetail.pricePerPerson);
         if (syncedContent) setQuoteDocumentContent(syncedContent);
         await onUpdateQuote(request.id, {
-            confirmed_price: priceDetail.totalAmount,
-            deposit: priceDetail.deposit,
+            confirmed_price: normalizedPriceDetail.totalAmount,
+            deposit: normalizedPriceDetail.deposit,
             confirmed_start_date: confirmedStartDate,
             confirmed_end_date: confirmedEndDate,
             itineraryTemplateId,
             documentContent: syncedContent,
         } as any);
-        onSendEstimate(estimateUrl, adminNote, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId);
+        onSendEstimate(estimateUrl, adminNote, normalizedPriceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId);
     };
     const estimatePageUrl = `${window.location.origin}/estimate/${request.id}`;
     const quoteSent = request.status === 'answered';
-    const hasQuoteItinerary = (docInitialContent?.days?.length ?? 0) > 0;
     const quoteDocStatusText = quoteSent
         ? '발송 완료 · 재발송 가능'
         : hasQuoteItinerary && !canSendEstimate
-            ? '일정 작성됨 · 금액 입력 필요'
+            ? `일정 작성됨 · ${missingSendItems[0] || '확인 필요'}`
         : canSendEstimate
             ? hasQuoteItinerary ? '작성됨 · 발송 대기' : '금액만 발송 가능'
             : '확정 일정·금액 입력 필요';
@@ -591,7 +612,7 @@ export const QuoteDetailModal: React.FC<{
     const nextAction = (() => {
         if (request.status === 'converted' || request.status === 'completed') return null;
         if (request.status === 'reservation_requested') return { label: '예약으로 전환', desc: '고객이 예약을 요청했습니다 — 확정 내용으로 전환하세요.', icon: 'sync_alt', onClick: onOpenConvert };
-        if (!canSendEstimate) return { label: '견적 작성 · 일정·금액 입력', desc: '확정 일정과 금액·예약금을 입력하면 발송할 수 있습니다.', icon: 'edit_note', onClick: () => scrollToSec('quote') };
+        if (!canSendEstimate) return { label: '견적 작성 · 누락 항목 확인', desc: `${missingSendItems[0] || '필수 항목'} 확인이 필요합니다.`, icon: 'edit_note', onClick: () => scrollToSec('quote') };
         if (request.status !== 'answered') return { label: '견적서 발송 처리', desc: '입력 완료 — 고객에게 견적을 발송하세요.', icon: 'send', onClick: handleSend };
         return { label: '재발송 · 고객 응답 대기', desc: '발송 완료 — 예약 요청을 기다리는 중입니다.', icon: 'mark_email_read', onClick: handleSend };
     })();
@@ -782,7 +803,7 @@ export const QuoteDetailModal: React.FC<{
                             <div className="action-doc-buttons">
                                 {!quoteSent ? (
                                     <>
-                                        <button className="btn btn-sm btn-blue" disabled={!canSendEstimate} onClick={handleSend} title={!canSendEstimate ? '확정 일정과 금액·예약금을 입력하면 발송할 수 있습니다.' : undefined}>
+                                        <button className="btn btn-sm btn-blue" onClick={handleSend} title={!canSendEstimate ? `확인 필요: ${missingSendItems.join(', ')}` : undefined}>
                                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span>고객에게 발송
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
