@@ -13,6 +13,7 @@ interface Reservation {
     id: string;
     type: 'product' | 'quote';
     productName: string;
+    productId?: string; // 예약한 상품 ID (신규 예약부터 저장 — 동명 상품 혼동 방지)
     customerName: string;
     date: string;
     bookedAt: string;
@@ -111,6 +112,8 @@ interface ProductSummary {
     id?: string;
     name?: string;
     category?: string;
+    thumbnail?: string;
+    mainImages?: any; // API가 mainImages/main_images 두 표기를 모두 내려줌 (배열 또는 JSON 문자열)
 }
 
 const quoteWorkflowMeta: Record<string, { label: string; hint: string; icon: string }> = {
@@ -319,7 +322,7 @@ const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Re
     );
 };
 
-const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservation: Reservation | null, onClose: () => void, onUpdate: (updated: Reservation) => void }) => {
+const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] }: { reservation: Reservation | null, onClose: () => void, onUpdate: (updated: Reservation) => void, products?: ProductSummary[] }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState<Reservation | null>(null);
     const [showGuideModal, setShowGuideModal] = useState(false);
@@ -1231,12 +1234,37 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate }: { reservatio
     const itinerarySentAt = lastEmailAt(itineraryUrl, '日程');
     const contractSentAt = lastEmailAt(contractUrl, '契約');
 
+    // 예약된 상품의 대표 이미지.
+    // 1순위: 예약에 저장된 상품 ID 정확 매칭 (신규 예약부터 저장됨).
+    // 2순위(과거 예약): 상품명이 '유일하게' 정확히 일치할 때만 —
+    //   동명 상품(예: 銀河の大自然満喫ツアー 4일/5일)이 있으면 추측하지 않고 이미지 생략.
+    // 수동 예약(자유 입력 상품명)은 대부분 미매칭 → 이미지 없이 기존 그대로.
+    const productImage = (() => {
+        let p = reservation.productId ? products.find(x => x.id === reservation.productId) : undefined;
+        if (!p) {
+            const norm = (v: any) => String(v || '').replace(/\s+/g, '').toLowerCase();
+            const rn = norm(reservation.productName);
+            if (rn) {
+                const exact = products.filter(x => norm(x.name) === rn);
+                if (exact.length === 1) p = exact[0];
+            }
+        }
+        if (!p) return undefined;
+        let imgs: any = p.mainImages;
+        if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs || '[]'); } catch { imgs = []; } }
+        return p.thumbnail || (Array.isArray(imgs) && imgs.length ? imgs[0] : undefined);
+    })();
+
     return (<>
         <div className="drawer-scrim reservation-workspace-scrim" onClick={onClose}>
             <div className="drawer reservation-workspace tcom" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="drawer-head">
+                    {productImage && (
+                        <img src={productImage} alt={reservation.productName} loading="lazy"
+                            style={{ width: 52, height: 52, flex: 'none', borderRadius: 12, objectFit: 'cover', border: '1px solid var(--mrt-gray-200, #E6E8EC)' }} />
+                    )}
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="row" style={{ gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
                             <span className={`tag-type ${reservation.type !== 'quote' ? 'reservation' : 'quote'}`}>
@@ -2064,6 +2092,8 @@ export const AdminReservationManage: React.FC = () => {
                     id: p.id,
                     name: p.name,
                     category: p.category,
+                    thumbnail: p.thumbnail,
+                    mainImages: p.mainImages ?? p.main_images,
                 })));
             }
 
@@ -2083,6 +2113,7 @@ export const AdminReservationManage: React.FC = () => {
                     reservationNumber: r.reservationNumber || r.reservation_number || null,
                     type: r.type || 'product',
                     productName: r.productName || r.product_name,
+                    productId: r.productId || r.product_id,
                     customerName: r.customerName || r.customer_name || r.customer_info?.name || 'Unknown',
                     country: r.country || r.customerCountry || r.customer_country || r.customer_info?.country || '일본',
                     startDate,
@@ -3032,6 +3063,7 @@ export const AdminReservationManage: React.FC = () => {
                     reservation={selectedReservation}
                     onClose={() => setSelectedReservation(null)}
                     onUpdate={handleUpdateReservation}
+                    products={products}
                 />
             )}
 

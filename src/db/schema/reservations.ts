@@ -5,6 +5,8 @@ export const reservations = sqliteTable('reservations', {
     id: text('id').primaryKey(),
     type: text('type').default('tour'),
     productName: text('product_name'),
+    productId: text('product_id'),          // 예약한 상품 ID — 이름 유사매칭 대신 정확 연결용
+
     customerName: text('customer_name'),
     customerEmail: text('customer_email'),
     customerPhone: text('customer_phone'),

@@ -171,6 +171,7 @@ app.put('/:id', async (c) => {
         itinerary_url: 'itineraryUrl',
         assigned_guide: 'assignedGuide',
         daily_accommodations: 'dailyAccommodations',
+        product_id: 'productId',
         are_assignments_visible_to_user: 'areAssignmentsVisibleToUser',
         total_people: 'travelers',
         total_amount: 'totalPrice',
@@ -203,7 +204,7 @@ app.put('/:id', async (c) => {
         'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData',
         'assignedGuide', 'contractUrl', 'itineraryUrl',
         'depositStatus', 'balanceStatus', 'areAssignmentsVisibleToUser', 'priceBreakdown',
-        'documentContent', 'source',
+        'documentContent', 'source', 'productId',
         'createdAt', 'updatedAt',
     ]);
     const filtered: any = {};
@@ -280,6 +281,7 @@ app.post('/', async (c) => {
             id,
             type: body.type ? String(body.type) : 'tour',
             productName: String(productName),
+            productId: (body.product_id || body.productId) ? String(body.product_id || body.productId) : null,
             userId: (body.user_id || body.userId) ? String(body.user_id || body.userId) : null,
             customerName: String(customerName),
             customerEmail: String(customerEmail),
