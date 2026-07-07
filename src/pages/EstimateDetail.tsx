@@ -356,8 +356,8 @@ export const EstimateDetail: React.FC = () => {
         </div>
     ) : null;
 
-    // ─── 작성 중 안내 ───
-    const writingBlock = !isSent ? (
+    // ─── 작성 중 안내 (아직 일정도 없고 발송도 안 된 초기 단계에만) ───
+    const writingBlock = (!isSent && docDays.length === 0) ? (
         <div style={{ padding: m ? '18px 18px 0' : '28px 56px 0' }}>
             <div style={{ background: SECTION, borderRadius: 16, padding: m ? 18 : '24px 28px', textAlign: 'center' }}>
                 <div style={{ fontSize: m ? 13.5 : 15, fontWeight: 800, color: INK }}>担当者がお見積りを作成しています</div>
@@ -403,8 +403,8 @@ export const EstimateDetail: React.FC = () => {
         </div>
     );
 
-    // ─── 일정표 ───
-    const itineraryBlock = docDays.length > 0 ? (
+    // ─── 일정표 (확정 일정표처럼 항상 렌더 — 일정이 없으면 "準備中" 표시) ───
+    const itineraryBlock = (
         <div style={{ padding: m ? '22px 18px 8px' : '40px 56px 8px', borderTop: m ? `8px solid ${SECTION}` : `1px solid #EDEFF2` }}>
             {isConverted && (
                 <div style={{ marginBottom: 14, background: SECTION, borderRadius: 12, padding: '10px 14px', fontSize: 12, color: SUB }}>
@@ -413,7 +413,7 @@ export const EstimateDetail: React.FC = () => {
             )}
             <DayTimelineBlock days={docDays} m={m} startDate={estimate.confirmedStartDate ? String(estimate.confirmedStartDate).slice(0, 10) : undefined} />
         </div>
-    ) : null;
+    );
 
     return (
         <>
@@ -447,7 +447,7 @@ export const EstimateDetail: React.FC = () => {
                                 {priceBlock}
                                 {ctaBlock}
                                 {itineraryBlock}
-                                {isSent && <IncludedListsBlock included={includedList} excluded={excludedList} m={m} />}
+                                <IncludedListsBlock included={includedList} excluded={excludedList} m={m} />
                                 {recapBlock}
                             </>
                         ) : (
@@ -457,7 +457,7 @@ export const EstimateDetail: React.FC = () => {
                                 {priceBlock}
                                 {ctaBlock}
                                 {itineraryBlock}
-                                {isSent && <IncludedListsBlock included={includedList} excluded={excludedList} m={m} />}
+                                <IncludedListsBlock included={includedList} excluded={excludedList} m={m} />
                                 {recapBlock}
                             </>
                         )}
