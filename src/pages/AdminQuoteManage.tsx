@@ -268,9 +268,10 @@ export const AdminQuoteManage: React.FC = () => {
                 setSelectedRequest(prev => ({ ...prev, ...updates }));
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to update quote:", error);
-            alert("정보 수정 중 오류가 발생했습니다.");
+            // 원인(Unauthorized/컬럼 없음 등)이 보여야 대처 가능 — 에러 메시지를 그대로 노출
+            alert(`정보 수정 중 오류가 발생했습니다: ${error?.message || error}`);
         }
     };
 

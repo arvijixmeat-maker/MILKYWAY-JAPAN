@@ -429,6 +429,16 @@ export const QuoteDetailModal: React.FC<{
             itineraryTemplateId,
             documentContent: content,
         } as any);
+        // 저장 검증 — 서버에 실제로 일정이 남았는지 재조회로 확인.
+        // 세션 만료(401)·마이그레이션 누락 등으로 조용히 실패하면 고객 미리보기에
+        // 「準備中」만 떠서 원인을 알 수 없으므로, 여기서 바로 드러낸다.
+        try {
+            const fresh: any = await api.quotes.get(request.id);
+            const savedDays = fresh?.documentContent?.days ?? fresh?.itinerary?.days;
+            if (!Array.isArray(savedDays) || savedDays.length === 0) {
+                alert('⚠️ 일정이 서버에 저장되지 않았습니다.\n\n관리자 로그인이 풀렸을 수 있습니다 — 로그인 상태를 확인하고 다시 저장해 주세요.\n반복되면 /api/migrate-db 실행이 필요할 수 있습니다.');
+            }
+        } catch { /* 재조회 실패는 무시 — 저장 실패는 위 update 에러로 이미 드러남 */ }
     };
     const handleTemplateChange = async (templateId: string) => {
         setItineraryTemplateId(templateId);
