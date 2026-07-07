@@ -717,9 +717,11 @@ export const QuoteDetailModal: React.FC<{
                                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '문서 편집' : '문서 만들기'}
                                 </button>
                                 <button className="btn btn-sm btn-ghost" onClick={() => {
-                                    // 일정이 하나도 없으면 고객 화면에 "準備中"만 뜬다 — 미리보기 전에 안내
-                                    const hasDoc = !!(request.documentContent || request.document_content);
-                                    if (!hasDoc && !itineraryTemplateId) {
+                                    // 실제로 렌더될 일정(문서 편집본 또는 선택 템플릿)이 하나도 없을 때만 안내.
+                                    // docInitialContent는 저장 시 즉시 갱신되는 quoteDocumentContent를 반영하므로
+                                    // 상품 적용·저장 후에는 오탐이 나지 않는다.
+                                    const hasItinerary = (docInitialContent?.days?.length ?? 0) > 0;
+                                    if (!hasItinerary) {
                                         if (window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 상태 그대로 미리보기를 엽니다)')) {
                                             setDocEditorOpen(true);
                                             return;
