@@ -3085,6 +3085,8 @@ export const AdminReservationManage: React.FC = () => {
                                 vehicle: updates.vehicle,
                                 confirmed_price: updates.confirmed_price,
                                 deposit: updates.deposit,
+                                itinerary_template_id: updates.itineraryTemplateId,
+                                document_content: updates.documentContent,
                                 updated_at: new Date().toISOString()
                             });
                             fetchReservations();
