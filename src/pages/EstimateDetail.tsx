@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BottomNav } from '../components/layout/BottomNav';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/Toast';
 import { SEO } from '../components/seo/SEO';
@@ -226,7 +225,10 @@ export const EstimateDetail: React.FC = () => {
         : ['空港送迎・専用車', '全行程の宿泊（ホテル・ゲル）', '日程表内のお食事', '日本語ガイド', '観光入場料・各種体験'];
     const excludedList = splitLines(ds?.overview?.excludedText).length > 0 ? splitLines(ds?.overview?.excludedText)
         : ['国際線航空券', '海外旅行保険', '個人的な費用（お土産・飲み物など）'];
-    const docDays: DayData[] = (estimate.itinerary && Array.isArray(estimate.itinerary.days)) ? estimate.itinerary.days : [];
+    // 일정: 견적 API의 itinerary(문서 편집본 우선, 없으면 템플릿) → 방어적으로 documentContent.days 폴백
+    const docDays: DayData[] = (estimate.itinerary && Array.isArray(estimate.itinerary.days) && estimate.itinerary.days.length > 0)
+        ? estimate.itinerary.days
+        : (Array.isArray(estimate.documentContent?.days) ? estimate.documentContent.days : []);
 
     const stepDone = [true, isWriting || isSent, isSent];
     const stepLabels = ['お見積り受付', 'お見積り作成', '送信完了'];
@@ -422,7 +424,7 @@ export const EstimateDetail: React.FC = () => {
                 description="お客様専用のお見積もりページです。"
                 robots="noindex, nofollow"
             />
-            <div className="doc-page jp" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: m ? '0 0 110px' : '0 24px 110px', fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
+            <div className="doc-page jp" style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: m ? '0 0 40px' : '0 24px 48px', fontFamily: "'Noto Sans JP','Pretendard',sans-serif", boxSizing: 'border-box' }}>
                 {/* 상단 바 (뒤로가기) */}
                 <div style={{ position: 'sticky', top: 0, zIndex: 50, width: '100%', background: 'rgba(255,255,255,.95)', backdropFilter: 'blur(6px)', borderBottom: `1px solid ${HAIRLINE}` }}>
                     <div style={{ maxWidth: m ? 430 : 1120, margin: '0 auto', display: 'flex', alignItems: 'center', padding: '12px 14px' }}>
@@ -463,8 +465,6 @@ export const EstimateDetail: React.FC = () => {
                         )}
                     </div>
                 </div>
-
-                <BottomNav />
             </div>
         </>
     );
