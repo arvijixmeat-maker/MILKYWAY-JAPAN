@@ -305,6 +305,14 @@ app.post('/contract/:reservationId/customer', async (c) => {
         return c.json({ error: 'Agreement and signer name are required.' }, 400);
     }
 
+    const signatureData = String(body.agreement?.signatureData || '');
+    if (!/^data:image\/png;base64,[a-z0-9+/=]+$/i.test(signatureData)) {
+        return c.json({ error: 'A valid handwritten signature is required.' }, 400);
+    }
+    if (signatureData.length > 250_000) {
+        return c.json({ error: 'Signature image is too large.' }, 413);
+    }
+
     if (!Array.isArray(body.travelers) || body.travelers.length === 0 || !String(body.travelers[0]?.name || '').trim()) {
         return c.json({ error: 'Lead traveler information is required.' }, 400);
     }
@@ -367,7 +375,8 @@ app.post('/contract/:reservationId/customer', async (c) => {
         status: 'signed',
         version,
         documentHash,
-        signatureType: 'typed',
+        signatureType: 'drawn',
+        signatureData,
         signerEmail: reservation.customer_email || '',
         ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || '',
         userAgent: c.req.header('user-agent') || '',

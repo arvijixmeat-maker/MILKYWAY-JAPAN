@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
@@ -27,7 +27,7 @@ interface ContractData {
     region?: string;
     category?: string;
     issuedDate?: string;
-    agreement?: { agreed?: boolean; name?: string; agreedAt?: string; status?: string; version?: number; documentHash?: string };
+    agreement?: { agreed?: boolean; name?: string; agreedAt?: string; status?: string; version?: number; documentHash?: string; signatureData?: string; signatureType?: string };
     signature?: { status?: string; version?: number; documentHash?: string; signedAt?: string };
     status?: string;
     version?: number;
@@ -259,6 +259,107 @@ const BrandMark: React.FC<{ style?: React.CSSProperties }> = ({ style }) => (
     </svg>
 );
 
+type SignaturePoint = { x: number; y: number };
+
+const SignaturePad: React.FC<{
+    value: string;
+    disabled?: boolean;
+    onChange: (value: string) => void;
+}> = ({ value, disabled = false, onChange }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const strokesRef = useRef<SignaturePoint[][]>([]);
+    const drawingRef = useRef(false);
+
+    const drawAll = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        ctx.strokeStyle = '#1A1B1E';
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (const stroke of strokesRef.current) {
+            if (stroke.length === 0) continue;
+            ctx.beginPath();
+            ctx.moveTo(stroke[0].x * rect.width, stroke[0].y * rect.height);
+            for (const point of stroke.slice(1)) ctx.lineTo(point.x * rect.width, point.y * rect.height);
+            ctx.stroke();
+        }
+    };
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const observer = new ResizeObserver(drawAll);
+        observer.observe(canvas);
+        drawAll();
+        return () => observer.disconnect();
+    }, []);
+
+    const pointFromEvent = (event: React.PointerEvent<HTMLCanvasElement>): SignaturePoint => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        return {
+            x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+            y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+        };
+    };
+
+    const begin = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        if (disabled) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drawingRef.current = true;
+        strokesRef.current.push([pointFromEvent(event)]);
+        drawAll();
+    };
+    const move = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!drawingRef.current || disabled) return;
+        strokesRef.current[strokesRef.current.length - 1]?.push(pointFromEvent(event));
+        drawAll();
+    };
+    const end = (event: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!drawingRef.current) return;
+        drawingRef.current = false;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        onChange(event.currentTarget.toDataURL('image/png'));
+    };
+    const clear = () => {
+        strokesRef.current = [];
+        drawAll();
+        onChange('');
+    };
+
+    return (
+        <div>
+            <div style={{ position: 'relative', height: 176, border: `1.5px solid ${value ? 'var(--mrt-blue)' : 'var(--border-strong)'}`, borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+                <canvas
+                    ref={canvasRef}
+                    role="img"
+                    aria-label="手書き署名欄"
+                    onPointerDown={begin}
+                    onPointerMove={move}
+                    onPointerUp={end}
+                    onPointerCancel={end}
+                    style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: disabled ? 'default' : 'crosshair' }}
+                />
+                {!value && <span style={{ position: 'absolute', left: 0, right: 0, bottom: 22, borderBottom: '1px solid #D7DAE0', margin: '0 28px', pointerEvents: 'none' }} />}
+                {!value && <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#B4B8C0', fontSize: 13, fontWeight: 700, pointerEvents: 'none' }}>指・マウス・ペンで署名してください</span>}
+            </div>
+            {!disabled && (
+                <button type="button" onClick={clear} disabled={!value} style={{ marginTop: 8, border: 0, background: 'transparent', color: value ? 'var(--mrt-blue-strong)' : 'var(--mrt-gray-400)', fontSize: 12.5, fontWeight: 800, cursor: value ? 'pointer' : 'default', fontFamily: 'var(--font-sans)' }}>
+                    署名を消して書き直す
+                </button>
+            )}
+        </div>
+    );
+};
+
 export const DocumentContract: React.FC = () => {
     const { reservationId } = useParams();
     const isMobile = useIsMobile();
@@ -270,6 +371,7 @@ export const DocumentContract: React.FC = () => {
     const [departure, setDeparture] = useState<{ date?: string; time?: string; flight?: string }>({});
     const [agreed, setAgreed] = useState(false);
     const [signerName, setSignerName] = useState('');
+    const [signatureData, setSignatureData] = useState('');
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 
@@ -318,6 +420,7 @@ export const DocumentContract: React.FC = () => {
         if (c.agreement?.agreed) {
             setAgreed(true);
             setSignerName(c.agreement.name || '');
+            setSignatureData(c.agreement.signatureData || '');
             setSaved(true);
         }
     }, [data]);
@@ -327,11 +430,12 @@ export const DocumentContract: React.FC = () => {
 
     const handleCustomerSubmit = async () => {
         if (!agreed) { alert('旅行契約内容への同意が必要です。'); return; }
-        if (!signerName.trim()) { alert('署名欄にお名前を入力してください。'); return; }
+        if (!signerName.trim()) { alert('署名者のお名前を入力してください。'); return; }
+        if (!signatureData) { alert('手書き署名を記入してください。'); return; }
         if (!reservationId) return;
         setSaving(true);
         try {
-            const agreement = { agreed: true, name: signerName.trim() };
+            const agreement = { agreed: true, name: signerName.trim(), signatureData, signatureType: 'drawn' };
             const result = await api.documents.contract.saveCustomer(reservationId, { travelers: formTravelers, arrival, departure, agreement });
             setSaved(true);
             setData(prev => prev ? { ...prev, contract: result.contract } as ContractPageData : prev);
@@ -423,7 +527,7 @@ export const DocumentContract: React.FC = () => {
     summaryRows.push({ label: '出発便', value: flightLine(departure) });
 
     const contractLocked = contract.status === 'signed' || contract.signature?.status === 'signed';
-    const canSubmit = !contractLocked && agreed && signerName.trim().length > 0;
+    const canSubmit = !contractLocked && agreed && signerName.trim().length > 0 && signatureData.length > 0;
     const agreeBox: React.CSSProperties = {
         flex: 'none', width: m ? 22 : 24, height: m ? 22 : 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: m ? 13 : 14, color: '#fff', fontWeight: 900, border: agreed ? `1.5px solid ${A}` : '1.5px solid var(--border-strong)', background: agreed ? A : '#fff',
@@ -583,8 +687,12 @@ export const DocumentContract: React.FC = () => {
                                 <span style={t.agreeText}>旅行契約内容、旅行条件、取消規定を確認し、<b style={{ color: A }}>同意します。</b></span>
                             </div>
                             <div>
-                                <label style={t.fieldLabel}>署名（お名前）</label>
-                                <input style={t.input} value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="お名前を入力してください" />
+                                <label style={t.fieldLabel}>署名者名</label>
+                                <input style={t.input} value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="契約者のお名前" />
+                            </div>
+                            <div style={{ marginTop: 14 }}>
+                                <label style={t.fieldLabel}>手書き署名</label>
+                                <SignaturePad value={signatureData} disabled={contractLocked} onChange={setSignatureData} />
                             </div>
                             <button style={canSubmit ? t.cta : t.ctaDisabled} disabled={!canSubmit || saving} onClick={handleCustomerSubmit}>
                                 {contractLocked ? '署名済み・変更できません' : saving ? '送信中...' : '同意して署名する'}
@@ -697,9 +805,14 @@ export const DocumentContract: React.FC = () => {
                             <div style={t.signLine}>
                                 <span style={t.signLabel}>旅行者署名</span>
                                 {contract.agreement?.agreed ? (
-                                    <span style={t.signValue}>
-                                        {contract.agreement.name}
-                                        <span style={{ marginLeft: 8, fontSize: m ? 11 : 12, fontWeight: 700, color: A }}>電子同意済み{contract.agreement.agreedAt ? `：${contract.agreement.agreedAt.split('T')[0]}` : ''}</span>
+                                    <span style={{ ...t.signValue, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                        {contract.agreement.signatureData && (
+                                            <img src={contract.agreement.signatureData} alt={`${contract.agreement.name || '旅行者'}の手書き署名`} style={{ width: m ? 120 : 160, height: m ? 54 : 68, objectFit: 'contain', objectPosition: 'left center' }} />
+                                        )}
+                                        <span>
+                                            {contract.agreement.name}
+                                            <span style={{ display: 'block', marginTop: 3, fontSize: m ? 10.5 : 11.5, fontWeight: 700, color: A }}>署名・電子同意済み{contract.agreement.agreedAt ? `：${contract.agreement.agreedAt.split('T')[0]}` : ''}</span>
+                                        </span>
                                     </span>
                                 ) : (
                                     <span style={t.signBlank} />

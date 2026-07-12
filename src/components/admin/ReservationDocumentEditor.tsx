@@ -328,11 +328,41 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const updateGuideNotice = (idx: number, field: 'title' | 'body', value: string) =>
         setDocSettings(s => ({ ...s, guide: { ...s.guide, notices: s.guide.notices.map((n, i) => i === idx ? { ...n, [field]: value } : n) } }));
 
+    const expectedDays = (() => {
+        const text = customer?.tripLength || '';
+        const dayMatch = text.match(/(\d+)\s*日/);
+        if (dayMatch) return Number(dayMatch[1]);
+        const nightMatch = text.match(/(\d+)\s*泊/);
+        return nightMatch ? Number(nightMatch[1]) + 1 : null;
+    })();
+    const expectedNights = expectedDays ? Math.max(0, expectedDays - 1) : Math.max(0, days.length - 1);
+    const missingTitles = days.filter(day => !day.title?.trim()).length;
+    const emptyScheduleDays = days.filter(day => !Array.isArray(day.activities) || day.activities.length === 0).length;
+    const missingRegions = days.filter(day => !day.region?.trim()).length;
+    const missingAccommodations = days.slice(0, expectedNights).filter(day => {
+        const assigned = dailyAccommodations?.find(item => item.day === day.day)?.accommodation;
+        return !assigned?.name && !day.accommodation?.name;
+    }).length;
+    const validationItems = documentType === 'contract'
+        ? [
+            { label: '고객·예약 정보', ok: !!customer?.name && !!customer?.tripNumber, critical: true },
+            { label: '여행금액', ok: !!customer?.totalAmount, critical: true },
+            { label: '취소 규정', ok: docSettings.contract.cancellationRows.some(row => row.period?.trim() && row.fee?.trim()), critical: true },
+            { label: '계약 안내문', ok: !!docSettings.contract.intro?.trim(), critical: false },
+        ]
+        : [
+            { label: `여행기간과 DAY 수${expectedDays ? ` (${expectedDays}일)` : ''}`, ok: days.length > 0 && (!expectedDays || days.length === expectedDays), critical: true },
+            { label: 'DAY 제목', ok: missingTitles === 0, detail: missingTitles ? `${missingTitles}개 미입력` : undefined, critical: true },
+            { label: '주요 일정', ok: emptyScheduleDays === 0, detail: emptyScheduleDays ? `${emptyScheduleDays}개 DAY 비어 있음` : undefined, critical: true },
+            { label: '지역', ok: missingRegions === 0, detail: missingRegions ? `${missingRegions}개 미입력` : undefined, critical: false },
+            { label: '숙소', ok: missingAccommodations === 0, detail: missingAccommodations ? `${missingAccommodations}박 미배정` : undefined, critical: false },
+            { label: '포함·불포함', ok: docSettings.overview.included.some(item => item.label?.trim()) && !!docSettings.overview.excludedText.trim(), critical: false },
+        ];
+    const criticalIssues = validationItems.filter(item => item.critical && !item.ok);
+
     const handleSave = async () => {
-        // 빈 일정 저장 방지 — 이대로 저장되면 고객 화면에 「日程は現在準備中です」만 떠서
-        // "저장했는데 일정표가 안 나온다"로 이어진다.
-        if (!templateMode && documentType === 'itinerary' && days.length === 0) {
-            const ok = window.confirm('일정(DAY)이 하나도 없습니다.\n이대로 저장하면 고객 화면에는 「日程は現在準備中です」로 표시됩니다.\n\n계속 저장할까요?\n(취소 후 좌측 「선택 상품 적용」을 누르면 상품 일정이 채워집니다)');
+        if (!templateMode && criticalIssues.length > 0) {
+            const ok = window.confirm(`발송 전 필수 항목 ${criticalIssues.length}개를 확인해야 합니다.\n\n- ${criticalIssues.map(item => item.label).join('\n- ')}\n\n임시저장은 가능하지만 고객 발송 전 반드시 수정해야 합니다. 계속 저장할까요?`);
             if (!ok) return;
         }
         setSaving(true);
@@ -369,7 +399,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">취소</button>
                         <button onClick={handleSave} disabled={saving} className="px-5 py-2 text-sm font-bold bg-[#287DFA] hover:bg-[#1668DC] text-white rounded-lg inline-flex items-center gap-1.5 disabled:opacity-50">
-                            <span className="material-symbols-outlined text-base">check</span>{saving ? '저장 중' : '저장'}
+                            <span className="material-symbols-outlined text-base">check</span>{saving ? '저장 중' : templateMode ? '저장' : '임시저장 후 검토'}
                         </button>
                     </div>
                 </div>
@@ -413,10 +443,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         </div>
                     )}
                 </div>}
-                {documentType === 'contract' && <div className="flex flex-shrink-0 items-center gap-2 border-b border-[#BBD9FF] bg-[#EAF3FF] px-6 py-2 text-xs font-bold text-[#287DFA] dark:border-teal-800 dark:bg-teal-900/20">
+                <div className="flex flex-shrink-0 items-center gap-2 border-b border-[#BBD9FF] bg-[#EAF3FF] px-6 py-2 text-xs font-bold text-[#287DFA] dark:border-teal-800 dark:bg-teal-900/20">
                     <span className="material-symbols-outlined text-[16px]">tips_and_updates</span>
-                    <span>문서를 클릭해서 수정하고, 상단에서 담당 가이드와 일자별 숙소를 배정하면 일정표·계약서에 함께 반영됩니다.</span>
-                </div>}
+                    <span>{documentType === 'contract' ? '현재 여행계약서만 편집하고 있습니다. 일정표 내용은 확정 일정표 편집에서 관리하세요.' : '현재 확정 일정표만 편집하고 있습니다. 계약조건과 서명은 여행계약서 편집에서 관리하세요.'}</span>
+                </div>
                 {autoLoadedName && (
                     <div className="flex flex-shrink-0 items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-6 py-2 text-xs font-bold text-emerald-700">
                         <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
@@ -434,8 +464,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                 <div className="flex items-center gap-2">
                                     <span className="material-symbols-outlined text-[18px] text-[#287DFA]">inventory_2</span>
                                     <div>
-                                        <p className="text-xs font-black text-slate-800">상품 정보 불러오기</p>
-                                        <p className="text-[9px] font-semibold text-slate-400">일정·가격·포함사항을 재사용합니다.</p>
+                                        <p className="text-xs font-black text-slate-800">예약 상품 원본</p>
+                                        <p className="text-[9px] font-semibold text-slate-400">적용 후 고객별 문서 사본으로 저장됩니다.</p>
                                     </div>
                                 </div>
                                 <select
@@ -474,6 +504,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                     선택 상품 적용
                                 </button>
                             </div>
+                            {documentType === 'itinerary' && <>
                             <div className="mb-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">일정 구성</p>
@@ -539,6 +570,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                     {days.length === 0 ? '첫 번째 DAY 추가' : 'DAY 추가'}
                                 </button>
                             </div>
+                            </>}
                         </aside>
 
                         <main className="min-w-0 overflow-hidden p-4 max-lg:h-[760px]">
@@ -572,7 +604,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                 }}
                                 defaultPage={documentType === 'contract' ? 'contract' : 'overview'}
                                 focusDayIndex={selectedDayIndex}
-                                showPageTabs={true}
+                                showPageTabs={documentType === 'itinerary'}
+                                visiblePages={documentType === 'contract' ? ['contract'] : ['overview', 'detail', 'guide']}
                             />
                         </main>
 
@@ -598,7 +631,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                 </div>
                             </div>
 
-                            <div className="mt-4 rounded-xl border border-slate-200 p-3">
+                            {documentType === 'itinerary' && <div className="mt-4 rounded-xl border border-slate-200 p-3">
                                 <div className="flex items-center justify-between">
                                     <p className="text-xs font-black text-slate-800">현재 DAY</p>
                                     <span className="rounded-full bg-[#EAF3FF] px-2 py-1 text-[10px] font-black text-[#287DFA]">DAY {selectedDay?.day || 0}</span>
@@ -608,9 +641,24 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                     <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">주요 일정</dt><dd className="font-black text-slate-700">{selectedDay?.activities.length || 0}개</dd></div>
                                     <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">숙소</dt><dd className="truncate font-black text-slate-700">{dailyAccommodations?.find(item => item.day === selectedDay?.day)?.accommodation?.name || selectedDay?.accommodation?.name || '미정'}</dd></div>
                                 </dl>
+                            </div>}
+
+                            <div className={`mt-4 rounded-xl border p-3 ${criticalIssues.length ? 'border-rose-200 bg-rose-50/60' : 'border-emerald-200 bg-emerald-50/60'}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="text-xs font-black text-slate-800">발송 전 자동점검</p>
+                                    <span className={`rounded-full px-2 py-1 text-[9px] font-black ${criticalIssues.length ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-700'}`}>{criticalIssues.length ? `필수 ${criticalIssues.length}건` : '필수항목 완료'}</span>
+                                </div>
+                                <div className="mt-3 space-y-2">
+                                    {validationItems.map(item => (
+                                        <div key={item.label} className="flex items-start gap-2 text-[10.5px]">
+                                            <span className={`material-symbols-outlined text-[15px] ${item.ok ? 'text-emerald-600' : item.critical ? 'text-rose-500' : 'text-amber-500'}`}>{item.ok ? 'check_circle' : item.critical ? 'error' : 'warning'}</span>
+                                            <span className="min-w-0 flex-1 font-bold text-slate-600">{item.label}{item.detail ? <small className="ml-1 font-semibold text-slate-400">{item.detail}</small> : null}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="mt-4 rounded-xl border border-slate-200 p-3">
+                            {documentType === 'itinerary' && <div className="mt-4 rounded-xl border border-slate-200 p-3">
                                 <p className="text-xs font-black text-slate-800">포함·불포함</p>
                                 <div className="mt-3 grid grid-cols-2 gap-2">
                                     <div className="rounded-lg bg-emerald-50 p-2 text-center">
@@ -622,7 +670,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                         <p className="mt-1 text-lg font-black text-rose-600">{excludedCount}</p>
                                     </div>
                                 </div>
-                            </div>
+                            </div>}
 
                             <div className="mt-4 space-y-2">
                                 {onAssignGuide && <button onClick={onAssignGuide} className="flex w-full items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left text-xs font-black text-slate-700 hover:border-[#287DFA]">
