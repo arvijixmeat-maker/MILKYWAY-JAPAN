@@ -49,11 +49,12 @@ export const Footer: React.FC = () => {
                     {t('footer.services_heading')}
                 </p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[13px]">
+                    <ServiceLink href="/mongolia-tour">モンゴルツアー比較</ServiceLink>
+                    <ServiceLink href="/mongolia-horse-riding-tour">モンゴル乗馬旅行</ServiceLink>
+                    <ServiceLink href="/gobi-desert-tour">ゴビ砂漠ツアー</ServiceLink>
+                    <ServiceLink href="/mongolia-travel-cost">旅行費用・シーズン</ServiceLink>
                     <ServiceLink href="/travel-guide">モンゴル旅行ガイド</ServiceLink>
-                    <ServiceLink href="/products">モンゴルツアー比較</ServiceLink>
-                    <ServiceLink href="/category/horse-riding-tour">モンゴル乗馬旅行</ServiceLink>
-                    <ServiceLink href="/category/gobi-desert">ゴビ砂漠ツアー</ServiceLink>
-                    <ServiceLink href="/products" className="col-span-2">モンゴルツアー商品一覧</ServiceLink>
+                    <ServiceLink href="/products">ツアー商品一覧</ServiceLink>
                 </div>
             </div>
 

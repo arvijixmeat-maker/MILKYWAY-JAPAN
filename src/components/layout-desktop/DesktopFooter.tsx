@@ -27,10 +27,12 @@ export function DesktopFooter({ contentWidth = 1280 }: DesktopFooterProps) {
         {
             h: 'サービス',
             items: [
+                { label: 'モンゴルツアー比較', path: '/mongolia-tour' },
+                { label: 'モンゴル乗馬旅行', path: '/mongolia-horse-riding-tour' },
+                { label: 'ゴビ砂漠ツアー', path: '/gobi-desert-tour' },
+                { label: '旅行費用・ベストシーズン', path: '/mongolia-travel-cost' },
                 { label: 'モンゴル旅行ガイド', path: '/travel-guide' },
-                { label: 'モンゴルツアー商品一覧', path: '/products' },
-                { label: 'モンゴル乗馬旅行', path: '/category/horse-riding-tour' },
-                { label: 'ゴビ砂漠ツアー', path: '/category/gobi-desert' },
+                { label: 'ツアー商品一覧', path: '/products' },
                 { label: '同行者を探す', path: '/travel-mates' },
                 { label: 'お見積もりリクエスト', path: '/custom-estimate' },
             ],

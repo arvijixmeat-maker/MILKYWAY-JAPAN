@@ -23,7 +23,35 @@ const LEGACY_REDIRECTS: Record<string, string> = {
     '/horse-riding-tour': '/category/horse-riding-tour',
     '/mongol-travel': '/travel-guide',
     '/mongol-tour': '/products',
+    '/33': '/travel-guide',
 };
+
+const PUBLIC_STATIC_ROUTES = new Set([
+    '/', '/login', '/about', '/products', '/payment', '/reservation-complete',
+    '/reservation-status', '/reviews', '/reviews/write', '/custom-estimate',
+    '/estimate-complete', '/travel-mates', '/travel-mates/write', '/chats',
+    '/travel-guide', '/mypage', '/mypage/travel-mates', '/mypage/estimates',
+    '/mypage/reservations', '/mypage/notifications', '/mypage/reviews',
+    '/mypage/recently-viewed', '/mypage/wishlist', '/faq', '/terms-of-service',
+    '/privacy-policy', '/guide-apply',
+    '/mongolia-tour', '/mongolia-horse-riding-tour', '/gobi-desert-tour',
+    '/mongolia-travel-cost',
+]);
+
+const VALID_DYNAMIC_ROUTE_PATTERNS = [
+    /^\/category\/[^/]+$/,
+    /^\/products\/[^/]+$/,
+    /^\/reservation\/[^/]+$/,
+    /^\/reviews\/[^/]+$/,
+    /^\/estimate\/[^/]+$/,
+    /^\/travel-mates\/[^/]+$/,
+    /^\/chats\/[^/]+$/,
+    /^\/travel-guide\/[^/]+$/,
+    /^\/mypage\/reservations\/[^/]+$/,
+    /^\/my-booking\/[^/]+$/,
+    /^\/documents\/(itinerary|contract)\/[^/]+$/,
+    /^\/admin(?:\/[^/]+)?$/,
+];
 
 // Per-page SEO configurations for static routes
 const STATIC_PAGE_META: Record<string, { title: string; description: string }> = {
@@ -54,6 +82,22 @@ const STATIC_PAGE_META: Record<string, { title: string; description: string }> =
     '/about': {
         title: '会社案内 – モンゴル現地の旅行会社 | Milkyway Japan',
         description: 'モンゴル現地の旅行会社「モンゴリア銀河系（天の川）」。韓国でホテル経営学科を卒業しモンゴルで暮らす代表と副代表が設立した家族経営の旅行会社です。日本人旅行客に合わせた日程とリーズナブルな価格で、どこにもないモンゴル旅行をご提案します。'
+    },
+    '/mongolia-tour': {
+        title: 'モンゴルツアー比較｜現地旅行会社の日本語ガイド付き旅行 | Milkyway Japan',
+        description: 'モンゴルツアーの選び方を目的・日数・予算別に解説。乗馬、ゴビ砂漠、テレルジ、ゲル宿泊を日本語ガイド付きで手配する現地旅行会社です。'
+    },
+    '/mongolia-horse-riding-tour': {
+        title: 'モンゴル乗馬ツアー｜初心者から経験者まで日本語ガイド同行 | Milkyway Japan',
+        description: 'モンゴル乗馬ツアーを初心者・経験者別に選ぶポイント、服装、時期、旅行日数を解説。大草原での乗馬旅行を日本語でサポートします。'
+    },
+    '/gobi-desert-tour': {
+        title: 'モンゴル・ゴビ砂漠ツアー｜日数・見どころ・移動を解説 | Milkyway Japan',
+        description: '南ゴビの砂丘、渓谷、恐竜化石で知られる地域を巡るゴビ砂漠ツアー。必要日数、長距離移動、宿泊、持ち物を日本語でご案内します。'
+    },
+    '/mongolia-travel-cost': {
+        title: 'モンゴル旅行の費用とベストシーズン｜予算・日数の目安 | Milkyway Japan',
+        description: 'モンゴル旅行の費用を航空券、現地ツアー、宿泊、食事に分けて考える方法と、目的別のベストシーズン、必要日数を解説します。'
     }
 };
 
@@ -61,12 +105,23 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const url = new URL(context.request.url);
     const path = url.pathname;
 
+    // Consolidate every public URL onto the apex HTTPS host. Splitting signals
+    // between www and apex weakens canonicalization and leaves legacy URLs indexed.
+    if (url.hostname === 'www.mongolryokou.com') {
+        url.hostname = 'mongolryokou.com';
+        url.protocol = 'https:';
+        return Response.redirect(url.toString(), 301);
+    }
+
     // Legacy Redirects
     if (path.startsWith('/shop_view') || url.searchParams.has('idx')) {
         return Response.redirect(`${SEO_CONSTANTS.SITE_URL}/products`, 301);
     }
     if (LEGACY_REDIRECTS[path]) {
         return Response.redirect(`${SEO_CONSTANTS.SITE_URL}${LEGACY_REDIRECTS[path]}`, 301);
+    }
+    if (path.toLowerCase().startsWith('/tour_guide')) {
+        return Response.redirect(`${SEO_CONSTANTS.SITE_URL}/travel-guide`, 301);
     }
 
     // 1. Get the original response from the asset (usually index.html for unknown routes in an SPA)
@@ -79,9 +134,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
 
-    let pageTitle = SEO_CONSTANTS.TITLE;
+    const normalizedPath = path.replace(/\/$/, '') || '/';
+    let knownRoute = PUBLIC_STATIC_ROUTES.has(normalizedPath)
+        || VALID_DYNAMIC_ROUTE_PATTERNS.some(pattern => pattern.test(normalizedPath));
+
+    let pageTitle = knownRoute ? SEO_CONSTANTS.TITLE : 'ページが見つかりません | Milkyway Japan';
     let pageDescription = SEO_CONSTANTS.DESCRIPTION;
     let pageImage = getAbsoluteImageUrl(SEO_CONSTANTS.OG_IMAGE);
+    let pageHeading = 'モンゴルツアー・モンゴル旅行なら現地旅行社 Milkyway Japan';
+    let pageIntro = SEO_CONSTANTS.DESCRIPTION;
     const pageUrl = url.href;
     const canonicalUrl = `${SEO_CONSTANTS.SITE_URL}${path === '/' ? '/' : path.replace(/\/$/, '')}`;
 
@@ -92,10 +153,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const extraJsonLd: string[] = [];
 
     // Check static routes first
-    const normalizedPath = path.replace(/\/$/, '') || '/';
     if (STATIC_PAGE_META[normalizedPath]) {
         pageTitle = STATIC_PAGE_META[normalizedPath].title;
         pageDescription = STATIC_PAGE_META[normalizedPath].description;
+        pageHeading = pageTitle.replace(/\s*[|｜–-]\s*Milkyway Japan.*$/i, '');
+        pageIntro = pageDescription;
     }
 
     try {
@@ -110,6 +172,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 const product = productArr[0];
                 pageTitle = `${product.name} | Milkyway Japan`;
                 pageDescription = product.description || SEO_CONSTANTS.DESCRIPTION;
+                pageHeading = product.name;
+                pageIntro = pageDescription;
 
                 // Parse images if stored as stringified JSON
                 let images: string[] = [];
@@ -153,30 +217,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                         availability: product.status === 'active'
                             ? 'https://schema.org/InStock'
                             : 'https://schema.org/OutOfStock',
-                        seller: { '@type': 'Organization', name: 'Milkyway Japan' },
-                        // Tour bookings are digital — no shipping is required. Declaring a
-                        // free, zero-delay shipping policy satisfies Google's Merchant Listing
-                        // requirement and avoids the "shippingDetails missing" warning.
-                        shippingDetails: {
-                            '@type': 'OfferShippingDetails',
-                            shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'JPY' },
-                            shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'JP' },
-                            deliveryTime: {
-                                '@type': 'ShippingDeliveryTime',
-                                handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
-                                transitTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
-                            },
-                        },
-                        // 14-day cancellation window is a reasonable baseline for tour bookings;
-                        // satisfies Google's requirement and signals a trustworthy refund policy.
-                        hasMerchantReturnPolicy: {
-                            '@type': 'MerchantReturnPolicy',
-                            applicableCountry: 'JP',
-                            returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-                            merchantReturnDays: 14,
-                            returnMethod: 'https://schema.org/ReturnByMail',
-                            returnFees: 'https://schema.org/FreeReturn',
-                        },
+                        seller: { '@type': 'TravelAgency', name: 'Milkyway Japan' },
                     },
                 };
                 extraJsonLd.push(JSON.stringify(productLd));
@@ -191,6 +232,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                     ],
                 };
                 extraJsonLd.push(JSON.stringify(breadcrumbLd));
+            } else {
+                knownRoute = false;
             }
         }
         // --- Logic for Travel Guides (Magazines) ---
@@ -204,6 +247,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                     if (guide) {
                         pageTitle = `${guide.title} | Milkyway Japan Travel Guide`;
                         pageDescription = (guide.subtitle || guide.description || SEO_CONSTANTS.DESCRIPTION) as string;
+                        pageHeading = String(guide.title || 'モンゴル旅行ガイド');
+                        pageIntro = pageDescription;
 
                         const imageStr = (guide.thumbnail || guide.image) as string;
                         const absoluteGuideImage = imageStr ? getAbsoluteImageUrl(imageStr) : pageImage;
@@ -247,6 +292,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                             ],
                         };
                         extraJsonLd.push(JSON.stringify(breadcrumbLd));
+                    } else {
+                        knownRoute = false;
                     }
                 } catch (e) {
                     console.log("Guide meta fetch skipped/failed:", e);
@@ -254,10 +301,57 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             }
         }
 
+        // Category pages need distinct server-rendered metadata. Without this,
+        // crawlers see the homepage title/body for every commercial landing page.
+        const categoryMatch = path.match(/^\/category\/([^/]+)$/);
+        if (categoryMatch) {
+            const category: any = await context.env.DB.prepare(
+                'SELECT id, name, description, image FROM categories WHERE id = ? AND is_active = 1 LIMIT 1'
+            ).bind(categoryMatch[1]).first();
+            if (category) {
+                const categoryName = String(category.name || 'モンゴルツアー');
+                pageTitle = `${categoryName}｜モンゴル専門現地旅行社 Milkyway Japan`;
+                pageDescription = String(category.description || `${categoryName}のおすすめモンゴルツアーを日本語ガイド同行でご案内。日程・料金・宿泊を比較してオンラインでご相談いただけます。`);
+                pageHeading = categoryName;
+                pageIntro = pageDescription;
+                if (category.image) pageImage = getAbsoluteImageUrl(String(category.image));
+                extraJsonLd.push(JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'CollectionPage',
+                    name: categoryName,
+                    description: pageDescription,
+                    url: canonicalUrl,
+                    inLanguage: 'ja',
+                    breadcrumb: {
+                        '@type': 'BreadcrumbList',
+                        itemListElement: [
+                            { '@type': 'ListItem', position: 1, name: 'ホーム', item: `${SEO_CONSTANTS.SITE_URL}/` },
+                            { '@type': 'ListItem', position: 2, name: 'モンゴルツアー', item: `${SEO_CONSTANTS.SITE_URL}/products` },
+                            { '@type': 'ListItem', position: 3, name: categoryName, item: canonicalUrl },
+                        ],
+                    },
+                }));
+            } else {
+                knownRoute = false;
+            }
+        }
+
     } catch (error) {
         console.error("Meta injection DB error:", error);
         // On error, we just fallback to default meta tags (do not block the user response)
     }
+
+    if (!knownRoute) {
+        pageTitle = 'ページが見つかりません | Milkyway Japan';
+        pageDescription = 'お探しのページは移動または削除された可能性があります。モンゴルツアー一覧や旅行ガイドから目的の情報をお探しください。';
+        pageHeading = 'ページが見つかりません';
+        pageIntro = pageDescription;
+        extraJsonLd.length = 0;
+    }
+
+    const rewrittenResponse = knownRoute
+        ? response
+        : new Response(response.body, { status: 404, statusText: 'Not Found', headers: response.headers });
 
     // 2. Use HTMLRewriter to update existing tags in-place.
     //    Crawlers (LINE, Facebook, Twitter) read the FIRST occurrence,
@@ -270,6 +364,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         })
         .on('meta[name="description"]', {
             element(el) { el.setAttribute('content', pageDescription); }
+        })
+        .on('#root .pre-render-seo h1', {
+            element(el) { el.setInnerContent(pageHeading); }
+        })
+        .on('#root .pre-render-seo > p', {
+            element(el) { el.setInnerContent(pageIntro); }
         })
         .on('link[rel="canonical"]', {
             element(el) { el.setAttribute('href', canonicalUrl); }
@@ -301,12 +401,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         // Escape `</script>` inside payloads (JSON.stringify leaves forward slashes raw).
         .on('head', {
             element(el) {
+                if (!knownRoute) {
+                    el.append('<meta name="robots" content="noindex, nofollow">', { html: true });
+                }
                 for (const ld of extraJsonLd) {
                     const safe = ld.replace(/<\/script>/gi, '<\\/script>');
                     el.append(`<script type="application/ld+json">${safe}</script>`, { html: true });
                 }
             }
         })
-        .transform(response);
+        .transform(rewrittenResponse);
 };
 

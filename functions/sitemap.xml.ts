@@ -10,7 +10,7 @@ interface Env {
 
 interface SitemapUrl {
     loc: string;
-    lastmod: string;
+    lastmod?: string;
     changefreq: string;
     priority: string;
     images?: string[];
@@ -44,26 +44,29 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             .from(products)
             .where(eq(products.status, 'active'));
 
-        const today = new Date().toISOString().split('T')[0];
         const baseUrl = SEO_CONSTANTS.SITE_URL;
 
         // Base static URLs (homepage uses trailing slash to match <link rel="canonical">)
         const urls: SitemapUrl[] = [
-            { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
-            { loc: `${baseUrl}/products`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-            { loc: `${baseUrl}/travel-guide`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-            { loc: `${baseUrl}/travel-mates`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-            { loc: `${baseUrl}/reviews`, lastmod: today, changefreq: 'daily', priority: '0.8' },
-            { loc: `${baseUrl}/custom-estimate`, lastmod: today, changefreq: 'monthly', priority: '0.7' },
-            { loc: `${baseUrl}/about`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-            { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-            { loc: `${baseUrl}/privacy-policy`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
-            { loc: `${baseUrl}/terms-of-service`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
+            { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0' },
+            { loc: `${baseUrl}/products`, changefreq: 'daily', priority: '0.9' },
+            { loc: `${baseUrl}/travel-guide`, changefreq: 'daily', priority: '0.9' },
+            { loc: `${baseUrl}/mongolia-tour`, changefreq: 'weekly', priority: '0.9' },
+            { loc: `${baseUrl}/mongolia-horse-riding-tour`, changefreq: 'weekly', priority: '0.9' },
+            { loc: `${baseUrl}/gobi-desert-tour`, changefreq: 'weekly', priority: '0.9' },
+            { loc: `${baseUrl}/mongolia-travel-cost`, changefreq: 'monthly', priority: '0.8' },
+            { loc: `${baseUrl}/travel-mates`, changefreq: 'weekly', priority: '0.8' },
+            { loc: `${baseUrl}/reviews`, changefreq: 'daily', priority: '0.8' },
+            { loc: `${baseUrl}/custom-estimate`, changefreq: 'monthly', priority: '0.7' },
+            { loc: `${baseUrl}/about`, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/faq`, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/privacy-policy`, changefreq: 'yearly', priority: '0.3' },
+            { loc: `${baseUrl}/terms-of-service`, changefreq: 'yearly', priority: '0.3' },
         ];
 
         // Add dynamic product URLs (with up to 5 images each for Google Image Search)
         activeProducts.forEach(product => {
-            const lastModFormat = product.updatedAt ? product.updatedAt.split(' ')[0] : today;
+            const lastModFormat = product.updatedAt ? product.updatedAt.split(' ')[0] : undefined;
             const images: string[] = [];
             try {
                 const parsed = JSON.parse(product.mainImages || '[]');
@@ -87,7 +90,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         });
 
         // Add dynamic category landing page URLs (/category/:slug)
-        // NOTE: categories table has no updated_at/created_at columns, so we use today's date.
+        // Categories currently have no reliable updated_at/created_at column, so lastmod is omitted.
         try {
             const categoriesResult = await context.env.DB.prepare(
                 "SELECT id FROM categories WHERE (type = 'product' OR type IS NULL) AND is_active = 1 AND id != 'all'"
@@ -96,7 +99,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 categoriesResult.results.forEach((cat: any) => {
                     urls.push({
                         loc: `${baseUrl}/category/${cat.id}`,
-                        lastmod: today,
                         changefreq: 'weekly',
                         priority: '0.8'
                     });
@@ -123,7 +125,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
         if (magazinesResult && magazinesResult.results) {
             magazinesResult.results.forEach((mag: any) => {
-                const lastModFormat = mag.updated_at ? String(mag.updated_at).split(' ')[0] : today;
+                const lastModFormat = mag.updated_at ? String(mag.updated_at).split(' ')[0] : undefined;
                 const images: string[] = [];
                 const abs = toAbsoluteImageUrl(mag.thumbnail, baseUrl);
                 if (abs) images.push(abs);
@@ -145,8 +147,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 : '';
             return `  <url>
     <loc>${xmlEscape(url.loc)}</loc>
-    <lastmod>${url.lastmod}</lastmod>
-    <changefreq>${url.changefreq}</changefreq>
+${url.lastmod ? `    <lastmod>${url.lastmod}</lastmod>\n` : ''}    <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>${imageBlock}
   </url>`;
         };

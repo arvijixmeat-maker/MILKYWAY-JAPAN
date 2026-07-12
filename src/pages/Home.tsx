@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SEO } from '../components/seo/SEO';
 import { HeroSection } from '../components/home/HeroSection';
@@ -105,6 +106,7 @@ export const Home: React.FC = () => {
                 ))}
 
                 <MagazineSectionDesktop magazines={data.magazines} />
+                <SearchTopicLinks />
                 <ReviewSectionDesktop />
                 <div style={{ height: 96 }} />
             </>
@@ -153,7 +155,23 @@ export const Home: React.FC = () => {
                 </>
             )}
 
+            <SearchTopicLinks />
             <ReviewSection />
         </>
     );
 };
+
+const SearchTopicLinks = () => (
+    <section className="mx-auto w-full max-w-7xl px-5 py-10 md:px-8 md:py-14" aria-labelledby="search-topic-heading">
+        <div className="rounded-3xl bg-slate-900 p-6 text-white md:p-10">
+            <p className="text-xs font-bold tracking-[0.18em] text-teal-300">MONGOLIA TRAVEL PLANNING</p>
+            <h2 id="search-topic-heading" className="mt-3 text-2xl font-bold md:text-3xl">目的からモンゴル旅行を計画する</h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Link className="rounded-2xl bg-white/10 p-5 font-bold hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-teal-300" to="/mongolia-tour">モンゴルツアーを比較する <span aria-hidden="true">→</span></Link>
+                <Link className="rounded-2xl bg-white/10 p-5 font-bold hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-teal-300" to="/mongolia-horse-riding-tour">初心者向け乗馬旅行 <span aria-hidden="true">→</span></Link>
+                <Link className="rounded-2xl bg-white/10 p-5 font-bold hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-teal-300" to="/gobi-desert-tour">ゴビ砂漠の旅を知る <span aria-hidden="true">→</span></Link>
+                <Link className="rounded-2xl bg-white/10 p-5 font-bold hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-teal-300" to="/mongolia-travel-cost">費用とベストシーズン <span aria-hidden="true">→</span></Link>
+            </div>
+        </div>
+    </section>
+);
