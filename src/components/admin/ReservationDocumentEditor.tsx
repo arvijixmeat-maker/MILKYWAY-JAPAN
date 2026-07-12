@@ -31,6 +31,7 @@ interface Props {
     templateMode?: boolean;
     /** 실제 고객 데이터 — TemplatePreview 상단/금액에 자동 표시 (템플릿 모드에선 생략) */
     customer?: {
+        productId?: string;
         tripNumber?: string;
         period?: string;
         tripLength?: string;
@@ -117,7 +118,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     const mn = tl.match(/(\d+)\s*泊/);
                     return mn ? parseInt(mn[1], 10) + 1 : null;
                 })();
-                const matched = mapped.filter(product => {
+                const exactProduct = customer?.productId
+                    ? mapped.find(product => product.id === customer.productId)
+                    : undefined;
+                const matched = exactProduct || mapped.filter(product => {
                     const productName = (product.name || '').replace(/\s+/g, '').toLowerCase();
                     return productName === target || productName.includes(target) || target.includes(productName);
                 }).sort((a, b) => {
@@ -148,7 +152,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 }
             })
             .finally(() => setLoadingProducts(false));
-    }, [open, documentType, customer?.tripType, products.length]);
+    }, [open, documentType, customer?.productId, customer?.tripType, products.length]);
 
     const textFromProductItem = (item: any) => {
         if (typeof item === 'string') return item;
@@ -200,7 +204,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                 }
                 const timeline = parseBlockContent<TimelineContent>(block.content as TimelineContent | string);
                 current.activities.push({
-                    time: '',
+                    time: timeline.time || '',
                     type: 'sightseeing',
                     title: timeline.title || '',
                     description: timeline.description || '',

@@ -562,6 +562,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
     const contractTravelers = editForm.contractData?.travelers || [];
     const contractHasTravelers = contractTravelers.length > 0 && !!contractTravelers[0]?.name;
     const contractAgreement = editForm.contractData?.agreement;
+    const contractSigned = contractAgreement?.status === 'signed'
+        || (editForm.contractData as any)?.signature?.status === 'signed'
+        || (editForm.contractData as any)?.status === 'signed';
     // 고객이 계약서에서 직접 제출한 내용(여권·항공편·동의)이 있으면 이 페이지에 바로 요약 표시
     const contractSubmitted = contractHasTravelers || !!editForm.contractData?.customerSubmittedAt;
     const fmtFlightLine = (f?: { date?: string; time?: string; flight?: string }) => {
@@ -569,7 +572,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         return parts.length ? parts.join(' · ') : '미입력';
     };
     // 고객이 계약서에서 직접 여행자 정보를 작성하므로, 이메일만 있으면 발송 가능
-    const contractReady = !!reservation.email;
+    const contractDocumentReady = !!reservation.documentContent || !!selectedTemplate;
+    const contractReady = !!reservation.email && contractDocumentReady && !contractSigned;
     const itinerarySent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === itineraryUrl || String(e.description || '').includes('日程')));
     const contractSent = timelineEvents.some((e: any) => e.type === 'email' && (e.detail === contractUrl || String(e.description || '').includes('契約')));
     const guideReady = !!reservation.assignedGuide || !!reservation.areAssignmentsVisibleToUser;
@@ -582,6 +586,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
     const _nights = (_sd && _ed) ? Math.round((new Date(_ed).getTime() - new Date(_sd).getTime()) / 86400000) : NaN;
     const docTripLength = (!Number.isNaN(_nights) && _nights >= 0) ? `${_nights}泊${_nights + 1}日` : undefined;
     const docCustomer = {
+        productId: (reservation as any).productId || (reservation as any).product_id,
         tripNumber: reservationNumber,
         period: reservation.date || '',
         tripLength: docTripLength,
@@ -938,6 +943,14 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
     };
 
     const sendContractToCustomer = async () => {
+        if (contractSigned) {
+            alert('이미 고객 서명이 완료되어 잠긴 계약서입니다. 변경 계약서는 새 버전으로 발행해야 합니다.');
+            return;
+        }
+        if (!contractDocumentReady) {
+            alert('계약서 내용을 먼저 작성하거나 문서 템플릿을 선택해 주세요.');
+            return;
+        }
         if (!reservation.email) {
             alert('고객 이메일이 없습니다.');
             return;
@@ -1079,10 +1092,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         },
         {
             title: '계약서',
-            description: contractSent ? '고객 발송 완료' : contractHasTravelers ? `${contractTravelers.length}명 입력됨 · 재발송 가능` : '발송하면 고객이 직접 작성',
+            description: contractSigned ? '고객 서명 완료 · 계약서 잠김' : contractSent ? '고객 발송 완료' : contractHasTravelers ? `${contractTravelers.length}명 입력됨 · 재발송 가능` : contractDocumentReady ? '발송하면 고객이 직접 작성' : '계약서 작성 또는 템플릿 선택 필요',
             icon: 'description',
-            done: contractSent,
-            actionLabel: contractReady ? '문서 확인' : '이메일 없음',
+            done: contractSigned,
+            actionLabel: contractSigned ? '서명 확인' : contractReady ? '문서 확인' : !reservation.email ? '이메일 없음' : '계약서 작성',
             onAction: () => setActiveDocument('contract'),
         },
         {
@@ -1835,14 +1848,16 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                 <span>
                                     <b>여행 계약서</b>
                                     <small>
-                                        {contractHasTravelers
+                                        {contractSigned
+                                            ? `서명 완료 · v${contractAgreement?.version || (editForm.contractData as any)?.version || 1} · 잠김`
+                                            : contractHasTravelers
                                             ? `여행자 ${contractTravelers.length}명 작성 완료`
                                             : contractSent
                                                 ? `고객 작성 대기${contractSentAt ? ` · 발송 ${contractSentAt}` : ''}`
                                                 : contractReady ? '작성·발송 가능' : '고객 이메일 필요'}
                                     </small>
                                 </span>
-                                <Icon name={contractHasTravelers ? 'check_circle' : contractSent ? 'hourglass_top' : 'chevron_right'} />
+                                <Icon name={contractSigned ? 'verified' : contractHasTravelers ? 'check_circle' : contractSent ? 'hourglass_top' : 'chevron_right'} />
                             </button>
                             <div className="action-doc-buttons">
                                 {!contractSent ? (
@@ -1865,13 +1880,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                         <button className="btn btn-sm btn-blue" onClick={() => window.open(contractUrl, '_blank')}>
                                             <Icon name="visibility" />{contractHasTravelers ? '작성 내용 확인' : '미리보기'}
                                         </button>
-                                        <button className="btn btn-sm btn-ghost" onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
+                                        <button className="btn btn-sm btn-ghost" disabled={contractSigned} onClick={() => { setActiveDocument('contract'); setDocEditorOpen(true); }}>
                                             <Icon name="edit_document" />편집
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(contractUrl); setCopiedDocId('contract'); setTimeout(() => setCopiedDocId(null), 1500); }}>
                                             <Icon name={copiedDocId === 'contract' ? 'check' : 'content_copy'} />{copiedDocId === 'contract' ? '복사됨' : '링크'}
                                         </button>
-                                        <button className="btn btn-sm btn-ghost" disabled={sendingContract} onClick={sendContractToCustomer}>
+                                        <button className="btn btn-sm btn-ghost" disabled={sendingContract || contractSigned} onClick={sendContractToCustomer}>
                                             <Icon name="forward_to_inbox" />{sendingContract ? '발송 중' : '재발송'}
                                         </button>
                                     </>

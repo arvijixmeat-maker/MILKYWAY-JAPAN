@@ -27,7 +27,11 @@ interface ContractData {
     region?: string;
     category?: string;
     issuedDate?: string;
-    agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+    agreement?: { agreed?: boolean; name?: string; agreedAt?: string; status?: string; version?: number; documentHash?: string };
+    signature?: { status?: string; version?: number; documentHash?: string; signedAt?: string };
+    status?: string;
+    version?: number;
+    lockedAt?: string;
     customerSubmittedAt?: string;
 }
 
@@ -327,10 +331,10 @@ export const DocumentContract: React.FC = () => {
         if (!reservationId) return;
         setSaving(true);
         try {
-            const agreement = { agreed: true, name: signerName.trim(), agreedAt: new Date().toISOString() };
-            await api.documents.contract.saveCustomer(reservationId, { travelers: formTravelers, arrival, departure, agreement });
+            const agreement = { agreed: true, name: signerName.trim() };
+            const result = await api.documents.contract.saveCustomer(reservationId, { travelers: formTravelers, arrival, departure, agreement });
             setSaved(true);
-            setData(prev => prev ? { ...prev, contract: { ...prev.contract, travelers: formTravelers, arrival, departure, agreement } } as ContractPageData : prev);
+            setData(prev => prev ? { ...prev, contract: result.contract } as ContractPageData : prev);
             alert('契約内容を送信しました。');
         } catch (e: any) {
             alert('送信に失敗しました。' + (e.message || ''));
@@ -418,7 +422,8 @@ export const DocumentContract: React.FC = () => {
     summaryRows.push({ label: '到着便', value: flightLine(arrival) });
     summaryRows.push({ label: '出発便', value: flightLine(departure) });
 
-    const canSubmit = agreed && signerName.trim().length > 0;
+    const contractLocked = contract.status === 'signed' || contract.signature?.status === 'signed';
+    const canSubmit = !contractLocked && agreed && signerName.trim().length > 0;
     const agreeBox: React.CSSProperties = {
         flex: 'none', width: m ? 22 : 24, height: m ? 22 : 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: m ? 13 : 14, color: '#fff', fontWeight: 900, border: agreed ? `1.5px solid ${A}` : '1.5px solid var(--border-strong)', background: agreed ? A : '#fff',
@@ -454,6 +459,16 @@ export const DocumentContract: React.FC = () => {
 
                         {/* 입력 폼 패널 (화면 전용) */}
                         <div className="no-print" style={t.formPanel}>
+                            {contractLocked && (
+                                <div style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 12, background: 'var(--mrt-green-soft)', color: '#117A3E', fontSize: 13, fontWeight: 800, lineHeight: 1.6 }}>
+                                    署名済みの契約書です。契約内容はロックされています。<br />
+                                    <span style={{ fontSize: 11.5, fontWeight: 600 }}>
+                                        バージョン {contract.signature?.version || contract.version || 1}
+                                        {contract.lockedAt ? ` · 署名日時 ${fmtDate(contract.lockedAt)}` : ''}
+                                    </span>
+                                </div>
+                            )}
+                            <fieldset disabled={contractLocked} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                             <div style={t.secHead}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1B1E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 7h9M4 12h6M4 17h5" /><path d="m16 16 4-4 2 2-4 4-2.6.6.6-2.6Z" fill="#E8F2FF" /></svg>
                                 <span style={t.secTitle}>お客様情報の確認</span>
@@ -572,8 +587,9 @@ export const DocumentContract: React.FC = () => {
                                 <input style={t.input} value={signerName} onChange={e => setSignerName(e.target.value)} placeholder="お名前を入力してください" />
                             </div>
                             <button style={canSubmit ? t.cta : t.ctaDisabled} disabled={!canSubmit || saving} onClick={handleCustomerSubmit}>
-                                {saving ? '送信中...' : saved ? '再送信する' : '同意して送信する'}
+                                {contractLocked ? '署名済み・変更できません' : saving ? '送信中...' : '同意して署名する'}
                             </button>
+                            </fieldset>
                         </div>
 
                         {/* 1. ご旅行内容 */}

@@ -6,6 +6,12 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+const sha256 = async (value: unknown): Promise<string> => {
+    const bytes = new TextEncoder().encode(JSON.stringify(value));
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
 const DOC_SETTINGS_MARKER = '\n\n__MILKYWAY_DOCUMENT_SETTINGS__=';
 
 const parseNestedJson = (value: any, fallback: any = null, maxDepth = 2) => {
@@ -33,11 +39,13 @@ const decodeTemplateDescription = (raw = '') => {
 
 // 예약 상품명으로 products 테이블의 포함/불포함(상품관리 입력값)을 로드.
 // 일정표·계약서가 동일한 상품 기준 포함/불포함을 노출하도록 단일 출처로 사용.
-const loadProductIncExc = async (db: any, productName?: string | null): Promise<{ included: string[]; excluded: string[] }> => {
+const loadProductIncExc = async (db: any, productName?: string | null, productId?: string | null): Promise<{ included: string[]; excluded: string[] }> => {
     const empty = { included: [], excluded: [] };
-    if (!productName) return empty;
+    if (!productName && !productId) return empty;
     try {
-        const prod: any = await db.prepare('SELECT included, excluded FROM products WHERE name = ? LIMIT 1').bind(productName).first();
+        const prod: any = productId
+            ? await db.prepare('SELECT included, excluded FROM products WHERE id = ? LIMIT 1').bind(productId).first()
+            : await db.prepare('SELECT included, excluded FROM products WHERE name = ? LIMIT 1').bind(productName).first();
         if (!prod) return empty;
         const arr = (v: any) => {
             try { const p = JSON.parse(v || '[]'); return Array.isArray(p) ? p.filter((x: any) => typeof x === 'string' && x.trim()) : []; }
@@ -133,7 +141,7 @@ app.get('/itinerary/:reservationId', async (c) => {
         }
     }
 
-    const productIncExc = await loadProductIncExc(db, reservation.product_name);
+    const productIncExc = await loadProductIncExc(db, reservation.product_name, reservation.product_id);
 
     return c.json({
         reservation: {
@@ -209,6 +217,22 @@ app.get('/contract/:reservationId', async (c) => {
         };
     }
 
+    const signedSnapshot = contractData?.signature?.status === 'signed'
+        ? contractData.signedSnapshot
+        : null;
+    if (signedSnapshot?.documentContent) {
+        const frozen = parseNestedJson(signedSnapshot.documentContent);
+        if (frozen && (Array.isArray(frozen.days) || frozen.documentSettings)) {
+            template = {
+                id: 'signed-snapshot',
+                name: frozen.name || template?.name || '',
+                description: frozen.description || template?.description || '',
+                documentSettings: frozen.documentSettings || template?.documentSettings || null,
+                days: Array.isArray(frozen.days) ? frozen.days : (template?.days || []),
+            };
+        }
+    }
+
     const templateAccommodations = (template?.days || [])
         .filter((day: any) => day?.accommodation)
         .map((day: any, index: number) => ({
@@ -216,29 +240,37 @@ app.get('/contract/:reservationId', async (c) => {
             accommodation: typeof day.accommodation === 'string' ? { name: day.accommodation } : day.accommodation,
         }));
 
-    const productIncExc = await loadProductIncExc(db, reservation.product_name);
+    const liveProductIncExc = await loadProductIncExc(db, reservation.product_name, reservation.product_id);
+    const productIncExc = signedSnapshot?.productIncluded || signedSnapshot?.productExcluded
+        ? {
+            included: signedSnapshot.productIncluded || [],
+            excluded: signedSnapshot.productExcluded || [],
+        }
+        : liveProductIncExc;
+    const frozenReservation = signedSnapshot?.reservation;
 
     return c.json({
         reservation: {
-            id: reservation.id,
-            reservationNumber: reservation.reservation_number,
-            productName: reservation.product_name,
-            customerName: reservation.customer_name,
-            customerEmail: reservation.customer_email,
-            customerPhone: reservation.customer_phone,
-            travelers: reservation.travelers,
-            startDate: reservation.start_date,
-            endDate: reservation.end_date,
+            id: frozenReservation?.id || reservation.id,
+            reservationNumber: frozenReservation?.reservationNumber || reservation.reservation_number,
+            productName: frozenReservation?.productName || reservation.product_name,
+            customerName: frozenReservation?.customerName || reservation.customer_name,
+            customerEmail: frozenReservation?.customerEmail || reservation.customer_email,
+            customerPhone: frozenReservation?.customerPhone || reservation.customer_phone,
+            travelers: frozenReservation?.travelers ?? reservation.travelers,
+            startDate: frozenReservation?.startDate || reservation.start_date,
+            endDate: frozenReservation?.endDate || reservation.end_date,
             status: reservation.status,
-            totalPrice: reservation.total_price,
-            depositAmount: reservation.deposit_amount,
-            balanceAmount: reservation.balance_amount,
+            totalPrice: frozenReservation?.totalPrice ?? reservation.total_price,
+            depositAmount: frozenReservation?.depositAmount ?? reservation.deposit_amount,
+            balanceAmount: frozenReservation?.balanceAmount ?? reservation.balance_amount,
             createdAt: reservation.created_at,
         },
         contract: contractData,
         template,
-        accommodations: dailyAccommodations.length > 0 ? dailyAccommodations : templateAccommodations,
-        guide: assignedGuide,
+        accommodations: signedSnapshot?.accommodations
+            || (dailyAccommodations.length > 0 ? dailyAccommodations : templateAccommodations),
+        guide: signedSnapshot?.guide || assignedGuide,
         productIncluded: productIncExc.included,
         productExcluded: productIncExc.excluded,
     });
@@ -265,6 +297,18 @@ app.post('/contract/:reservationId/customer', async (c) => {
     let contractData: any = {};
     try { contractData = reservation.contract_data ? JSON.parse(reservation.contract_data) : {}; } catch { contractData = {}; }
 
+    if (contractData?.signature?.status === 'signed') {
+        return c.json({ error: 'This contract has already been signed and is locked.' }, 409);
+    }
+
+    if (!body.agreement?.agreed || !String(body.agreement?.name || '').trim()) {
+        return c.json({ error: 'Agreement and signer name are required.' }, 400);
+    }
+
+    if (!Array.isArray(body.travelers) || body.travelers.length === 0 || !String(body.travelers[0]?.name || '').trim()) {
+        return c.json({ error: 'Lead traveler information is required.' }, 400);
+    }
+
     // 여행자 여권정보(고객 입력)와 동의 정보만 병합 — 관리자가 입력한 일정/항공편 등은 유지
     if (Array.isArray(body.travelers)) {
         contractData.travelers = body.travelers.map((t: any) => ({
@@ -283,20 +327,63 @@ app.post('/contract/:reservationId/customer', async (c) => {
     if (hasFlight(body.departure)) {
         contractData.departure = { date: body.departure.date || '', time: body.departure.time || '', flight: body.departure.flight || '' };
     }
-    if (body.agreement && body.agreement.agreed) {
-        contractData.agreement = {
-            agreed: true,
-            name: body.agreement.name || '',
-            agreedAt: body.agreement.agreedAt || new Date().toISOString(),
-        };
-    }
-    contractData.customerSubmittedAt = new Date().toISOString();
+    const signedAt = new Date().toISOString();
+    const version = Math.max(1, Number(contractData.version || 1));
+    const productIncExc = await loadProductIncExc(db, reservation.product_name, reservation.product_id);
+    const snapshot = {
+        version,
+        reservation: {
+            id: reservation.id,
+            reservationNumber: reservation.reservation_number,
+            productId: reservation.product_id,
+            productName: reservation.product_name,
+            customerName: reservation.customer_name,
+            customerEmail: reservation.customer_email,
+            customerPhone: reservation.customer_phone,
+            travelers: reservation.travelers,
+            startDate: reservation.start_date,
+            endDate: reservation.end_date,
+            totalPrice: reservation.total_price,
+            depositAmount: reservation.deposit_amount,
+            balanceAmount: reservation.balance_amount,
+        },
+        documentContent: parseNestedJson(reservation.document_content),
+        productIncluded: productIncExc.included,
+        productExcluded: productIncExc.excluded,
+        accommodations: (() => {
+            try { return reservation.daily_accommodations ? JSON.parse(reservation.daily_accommodations) : []; }
+            catch { return []; }
+        })(),
+        guide: (() => {
+            try { return reservation.assigned_guide ? JSON.parse(reservation.assigned_guide) : null; }
+            catch { return null; }
+        })(),
+    };
+    const documentHash = await sha256(snapshot);
+    contractData.agreement = {
+        agreed: true,
+        name: String(body.agreement.name).trim(),
+        agreedAt: signedAt,
+        status: 'signed',
+        version,
+        documentHash,
+        signatureType: 'typed',
+        signerEmail: reservation.customer_email || '',
+        ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || '',
+        userAgent: c.req.header('user-agent') || '',
+    };
+    contractData.signature = contractData.agreement;
+    contractData.signedSnapshot = snapshot;
+    contractData.status = 'signed';
+    contractData.version = version;
+    contractData.lockedAt = signedAt;
+    contractData.customerSubmittedAt = signedAt;
 
     await db.prepare(
         'UPDATE reservations SET contract_data = ? WHERE id = ?'
     ).bind(JSON.stringify(contractData), reservation.id).run();
 
-    return c.json({ success: true, contract: contractData });
+    return c.json({ success: true, contract: contractData, documentHash, version, signedAt });
 });
 
 export default app;
