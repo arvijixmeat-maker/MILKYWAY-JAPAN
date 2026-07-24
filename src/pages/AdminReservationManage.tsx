@@ -760,8 +760,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
     };
 
     // ── 가이드용 안내서 PDF ──
-    // 고객에게 보낸 확정 일정표(DocumentItinerary)를 그대로 새 창에 열어 인쇄한다.
-    // → 고객이 받은 일정표와 100% 동일한 디자인으로 나온다.
+    // 확정 일정 데이터는 그대로 사용하되, 가이드 업무에 필요한 항공편·고객·일정만
+    // 이미지 없이 압축한 전용 인쇄 레이아웃(DocumentItinerary의 guide 모드)으로 연다.
     // 가이드 전용 정보(항공편·요청메모·담당가이드·차량)는 고객용 API 응답에 없으므로
     // localStorage(같은 origin·일회성)로만 전달한다 — 고객에게는 절대 노출되지 않는다.
     const printGuideSheet = () => {
@@ -782,7 +782,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         try { localStorage.setItem(`guideDoc:${reservation.id}`, JSON.stringify(payload)); } catch { /* ignore */ }
         // 새 탭/중간 페이지 없이 곧바로 인쇄창이 뜨도록, 고객 일정표 페이지를 화면 밖
         // 숨은 iframe으로 로드해 그 안에서 인쇄한다(크로미엄은 iframe 문서만 인쇄).
-        // iframe 안의 DocumentItinerary(?guide=1&autoprint=1)가 이미지 로드 후 스스로 인쇄한다.
+        // iframe 안의 DocumentItinerary(?guide=1&autoprint=1)가 데이터 렌더 후 스스로 인쇄한다.
         const url = `${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1`;
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
@@ -795,6 +795,101 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         };
         iframe.src = url;
         document.body.appendChild(iframe);
+    };
+
+    // ── 공항 미팅용 가이드 피켓 ──
+    // 고정 디자인 PNG 위에 예약 고객명과 투어 기간만 캔버스로 합성해 즉시 내려받는다.
+    const downloadGuidePicket = async () => {
+        const customerName = String(reservation.customerName || '').trim().toUpperCase();
+        if (!customerName) { alert('고객 이름이 없어 가이드 피켓을 만들 수 없습니다.'); return; }
+
+        const parseDate = (value: any) => {
+            const match = String(value || '').match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+            if (!match) return null;
+            return { year: match[1], month: match[2].padStart(2, '0'), day: match[3].padStart(2, '0') };
+        };
+        const contractData: any = editForm.contractData || {};
+        const start = parseDate((reservation as any).startDate || contractData.arrival?.date);
+        const end = parseDate((reservation as any).endDate || contractData.departure?.date);
+        if (!start || !end) { alert('투어 시작일과 종료일을 먼저 입력해 주세요.'); return; }
+        const period = start.year === end.year
+            ? `${start.year}.${start.month}.${start.day} - ${end.month}.${end.day}`
+            : `${start.year}.${start.month}.${start.day} - ${end.year}.${end.month}.${end.day}`;
+
+        try {
+            const template = await new Promise<HTMLImageElement>((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error('피켓 디자인을 불러오지 못했습니다.'));
+                image.src = '/assets/guide-picket-template.png';
+            });
+            try { await document.fonts?.ready; } catch { /* 시스템 글꼴로 계속 진행 */ }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = template.naturalWidth;
+            canvas.height = template.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('이미지 생성 기능을 사용할 수 없습니다.');
+            ctx.drawImage(template, 0, 0);
+
+            // 고객명: 빈 하늘 영역 중앙. 긴 이름은 한 줄에 들어올 때까지 자동 축소한다.
+            const nameMaxWidth = canvas.width * 0.86;
+            let nameFontSize = Math.round(canvas.width * 0.13);
+            const nameFontFamily = '"Arial Black", "Helvetica Neue", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `900 ${nameFontSize}px ${nameFontFamily}`;
+            while (ctx.measureText(customerName).width > nameMaxWidth && nameFontSize > 68) {
+                nameFontSize -= 2;
+                ctx.font = `900 ${nameFontSize}px ${nameFontFamily}`;
+            }
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 32, 42, 0.32)';
+            ctx.shadowBlur = Math.max(5, canvas.width * 0.006);
+            ctx.shadowOffsetY = Math.max(4, canvas.height * 0.005);
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = Math.max(4, canvas.width * 0.004);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.96)';
+            ctx.fillStyle = '#006879';
+            const nameY = canvas.height * 0.60;
+            ctx.strokeText(customerName, canvas.width / 2, nameY, nameMaxWidth);
+            ctx.fillText(customerName, canvas.width / 2, nameY, nameMaxWidth);
+            ctx.restore();
+
+            // 날짜: 원본의 청록색 배너 정중앙.
+            const dateMaxWidth = canvas.width * 0.31;
+            let dateFontSize = Math.round(canvas.width * 0.033);
+            ctx.font = `900 ${dateFontSize}px "Arial Black", Arial, sans-serif`;
+            while (ctx.measureText(period).width > dateMaxWidth && dateFontSize > 28) {
+                dateFontSize -= 1;
+                ctx.font = `900 ${dateFontSize}px "Arial Black", Arial, sans-serif`;
+            }
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.shadowColor = 'rgba(0, 20, 28, 0.45)';
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetY = 2;
+            ctx.fillText(period, canvas.width / 2, canvas.height * 0.722, dateMaxWidth);
+            ctx.restore();
+
+            const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(
+                (value) => value ? resolve(value) : reject(new Error('PNG 변환에 실패했습니다.')),
+                'image/png',
+            ));
+            const safeName = customerName.replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_').slice(0, 70);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `가이드_피켓_${safeName}_${start.year}${start.month}${start.day}.png`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error: any) {
+            alert(error?.message || '가이드 피켓을 만들지 못했습니다.');
+        }
     };
 
     const downloadBookingSheetExcel = () => {
@@ -1369,6 +1464,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                     </button>
                                     <button type="button" className="btn btn-sm btn-ink" style={{ flex: 'none' }} onClick={printGuideSheet} title="가이드용 안내서(확정 일정표·항공편·고객명·요청사항)를 PDF로 저장·인쇄">
                                         <Icon name="hiking" />가이드 PDF
+                                    </button>
+                                    <button type="button" className="btn btn-sm btn-ink" style={{ flex: 'none' }} onClick={downloadGuidePicket} title="고객명과 투어 기간이 자동 입력된 공항 미팅 피켓을 PNG로 다운로드">
+                                        <Icon name="badge" />가이드 피켓
                                     </button>
                                     <button type="button" className="btn btn-sm btn-ghost" style={{ flex: 'none' }} onClick={downloadBookingSheetExcel} title="일차별 숙소 수배 정보를 Excel 파일로 다운로드">
                                         <Icon name="table_view" />수배서 Excel

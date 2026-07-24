@@ -10,6 +10,7 @@ import {
     eyebrowStyle, h2Style,
 } from '../components/document/ItineraryDocParts';
 import { COMPANY_INFO, EMBASSY_INFO, LOCAL_EMERGENCY } from '../constants/company';
+import { GuideItineraryPrint } from '../components/document/GuideItineraryPrint';
 
 /**
  * 確定日程表（고객용）— "確定日程表.dc.html"(모바일) + "確定日程表_PC.dc.html"(PC) 디자인 적용.
@@ -206,6 +207,15 @@ export const DocumentItinerary: React.FC = () => {
         { label: 'ガイド', value: guide?.name || '日本語ガイド' },
         { label: '車両', value: '専用車' },
     ];
+
+    if (guideMode) {
+        return (
+            <>
+                <SEO title="ガイド用旅行日程" description="担当ガイド用の旅行日程表です。" robots="noindex, nofollow" />
+                <GuideItineraryPrint reservation={reservation} title={title} days={days} extra={guideExtra} />
+            </>
+        );
+    }
 
     const blockTitle: React.CSSProperties = { fontSize: m ? 14 : 16, fontWeight: 800, color: INK };
     const prose: React.CSSProperties = { fontSize: m ? 12.5 : 13.5, color: SUB, lineHeight: 1.8, marginTop: 8 };
