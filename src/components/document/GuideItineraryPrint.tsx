@@ -64,24 +64,11 @@ const asTextList = (value?: string[] | string) => {
     return String(value || '').split(/\r?\n|、|,/).map((item) => item.trim()).filter(Boolean);
 };
 
-const timeTone = (value?: string) => {
-    const text = String(value || '').trim();
-    if (/早朝|朝/.test(text)) return 'morning';
-    if (/午前/.test(text)) return 'forenoon';
-    if (/昼/.test(text)) return 'noon';
-    if (/午後/.test(text)) return 'afternoon';
-    if (/夕方|夕/.test(text)) return 'evening';
-    if (/夜/.test(text)) return 'night';
-    const hour = Number(text.match(/^(\d{1,2})[:時]/)?.[1]);
-    if (Number.isFinite(hour)) {
-        if (hour < 9) return 'morning';
-        if (hour < 12) return 'forenoon';
-        if (hour < 14) return 'noon';
-        if (hour < 17) return 'afternoon';
-        if (hour < 19) return 'evening';
-        return 'night';
-    }
-    return 'neutral';
+const shortDayNote = (summary?: string, region?: string) => {
+    const text = String(summary || '').replace(/\s+/g, ' ').trim();
+    // 상품 설명형 장문은 카드 헤더에 넣지 않는다. 이동시간처럼 짧은 요약만 노출한다.
+    if (text && text.length <= 32) return text;
+    return String(region || '').trim();
 };
 
 export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reservation, title, days, extra }) => {
@@ -112,7 +99,7 @@ export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reserv
                 * { box-sizing: border-box; }
                 html, body { margin: 0; background: #fff !important; }
                 .guide-print-page {
-                    width: 100%; max-width: 920px; margin: 0 auto; padding: 28px 32px 34px;
+                    width: 190mm; max-width: 190mm; margin: 0 auto; padding: 24px 28px 32px;
                     color: #17202b; background: #fff;
                     font-family: 'Noto Sans JP', 'Pretendard', 'Malgun Gothic', Arial, sans-serif;
                     -webkit-print-color-adjust: exact; print-color-adjust: exact;
@@ -137,12 +124,12 @@ export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reserv
                 .guide-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 15px; }
                 .guide-chip { max-width: 100%; padding: 6px 12px; border: 1px solid #bde9e1; border-radius: 999px; color: #3e4b58; background: rgba(255,255,255,.8); font-size: 10.5px; font-weight: 800; line-height: 1.25; }
                 .guide-chip b { color: #009e85; }
-                .guide-info-grid { display: grid; grid-template-columns: .92fr 1.28fr; gap: 12px; margin-top: 13px; }
+                .guide-info-grid { display: grid; grid-template-columns: 1fr 1.18fr; gap: 12px; margin-top: 13px; }
                 .guide-info-card { padding: 15px 17px 14px; border-radius: 16px; background: #f1f3f5; break-inside: avoid; page-break-inside: avoid; }
                 .guide-info-title { margin-bottom: 9px; color: #009e85; font-size: 11.5px; font-weight: 900; }
-                .guide-info-row { display: grid; grid-template-columns: 116px minmax(0,1fr); gap: 12px; padding: 4px 0; align-items: start; }
+                .guide-info-row { display: grid; grid-template-columns: 78px minmax(0,1fr); gap: 10px; padding: 4px 0; align-items: start; }
                 .guide-info-row span:first-child { color: #8d97a3; font-size: 10.5px; }
-                .guide-info-row span:last-child { color: #1b2330; font-size: 11px; font-weight: 800; line-height: 1.55; text-align: right; overflow-wrap: anywhere; white-space: pre-wrap; }
+                .guide-info-row span:last-child { color: #1b2330; font-size: 10.5px; font-weight: 800; line-height: 1.55; text-align: right; word-break: normal; overflow-wrap: break-word; white-space: pre-wrap; }
                 .guide-memos { margin-top: 13px; padding: 13px 16px; border: 1px solid #f2d39f; border-radius: 14px; background: #fff8ec; break-inside: avoid; page-break-inside: avoid; }
                 .guide-memos-title { color: #b56c08; font-size: 11.5px; font-weight: 900; }
                 .guide-memos ul { margin: 7px 0 0; padding-left: 17px; }
@@ -153,43 +140,33 @@ export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reserv
                 .guide-section-head h2 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.03em; }
                 .guide-section-note { display: flex; align-items: center; gap: 7px; color: #8b96a2; font-size: 9.5px; }
                 .guide-section-note::before { content: ''; width: 24px; border-top: 2px solid #17c4a6; }
-                .guide-day-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-items: start; }
-                .guide-day-card { overflow: hidden; border: 1px solid #cfe6df; border-radius: 13px; background: #fbfefd; break-inside: avoid; page-break-inside: avoid; }
+                .guide-day-grid { display: block; }
+                .guide-day-card { overflow: hidden; width: 100%; margin-bottom: 12px; border: 1px solid #cfe6df; border-radius: 13px; background: #fbfefd; break-inside: avoid-page; page-break-inside: avoid; }
                 .guide-day-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; min-height: 38px; padding: 9px 13px; color: #fff; background: #0cc3a2; }
-                .guide-day-title { min-width: 0; font-size: 12.5px; font-weight: 900; line-height: 1.35; }
+                .guide-day-title { min-width: 0; font-size: 13px; font-weight: 900; line-height: 1.35; }
                 .guide-day-title b { margin-right: 8px; }
-                .guide-day-summary { max-width: 120px; font-size: 9px; font-weight: 800; line-height: 1.3; text-align: right; }
-                .guide-day-date { padding: 6px 13px 0; color: #87949f; font-size: 9px; font-weight: 800; text-align: right; }
-                .guide-activities { position: relative; padding: 5px 12px 5px 43px; }
-                .guide-activities::before { content: ''; position: absolute; left: 20px; top: 13px; bottom: 13px; border-left: 2px solid #19c4a6; }
-                .guide-activity { position: relative; min-height: 25px; padding: 4px 0; break-inside: avoid; page-break-inside: avoid; }
-                .guide-activity::before { content: ''; position: absolute; left: -27px; top: 9px; width: 10px; height: 10px; border-radius: 50%; background: #15bea1; box-shadow: 0 0 0 2px #fbfefd; }
-                .guide-activity-main { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 7px; align-items: start; }
-                .guide-time { min-width: 37px; padding: 2px 5px; border-radius: 6px; color: #2778c9; background: #e5f1ff; font-size: 8.5px; font-weight: 900; line-height: 1.35; text-align: center; }
-                .guide-time.morning { color: #008e79; background: #dcf5ef; }
-                .guide-time.forenoon { color: #d48808; background: #fff0cf; }
-                .guide-time.noon { color: #d45c42; background: #ffe2da; }
-                .guide-time.afternoon { color: #317bca; background: #e1efff; }
-                .guide-time.evening { color: #d16b17; background: #ffead7; }
-                .guide-time.night { color: #6d4bc0; background: #ebe2ff; }
-                .guide-time.neutral { color: #687481; background: #edf0f3; }
-                .guide-activity-copy { min-width: 0; }
-                .guide-place { color: #8a96a1; font-size: 8.5px; font-weight: 800; line-height: 1.35; }
-                .guide-action { color: #293542; font-size: 10.5px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
-                .guide-description { margin-top: 2px; color: #8a96a1; font-size: 8.5px; font-weight: 500; line-height: 1.45; white-space: pre-wrap; }
+                .guide-day-summary { max-width: 210px; font-size: 9.5px; font-weight: 800; line-height: 1.35; text-align: right; }
+                .guide-day-summary span { display: block; margin-top: 2px; opacity: .82; font-size: 8.5px; }
+                .guide-activities { position: relative; padding: 9px 18px 9px 46px; }
+                .guide-activities::before { content: ''; position: absolute; left: 23px; top: 17px; bottom: 17px; border-left: 2px solid #19c4a6; }
+                .guide-activity { position: relative; min-height: 27px; padding: 5px 0; break-inside: avoid; page-break-inside: avoid; }
+                .guide-activity::before { content: ''; position: absolute; left: -28px; top: 10px; width: 10px; height: 10px; border-radius: 50%; background: #15bea1; box-shadow: 0 0 0 2px #fbfefd; }
+                .guide-action { color: #293542; font-size: 11.5px; font-weight: 700; line-height: 1.5; word-break: normal; overflow-wrap: break-word; white-space: pre-wrap; }
                 .guide-empty { padding: 14px; color: #98a2ac; font-size: 10.5px; }
-                .guide-day-details { padding: 7px 13px 10px; border-top: 1px dashed #d9e5e1; }
-                .guide-stay { color: #0b4050; font-size: 9px; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
-                .guide-meals { margin-top: 3px; color: #8a96a1; font-size: 8.5px; font-weight: 600; line-height: 1.45; }
+                .guide-day-details { padding: 8px 14px 10px; border-top: 1px dashed #d9e5e1; }
+                .guide-stay { color: #0b4050; font-size: 9.5px; font-weight: 800; line-height: 1.5; word-break: normal; overflow-wrap: break-word; }
+                .guide-meals { margin-top: 3px; color: #8a96a1; font-size: 9px; font-weight: 600; line-height: 1.45; }
                 .guide-footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #e2e8e6; color: #8c98a3; font-size: 9px; line-height: 1.6; text-align: center; }
                 .guide-footer b { color: #009e85; }
-                @page { size: A4; margin: 10mm; }
+                @page { size: A4 portrait; margin: 12mm 10mm; }
                 @media print {
-                    .guide-print-page { max-width: none; padding: 0; }
+                    html, body { width: 210mm; }
+                    .guide-print-page { width: 190mm; max-width: 190mm; padding: 0; }
                     .guide-day-card { box-shadow: none; }
                 }
                 @media screen and (max-width: 620px) {
-                    .guide-day-grid, .guide-info-grid { grid-template-columns: 1fr; }
+                    .guide-print-page { width: 100%; max-width: none; }
+                    .guide-info-grid { grid-template-columns: 1fr; }
                 }
             `}</style>
 
@@ -267,22 +244,17 @@ export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reserv
                                 <article className="guide-day-card" key={`${dayNumber}-${index}`}>
                                     <div className="guide-day-head">
                                         <div className="guide-day-title"><b>{dayNumber}日目</b>{day.title || day.region || ''}</div>
-                                        <div className="guide-day-summary">{day.summary || day.region || longDayDate(reservation.startDate, dayNumber)}</div>
+                                        <div className="guide-day-summary">
+                                            {shortDayNote(day.summary, day.region)}
+                                            <span>{longDayDate(reservation.startDate, dayNumber)}</span>
+                                        </div>
                                     </div>
-                                    <div className="guide-day-date">{longDayDate(reservation.startDate, dayNumber)}</div>
                                     {activities.length === 0
                                         ? <div className="guide-empty">調整中</div>
                                         : <div className="guide-activities">
                                             {activities.map((activity, activityIndex) => (
                                                 <div className="guide-activity" key={activityIndex}>
-                                                    <div className="guide-activity-main">
-                                                        {activity.time && <span className={`guide-time ${timeTone(activity.time)}`}>{activity.time}</span>}
-                                                        <div className="guide-activity-copy">
-                                                            {activity.type && <div className="guide-place">{activity.type}</div>}
-                                                            <div className="guide-action">{activity.title}</div>
-                                                            {activity.description && <div className="guide-description">{activity.description}</div>}
-                                                        </div>
-                                                    </div>
+                                                    <div className="guide-action">{activity.title}</div>
                                                 </div>
                                             ))}
                                         </div>}

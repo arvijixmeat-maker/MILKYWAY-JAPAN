@@ -144,7 +144,22 @@ export const DocumentItinerary: React.FC = () => {
     useEffect(() => {
         if (searchParams.get('autoprint') !== '1' || loading || error || !data) return;
         let printed = false;
-        const doPrint = () => { if (printed) return; printed = true; try { window.focus(); window.print(); } catch { /* 수동 인쇄 */ } };
+        const doPrint = () => {
+            if (printed) return;
+            printed = true;
+            const previousTitle = document.title;
+            // Chromium 인쇄의 선택적 머리글에 긴 페이지 제목이 반복되지 않도록 비운다.
+            if (guideMode) document.title = ' ';
+            const restoreTitle = () => { document.title = previousTitle; };
+            try {
+                window.addEventListener('afterprint', restoreTitle, { once: true });
+                window.focus();
+                window.print();
+                window.setTimeout(restoreTitle, 10000);
+            } catch {
+                restoreTitle();
+            }
+        };
         const kick = window.setTimeout(() => {
             const imgs = Array.from(document.querySelectorAll('img'));
             imgs.forEach((im) => { try { im.loading = 'eager'; const s = im.getAttribute('src'); if (s && !im.complete) im.setAttribute('src', s); } catch { /* noop */ } });
@@ -156,7 +171,7 @@ export const DocumentItinerary: React.FC = () => {
             window.setTimeout(doPrint, 4000); // 하드 캡: 일부 이미지가 안 떠도 인쇄는 진행
         }, 500);
         return () => window.clearTimeout(kick);
-    }, [searchParams, loading, error, data]);
+    }, [searchParams, loading, error, data, guideMode]);
 
     if (loading) {
         return (<>
