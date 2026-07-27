@@ -780,21 +780,15 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             memos: d.memos || [],
         };
         try { localStorage.setItem(`guideDoc:${reservation.id}`, JSON.stringify(payload)); } catch { /* ignore */ }
-        // 새 탭/중간 페이지 없이 곧바로 인쇄창이 뜨도록, 고객 일정표 페이지를 화면 밖
-        // 숨은 iframe으로 로드해 그 안에서 인쇄한다(크로미엄은 iframe 문서만 인쇄).
-        // iframe 안의 DocumentItinerary(?guide=1&autoprint=1)가 데이터 렌더 후 스스로 인쇄한다.
-        const url = `${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1`;
-        const iframe = document.createElement('iframe');
-        iframe.setAttribute('aria-hidden', 'true');
-        // 718px = A4(210mm) - 여백 20mm = 190mm @96dpi → 인쇄 시 축소 없이 전폭이 그대로 매핑된다.
-        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:718px;height:1200px;border:0;';
-        const cleanup = () => { try { iframe.remove(); } catch { /* noop */ } };
-        iframe.onload = () => {
-            try { iframe.contentWindow?.addEventListener('afterprint', () => window.setTimeout(cleanup, 500), { once: true }); } catch { /* noop */ }
-            window.setTimeout(cleanup, 120000); // 안전용: 2분 뒤 무조건 제거
-        };
-        iframe.src = url;
-        document.body.appendChild(iframe);
+        // Chromium은 숨은 iframe에서 window.print()를 호출해도 상위 관리자 화면을
+        // 인쇄하는 경우가 있다. 전용 창을 동기적으로 열어 가이드 문서만 A4로 인쇄한다.
+        const url = `${window.location.origin}/documents/itinerary/${reservation.id}?guide=1&autoprint=1&autoclose=1`;
+        const printWindow = window.open(url, '_blank', 'popup=yes,width=920,height=1100');
+        if (!printWindow) {
+            alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 눌러 주세요.');
+            return;
+        }
+        try { printWindow.focus(); } catch { /* 새 창에서 자동 인쇄 계속 */ }
     };
 
     // ── 공항 미팅용 가이드 피켓 ──

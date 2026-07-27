@@ -150,14 +150,18 @@ export const DocumentItinerary: React.FC = () => {
             const previousTitle = document.title;
             // Chromium 인쇄의 선택적 머리글에 긴 페이지 제목이 반복되지 않도록 비운다.
             if (guideMode) document.title = ' ';
-            const restoreTitle = () => { document.title = previousTitle; };
+            const closeAfterPrint = guideMode && searchParams.get('autoclose') === '1';
+            const finishPrint = () => {
+                document.title = previousTitle;
+                if (closeAfterPrint) window.setTimeout(() => window.close(), 300);
+            };
             try {
-                window.addEventListener('afterprint', restoreTitle, { once: true });
+                window.addEventListener('afterprint', finishPrint, { once: true });
                 window.focus();
                 window.print();
-                window.setTimeout(restoreTitle, 10000);
+                if (!closeAfterPrint) window.setTimeout(finishPrint, 10000);
             } catch {
-                restoreTitle();
+                finishPrint();
             }
         };
         const kick = window.setTimeout(() => {
