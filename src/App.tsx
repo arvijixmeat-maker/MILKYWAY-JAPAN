@@ -84,21 +84,31 @@ const PageLoader = () => (
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isGuidePrintRoute =
+    location.pathname.startsWith('/documents/itinerary/') &&
+    new URLSearchParams(location.search).get('guide') === '1';
+  const appWrapperClass = isAdminRoute
+    ? 'admin-app-wrapper'
+    : isGuidePrintRoute
+      ? 'guide-document-wrapper'
+      : 'mobile-app-wrapper';
 
   // Ensure body background matches the layout style for seamless experience
   useEffect(() => {
-    if (isAdminRoute) {
+    if (isGuidePrintRoute) {
+      document.body.style.backgroundColor = '#ffffff';
+    } else if (isAdminRoute) {
       document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#0f172a' : '#f8fafc';
     } else {
       document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#111827' : '#f3f4f6';
     }
-  }, [isAdminRoute]);
+  }, [isAdminRoute, isGuidePrintRoute]);
 
   return (
-    <div className={isAdminRoute ? "admin-app-wrapper" : "mobile-app-wrapper"}>
+    <div className={appWrapperClass}>
       <SEO />
       <NotificationProvider>
-        {!isAdminRoute && <FloatingConsultation />}
+        {!isAdminRoute && !isGuidePrintRoute && <FloatingConsultation />}
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />

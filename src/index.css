@@ -113,6 +113,25 @@ body {
     font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
+/* Standalone printable documents must not inherit the 480px mobile frame. */
+.guide-document-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    overflow: visible;
+    background: #ffffff;
+}
+
+@media print {
+    .guide-document-wrapper {
+        width: auto !important;
+        min-height: 0;
+        margin: 0 !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+    }
+}
+
 .admin-app-wrapper .font-sans,
 .admin-app-wrapper input,
 .admin-app-wrapper button,

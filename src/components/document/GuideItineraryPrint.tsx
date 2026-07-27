@@ -99,7 +99,7 @@ export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reserv
                 * { box-sizing: border-box; }
                 html, body { margin: 0; background: #fff !important; }
                 .guide-print-page {
-                    width: 190mm; max-width: 190mm; margin: 0 auto; padding: 24px 28px 32px;
+                    width: 100%; max-width: 920px; margin: 0 auto; padding: 24px 28px 32px;
                     color: #17202b; background: #fff;
                     font-family: 'Noto Sans JP', 'Pretendard', 'Malgun Gothic', Arial, sans-serif;
                     -webkit-print-color-adjust: exact; print-color-adjust: exact;
@@ -160,8 +160,20 @@ export const GuideItineraryPrint: React.FC<GuideItineraryPrintProps> = ({ reserv
                 .guide-footer b { color: #009e85; }
                 @page { size: A4 portrait; margin: 12mm 10mm; }
                 @media print {
-                    html, body { width: 210mm; }
-                    .guide-print-page { width: 190mm; max-width: 190mm; padding: 0; }
+                    html, body, #root {
+                        width: auto !important;
+                        min-width: 0 !important;
+                        max-width: none !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
+                    }
+                    .guide-print-page {
+                        width: 100% !important;
+                        max-width: none !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
                     .guide-day-card { box-shadow: none; }
                 }
                 @media screen and (max-width: 620px) {
