@@ -49,8 +49,9 @@ const unformatNumber = (str: string) => {
 };
 
 const parsePeopleCount = (value?: string) => {
-    const parsed = parseInt(String(value || '').replace(/[^0-9]/g, ''), 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    const matches = String(value || '').match(/\d+/g);
+    if (!matches || matches.length === 0) return 1;
+    return Math.max(1, matches.reduce((sum, count) => sum + parseInt(count, 10), 0));
 };
 
 const parseDocumentPricePerPerson = (content?: ReservationDocContent | null) => {
@@ -265,11 +266,12 @@ export const QuoteDetailModal: React.FC<{
     onClose: () => void;
     onSendEstimate: (url: string, note: string, priceDetail: any, startDate: string, endDate: string, itineraryTemplateId?: string) => void;
     onOpenConvert: () => void;
-    onUpdateQuote: (id: string, updates: Partial<QuoteRequest>) => Promise<void>;
+    onUpdateQuote: (id: string, updates: Partial<QuoteRequest>) => Promise<boolean | void>;
 }> = ({ request, onClose, onSendEstimate, onOpenConvert, onUpdateQuote }) => {
     const [estimateUrl, setEstimateUrl] = useState(request?.estimateUrl || '');
     const [adminNote, setAdminNote] = useState(request?.adminNote || '');
     const [copiedEstimateUrl, setCopiedEstimateUrl] = useState(false);
+    const [previewSaving, setPreviewSaving] = useState(false);
 
     // 맞춤 일정표 — 고객 견적 페이지에 함께 보낼 일정표 템플릿
     const [templatesList, setTemplatesList] = useState<any[]>([]);
@@ -356,16 +358,19 @@ export const QuoteDetailModal: React.FC<{
     const handleSaveEdit = async () => {
         if (!request) return;
 
-        await onUpdateQuote(request.id, {
+        const saved = await onUpdateQuote(request.id, {
             ...editForm
         } as any);
-        setIsEditing(false);
+        if (saved !== false) setIsEditing(false);
     };
 
     if (!request) return null;
 
     // 문서 편집기 (견적용) — 고객 데이터 자동 채움, document_content 저장
     const quotePeople = priceDetail.peopleCount || parsePeopleCount(request.headcount);
+    const quoteHeadcount = quotePeople === parsePeopleCount(request.headcount)
+        ? request.headcount
+        : `${quotePeople}名`;
     const quoteBalance = Math.max(0, (priceDetail.totalAmount || 0) - (priceDetail.deposit || 0));
     const updatePricePerPerson = (nextPricePerPerson: number) => {
         setPriceDetail(prev => {
@@ -410,7 +415,7 @@ export const QuoteDetailModal: React.FC<{
         tripNumber: request.id.slice(0, 8).toUpperCase(),
         period: request.period || '',
         tripLength: docTripLength || undefined,
-        headcount: request.headcount || '',
+        headcount: quoteHeadcount || '',
         name: request.name,
         tripType: request.destination,
         totalAmount: priceDetail.totalAmount || undefined,
@@ -456,12 +461,13 @@ export const QuoteDetailModal: React.FC<{
             }));
         }
         setQuoteDocumentContent(syncedContent);
-        await onUpdateQuote(request.id, {
+        const saved = await onUpdateQuote(request.id, {
             itineraryTemplateId,
             documentContent: syncedContent,
             confirmed_price: nextTotal,
             deposit: nextDeposit,
         } as any);
+        if (saved === false) return;
         // 저장 검증 — 서버에 실제로 일정이 남았는지 재조회로 확인.
         // 세션 만료(401)·마이그레이션 누락 등으로 조용히 실패하면 고객 미리보기에
         // 「準備中」만 떠서 원인을 알 수 없으므로, 여기서 바로 드러낸다.
@@ -473,10 +479,11 @@ export const QuoteDetailModal: React.FC<{
             }
         } catch { /* 재조회 실패는 무시 — 저장 실패는 위 update 에러로 이미 드러남 */ }
     };
-    const saveQuoteBasics = async () => {
+    const saveQuoteBasics = async (): Promise<boolean> => {
         const syncedContent = syncDocumentPrice(quoteDocumentContent, priceDetail.pricePerPerson);
         if (syncedContent) setQuoteDocumentContent(syncedContent);
-        await onUpdateQuote(request.id, {
+        const saved = await onUpdateQuote(request.id, {
+            headcount: quoteHeadcount,
             confirmed_price: priceDetail.totalAmount,
             deposit: priceDetail.deposit,
             confirmed_start_date: confirmedStartDate,
@@ -484,6 +491,7 @@ export const QuoteDetailModal: React.FC<{
             itineraryTemplateId,
             documentContent: syncedContent,
         } as any);
+        return saved !== false;
     };
     const handleTemplateChange = async (templateId: string) => {
         setItineraryTemplateId(templateId);
@@ -500,10 +508,11 @@ export const QuoteDetailModal: React.FC<{
             }));
         }
         setQuoteDocumentContent(syncedContent);
-        await onUpdateQuote(request.id, {
+        const saved = await onUpdateQuote(request.id, {
             itineraryTemplateId: templateId,
             documentContent: syncedContent,
         } as any);
+        if (saved === false) return;
     };
 
     const quoteStatusMeta: Record<string, { label: string; tone: string }> = {
@@ -570,7 +579,8 @@ export const QuoteDetailModal: React.FC<{
         };
         const syncedContent = syncDocumentPrice(quoteDocumentContent, normalizedPriceDetail.pricePerPerson);
         if (syncedContent) setQuoteDocumentContent(syncedContent);
-        await onUpdateQuote(request.id, {
+        const saved = await onUpdateQuote(request.id, {
+            headcount: quoteHeadcount,
             confirmed_price: normalizedPriceDetail.totalAmount,
             deposit: normalizedPriceDetail.deposit,
             confirmed_start_date: confirmedStartDate,
@@ -578,10 +588,45 @@ export const QuoteDetailModal: React.FC<{
             itineraryTemplateId,
             documentContent: syncedContent,
         } as any);
+        if (saved === false) return;
         onSendEstimate(estimateUrl, adminNote, normalizedPriceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId);
     };
     const estimatePageUrl = `${window.location.origin}/estimate/${request.id}`;
     const quoteSent = request.status === 'answered';
+    const handlePreview = async () => {
+        if (previewSaving) return;
+        if (!quoteSent && !hasQuoteItinerary) {
+            const shouldEdit = window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 금액을 저장한 뒤 미리보기를 엽니다)');
+            if (shouldEdit) {
+                setDocEditorOpen(true);
+                return;
+            }
+        }
+
+        // 팝업 차단을 피하려고 사용자 클릭 시점에 창을 먼저 만들고,
+        // 현재 입력값 저장이 끝난 뒤 최신 고객 페이지로 이동시킨다.
+        const previewWindow = window.open('about:blank', '_blank');
+        if (previewWindow) {
+            previewWindow.document.title = '견적 미리보기 준비 중';
+            previewWindow.document.body.textContent = '최신 견적 내용을 저장하는 중입니다…';
+        }
+
+        setPreviewSaving(true);
+        try {
+            const saved = await saveQuoteBasics();
+            if (!saved) {
+                previewWindow?.close();
+                return;
+            }
+            if (!previewWindow) {
+                alert('견적 내용은 저장되었습니다. 브라우저에서 팝업을 허용한 뒤 미리보기를 다시 눌러 주세요.');
+                return;
+            }
+            previewWindow.location.replace(`${estimatePageUrl}?preview=${Date.now()}`);
+        } finally {
+            setPreviewSaving(false);
+        }
+    };
     const quoteDocStatusText = quoteSent
         ? '발송 완료 · 재발송 가능'
         : hasQuoteItinerary && !canSendEstimate
@@ -809,16 +854,8 @@ export const QuoteDetailModal: React.FC<{
                                         <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
                                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '편집' : '견적서 만들기'}
                                         </button>
-                                        <button className="btn btn-sm btn-ghost" onClick={() => {
-                                            if (!hasQuoteItinerary) {
-                                                if (window.confirm('일정표가 아직 없어 고객 화면에는 「準備中」로 표시됩니다.\n문서 편집기를 열어 일정을 만들까요?\n\n(취소를 누르면 현재 상태 그대로 미리보기를 엽니다)')) {
-                                                    setDocEditorOpen(true);
-                                                    return;
-                                                }
-                                            }
-                                            window.open(estimatePageUrl, '_blank');
-                                        }}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>미리보기
+                                        <button className="btn btn-sm btn-ghost" onClick={handlePreview} disabled={previewSaving}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>{previewSaving ? '저장 중…' : '미리보기'}
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={copyEstimatePageUrl}>
                                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{copiedEstimateUrl ? 'check' : 'content_copy'}</span>{copiedEstimateUrl ? '복사됨' : '링크'}
@@ -826,8 +863,8 @@ export const QuoteDetailModal: React.FC<{
                                     </>
                                 ) : (
                                     <>
-                                        <button className="btn btn-sm btn-blue" onClick={() => window.open(estimatePageUrl, '_blank')}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>미리보기
+                                        <button className="btn btn-sm btn-blue" onClick={handlePreview} disabled={previewSaving}>
+                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>{previewSaving ? '저장 중…' : '미리보기'}
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
                                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>편집

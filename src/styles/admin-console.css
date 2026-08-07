@@ -194,6 +194,63 @@
 .admin-app-wrapper .tint-amber { background: #FFF3DC; color: #B7791F; }
 .admin-app-wrapper .tint-ink { background: var(--mrt-gray-100); color: var(--mrt-ink); }
 
+/* ============ Upcoming tour radar ============ */
+.admin-app-wrapper .upcoming-tours { overflow: hidden; }
+.admin-app-wrapper .upcoming-tours-icon { width: 38px; height: 38px; border-radius: 11px; flex: none; }
+.admin-app-wrapper .upcoming-tours-icon .material-symbols-outlined { font-size: 21px; }
+.admin-app-wrapper .upcoming-tour-list { padding: 0 20px; }
+.admin-app-wrapper .upcoming-tour-row {
+  display: grid; grid-template-columns: 108px minmax(220px, 1.4fr) minmax(190px, 1fr) auto;
+  align-items: center; gap: 18px; min-height: 78px; padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.admin-app-wrapper .upcoming-tour-row:last-of-type { border-bottom: none; }
+.admin-app-wrapper .upcoming-tour-due { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.admin-app-wrapper .upcoming-tour-due strong {
+  min-width: 58px; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+.admin-app-wrapper .upcoming-tour-due span,
+.admin-app-wrapper .upcoming-tour-product span,
+.admin-app-wrapper .upcoming-tour-customer span {
+  display: block; margin-top: 4px; overflow: hidden; color: var(--text-tertiary);
+  font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-app-wrapper .upcoming-tour-due.due-now strong { color: var(--mrt-red); background: var(--mrt-red-soft); }
+.admin-app-wrapper .upcoming-tour-due.due-week strong { color: #B7791F; background: #FFF3DC; }
+.admin-app-wrapper .upcoming-tour-due.due-later strong { color: var(--mrt-blue-strong); background: var(--mrt-blue-50); }
+.admin-app-wrapper .upcoming-tour-product,
+.admin-app-wrapper .upcoming-tour-customer { min-width: 0; }
+.admin-app-wrapper .upcoming-tour-product strong,
+.admin-app-wrapper .upcoming-tour-customer strong {
+  display: block; overflow: hidden; color: var(--text-strong); font-size: 13.5px;
+  font-weight: 750; text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-app-wrapper .upcoming-tour-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.admin-app-wrapper .upcoming-tour-more {
+  margin: 0 -20px; padding: 10px 20px; border-top: 1px solid var(--border-subtle);
+  background: var(--mrt-gray-50); color: var(--text-tertiary); font-size: 11.5px; text-align: center;
+}
+.admin-app-wrapper .upcoming-tour-empty {
+  display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 112px;
+  padding: 22px; color: var(--text-tertiary);
+}
+.admin-app-wrapper .upcoming-tour-empty > .material-symbols-outlined { font-size: 28px; color: var(--mrt-green); }
+.admin-app-wrapper .upcoming-tour-empty strong,
+.admin-app-wrapper .upcoming-tour-empty span { display: block; }
+.admin-app-wrapper .upcoming-tour-empty strong { color: var(--text-strong); font-size: 13.5px; }
+.admin-app-wrapper .upcoming-tour-empty span { margin-top: 3px; font-size: 11.5px; }
+
+@media (max-width: 1050px) {
+  .admin-app-wrapper .upcoming-tour-row { grid-template-columns: 100px minmax(200px, 1fr) auto; }
+  .admin-app-wrapper .upcoming-tour-customer { display: none; }
+}
+@media (max-width: 760px) {
+  .admin-app-wrapper .upcoming-tour-list { padding: 0 16px; }
+  .admin-app-wrapper .upcoming-tour-row { grid-template-columns: 84px minmax(0, 1fr); gap: 12px; padding: 14px 0; }
+  .admin-app-wrapper .upcoming-tour-actions { grid-column: 1 / -1; justify-content: space-between; }
+}
+
 /* ============ Badges ============ */
 .admin-app-wrapper .badge {
   display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700;
