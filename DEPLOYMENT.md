@@ -59,7 +59,7 @@ git push origin feature/change-font
 
 ## 4. 자동 후기 요청 이메일 설정
 
-Cloudflare Pages Functions에는 별도 예약 실행이 없으므로, 외부 스케줄러(예: cron-job.org)에서 아래 API를 하루 한 번 호출합니다.
+Cloudflare Pages Functions에는 별도 예약 실행이 없으므로, `.github/workflows/review-request.yml`의 GitHub Actions 스케줄이 아래 API를 하루 한 번 호출합니다.
 
 - URL: `https://mongolryokou.com/api/cron/review-request`
 - Method: `POST`
@@ -67,6 +67,8 @@ Cloudflare Pages Functions에는 별도 예약 실행이 없으므로, 외부 �
 - 권장 시간: 매일 일본시간 오전 9시(UTC 00:00)
 
 Cloudflare Pages의 Production 환경 변수에는 `CRON_SECRET`과 `RESEND_API_KEY`가 설정되어 있어야 합니다. 종료일이 지난 `confirmed`, `paid`, `completed` 예약이 대상이며, 전날 실행을 놓쳐도 다음 실행에서 자동 보충합니다. 예약 이력에 발송 완료 상태를 기록하므로 같은 예약에 중복 발송하지 않습니다.
+
+GitHub 저장소의 Actions secret에도 Cloudflare와 동일한 이름과 값의 `CRON_SECRET`을 등록해야 합니다. Actions 화면의 `Send post-tour review requests` 워크플로에서 `Run workflow`를 실행하면 예약 실행을 기다리지 않고 즉시 연결 상태를 확인할 수 있습니다.
 
 ## ✅ 당장 실천할 수 있는 방법
 지금 당장 복잡한 PR(Pull Request) 과정이 귀찮다면, 최소한 **개발용 브랜치(dev)** 하나만이라도 만들어서 사용하는 것을 추천합니다.
