@@ -81,6 +81,35 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped idx_notifications_user: ${e.message}`);
     }
 
+    // Reviews: comments and normalized per-user helpful reactions.
+    // A separate table prevents clients from overwriting another user's reaction
+    // and makes the displayed count authoritative on the server.
+    try {
+        await c.env.DB.prepare("ALTER TABLE reviews ADD COLUMN comments TEXT DEFAULT '[]'").run();
+        migrationResults.push('Added reviews.comments');
+    } catch (e: unknown) {
+        migrationResults.push(`Skipped reviews.comments: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS review_helpful (
+                review_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (review_id, user_id)
+            )
+        `).run();
+        migrationResults.push('Created review_helpful table');
+    } catch (e: unknown) {
+        migrationResults.push(`Skipped review_helpful table: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    try {
+        await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_review_helpful_review ON review_helpful(review_id)').run();
+        migrationResults.push('Created idx_review_helpful_review');
+    } catch (e: unknown) {
+        migrationResults.push(`Skipped idx_review_helpful_review: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
     // Create quotes table if it doesn't exist
     try {
         await c.env.DB.prepare(`

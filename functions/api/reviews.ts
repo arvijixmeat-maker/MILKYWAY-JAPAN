@@ -37,7 +37,13 @@ app.get('/', async (c) => {
         const binds: any[] = [];
         if (productId) { where.push('product_id = ?'); binds.push(productId); }
         if (approvedParam === '1' || approvedParam === 'true') { where.push('is_approved = 1'); }
-        const sql = `SELECT * FROM reviews${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC`;
+        const sql = `
+            SELECT reviews.*,
+                   COALESCE((SELECT COUNT(*) FROM review_helpful WHERE review_id = reviews.id), 0) AS helpful_count
+            FROM reviews
+            ${where.length ? ' WHERE ' + where.join(' AND ') : ''}
+            ORDER BY reviews.created_at DESC
+        `;
         const result = await (binds.length ? db.prepare(sql).bind(...binds) : db.prepare(sql)).all();
         return c.json(result.results);
     } catch (e: any) {
@@ -143,12 +149,72 @@ app.get('/:id', async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {
-        const result = await db.prepare('SELECT * FROM reviews WHERE id=?').bind(id).first();
+        const result = await db.prepare(`
+            SELECT reviews.*,
+                   COALESCE((SELECT COUNT(*) FROM review_helpful WHERE review_id = reviews.id), 0) AS helpful_count
+            FROM reviews
+            WHERE reviews.id = ?
+        `).bind(id).first();
         if (!result) return c.json({ error: 'Not found' }, 404);
         return c.json(result);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
+});
+
+// GET /api/reviews/:id/helpful — current user's reaction state.
+app.get('/:id/helpful', requireAuth, async (c) => {
+    const id = c.req.param('id');
+    const db = c.env.DB;
+    const sessionUser = c.get('user');
+
+    const state = await db.prepare(`
+        SELECT
+            EXISTS(SELECT 1 FROM review_helpful WHERE review_id = ? AND user_id = ?) AS helpful,
+            (SELECT COUNT(*) FROM review_helpful WHERE review_id = ?) AS helpful_count
+    `).bind(id, sessionUser.id, id).first<{ helpful: number; helpful_count: number }>();
+
+    return c.json({
+        helpful: Boolean(state?.helpful),
+        helpful_count: Number(state?.helpful_count || 0),
+    });
+});
+
+// POST /api/reviews/:id/helpful — toggle only the authenticated user's reaction.
+app.post('/:id/helpful', requireAuth, async (c) => {
+    const id = c.req.param('id');
+    const db = c.env.DB;
+    const sessionUser = c.get('user');
+
+    const review = await db.prepare('SELECT id FROM reviews WHERE id = ?').bind(id).first();
+    if (!review) return c.json({ error: 'Review not found' }, 404);
+
+    const existing = await db.prepare(
+        'SELECT 1 AS found FROM review_helpful WHERE review_id = ? AND user_id = ?'
+    ).bind(id, sessionUser.id).first();
+
+    if (existing) {
+        await db.prepare('DELETE FROM review_helpful WHERE review_id = ? AND user_id = ?')
+            .bind(id, sessionUser.id)
+            .run();
+    } else {
+        await db.prepare('INSERT OR IGNORE INTO review_helpful (review_id, user_id) VALUES (?, ?)')
+            .bind(id, sessionUser.id)
+            .run();
+    }
+
+    // Read the final state back from D1 so concurrent/repeated requests cannot
+    // leave the client displaying a guessed count or selection state.
+    const state = await db.prepare(`
+        SELECT
+            EXISTS(SELECT 1 FROM review_helpful WHERE review_id = ? AND user_id = ?) AS helpful,
+            (SELECT COUNT(*) FROM review_helpful WHERE review_id = ?) AS helpful_count
+    `).bind(id, sessionUser.id, id).first<{ helpful: number; helpful_count: number }>();
+
+    return c.json({
+        helpful: Boolean(state?.helpful),
+        helpful_count: Number(state?.helpful_count || 0),
+    });
 });
 
 // POST /api/reviews — login required.
@@ -206,7 +272,7 @@ app.post('/', requireAuth, async (c) => {
     }
 });
 
-// PUT /api/reviews/:id — login required. Used by users for comments / helpful toggles
+// PUT /api/reviews/:id — login required. Used by users for comments
 // and by admins for moderation. Sensitive fields (is_approved) are honored only when
 // the requester is an admin.
 app.put('/:id', requireAuth, async (c) => {
@@ -239,14 +305,6 @@ app.put('/:id', requireAuth, async (c) => {
         if (data.comments !== undefined) {
             fields.push('comments = ?');
             binds.push(typeof data.comments === 'string' ? data.comments : JSON.stringify(data.comments));
-        }
-        if (data.helpful_count !== undefined) {
-            fields.push('helpful_count = ?');
-            binds.push(data.helpful_count || 0);
-        }
-        if (data.helpful_users !== undefined) {
-            fields.push('helpful_users = ?');
-            binds.push(typeof data.helpful_users === 'string' ? data.helpful_users : JSON.stringify(data.helpful_users));
         }
         // is_approved is admin-only.
         if (data.is_approved !== undefined && isAdmin) {

@@ -165,6 +165,10 @@ export const api = {
             return request(`${API_BASE}/reviews?${params.toString()}`);
         },
         get: async (id: string) => request(`${API_BASE}/reviews/${id}`),
+        getHelpfulStatus: async (id: string) => request(`${API_BASE}/reviews/${encodeURIComponent(id)}/helpful`),
+        toggleHelpful: async (id: string) => request(`${API_BASE}/reviews/${encodeURIComponent(id)}/helpful`, {
+            method: 'POST'
+        }),
         create: async (data: any) => request(`${API_BASE}/reviews`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
