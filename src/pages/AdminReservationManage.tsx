@@ -11,10 +11,14 @@ import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplat
 // Reservation Interface
 interface Reservation {
     id: string;
+    reservationNumber?: string;
     type: 'product' | 'quote';
     productName: string;
     productId?: string; // 예약한 상품 ID (신규 예약부터 저장 — 동명 상품 혼동 방지)
     customerName: string;
+    startDate?: string;
+    endDate?: string;
+    departureMs?: number;
     date: string;
     bookedAt: string;
     bookedAtMs?: number;
@@ -2159,6 +2163,11 @@ export const AdminReservationManage: React.FC = () => {
 
     const toTime = (value: any) => {
         if (!value) return 0;
+        const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateOnly) {
+            const [, year, month, day] = dateOnly;
+            return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+        }
         const time = new Date(value).getTime();
         return Number.isNaN(time) ? 0 : time;
     };
@@ -2645,11 +2654,41 @@ export const AdminReservationManage: React.FC = () => {
         currentPage * itemsPerPage
     );
 
+    const upcomingTours = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayMs = today.getTime();
+        const horizonMs = todayMs + 30 * 86400000;
+
+        return reservations
+            .filter((reservation) => {
+                const departureMs = reservation.departureMs || toTime(reservation.startDate);
+                return reservation.type !== 'quote'
+                    && reservation.status !== 'cancelled'
+                    && departureMs >= todayMs
+                    && departureMs <= horizonMs;
+            })
+            .sort((a, b) => (a.departureMs || toTime(a.startDate)) - (b.departureMs || toTime(b.startDate)))
+            .map((reservation) => {
+                const departureMs = reservation.departureMs || toTime(reservation.startDate);
+                return {
+                    reservation,
+                    departureMs,
+                    daysUntil: Math.max(0, Math.round((departureMs - todayMs) / 86400000)),
+                };
+            });
+    }, [reservations]);
+
+    const formatUpcomingDate = (value?: string) => {
+        if (!value) return '날짜 미정';
+        const time = toTime(String(value).slice(0, 10));
+        if (!time) return '날짜 미정';
+        return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' }).format(new Date(time));
+    };
+
     // Stats
     const stats = useMemo(() => {
         const activeQuoteStatuses = ['new', 'processing', 'reservation_requested'];
-        const now = Date.now();
-        const thirtyDays = now + 30 * 86400000;
         const hasContractSent = (r: Reservation) => Boolean(r.history?.some((event: any) =>
             event.type === 'email' && (String(event.description || '').includes('契約') || String(event.detail || '').includes('/documents/contract/'))
         ));
@@ -2660,9 +2699,9 @@ export const AdminReservationManage: React.FC = () => {
             confirmed: reservations.filter(r => r.status === 'confirmed' || r.status === 'paid').length,
             quoteTodo: reservations.filter(r => r.type === 'quote' && activeQuoteStatuses.includes(r.status)).length,
             contractSent: reservations.filter(hasContractSent).length,
-            departingSoon: reservations.filter(r => r.type !== 'quote' && (r.departureMs || 0) >= now && (r.departureMs || 0) <= thirtyDays).length,
+            departingSoon: upcomingTours.length,
         };
-    }, [reservations]);
+    }, [reservations, upcomingTours]);
 
     const downloadConfirmedReservationsExcel = () => {
         const confirmedReservations = reservations
@@ -2934,6 +2973,59 @@ export const AdminReservationManage: React.FC = () => {
                         ))}
                     </div>
 
+                    {/* Upcoming tours — operational departure radar */}
+                    <section className="card upcoming-tours" aria-labelledby="upcoming-tours-title">
+                        <div className="card-head">
+                            <span className="metric-ico tint-red upcoming-tours-icon"><Icon name="flight_takeoff" fill /></span>
+                            <div style={{ minWidth: 0 }}>
+                                <h2 id="upcoming-tours-title">곧 출발하는 투어</h2>
+                                <div className="sub">30일 이내 출발 일정 · 가까운 날짜순</div>
+                            </div>
+                            <div className="spacer" />
+                            <span className="badge b-red"><span className="pulse" />{upcomingTours.length}건 예정</span>
+                        </div>
+                        {upcomingTours.length > 0 ? (
+                            <div className="upcoming-tour-list">
+                                {upcomingTours.slice(0, 5).map(({ reservation, daysUntil }) => {
+                                    const dueTone = daysUntil <= 3 ? 'due-now' : daysUntil <= 7 ? 'due-week' : 'due-later';
+                                    const peopleText = reservation.headcount || (reservation.totalPeople ? `${reservation.totalPeople}명` : '인원 미정');
+                                    return (
+                                        <div className="upcoming-tour-row" key={reservation.id}>
+                                            <div className={`upcoming-tour-due ${dueTone}`}>
+                                                <strong>{daysUntil === 0 ? '오늘 출발' : `D-${daysUntil}`}</strong>
+                                                <span>{formatUpcomingDate(reservation.startDate)}</span>
+                                            </div>
+                                            <div className="upcoming-tour-product">
+                                                <strong>{reservation.productName || '상품명 미정'}</strong>
+                                                <span>#{reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</span>
+                                            </div>
+                                            <div className="upcoming-tour-customer">
+                                                <strong>{reservation.customerName || '고객명 미정'}</strong>
+                                                <span>{peopleText}{reservation.phone ? ` · ${reservation.phone}` : ''}</span>
+                                            </div>
+                                            <div className="upcoming-tour-actions">
+                                                <span className={`badge ${STATUS_TONE[reservation.status] || 'b-gray'}`}>
+                                                    <span className="pulse" />{STATUS_LABELS[reservation.status] || reservation.status}
+                                                </span>
+                                                <button type="button" className="btn btn-sm btn-ghost" onClick={() => openReservation(reservation)}>
+                                                    <Icon name="visibility" />상세
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {upcomingTours.length > 5 && (
+                                    <div className="upcoming-tour-more">가까운 5건을 표시 중입니다. 이후 일정이 {upcomingTours.length - 5}건 더 있습니다.</div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="upcoming-tour-empty">
+                                <Icon name="event_available" />
+                                <div><strong>30일 이내 출발 예정 투어가 없습니다.</strong><span>새 예약의 출발일이 등록되면 이곳에 자동으로 표시됩니다.</span></div>
+                            </div>
+                        )}
+                    </section>
+
                     {/* Filter Section */}
                     <div className="card card-pad">
                         <div className="row" style={{ marginBottom: 16 }}>
@@ -3184,9 +3276,11 @@ export const AdminReservationManage: React.FC = () => {
                                 updated_at: new Date().toISOString()
                             });
                             fetchReservations();
+                            return true;
                         } catch (e) {
                             console.error(e);
                             alert('견적 수정 실패');
+                            return false;
                         }
                     }}
                     onSendEstimate={async (url, note, priceDetail, confirmedStartDate, confirmedEndDate, itineraryTemplateId) => {
