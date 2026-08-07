@@ -5,6 +5,28 @@ type Variables = { user: { id: string; name?: string; email?: string; avatarUrl?
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+const REVIEW_MIN_LENGTH = 10;
+const REVIEW_MAX_LENGTH = 2000;
+
+function parseHistory(value: unknown): Array<Record<string, unknown>> {
+    if (typeof value !== 'string' || !value) return [];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function todayInJapan() {
+    return new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(new Date());
+}
+
 // GET /api/reviews  — optional filters: ?product_id=... & ?approved=1
 app.get('/', async (c) => {
     const db = c.env.DB;
@@ -20,6 +42,99 @@ app.get('/', async (c) => {
         return c.json(result.results);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
+    }
+});
+
+// POST /api/reviews/reservation/:reservationId — login required.
+// The reservation controls the author/tour identity, and a history marker prevents
+// the same reservation from being reviewed twice through the invitation flow.
+app.post('/reservation/:reservationId', requireAuth, async (c) => {
+    const reservationId = c.req.param('reservationId');
+    const data = await c.req.json();
+    const db = c.env.DB;
+    const sessionUser = c.get('user');
+
+    const reservation = await db.prepare(`
+        SELECT id, user_id, customer_email, customer_name, product_id, product_name,
+               start_date, end_date, status, history
+        FROM reservations
+        WHERE id = ?
+    `).bind(reservationId).first<{
+        id: string;
+        user_id: string | null;
+        customer_email: string | null;
+        customer_name: string | null;
+        product_id: string | null;
+        product_name: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        status: string | null;
+        history: string | null;
+    }>();
+
+    if (!reservation) return c.json({ error: 'Reservation not found' }, 404);
+
+    const sessionEmail = sessionUser.email?.trim().toLowerCase();
+    const reservationEmail = reservation.customer_email?.trim().toLowerCase();
+    const ownsReservation = sessionUser.role === 'admin'
+        || reservation.user_id === sessionUser.id
+        || (!!sessionEmail && !!reservationEmail && sessionEmail === reservationEmail);
+    if (!ownsReservation) return c.json({ error: 'Forbidden' }, 403);
+
+    const endDate = reservation.end_date?.slice(0, 10) || '';
+    const eligibleStatus = ['confirmed', 'paid', 'completed'].includes(reservation.status || '');
+    const tourHasEnded = reservation.status === 'completed' || (!!endDate && endDate < todayInJapan());
+    if (!eligibleStatus || !tourHasEnded) {
+        return c.json({ error: 'This tour is not eligible for a review yet' }, 400);
+    }
+
+    const history = parseHistory(reservation.history);
+    if (history.some((entry) => entry.type === 'review_submitted')) {
+        return c.json({ error: 'A review has already been submitted for this reservation' }, 409);
+    }
+
+    const rating = Number(data.rating);
+    const content = typeof data.content === 'string' ? data.content.trim() : '';
+    const images = Array.isArray(data.images)
+        ? data.images.filter((image: unknown) => typeof image === 'string').slice(0, 10)
+        : [];
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        return c.json({ error: 'Rating must be an integer between 1 and 5' }, 400);
+    }
+    if (content.length < REVIEW_MIN_LENGTH || content.length > REVIEW_MAX_LENGTH) {
+        return c.json({ error: `Review must be between ${REVIEW_MIN_LENGTH} and ${REVIEW_MAX_LENGTH} characters` }, 400);
+    }
+
+    const id = crypto.randomUUID();
+    const productName = reservation.product_name || 'モンゴルツアー';
+    const userName = sessionUser.name || reservation.customer_name || sessionUser.email?.split('@')[0] || '';
+    const submittedAt = new Date().toISOString();
+    const nextHistory = history.concat({ type: 'review_submitted', date: submittedAt, reviewId: id });
+
+    try {
+        await db.batch([
+            db.prepare(
+                'INSERT INTO reviews (id, user_id, user_name, user_avatar, product_id, product_name, rating, title, content, images, is_approved, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            ).bind(
+                id,
+                sessionUser.id,
+                userName,
+                sessionUser.avatarUrl || '',
+                reservation.product_id || '',
+                productName,
+                rating,
+                `${productName} レビュー`,
+                content,
+                JSON.stringify(images),
+                1,
+                submittedAt,
+            ),
+            db.prepare('UPDATE reservations SET history = ? WHERE id = ?')
+                .bind(JSON.stringify(nextHistory), reservation.id),
+        ]);
+        return c.json({ id });
+    } catch (e: unknown) {
+        return c.json({ error: e instanceof Error ? e.message : 'Failed to save review' }, 500);
     }
 });
 

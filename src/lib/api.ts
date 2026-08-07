@@ -170,6 +170,11 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }),
+        createForReservation: async (reservationId: string, data: Record<string, unknown>) => request(`${API_BASE}/reviews/reservation/${encodeURIComponent(reservationId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
         update: async (id: string, data: any) => request(`${API_BASE}/reviews/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
@@ -49,6 +49,24 @@ interface ReservationLite {
     endDate: string;
 }
 
+interface ReservationApiRow {
+    id: string;
+    userId?: string;
+    user_id?: string;
+    customerEmail?: string;
+    customer_email?: string;
+    email?: string;
+    productId?: string;
+    product_id?: string;
+    productName?: string;
+    product_name?: string;
+    startDate?: string;
+    start_date?: string;
+    endDate?: string;
+    end_date?: string;
+    status?: string;
+}
+
 interface ProductLite {
     id: string;
     name: string;
@@ -73,13 +91,15 @@ const buildVisitMonthOptions = (): { value: string; label: string }[] => {
 
 export const ReviewWrite: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const invitedReservationId = searchParams.get('reservationId') || '';
 
     // Initialize from any persisted draft so users who got bounced through the
     // login flow (or accidentally navigated away) don't lose what they typed.
     const initialDraft = loadDraft();
 
     const [mode, setMode] = useState<Mode>(initialDraft?.mode ?? 'reservation');
-    const [selectedReservationId, setSelectedReservationId] = useState<string>(initialDraft?.selectedReservationId ?? '');
+    const [selectedReservationId, setSelectedReservationId] = useState<string>(invitedReservationId || initialDraft?.selectedReservationId || '');
     const [selectedProductId, setSelectedProductId] = useState<string>(initialDraft?.selectedProductId ?? '');
     const [visitMonth, setVisitMonth] = useState<string>(initialDraft?.visitMonth ?? '');
     const [rating, setRating] = useState<number>(initialDraft?.rating ?? 4);
@@ -123,18 +143,37 @@ export const ReviewWrite: React.FC = () => {
 
                 const data = await api.reservations.list();
                 if (!Array.isArray(data)) return;
+                const reservationData = data as ReservationApiRow[];
 
-                const myCompleted = data.filter((r: any) => r.user_id === me.id && r.status === 'completed');
-                myCompleted.sort((a: any, b: any) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+                const today = new Intl.DateTimeFormat('sv-SE', {
+                    timeZone: 'Asia/Tokyo',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                }).format(new Date());
+                const myCompleted = reservationData.filter((r) => {
+                    const endDate = String(r.endDate || r.end_date || '').slice(0, 10);
+                    const belongsToUser = (r.userId || r.user_id) === me.id
+                        || (!!me.email && String(r.customerEmail || r.customer_email || r.email || '').toLowerCase() === me.email.toLowerCase());
+                    const eligibleStatus = ['confirmed', 'paid', 'completed'].includes(r.status);
+                    const tourHasEnded = r.status === 'completed' || (!!endDate && endDate < today);
+                    return belongsToUser && eligibleStatus && tourHasEnded;
+                });
+                myCompleted.sort((a, b) => new Date(b.startDate || b.start_date || '').getTime() - new Date(a.startDate || a.start_date || '').getTime());
 
-                const mapped: ReservationLite[] = myCompleted.map((r: any) => ({
+                const mapped: ReservationLite[] = myCompleted.map((r) => ({
                     id: r.id,
-                    productId: r.product_id,
-                    productName: r.product_name,
-                    startDate: r.start_date,
-                    endDate: r.end_date,
+                    productId: r.productId || r.product_id,
+                    productName: r.productName || r.product_name || 'モンゴルツアー',
+                    startDate: r.startDate || r.start_date || '',
+                    endDate: r.endDate || r.end_date || '',
                 }));
                 setCompletedReservations(mapped);
+
+                if (invitedReservationId && mapped.some((r) => r.id === invitedReservationId)) {
+                    setMode('reservation');
+                    setSelectedReservationId(invitedReservationId);
+                }
 
                 // If the user has no completed reservations, default to "free" mode so they
                 // can still write a review (off-platform / Instagram / custom-quote travelers).
@@ -166,7 +205,7 @@ export const ReviewWrite: React.FC = () => {
 
         fetchReservations();
         fetchProducts();
-    }, []);
+    }, [invitedReservationId]);
 
     const selectedReservation = completedReservations.find(r => r.id === selectedReservationId);
     const selectedProduct = allProducts.find(p => p.id === selectedProductId);
@@ -245,7 +284,7 @@ export const ReviewWrite: React.FC = () => {
                 return;
             }
 
-            await api.reviews.create({
+            const reviewData = {
                 product_id: productId,
                 product_name: productName,
                 rating,
@@ -253,7 +292,13 @@ export const ReviewWrite: React.FC = () => {
                 content: sanitized,
                 images,
                 visit_date: visitDateLabel,
-            });
+            };
+
+            if (mode === 'reservation' && selectedReservation) {
+                await api.reviews.createForReservation(selectedReservation.id, reviewData);
+            } else {
+                await api.reviews.create(reviewData);
+            }
 
             // Submission succeeded — discard the persisted draft so the form is
             // empty next time the user lands here.
