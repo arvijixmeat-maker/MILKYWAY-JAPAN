@@ -143,9 +143,20 @@ CREATE TABLE IF NOT EXISTS reviews (
     title TEXT,
     content TEXT,
     images TEXT DEFAULT '[]',
+    comments TEXT DEFAULT '[]',
     is_approved INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS review_helpful (
+    review_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (review_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_helpful_review
+    ON review_helpful(review_id);
 
 -- Travel Guides
 CREATE TABLE IF NOT EXISTS travel_guides (

@@ -18,10 +18,12 @@ export const ReviewDetail: React.FC = () => {
 };
 
 const ReviewDetailDesktopContainer: React.FC = () => {
+    const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [review, setReview] = useState<any>(null);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [helpful, setHelpful] = useState(false);
+    const [helpfulSubmitting, setHelpfulSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -34,15 +36,20 @@ const ReviewDetailDesktopContainer: React.FC = () => {
                     api.auth.me().catch(() => null),
                 ]);
                 if (cancelled) return;
-                setReview(r);
                 setCurrentUser(me);
+                let helpfulState = null;
                 if (me && r) {
-                    let helpfulUsers: string[] = [];
                     try {
-                        helpfulUsers = typeof r.helpful_users === 'string' ? JSON.parse(r.helpful_users) : r.helpful_users || [];
-                    } catch { helpfulUsers = []; }
-                    if (helpfulUsers.includes(me.id)) setHelpful(true);
+                        helpfulState = await api.reviews.getHelpfulStatus(id);
+                        setHelpful(Boolean(helpfulState.helpful));
+                    } catch (error) {
+                        console.error('Helpful status fetch error:', error);
+                    }
                 }
+                setReview({
+                    ...r,
+                    helpful_count: helpfulState?.helpful_count ?? r.helpful_count ?? 0,
+                });
             } catch (e) {
                 console.error('Review detail fetch error:', e);
             } finally {
@@ -68,15 +75,27 @@ const ReviewDetailDesktopContainer: React.FC = () => {
     }
 
     const toggleHelpful = async () => {
-        if (!id || !currentUser) return;
-        let users: string[] = [];
-        try { users = typeof review.helpful_users === 'string' ? JSON.parse(review.helpful_users) : review.helpful_users || []; }
-        catch { users = []; }
-        const next = users.includes(currentUser.id) ? users.filter((u) => u !== currentUser.id) : [...users, currentUser.id];
+        if (!id) return;
+        if (!currentUser) {
+            alert('「参考になった」を登録するにはログインしてください。');
+            navigate('/login', { state: { from: `/reviews/${id}` } });
+            return;
+        }
+        if (helpfulSubmitting) return;
+        setHelpfulSubmitting(true);
         try {
-            await api.reviews.update(id, { helpful_users: JSON.stringify(next), helpful_count: next.length });
-            setHelpful(next.includes(currentUser.id));
-        } catch (e) { console.error(e); }
+            const result = await api.reviews.toggleHelpful(id);
+            setHelpful(Boolean(result.helpful));
+            setReview((current) => ({
+                ...current,
+                helpful_count: Number(result.helpful_count || 0),
+            }));
+        } catch (error) {
+            console.error('Failed to toggle helpful:', error);
+            alert('操作に失敗しました。時間をおいてもう一度お試しください。');
+        } finally {
+            setHelpfulSubmitting(false);
+        }
     };
 
     const addComment = async (content: string) => {
@@ -100,7 +119,7 @@ const ReviewDetailDesktopContainer: React.FC = () => {
 
     return (
         <DesktopLayout>
-            <ReviewDetailDesktop review={review} helpful={helpful} onHelpful={toggleHelpful} onAddComment={addComment} />
+            <ReviewDetailDesktop review={review} helpful={helpful} helpfulSubmitting={helpfulSubmitting} onHelpful={toggleHelpful} onAddComment={addComment} />
         </DesktopLayout>
     );
 };
@@ -119,6 +138,8 @@ const ReviewDetailMobile: React.FC = () => {
     const [replyContent, setReplyContent] = useState('');
 
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [helpful, setHelpful] = useState(false);
+    const [helpfulSubmitting, setHelpfulSubmitting] = useState(false);
 
     useEffect(() => {
         const checkUser = async () => {
@@ -131,6 +152,14 @@ const ReviewDetailMobile: React.FC = () => {
                         image: me.user_metadata?.avatar_url || me.avatar_url,
                         role: me.role,
                     });
+                    if (id) {
+                        try {
+                            const helpfulState = await api.reviews.getHelpfulStatus(id);
+                            setHelpful(Boolean(helpfulState.helpful));
+                        } catch (error) {
+                            console.error('Helpful status fetch error:', error);
+                        }
+                    }
                 }
             } catch (e) { /* ignore */ }
         };
@@ -149,9 +178,6 @@ const ReviewDetailMobile: React.FC = () => {
                     let parsedComments = [];
                     try { parsedComments = typeof data.comments === 'string' ? JSON.parse(data.comments) : (data.comments || []); } catch (e) { parsedComments = []; }
                     
-                    let parsedHelpfulUsers = [];
-                    try { parsedHelpfulUsers = typeof data.helpful_users === 'string' ? JSON.parse(data.helpful_users) : (data.helpful_users || []); } catch (e) { parsedHelpfulUsers = []; }
-
                     setReview({
                         id: data.id,
                         author: data.user_name,
@@ -166,7 +192,6 @@ const ReviewDetailMobile: React.FC = () => {
                         userImage: data.user_image,
                         comments: parsedComments,
                         helpfulCount: data.helpful_count || 0,
-                        helpfulUsers: parsedHelpfulUsers
                     });
                 }
             } catch (error) {
@@ -261,35 +286,24 @@ const ReviewDetailMobile: React.FC = () => {
 
     const handleToggleHelpful = async () => {
         if (!currentUser) {
-            alert(t('review_detail.login_required'));
+            alert('「参考になった」を登録するにはログインしてください。');
+            navigate('/login', { state: { from: `/reviews/${id}` } });
             return;
         }
-        if (!review || !id) return;
+        if (!review || !id || helpfulSubmitting) return;
+        setHelpfulSubmitting(true);
         try {
-            const isHelpful = review.helpfulUsers?.includes(currentUser.id);
-            let updatedUsers = review.helpfulUsers || [];
-            let updatedCount = review.helpfulCount || 0;
-
-            if (isHelpful) {
-                updatedUsers = updatedUsers.filter((uid: string) => uid !== currentUser.id);
-                updatedCount = Math.max(0, updatedCount - 1);
-            } else {
-                updatedUsers = [...updatedUsers, currentUser.id];
-                updatedCount += 1;
-            }
-
-            await api.reviews.update(id, {
-                helpful_count: updatedCount,
-                helpful_users: updatedUsers
-            });
-
+            const result = await api.reviews.toggleHelpful(id);
+            setHelpful(Boolean(result.helpful));
             setReview({
                 ...review,
-                helpfulCount: updatedCount,
-                helpfulUsers: updatedUsers
+                helpfulCount: Number(result.helpful_count || 0),
             });
         } catch (error) {
             console.error('Failed to toggle helpful:', error);
+            alert('操作に失敗しました。時間をおいてもう一度お試しください。');
+        } finally {
+            setHelpfulSubmitting(false);
         }
     };
 
@@ -426,7 +440,10 @@ const ReviewDetailMobile: React.FC = () => {
                         <p className="text-[15px] font-semibold text-[#4e5968] dark:text-gray-400">{t('review_detail.helpful_question')}</p>
                         <button
                             onClick={handleToggleHelpful}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-full border font-bold text-[15px] active:scale-95 transition-transform ${review.helpfulUsers?.includes(currentUser?.id)
+                            disabled={helpfulSubmitting}
+                            aria-pressed={helpful}
+                            aria-label={`参考になった ${review.helpfulCount || 0}件`}
+                            className={`flex items-center gap-2 px-8 py-3 rounded-full border font-bold text-[15px] active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-wait ${helpful
                                 ? 'bg-primary text-white border-primary'
                                 : 'border-primary text-primary hover:bg-primary/5'
                                 }`}

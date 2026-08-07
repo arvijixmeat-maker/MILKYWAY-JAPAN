@@ -21,7 +21,6 @@ interface ApiReview {
     comments?: string | CommentItem[];
     helpful_count?: number;
     helpfulCount?: number;
-    helpful_users?: string | string[];
 }
 
 interface CommentItem {
@@ -36,7 +35,8 @@ interface CommentItem {
 interface ReviewDetailDesktopProps {
     review: ApiReview;
     helpful?: boolean;
-    onHelpful?: () => void;
+    helpfulSubmitting?: boolean;
+    onHelpful?: () => void | Promise<void>;
     onAddComment?: (content: string) => void;
     contentWidth?: number;
 }
@@ -75,7 +75,7 @@ function timeAgo(iso?: string): string {
     return `${d} 日前`;
 }
 
-export function ReviewDetailDesktop({ review, helpful = false, onHelpful, onAddComment, contentWidth = 1280 }: ReviewDetailDesktopProps) {
+export function ReviewDetailDesktop({ review, helpful = false, helpfulSubmitting = false, onHelpful, onAddComment, contentWidth = 1280 }: ReviewDetailDesktopProps) {
     const navigate = useNavigate();
     const [comment, setComment] = useState('');
     const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -252,6 +252,9 @@ export function ReviewDetailDesktop({ review, helpful = false, onHelpful, onAddC
                     <button
                         type="button"
                         onClick={onHelpful}
+                        disabled={helpfulSubmitting}
+                        aria-pressed={helpful}
+                        aria-label={`参考になった ${helpfulCount}件`}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -263,12 +266,13 @@ export function ReviewDetailDesktop({ review, helpful = false, onHelpful, onAddC
                             borderRadius: 999,
                             fontSize: 13,
                             fontWeight: 700,
-                            cursor: 'pointer',
+                            cursor: helpfulSubmitting ? 'wait' : 'pointer',
+                            opacity: helpfulSubmitting ? 0.65 : 1,
                             fontFamily: 'inherit',
                         }}
                     >
                         <MatIcon name="thumb_up" size={16} filled={helpful} color={helpful ? '#0f766e' : 'var(--fg-3)'} />
-                        参考になった ({helpfulCount + (helpful ? 1 : 0)})
+                        参考になった ({helpfulCount})
                     </button>
                 </div>
 
