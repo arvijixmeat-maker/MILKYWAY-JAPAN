@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MatIcon } from '../desktop-primitives/MatIcon';
+import { ImageLightbox } from '../common/ImageLightbox';
 
 interface ApiReview {
     id: string | number;
@@ -393,55 +394,13 @@ export function ReviewDetailDesktop({ review, helpful = false, helpfulSubmitting
                 <div style={{ height: 96 }} />
             </div>
 
-            {/* Lightbox */}
+            {/* Lightbox — shared component with prev/next, keyboard nav, thumbnails */}
             {lightboxIdx !== null && images.length > 0 && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(0,0,0,0.92)',
-                        zIndex: 200,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        padding: 32,
-                    }}
-                    onClick={() => setLightboxIdx(null)}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', marginBottom: 24 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>{lightboxIdx + 1} / {images.length}</span>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setLightboxIdx(null);
-                            }}
-                            aria-label="close"
-                            style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 999,
-                                background: 'rgba(255,255,255,0.1)',
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <MatIcon name="close" size={22} color="#fff" />
-                        </button>
-                    </div>
-                    <div
-                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <img
-                            src={images[lightboxIdx]}
-                            alt=""
-                            style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }}
-                        />
-                    </div>
-                </div>
+                <ImageLightbox
+                    images={images}
+                    startIndex={lightboxIdx}
+                    onClose={() => setLightboxIdx(null)}
+                />
             )}
         </div>
     );
