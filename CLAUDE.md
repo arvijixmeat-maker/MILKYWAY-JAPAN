@@ -102,7 +102,17 @@ sitemap.xml.ts의 try/catch가 에러를 조용히 삼켜서 카테고리 URL이
 - magazine 카테고리/내용 일부가 한국어로 작성된 적이 있음. 운영 페이지는 모두 일본어가 맞으므로, 문자열 추가 시 일본어로 작성.
 - 관리자 페이지(`Admin*.tsx`)만 한국어 운영.
 
-### 6.5 채팅 위젯 (Channel Talk)
+### 6.5 Material Symbols 아이콘 = 서브셋 폰트 — **새 아이콘 추가 시 등록 필수**
+
+`index.html`의 Material Symbols `<link>` 2개(preload + stylesheet)는 `icon_names=` 파라미터로
+실제 사용하는 아이콘만 서브셋 요청함 (전체 폰트 3.9MB → 약 80KB, 모바일 FOUT 해결).
+**코드에 새 아이콘을 쓰면 두 URL 모두의 `icon_names`에 이름을 추가해야 함** — 안 하면
+그 아이콘만 원시 텍스트("chevron_right" 등)로 노출됨.
+
+- 검증: `npm run check:icons` (build 시 자동 실행되어 누락 시 빌드 실패)
+- 공식 아이콘 목록: `scripts/material-symbols-names.txt` (갱신 방법은 `scripts/check-icon-subset.mjs` 상단 주석)
+
+### 6.6 채팅 위젯 (Channel Talk)
 
 `index.html`에서 stub만 inline으로 로드하고, 실제 SDK는 `requestIdleCallback` 또는 5초 후 lazy load. LCP/TBT 보호. 절대 main bundle에 넣지 말 것.
 
