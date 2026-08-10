@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/check-icon-subset.mjs && vite build",
+    "check:icons": "node scripts/check-icon-subset.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -17,6 +18,7 @@
     "@fullcalendar/timegrid": "^6.1.20",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@paypal/react-paypal-js": "^9.1.0",
+    "@rollup/rollup-win32-x64-msvc": "^4.62.4",
     "@tanstack/react-query": "^5.90.18",
     "@types/dompurify": "^3.0.5",
     "@types/leaflet": "^1.9.21",

@@ -10,6 +10,7 @@ import { ReviewAvatar } from '../components/review/ReviewAvatar';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
 import { ReviewDetailDesktop } from '../components/reviews-desktop/ReviewDetailDesktop';
+import { ImageLightbox } from '../components/common/ImageLightbox';
 
 export const ReviewDetail: React.FC = () => {
     const isDesktop = useIsDesktop();
@@ -140,6 +141,9 @@ const ReviewDetailMobile: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [helpful, setHelpful] = useState(false);
     const [helpfulSubmitting, setHelpfulSubmitting] = useState(false);
+
+    // Tap-to-zoom lightbox: index of the tapped image, null = closed
+    const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
     useEffect(() => {
         const checkUser = async () => {
@@ -403,36 +407,56 @@ const ReviewDetailMobile: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Image Grid */}
+                    {/* Image Grid — tap any tile to open the fullscreen lightbox */}
                     {review.images && review.images.length > 0 && (
                         <div className={`grid gap-2 mb-8 ${review.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                             {review.images.slice(0, 3).map((img: string, idx: number) => (
-                                <img
+                                <button
                                     key={idx}
-                                    src={optimizeImage(img, { width: 600, height: 600 })}
-                                    alt={`レビュー写真 ${idx + 1}`}
-                                    className="aspect-square rounded-2xl object-cover w-full bg-gray-100 dark:bg-zinc-800"
-                                    loading="lazy"
-                                    decoding="async"
-                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                />
+                                    type="button"
+                                    onClick={() => setLightboxIdx(idx)}
+                                    aria-label={`レビュー写真 ${idx + 1}を拡大`}
+                                    className="p-0 border-0 bg-transparent cursor-pointer"
+                                >
+                                    <img
+                                        src={optimizeImage(img, { width: 600, height: 600 })}
+                                        alt={`レビュー写真 ${idx + 1}`}
+                                        className="aspect-square rounded-2xl object-cover w-full bg-gray-100 dark:bg-zinc-800"
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                </button>
                             ))}
                             {review.images.length > 3 && (
-                                <div className="relative aspect-square rounded-2xl overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setLightboxIdx(3)}
+                                    aria-label={`残り${review.images.length - 3}枚のレビュー写真を見る`}
+                                    className="relative aspect-square rounded-2xl overflow-hidden p-0 border-0 bg-transparent cursor-pointer"
+                                >
                                     <img
-                                        src={optimizeImage(review.images[2], { width: 600, height: 600 })}
-                                        alt={`レビュー写真 3`}
+                                        src={optimizeImage(review.images[3], { width: 600, height: 600 })}
+                                        alt={`レビュー写真 4`}
                                         className="absolute inset-0 w-full h-full object-cover bg-gray-100 dark:bg-zinc-800"
                                         loading="lazy"
                                         decoding="async"
                                         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                     />
                                     <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
-                                        <span className="text-white text-sm font-bold">+{review.images.length - 2}枚を見る</span>
+                                        <span className="text-white text-sm font-bold">+{review.images.length - 3}枚を見る</span>
                                     </div>
-                                </div>
+                                </button>
                             )}
                         </div>
+                    )}
+
+                    {lightboxIdx !== null && review.images && review.images.length > 0 && (
+                        <ImageLightbox
+                            images={review.images}
+                            startIndex={lightboxIdx}
+                            onClose={() => setLightboxIdx(null)}
+                        />
                     )}
 
                     {/* Helpful Button */}
