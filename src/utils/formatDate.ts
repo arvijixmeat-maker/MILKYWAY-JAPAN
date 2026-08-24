@@ -56,3 +56,42 @@ export const formatRelativeTime = (raw: string | number | Date | null | undefine
     if (day < 7) return isJa ? `${day}日前` : `${day}일 전`;
     return formatShortDate(d, locale);
 };
+
+/** Date → 브라우저 로컬 캘린더 기준 "YYYY-MM-DD". 고객이 실제로 클릭한 날짜 칸을 그대로 보존한다. */
+export const toLocalDateKey = (raw: string | number | Date | null | undefined): string => {
+    const d = toValidDate(raw);
+    if (!d) return '';
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+
+const JST_DATE_PARTS = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+/**
+ * 예약 출발일/종료일을 "YYYY-MM-DD"로 정규화한다.
+ *
+ * D1의 start_date/end_date는 두 가지 형태가 섞여 있다.
+ *  - "YYYY-MM-DD"        : 관리자 입력·견적 전환 경로. 이미 의도한 캘린더 날짜.
+ *  - ISO 타임스탬프      : 예전 예약 플로우가 로컬 자정 Date에 toISOString()을 씌운 값.
+ *                          JST(UTC+9)에서는 전날 15:00Z로 저장되므로 앞 10자를 그대로
+ *                          자르면 출발일이 하루 앞당겨져 보인다.
+ * ISO 값은 영업·고객 기준 시간대(Asia/Tokyo) 캘린더로 환산해, 관리자 브라우저
+ * 시간대(몽골 UTC+8 등)와 무관하게 고객이 고른 날짜와 일치하게 만든다.
+ */
+export const toTourDateKey = (raw: string | number | Date | null | undefined): string => {
+    if (!raw) return '';
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        if (!trimmed) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+        // "YYYY-MM-DD HH:mm:ss" (시간대 표기 없음) → 날짜 부분이 이미 현지 날짜다.
+        if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) return trimmed.slice(0, 10);
+    }
+    const d = toValidDate(raw);
+    if (!d) return typeof raw === 'string' ? raw.trim().slice(0, 10) : '';
+    const parts = JST_DATE_PARTS.formatToParts(d);
+    const get = (type: string) => parts.find(p => p.type === type)?.value || '';
+    const y = get('year'), m = get('month'), day = get('day');
+    return y && m && day ? `${y}-${m}-${day}` : toLocalDateKey(d);
+};

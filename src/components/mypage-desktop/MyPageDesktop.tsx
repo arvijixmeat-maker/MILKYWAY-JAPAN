@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { PageHero } from '../desktop-primitives/PageHero';
+import { toTourDateKey } from '../../utils/formatDate';
 
 interface MeUser {
     id: string;
@@ -623,8 +624,8 @@ function ReservationRow({ r, onClick }: { r: Reservation; onClick: () => void })
     const endDate = r.endDate || r.end_date;
     const dateLabel = startDate
         ? endDate
-            ? `${startDate.slice(0, 10)} 〜 ${endDate.slice(0, 10)}`
-            : startDate.slice(0, 10)
+            ? `${toTourDateKey(startDate)} 〜 ${toTourDateKey(endDate)}`
+            : toTourDateKey(startDate)
         : '';
     const statusColor =
         r.status === 'confirmed'
