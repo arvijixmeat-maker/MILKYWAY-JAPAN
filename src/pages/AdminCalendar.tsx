@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
+import { toTourDateKey } from '../utils/formatDate';
 
 type CalendarItemType = 'reservation' | 'quote';
 
@@ -44,7 +45,8 @@ const normalizeDate = (value: unknown): string => {
     if (!value || typeof value !== 'string') return '';
     const trimmed = value.trim();
     if (!trimmed) return '';
-    if (trimmed.includes('T')) return trimmed.split('T')[0];
+    // ISO 타임스탬프를 그대로 자르면 출발일이 하루 앞당겨진다 (toTourDateKey 주석 참고).
+    if (trimmed.includes('T')) return toTourDateKey(trimmed);
     if (trimmed.includes('.')) return trimmed.replace(/\./g, '-').replace(/\s/g, '');
     return trimmed;
 };

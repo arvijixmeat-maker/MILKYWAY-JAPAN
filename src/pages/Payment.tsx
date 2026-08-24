@@ -6,6 +6,7 @@ import { sendNotificationEmail } from '../lib/email';
 import { SEO } from '../components/seo/SEO';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PaymentDesktop } from '../components/reservation-desktop/PaymentDesktop';
+import { toLocalDateKey } from '../utils/formatDate';
 
 export const Payment: React.FC = () => {
     const { t } = useTranslation();
@@ -200,8 +201,10 @@ export const Payment: React.FC = () => {
 
             // Add date fields only for regular products
             if (!isQuote && selectedStartDate && parsedDuration) {
-                newReservation.start_date = new Date(selectedStartDate).toISOString();
-                newReservation.end_date = endDate ? endDate.toISOString() : null;
+                // 캘린더에서 고른 날짜는 로컬 자정 Date다. toISOString()을 씌우면 JST/KST(UTC+9)
+                // 기준으로 전날 15:00Z가 되어 출발일이 하루 앞당겨 저장된다 → "YYYY-MM-DD"로 저장.
+                newReservation.start_date = toLocalDateKey(selectedStartDate);
+                newReservation.end_date = endDate ? toLocalDateKey(endDate) : null;
                 newReservation.duration = `${parsedDuration.nights}박 ${parsedDuration.days}일`;
             } else if (isQuote) {
                 // For quotes, use duration string from product if available

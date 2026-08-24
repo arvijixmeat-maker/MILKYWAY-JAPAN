@@ -7,6 +7,7 @@ import { sendNotificationEmail } from '../lib/email';
 import { sendNotification } from '../utils/notification';
 import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplateManage';
+import { toTourDateKey } from '../utils/formatDate';
 
 // Reservation Interface
 interface Reservation {
@@ -248,6 +249,9 @@ const STATUS_TONE: Record<string, string> = {
     completed: 'b-gray',
     converted: 'b-gray',
 };
+
+// 「곧 출발하는 투어」에 노출할 확정 상태 — 입금 대기(pending_payment)는 제외한다.
+const CONFIRMED_TOUR_STATUSES = new Set(['confirmed', 'paid']);
 
 const STATUS_LABELS: Record<string, string> = {
     pending_payment: '입금 대기',
@@ -2203,8 +2207,10 @@ export const AdminReservationManage: React.FC = () => {
             // Map Reservations
             if (resData) {
                 const mappedReservations: Reservation[] = resData.map((r: any) => {
-                    const startDate = r.startDate || r.start_date;
-                    const endDate = r.endDate || r.end_date;
+                    // start_date/end_date는 "YYYY-MM-DD"와 ISO 타임스탬프가 섞여 저장돼 있다.
+                    // ISO 값을 그대로 자르면 출발일이 하루 앞당겨 보이므로 여기서 한 번에 정규화한다.
+                    const startDate = toTourDateKey(r.startDate || r.start_date);
+                    const endDate = toTourDateKey(r.endDate || r.end_date);
                     const createdAt = r.createdAt || r.created_at;
                     const travelers = r.travelers || r.totalPeople || r.total_people || 0;
                     const totalAmount = r.totalPrice || r.total_amount || r.price_breakdown?.total || r.totalAmount || 0;
@@ -2221,7 +2227,7 @@ export const AdminReservationManage: React.FC = () => {
                     endDate,
                     departureMs: toTime(startDate),
                     date: startDate
-                        ? `${new Date(startDate).toLocaleDateString('ko-KR')} ~ ${endDate ? new Date(endDate).toLocaleDateString('ko-KR') : ''}`
+                        ? `${new Date(toTime(startDate)).toLocaleDateString('ko-KR')} ~ ${endDate ? new Date(toTime(endDate)).toLocaleDateString('ko-KR') : ''}`
                         : r.duration || '날짜 미정',
                     bookedAt: createdAt ? new Date(createdAt).toLocaleDateString('ko-KR') : '',
                     status: r.status,
@@ -2663,8 +2669,9 @@ export const AdminReservationManage: React.FC = () => {
         return reservations
             .filter((reservation) => {
                 const departureMs = reservation.departureMs || toTime(reservation.startDate);
+                // 입금 대기·취소·견적은 제외하고 확정된 팀(예약 확정 / 결제 완료)만 노출한다.
                 return reservation.type !== 'quote'
-                    && reservation.status !== 'cancelled'
+                    && CONFIRMED_TOUR_STATUSES.has(reservation.status)
                     && departureMs >= todayMs
                     && departureMs <= horizonMs;
             })
@@ -2681,7 +2688,7 @@ export const AdminReservationManage: React.FC = () => {
 
     const formatUpcomingDate = (value?: string) => {
         if (!value) return '날짜 미정';
-        const time = toTime(String(value).slice(0, 10));
+        const time = toTime(toTourDateKey(value));
         if (!time) return '날짜 미정';
         return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' }).format(new Date(time));
     };
@@ -2979,7 +2986,7 @@ export const AdminReservationManage: React.FC = () => {
                             <span className="metric-ico tint-red upcoming-tours-icon"><Icon name="flight_takeoff" fill /></span>
                             <div style={{ minWidth: 0 }}>
                                 <h2 id="upcoming-tours-title">곧 출발하는 투어</h2>
-                                <div className="sub">30일 이내 출발 일정 · 가까운 날짜순</div>
+                                <div className="sub">30일 이내 출발 · 확정 팀만 · 가까운 날짜순</div>
                             </div>
                             <div className="spacer" />
                             <span className="badge b-red"><span className="pulse" />{upcomingTours.length}건 예정</span>
@@ -3021,7 +3028,7 @@ export const AdminReservationManage: React.FC = () => {
                         ) : (
                             <div className="upcoming-tour-empty">
                                 <Icon name="event_available" />
-                                <div><strong>30일 이내 출발 예정 투어가 없습니다.</strong><span>새 예약의 출발일이 등록되면 이곳에 자동으로 표시됩니다.</span></div>
+                                <div><strong>30일 이내 출발 예정인 확정 투어가 없습니다.</strong><span>예약이 확정(입금 완료)되고 출발일이 등록되면 이곳에 자동으로 표시됩니다.</span></div>
                             </div>
                         )}
                     </section>
