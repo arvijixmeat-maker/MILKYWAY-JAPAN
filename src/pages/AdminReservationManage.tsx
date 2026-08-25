@@ -629,11 +629,22 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             images: Array.isArray(acc.images) ? acc.images : (acc.images ? [acc.images] : []),
         };
     };
-    const saveDocContent = async (content: ReservationDocContent) => {
-        const payload = { document_content: JSON.stringify(content) };
+    const saveDocContent = async (content: ReservationDocContent, tourDates?: { startDate: string; endDate: string }) => {
+        const payload = {
+            document_content: JSON.stringify(content),
+            ...(tourDates ? { start_date: tourDates.startDate || null, end_date: tourDates.endDate || null } : {}),
+        };
         if (isQuoteRes) await (api.quotes as any).update(reservation.id, payload);
         else await (api.reservations as any).update(reservation.id, payload);
-        onUpdate({ ...reservation, documentContent: content });
+        onUpdate({
+            ...reservation,
+            documentContent: content,
+            ...(tourDates ? {
+                startDate: tourDates.startDate,
+                endDate: tourDates.endDate,
+                date: tourDates.startDate && tourDates.endDate ? `${tourDates.startDate} ~ ${tourDates.endDate}` : '날짜 미정',
+            } : {}),
+        });
     };
 
     const addHistory = (entry: { type: string; description: string; detail?: string }) => ({
@@ -2131,6 +2142,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             customer={docCustomer}
             initialContent={docInitialContent}
             onSave={saveDocContent}
+            tourStartDate={String((reservation as any).startDate || '').slice(0, 10)}
+            tourEndDate={String((reservation as any).endDate || '').slice(0, 10)}
             assignedGuide={reservation.assignedGuide}
             dailyAccommodations={reservation.dailyAccommodations}
             onAssignGuide={() => setShowGuideModal(true)}
@@ -2427,6 +2440,8 @@ export const AdminReservationManage: React.FC = () => {
                 contract_url: updated.contractUrl,
                 itinerary_url: updated.itineraryUrl,
                 itinerary_template_id: updated.itineraryTemplateId,
+                ...(updated.startDate !== oldReservation.startDate ? { start_date: updated.startDate || null } : {}),
+                ...(updated.endDate !== oldReservation.endDate ? { end_date: updated.endDate || null } : {}),
                 ...(updated.contractData !== oldReservation.contractData ? { contract_data: updated.contractData } : {}),
                 ...(updated.assignedGuide !== oldReservation.assignedGuide ? { assigned_guide: updated.assignedGuide } : {}),
                 ...(updated.dailyAccommodations !== oldReservation.dailyAccommodations ? { daily_accommodations: updated.dailyAccommodations } : {}),

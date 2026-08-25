@@ -116,6 +116,7 @@ app.get('/itinerary/:reservationId', async (c) => {
             : null;
         return {
             day: dayNumber,
+            date: tday.date || '',
             title: tday.title || '',
             region: tday.region || '',
             summary: tday.summary || '',
@@ -129,7 +130,7 @@ app.get('/itinerary/:reservationId', async (c) => {
     if (dailyAccommodations.length > mergedDays.length) {
         for (let d = mergedDays.length + 1; d <= dailyAccommodations.length; d++) {
             const accommodation = dailyAccommodations.find((x: any) => x.day === d)?.accommodation || null;
-            if (accommodation) mergedDays.push({ day: d, title: '', activities: [], accommodation });
+            if (accommodation) mergedDays.push({ day: d, date: dailyAccommodations.find((x: any) => x.day === d)?.date || '', title: '', activities: [], accommodation });
         }
     }
 

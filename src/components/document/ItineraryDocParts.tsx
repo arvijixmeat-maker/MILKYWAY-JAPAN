@@ -34,7 +34,7 @@ export const PAGE_BG = '#e7e5df';
 // ─── 타입 ───
 export interface Activity { time?: string; type?: string; title: string; description?: string; images?: string[] | string; }
 export interface DayData {
-    day: number; title: string; region?: string; summary?: string;
+    day: number; date?: string; title: string; region?: string; summary?: string;
     activities: Activity[];
     meals?: { breakfast?: string; lunch?: string; dinner?: string };
     accommodation: { id?: string; name: string; type?: string; location?: string; images?: string[] | string; description?: string; facilities?: string[] | string } | null;
@@ -57,6 +57,15 @@ export const dayDate = (start: string | undefined, dayNum: number) => {
     const d = new Date(start);
     if (Number.isNaN(d.getTime())) return '';
     d.setDate(d.getDate() + dayNum - 1);
+    const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+    return `${d.getMonth() + 1}.${d.getDate()} ${wd}`;
+};
+export const displayDayDate = (explicitDate: string | undefined, start: string | undefined, dayNum: number) => {
+    const value = explicitDate?.trim();
+    if (!value) return dayDate(start, dayNum);
+    const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!iso) return value;
+    const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
     const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
     return `${d.getMonth() + 1}.${d.getDate()} ${wd}`;
 };
@@ -223,7 +232,7 @@ export const DayTimelineBlock: React.FC<{
                 <div style={{ padding: '8px 0', fontSize: 13, color: MUTE }}>日程は現在準備中です。</div>
             ) : days.map((day, i) => {
                 const dayNum = day.day || i + 1;
-                const dstr = dayDate(startDate, dayNum);
+                const dstr = displayDayDate(day.date, startDate, dayNum);
                 return (
                     <div key={dayNum} style={{ position: 'relative', marginBottom: i === days.length - 1 ? 0 : (m ? 18 : 28) }} className="print-break">
                         <div style={{ position: 'absolute', left: m ? -26 : -34, top: 4, width: m ? 12 : 16, height: m ? 12 : 16, borderRadius: '50%', background: BLUE, boxShadow: `0 0 0 ${m ? 3 : 4}px ${BLUE_BG}` }} />

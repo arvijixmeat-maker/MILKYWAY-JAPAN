@@ -179,6 +179,8 @@ app.put('/:id', async (c) => {
         itinerary_template_id: 'itineraryTemplateId',
         contract_data: 'contractData',
         document_content: 'documentContent',
+        start_date: 'startDate',
+        end_date: 'endDate',
         updated_at: 'updatedAt',
     };
     const normalized: any = {};

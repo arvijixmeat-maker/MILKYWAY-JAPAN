@@ -45,7 +45,10 @@ interface Props {
     };
     /** 저장돼 있던 문서 내용(없으면 템플릿/기본값) */
     initialContent: ReservationDocContent | null;
-    onSave: (content: ReservationDocContent) => Promise<void>;
+    onSave: (content: ReservationDocContent, tourDates?: { startDate: string; endDate: string }) => Promise<void>;
+    /** 고객 확정 일정의 기준 여행일. 전달된 경우 편집기에서 수정·저장할 수 있다. */
+    tourStartDate?: string;
+    tourEndDate?: string;
     /** 가이드·숙소 배정 (상세내역의 picker 재사용) */
     assignedGuide?: { name?: string; phone?: string; image?: string } | null;
     dailyAccommodations?: Array<{ day: number; accommodation: { name?: string } }>;
@@ -55,11 +58,13 @@ interface Props {
     onUnassignAccommodation?: (day: number) => void;
 }
 
-export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, documentType = 'itinerary', templateMode = false, customer, initialContent, onSave, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation, onUnassignAccommodation }) => {
+export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, title, documentType = 'itinerary', templateMode = false, customer, initialContent, onSave, tourStartDate, tourEndDate, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation, onUnassignAccommodation }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [days, setDays] = useState<TemplateDay[]>([]);
     const [docSettings, setDocSettings] = useState<DocumentSettings>(defaultDocumentSettings());
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [saving, setSaving] = useState(false);
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [draggedDayIndex, setDraggedDayIndex] = useState<number | null>(null);
@@ -78,9 +83,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
         setDescription(initialContent?.description || '');
         setDays(Array.isArray(initialContent?.days) ? initialContent!.days : []);
         setDocSettings(mergeDocumentSettings(initialContent?.documentSettings));
+        setStartDate(tourStartDate || '');
+        setEndDate(tourEndDate || '');
         setSelectedDayIndex(0);
         setAutoLoadedName(null);
-    }, [open, initialContent]);
+    }, [open, initialContent, tourStartDate, tourEndDate]);
 
     useEffect(() => {
         if (!open || products.length > 0) return;
@@ -352,9 +359,22 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
             const ok = window.confirm('일정(DAY)이 하나도 없습니다.\n이대로 저장하면 고객 화면에는 「日程は現在準備中です」로 표시됩니다.\n\n계속 저장할까요?\n(취소 후 좌측 「선택 상품 적용」을 누르면 상품 일정이 채워집니다)');
             if (!ok) return;
         }
+        if (!templateMode && (tourStartDate !== undefined || tourEndDate !== undefined)) {
+            if ((startDate && !endDate) || (!startDate && endDate)) {
+                alert('여행 시작일과 종료일을 모두 입력해 주세요.');
+                return;
+            }
+            if (startDate && endDate && endDate < startDate) {
+                alert('여행 종료일은 시작일보다 빠를 수 없습니다.');
+                return;
+            }
+        }
         setSaving(true);
         try {
-            await onSave({ name, description, days, documentSettings: docSettings });
+            await onSave(
+                { name, description, days, documentSettings: docSettings },
+                (tourStartDate !== undefined || tourEndDate !== undefined) ? { startDate, endDate } : undefined,
+            );
             onClose();
         } catch (e: any) {
             alert('저장 실패: ' + (e?.message || e));
@@ -369,6 +389,20 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const includedCount = docSettings.overview.included.filter(item => item.label?.trim()).length;
     const excludedCount = docSettings.overview.excludedText.split(/\r?\n/).filter(Boolean).length;
     const selectedDay = days[selectedDayIndex];
+    const datesEditable = !templateMode && (tourStartDate !== undefined || tourEndDate !== undefined);
+    const editableDuration = (() => {
+        if (!startDate || !endDate) return undefined;
+        const start = new Date(`${startDate}T00:00:00`);
+        const end = new Date(`${endDate}T00:00:00`);
+        const nights = Math.round((end.getTime() - start.getTime()) / 86400000);
+        return Number.isFinite(nights) && nights >= 0 ? `${nights}泊${nights + 1}日` : undefined;
+    })();
+    const editablePeriod = startDate && endDate ? `${startDate} ~ ${endDate}` : (startDate || customer?.period || '');
+    const previewCustomer = customer ? {
+        ...customer,
+        period: datesEditable ? editablePeriod : customer.period,
+        tripLength: datesEditable ? (editableDuration || customer.tripLength) : customer.tripLength,
+    } : customer;
 
     return (
         <div className="fixed inset-0 z-[210] bg-slate-900/50 backdrop-blur-sm p-3 sm:p-6">
@@ -391,7 +425,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                     </div>
                 </div>
                 {(customer || (documentType === 'contract' && (onAssignGuide || onAssignAccommodation))) && <div className="flex flex-shrink-0 flex-col gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[520px]">
+                    <div className={`grid gap-2 sm:grid-cols-3 ${datesEditable ? 'lg:min-w-[760px] lg:grid-cols-5' : 'lg:min-w-[520px]'}`}>
                         <div className="rounded-2xl border border-[#BBD9FF] bg-[#EAF3FF] px-4 py-3 dark:border-teal-900 dark:bg-teal-950/20">
                             <p className="text-[10px] font-black uppercase tracking-widest text-[#1668DC]">고객</p>
                             <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer?.name || '고객명 없음'}</p>
@@ -402,8 +436,18 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">여행기간</p>
-                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{customer?.period || customer?.tripLength || '-'}</p>
+                            <p className="mt-1 truncate text-sm font-black text-slate-900 dark:text-white">{editableDuration || customer?.tripLength || '-'}</p>
                         </div>
+                        {datesEditable && <>
+                            <label className="rounded-2xl border border-[#BBD9FF] bg-white px-4 py-2 dark:border-blue-800 dark:bg-slate-800">
+                                <span className="block text-[10px] font-black uppercase tracking-widest text-[#1668DC]">투어 시작일</span>
+                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-black text-slate-900 outline-none dark:text-white" />
+                            </label>
+                            <label className="rounded-2xl border border-[#BBD9FF] bg-white px-4 py-2 dark:border-blue-800 dark:bg-slate-800">
+                                <span className="block text-[10px] font-black uppercase tracking-widest text-[#1668DC]">투어 종료일</span>
+                                <input type="date" value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-black text-slate-900 outline-none dark:text-white" />
+                            </label>
+                        </>}
                     </div>
                     {documentType === 'contract' && (onAssignGuide || onAssignAccommodation) && (
                         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -549,6 +593,13 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                             placeholder="지역 미정"
                                             className="mt-0.5 w-full truncate border-none bg-transparent p-0 text-[10px] font-semibold text-slate-400 outline-none placeholder:text-slate-300 focus:ring-0"
                                         />
+                                        <input
+                                            value={day.date || ''}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => updateDay(index, 'date', e.target.value)}
+                                            placeholder={startDate ? '기준일로 자동 계산' : '날짜 직접 입력 (예: 9月20日)'}
+                                            className="mt-0.5 w-full truncate border-none bg-transparent p-0 text-[10px] font-semibold text-[#287DFA] outline-none placeholder:text-slate-300 focus:ring-0"
+                                        />
                                     </div>
                                 ))}
                                 <button onClick={addDay} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#9CC5FF] px-3 py-3 text-xs font-black text-[#287DFA] hover:bg-[#EAF3FF]">
@@ -564,7 +615,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         description={description}
                         days={days}
                         documentSettings={docSettings}
-                        customer={customer}
+                        customer={previewCustomer}
                         assignedGuide={assignedGuide}
                         dailyAccommodations={dailyAccommodations}
                         onNameChange={setName}
@@ -603,7 +654,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                     <span className="material-symbols-outlined text-[18px] text-[#287DFA]">calendar_month</span>
                                     <div>
                                         <p className="text-[10px] font-bold text-slate-400">여행 기간</p>
-                                        <p className="text-xs font-black text-slate-800">{customer?.period || customer?.tripLength || '-'}</p>
+                                        <p className="text-xs font-black text-slate-800">{editablePeriod || editableDuration || customer?.period || customer?.tripLength || '-'}</p>
                                     </div>
                                 </div>
                                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -625,6 +676,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                                 </div>
                                 <dl className="mt-3 space-y-2 text-[11px]">
                                     <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">지역</dt><dd className="truncate font-black text-slate-700">{selectedDay?.region || '미정'}</dd></div>
+                                    <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">날짜</dt><dd className="truncate font-black text-slate-700">{selectedDay?.date || (startDate ? '기준일 자동 계산' : '미정')}</dd></div>
                                     <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">주요 일정</dt><dd className="font-black text-slate-700">{selectedDay?.activities.length || 0}개</dd></div>
                                     <div className="flex justify-between gap-3"><dt className="font-bold text-slate-400">숙소</dt><dd className="truncate font-black text-slate-700">{dailyAccommodations?.find(item => item.day === selectedDay?.day)?.accommodation?.name || selectedDay?.accommodation?.name || '미정'}</dd></div>
                                 </dl>

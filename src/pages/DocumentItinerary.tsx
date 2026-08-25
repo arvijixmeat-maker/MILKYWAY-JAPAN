@@ -206,7 +206,8 @@ export const DocumentItinerary: React.FC = () => {
     const duration = computeDuration(reservation.startDate, reservation.endDate);
     const durationChip = duration ? `${duration.nights}泊${duration.days}日` : `全${days.length}日間`;
     const title = template?.name || reservation.productName;
-    const subtitle = overview.heroTagline || template?.description || '中央モンゴルの大自然と文化を体験する特別な旅へ。日本語ガイド同行。';
+    // 고객별 문서 편집기에서 고친 소개문이 프리셋 기본 문구보다 우선한다.
+    const subtitle = template?.description || overview.heroTagline || '中央モンゴルの大自然と文化を体験する特別な旅へ。日本語ガイド同行。';
 
     const productInc = data.productIncluded || [];
     const productExc = data.productExcluded || [];

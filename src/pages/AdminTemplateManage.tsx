@@ -565,7 +565,12 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                 <article key={dayIdx} className={`${card} overflow-hidden`}>
                                     <div className="flex flex-wrap items-center gap-3 px-5 pt-5">
                                         <span className="rounded-full px-4 py-1.5 text-[13px] font-black text-white" style={{ background: DOC_BLUE }}>DAY {day.day}</span>
-                                        <span className="text-[11px] font-bold text-slate-400">{day.date || `${day.day}日目`}</span>
+                                        <input
+                                            value={day.date || ''}
+                                            onChange={e => onDayChange(dayIdx, 'date', e.target.value)}
+                                            placeholder="날짜 자동 / 직접 입력"
+                                            className={`${fieldClass} w-[140px] flex-none text-[11px] font-bold text-slate-400`}
+                                        />
                                         <div className="min-w-[160px] flex-1">
                                             <input value={day.title} onChange={e => onDayChange(dayIdx, 'title', e.target.value)} placeholder={`${day.day}日目のタイトル`} className={`${fieldClass} text-[15px] font-black text-[#0B1B45]`} />
                                         </div>
