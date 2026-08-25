@@ -9,6 +9,7 @@ import {
     type ActivityType,
 } from '../../pages/AdminTemplateManage';
 import { api } from '../../lib/api';
+import { uploadImage } from '../../utils/upload';
 import type { DayInfoContent, DetailContentBlock, TimelineContent, TourProduct } from '../../types/product';
 import { TouristSpotPickerModal } from './TouristSpotPickerModal';
 import { HotelPickerModal } from './HotelPickerModal';
@@ -299,6 +300,26 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
     const removeActivity = (dayIdx: number, actIdx: number) => setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.filter((_, j) => j !== actIdx) } : x));
     const updateActivity = (dayIdx: number, actIdx: number, field: 'time' | 'title' | 'description', value: string) =>
         setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.map((a, j) => j === actIdx ? { ...a, [field]: value } : a) } : x));
+    // 일정 항목 순서 변경(드래그앤드랍) — moveDay와 같은 방식, 같은 일차 내에서만 이동
+    const moveActivityTo = (dayIdx: number, from: number, to: number) => setDays(d => d.map((x, i) => {
+        if (i !== dayIdx || from === to || to < 0 || to >= x.activities.length) return x;
+        const acts = [...x.activities];
+        const [moved] = acts.splice(from, 1);
+        acts.splice(to, 0, moved);
+        return { ...x, activities: acts };
+    }));
+    // 일정 항목 사진 업로드 — AdminTemplateManage의 uploadActivityImages와 동일 패턴(WebP 압축 → R2)
+    const uploadActivityImages = async (dayIdx: number, actIdx: number, files: FileList | null) => {
+        if (!files?.length) return;
+        try {
+            const urls = await Promise.all(Array.from(files).map(file => uploadImage(file, 'reservation-docs')));
+            setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.map((a, j) => j === actIdx ? { ...a, images: [...(a.images || []), ...urls] } : a) } : x));
+        } catch {
+            alert('일정 사진 업로드에 실패했습니다.');
+        }
+    };
+    const removeActivityImage = (dayIdx: number, actIdx: number, imgIdx: number) =>
+        setDays(d => d.map((x, i) => i === dayIdx ? { ...x, activities: x.activities.map((a, j) => j === actIdx ? { ...a, images: (a.images || []).filter((_, k) => k !== imgIdx) } : a) } : x));
 
     // 관광지 마스터 → 해당 항목의 제목(비었을 때만)·설명·사진 채움
     const fillItemFromSpot = (d: number, a: number, spot: TouristSpot) => setDays(prev => prev.map((day, i) => {
@@ -559,6 +580,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
                         onRemoveDay={removeDay}
                         onRemoveActivity={removeActivity}
                         onDayActivitiesText={(d, text) => setDays(ds => ds.map((x, i) => i === d ? { ...x, activities: parseDayActivitiesText(text) } : x))}
+                                onMoveActivity={moveActivityTo}
+                                onUploadActivityImages={uploadActivityImages}
+                                onRemoveActivityImage={removeActivityImage}
                                 onPickSpot={(d, a) => setSpotTarget({ d, a })}
                                 onPickHotel={(dayIdx) => { if (!templateMode && onAssignAccommodation) { onAssignAccommodation(dayIdx + 1); } else { setHotelDayIdx(dayIdx); } }}
                                 onClearHotel={(dayIdx) => {
