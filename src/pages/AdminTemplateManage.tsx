@@ -236,6 +236,11 @@ type TemplatePreviewProps = {
     onRemoveDay: (dayIdx: number) => void;
     onRemoveActivity: (dayIdx: number, actIdx: number) => void;
     onDayActivitiesText?: (dayIdx: number, text: string) => void;
+    /** 일정 항목 순서 변경(드래그앤드랍) — 없으면 드래그 핸들 미표시 */
+    onMoveActivity?: (dayIdx: number, from: number, to: number) => void;
+    /** 일정 항목 사진 업로드 — 없으면 「사진 추가」 버튼 미표시 */
+    onUploadActivityImages?: (dayIdx: number, actIdx: number, files: FileList | null) => void;
+    onRemoveActivityImage?: (dayIdx: number, actIdx: number, imgIdx: number) => void;
     onPickSpot?: (dayIdx: number, actIdx: number) => void;
     onPickHotel?: (dayIdx: number) => void;
     /** 해당 일차의 숙소 선택 해제(확정 배정 해제 포함). 없으면 문서 내용의 숙소만 비운다. */
@@ -269,8 +274,10 @@ const AutoTextarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> 
     return <textarea ref={ref} rows={1} {...props} onInput={(e) => { fit(); props.onInput?.(e); }} style={{ ...(props.style || {}), overflow: 'hidden', resize: 'none' }} />;
 };
 
-export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onPickSpot, onPickHotel, onClearHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true, visiblePages }) => {
+export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, description, days, documentSettings, customer, assignedGuide, dailyAccommodations, onNameChange, onDescriptionChange, onDocSection, onIncluded, onCancellation, onGuideNotice, onDayChange, onActivityChange, onAddDay, onAddActivity, onRemoveDay, onRemoveActivity, onDayActivitiesText, onMoveActivity, onUploadActivityImages, onRemoveActivityImage, onPickSpot, onPickHotel, onClearHotel, defaultPage = 'overview', focusDayIndex, showPageTabs = true, visiblePages }) => {
     const [activePage, setActivePage] = useState<'overview' | 'contract' | 'detail' | 'guide'>(defaultPage);
+    // 詳細 탭 일정 항목 드래그앤드랍 상태 — DAY 사이드바(ReservationDocumentEditor)와 같은 HTML5 drag 방식
+    const [dragActivity, setDragActivity] = useState<{ day: number; idx: number } | null>(null);
     useEffect(() => setActivePage(defaultPage), [defaultPage]);
     const totalDays = days.length;
     const nights = Math.max(0, totalDays - 1);
@@ -595,21 +602,59 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                             </div>
                                             <ul className="space-y-2">
                                                 {day.activities.map((activity, index) => (
-                                                    <li key={index} className="rounded-xl bg-[#F4F8FF] p-2.5">
+                                                    <li
+                                                        key={index}
+                                                        onDragOver={e => {
+                                                            if (!onMoveActivity || dragActivity === null || dragActivity.day !== dayIdx) return;
+                                                            e.preventDefault();
+                                                            if (dragActivity.idx === index) return;
+                                                            onMoveActivity(dayIdx, dragActivity.idx, index);
+                                                            setDragActivity({ day: dayIdx, idx: index });
+                                                        }}
+                                                        onDrop={() => setDragActivity(null)}
+                                                        className={`rounded-xl bg-[#F4F8FF] p-2.5 ${dragActivity?.day === dayIdx && dragActivity.idx === index ? 'opacity-50' : ''}`}
+                                                    >
                                                         <div className="flex items-center gap-2">
-                                                            <span className="ml-1 h-1.5 w-1.5 flex-none rounded-full" style={{ background: DOC_BLUE }} />
+                                                            {onMoveActivity ? (
+                                                                <span
+                                                                    draggable
+                                                                    onDragStart={() => setDragActivity({ day: dayIdx, idx: index })}
+                                                                    onDragEnd={() => setDragActivity(null)}
+                                                                    title="드래그하여 순서 변경"
+                                                                    className="-ml-0.5 flex flex-none cursor-grab items-center text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">drag_indicator</span>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="ml-1 h-1.5 w-1.5 flex-none rounded-full" style={{ background: DOC_BLUE }} />
+                                                            )}
                                                             <div className="w-[56px] flex-none">
                                                                 <input value={activity.time || ''} onChange={e => onActivityChange(dayIdx, index, 'time', e.target.value)} placeholder="10:00" className={`${fieldClass} text-center text-[11px] font-black text-[#1656D6]`} />
                                                             </div>
                                                             <input value={activity.title} onChange={e => onActivityChange(dayIdx, index, 'title', e.target.value)} placeholder="주요 일정 (예: 공항 도착 및 가이드 미팅)" className={`${fieldClass} flex-1 text-[12.5px] font-bold text-[#0B1B45]`} />
                                                             {onPickSpot && <button onClick={() => onPickSpot(dayIdx, index)} className="h-7 flex-none rounded-lg border border-[#C7DCFF] bg-white px-2 text-[9px] font-black" style={{ color: '#1656D6' }}>관광지</button>}
+                                                            {onUploadActivityImages && (
+                                                                <label className="flex h-7 flex-none cursor-pointer items-center gap-0.5 rounded-lg border border-[#C7DCFF] bg-white px-2 text-[9px] font-black" style={{ color: '#1656D6' }} title="사진 추가">
+                                                                    <span className="material-symbols-outlined text-[14px]">add_photo_alternate</span>사진
+                                                                    <input type="file" accept="image/*" multiple className="hidden" onChange={e => { onUploadActivityImages(dayIdx, index, e.target.files); e.currentTarget.value = ''; }} />
+                                                                </label>
+                                                            )}
                                                             <button onClick={() => onRemoveActivity(dayIdx, index)} className="flex-none text-slate-300 hover:text-red-500" title="삭제"><span className="material-symbols-outlined text-[16px]">close</span></button>
                                                         </div>
                                                         <div className="pl-[18px]">
                                                             <AutoTextarea value={activity.description || ''} onChange={e => onActivityChange(dayIdx, index, 'description', e.target.value)} rows={2} placeholder="상세 설명 (선택)" className={`${fieldClass} mt-1 resize-y text-[10.5px] font-semibold leading-relaxed text-slate-500`} />
                                                             {(activity.images || []).length > 0 && (
                                                                 <div className="mt-1.5 grid grid-cols-3 gap-2">
-                                                                    {(activity.images || []).slice(0, 3).map((image, imageIndex) => <img key={imageIndex} src={image} alt="" className="h-16 w-full rounded-lg object-cover" />)}
+                                                                    {(activity.images || []).map((image, imageIndex) => (
+                                                                        <div key={`${image}-${imageIndex}`} className="relative">
+                                                                            <img src={image} alt="" className="h-16 w-full rounded-lg object-cover" />
+                                                                            {onRemoveActivityImage && (
+                                                                                <button type="button" onClick={() => onRemoveActivityImage(dayIdx, index, imageIndex)} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white shadow" title="사진 삭제">
+                                                                                    <span className="material-symbols-outlined text-[13px]">close</span>
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             )}
                                                         </div>
