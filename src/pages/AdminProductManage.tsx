@@ -1,11 +1,13 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
+import { DesignTemplateBlockEditor } from '../components/admin/DesignTemplateBlockEditor';
+import { designTemplates } from '../components/product/designTemplates/registry';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
-import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
+import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent, DesignBlockContent } from '../types/product';
 import type { Category } from '../types/category';
 import type { Hotel } from '../types/hotel';
 import type { TouristSpot } from '../types/touristSpot';
@@ -789,10 +791,15 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
     // Detail Block Handlers
-    const addDetailBlock = (type: 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo', dayLabel?: string) => {
+    const addDetailBlock = (type: 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo' | 'design', dayLabel?: string, templateId?: string) => {
         let content: any = '';
 
-        if (type === 'slide') {
+        if (type === 'design') {
+            content = {
+                templateId: templateId || designTemplates[0]?.id || '',
+                values: {}
+            };
+        } else if (type === 'slide') {
             content = {
                 id: `slide-${Date.now()}`,
                 type: 'day',
@@ -1933,6 +1940,23 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                             <button type="button" className="chip" onClick={() => addDetailBlock('divider')}>
                                                 <Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선/여백
                                             </button>
+                                            {designTemplates.length === 1 ? (
+                                                <button type="button" className="chip" onClick={() => addDetailBlock('design', undefined, designTemplates[0].id)}>
+                                                    <Icon name="auto_awesome" style={{ fontSize: 16 }} />디자인 템플릿
+                                                </button>
+                                            ) : (
+                                                <select
+                                                    onChange={(e) => { if (e.target.value) { addDetailBlock('design', undefined, e.target.value); e.target.value = ''; } }}
+                                                    defaultValue=""
+                                                    className="select"
+                                                    style={{ height: 36, fontSize: 13 }}
+                                                >
+                                                    <option value="" disabled>✨ 디자인 템플릿</option>
+                                                    {designTemplates.map(t => (
+                                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                         <div className="card-muted-note" style={{ marginBottom: 14 }}>
                                             <Icon name="info" />
@@ -1950,7 +1974,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         {/* Block Header */}
                                                         <div className="row" style={{ gap: 8, marginBottom: 10 }}>
                                                             <span className="badge b-gray">
-                                                                {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : 'DIVIDER')))}
+                                                                {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : (block.type === 'design' ? 'DESIGN' : 'DIVIDER'))))}
                                                             </span>
                                                             <span className="cell-muted" style={{ fontSize: 12 }}>{index + 1}번째 블록</span>
                                                         </div>
@@ -2084,6 +2108,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                     <div className="inp-mini"><span className="pre"><Icon name="hotel" style={{ fontSize: 14 }} /></span><input value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" /></div>
                                                                 </div>
                                                             </div>
+                                                        ) : block.type === 'design' ? (
+                                                            // DESIGN TEMPLATE BLOCK
+                                                            <DesignTemplateBlockEditor
+                                                                content={block.content as DesignBlockContent}
+                                                                onChange={(next) => updateBlockContent(index, next)}
+                                                            />
                                                         ) : (
                                                             // DIVIDER BLOCK
                                                             <div className="row" style={{ gap: 16, alignItems: 'flex-end' }}>

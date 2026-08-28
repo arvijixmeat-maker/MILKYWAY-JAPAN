@@ -134,11 +134,21 @@ export interface DayInfoContent {
     accommodationSubtitle?: string;  // hotels.name_local — small caption below the name
 }
 
-export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo';
+export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo' | 'design';
+
+/**
+ * 'design' 블록: 코드에 내장된 디자인 템플릿(src/components/product/designTemplates)을
+ * 렌더링한다. values는 템플릿 매니페스트의 field key → 관리자가 입력한 값(텍스트/이미지 URL).
+ * 비어 있는 key는 매니페스트의 default가 사용된다.
+ */
+export interface DesignBlockContent {
+    templateId: string;
+    values: Record<string, string>;
+}
 
 export interface DetailContentBlock {
     id: string;
     type: DetailBlockType;
-    content: string | DetailSlide | DividerContent | TimelineContent | DayInfoContent;
+    content: string | DetailSlide | DividerContent | TimelineContent | DayInfoContent | DesignBlockContent;
 }
 

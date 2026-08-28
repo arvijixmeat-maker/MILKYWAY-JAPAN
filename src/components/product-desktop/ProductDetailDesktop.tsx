@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, ProductFAQ, TourPricingOption } from '../../types/product';
+import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, DesignBlockContent, ProductFAQ, TourPricingOption } from '../../types/product';
+import DesignBlockView from '../product/designTemplates/DesignBlockView';
 import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
@@ -1015,6 +1016,9 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                                 }}
                             />
                         );
+                    }
+                    if (b.type === 'design') {
+                        return <DesignBlockView key={b.id || i} content={b.content as DesignBlockContent} />;
                     }
                     return null;
                 })}

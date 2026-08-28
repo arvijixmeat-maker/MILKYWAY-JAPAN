@@ -16,7 +16,8 @@ import { DestinationsMap } from '../components/desktop-primitives/DestinationsMa
 import { extractPlacesFromItinerary } from '../constants/mongoliaPlaces';
 import { MobileItineraryTimeline } from '../components/product/MobileItineraryTimeline';
 
-import type { TourProduct, DetailSlide, DividerContent } from '../types/product';
+import type { TourProduct, DetailSlide, DividerContent, DesignBlockContent } from '../types/product';
+import DesignBlockView from '../components/product/designTemplates/DesignBlockView';
 
 // Hide broken product images gracefully instead of showing the browser's default error icon.
 const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -886,6 +887,13 @@ export const ProductDetail: React.FC = () => {
                                             ? 'border-b border-gray-200 dark:border-gray-700'
                                             : ''
                                             }`}
+                                    />
+                                );
+                            } else if (block.type === 'design') {
+                                return (
+                                    <DesignBlockView
+                                        key={block.id}
+                                        content={block.content as DesignBlockContent}
                                     />
                                 );
                             }
