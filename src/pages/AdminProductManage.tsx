@@ -1969,7 +1969,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
 
                                         <div className="stack" style={{ gap: 12 }}>
                                             {(formData.detailBlocks || []).map((block, index) => (
-                                                <div key={block.id} className="edit-row">
+                                                // 디자인 블록은 분할 편집기(미리보기+폼)라 860px 스택을 벗어나
+                                                // 데스크톱 콘텐츠 폭 전체를 쓴다
+                                                <div key={block.id} className="edit-row" style={block.type === 'design' ? { width: 'min(1380px, calc(100vw - var(--side-w) - 128px))' } : undefined}>
                                                     <div className="edit-move">
                                                         <button type="button" onClick={() => moveDetailBlock(index, index - 1)} disabled={index === 0}><Icon name="expand_less" /></button>
                                                         <button type="button" onClick={() => moveDetailBlock(index, index + 1)} disabled={index === (formData.detailBlocks?.length || 0) - 1}><Icon name="expand_more" /></button>

@@ -272,7 +272,7 @@ export function DesignTemplateBlockEditor({
                 </div>
 
                 {/* 우: 섹션별 폼 */}
-                <div className="stack" style={{ gap: 6, flex: '0 0 380px', maxHeight: '78vh', overflowY: 'auto' }}>
+                <div className="stack" style={{ gap: 6, flex: '0 0 420px', maxHeight: '78vh', overflowY: 'auto' }}>
                 {sections.map(sec => {
                     const open = openSection === sec.name;
                     const filled = filledCount(sec.fields);
