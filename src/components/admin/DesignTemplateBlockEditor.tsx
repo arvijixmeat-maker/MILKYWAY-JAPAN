@@ -4,6 +4,7 @@ import type { DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
+import { fieldKeysOfSection, nextCopyId, resolveInstances, scopedKey } from '../product/designTemplates/sections';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
@@ -163,12 +164,39 @@ export function DesignTemplateBlockEditor({
     const fieldRefs = useRef(new Map<string, HTMLElement>());
     const previewRef = useRef<HTMLDivElement>(null);
 
+    const instances = useMemo(
+        () => (def ? resolveInstances(def, content?.sections) : []),
+        [def, content?.sections],
+    );
+
+    /**
+     * 폼에 표시할 섹션 목록 — 인스턴스(복제본 포함) × 그 섹션이 가진 매니페스트 필드.
+     * 복제본은 필드 key에 접미사가 붙어 원본과 값이 분리된다.
+     */
+    const sections = useMemo(() => {
+        if (!def) return [] as { instId: string; defId: string; name: string; copyNo: number; fields: { field: DesignTemplateField; key: string }[] }[];
+        return instances.map(inst => {
+            const sec = def.sectionDefs.find(s => s.id === inst.def)!;
+            const names = new Set(sec.fieldSections);
+            const hash = inst.id.indexOf('#');
+            return {
+                instId: inst.id,
+                defId: inst.def,
+                name: hash === -1 ? inst.id : `${inst.def} (복제 ${inst.id.slice(hash + 1)})`,
+                copyNo: hash === -1 ? 1 : Number(inst.id.slice(hash + 1)),
+                fields: def.fields
+                    .filter(f => names.has(f.section))
+                    .map(f => ({ field: f, key: scopedKey(f.key, inst.id) })),
+            };
+        });
+    }, [def, instances]);
+
     /** 미리보기에서 필드 클릭 → 해당 섹션 열고 입력칸으로 스크롤 + 포커스 */
     const handlePreviewFieldClick = (key: string) => {
-        const field = def?.fields.find(f => f.key === key);
-        if (!field) return;
+        const owner = sections.find(s => s.fields.some(f => f.key === key));
+        if (!owner) return;
         setSelectedField(key);
-        setOpenSection(field.section);
+        setOpenSection(owner.instId);
         // 섹션이 방금 열렸으면 입력칸이 다음 렌더에 생기므로 한 프레임 기다린다
         setTimeout(() => {
             const el = fieldRefs.current.get(key);
@@ -180,20 +208,53 @@ export function DesignTemplateBlockEditor({
     /** 입력칸 포커스 → 미리보기의 해당 요소를 하이라이트하고 화면에 보이게 */
     const handleFieldFocus = (key: string) => {
         setSelectedField(key);
-        previewRef.current?.querySelector(`[data-df="${key}"]`)
+        const at = key.lastIndexOf('@');
+        const base = at > 0 ? key.slice(0, at) : key;
+        const scope = at > 0 ? key.slice(at) : '';
+        previewRef.current?.querySelector(`[data-df-scope="${scope}"] [data-df="${base}"]`)
             ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     };
 
-    const sections = useMemo(() => {
-        if (!def) return [] as { name: string; fields: DesignTemplateField[] }[];
-        const out: { name: string; fields: DesignTemplateField[] }[] = [];
-        for (const f of def.fields) {
-            const last = out[out.length - 1];
-            if (last && last.name === f.section) last.fields.push(f);
-            else out.push({ name: f.section, fields: [f] });
+    /** 섹션 복제 — 현재 입력값까지 그대로 복사해 바로 아래에 추가 */
+    const duplicateSection = (instId: string) => {
+        if (!def) return;
+        const idx = instances.findIndex(s => s.id === instId);
+        if (idx === -1) return;
+        const defId = instances[idx].def;
+        const newId = nextCopyId(defId, instances);
+        const nextValues = { ...(content.values || {}) };
+        for (const key of fieldKeysOfSection(def, defId)) {
+            const from = scopedKey(key, instId);
+            const cur = content.values?.[from];
+            if (cur !== undefined && cur !== '') nextValues[scopedKey(key, newId)] = cur;
         }
-        return out;
-    }, [def]);
+        const nextSections = [...instances];
+        nextSections.splice(idx + 1, 0, { id: newId, def: defId });
+        onChange({ ...content, values: nextValues, sections: nextSections });
+        setOpenSection(newId);
+    };
+
+    /** 섹션 삭제 — 목록에서만 제거(입력값은 남아 다시 추가하면 복원) */
+    const removeSection = (instId: string) => {
+        if (!window.confirm('이 섹션을 상세페이지에서 빼시겠습니까? 입력한 내용은 남아 있습니다.')) return;
+        onChange({ ...content, sections: instances.filter(s => s.id !== instId) });
+        if (openSection === instId) setOpenSection(null);
+    };
+
+    /** 삭제한 섹션 다시 추가 */
+    const restoreSection = (defId: string) => {
+        if (!def) return;
+        const order = def.sectionDefs.map(s => s.id);
+        const next = [...instances, { id: defId, def: defId }]
+            .sort((a, b) => order.indexOf(a.def) - order.indexOf(b.def));
+        onChange({ ...content, sections: next });
+        setOpenSection(defId);
+    };
+
+    const removedDefs = useMemo(
+        () => (def ? def.sectionDefs.filter(s => !instances.some(i => i.def === s.id)) : []),
+        [def, instances],
+    );
 
     if (!def) {
         return (
@@ -223,10 +284,10 @@ export function DesignTemplateBlockEditor({
         }
     };
 
-    const filledCount = (fields: DesignTemplateField[]) =>
-        fields.filter(f => {
-            const raw = values[f.key] ?? '';
-            return raw !== '' && raw !== (f.default ?? '');
+    const filledCount = (fields: { field: DesignTemplateField; key: string }[]) =>
+        fields.filter(({ field, key }) => {
+            const raw = values[key] ?? '';
+            return raw !== '' && raw !== (field.default ?? '');
         }).length;
 
     return (
@@ -274,44 +335,67 @@ export function DesignTemplateBlockEditor({
                 {/* 우: 섹션별 폼 */}
                 <div className="stack" style={{ gap: 6, flex: '0 0 420px', maxHeight: '78vh', overflowY: 'auto' }}>
                 {sections.map(sec => {
-                    const open = openSection === sec.name;
+                    const open = openSection === sec.instId;
                     const filled = filledCount(sec.fields);
+                    const repeatable = def.sectionDefs.find(s => s.id === sec.defId)?.repeatable;
                     return (
-                        <div key={sec.name} style={{ flex: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
-                            <button
-                                type="button"
-                                onClick={() => setOpenSection(open ? null : sec.name)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: open ? 'var(--bg-muted, #f6f7f8)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                            >
-                                <Icon name={open ? 'expand_less' : 'expand_more'} style={{ fontSize: 18 }} />
-                                <span style={{ fontSize: 13, fontWeight: 700 }}>{sec.name}</span>
-                                <span className="cell-muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
-                                    {filled > 0 ? `${filled}개 수정됨` : '원본 그대로'}
-                                </span>
-                            </button>
+                        <div key={sec.instId} style={{ flex: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                            <div className="row" style={{ gap: 0, alignItems: 'stretch', background: open ? 'var(--bg-muted, #f6f7f8)' : 'transparent' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setOpenSection(open ? null : sec.instId)}
+                                    style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px 10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                                >
+                                    <Icon name={open ? 'expand_less' : 'expand_more'} style={{ fontSize: 18, flex: 'none' }} />
+                                    <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
+                                    <span className="cell-muted" style={{ fontSize: 12, marginLeft: 'auto', flex: 'none' }}>
+                                        {filled > 0 ? `${filled}개 수정됨` : '원본 그대로'}
+                                    </span>
+                                </button>
+                                <div className="row" style={{ gap: 2, alignItems: 'center', padding: '0 8px 0 4px', flex: 'none' }}>
+                                    {repeatable && (
+                                        <button
+                                            type="button"
+                                            className="act-btn"
+                                            title="이 섹션을 내용까지 복제해 아래에 추가"
+                                            onClick={() => duplicateSection(sec.instId)}
+                                        >
+                                            <Icon name="content_copy" style={{ fontSize: 15 }} />
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        className="act-btn danger"
+                                        title="이 섹션을 상세페이지에서 빼기"
+                                        onClick={() => removeSection(sec.instId)}
+                                    >
+                                        <Icon name="delete" style={{ fontSize: 15 }} />
+                                    </button>
+                                </div>
+                            </div>
                             {open && (
                                 <div className="stack" style={{ gap: 10, padding: '12px 12px 14px' }}>
-                                    {sec.fields.map(f => (
-                                        <div key={f.key}>
+                                    {sec.fields.map(({ field: f, key: fk }) => (
+                                        <div key={fk}>
                                             <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
                                                 {f.label}
                                             </label>
                                             {f.type === 'image' ? (
                                                 <div
-                                                    ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
+                                                    ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="row"
-                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === f.key ? { outline: '2px solid rgba(6,196,160,0.5)', outlineOffset: 4, borderRadius: 6 } : {}) }}
+                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === fk ? { outline: '2px solid rgba(6,196,160,0.5)', outlineOffset: 4, borderRadius: 6 } : {}) }}
                                                 >
-                                                    {values[f.key] ? (
+                                                    {values[fk] ? (
                                                         <div style={{ position: 'relative', flex: 'none' }}>
                                                             <img
-                                                                src={values[f.key]}
+                                                                src={values[fk]}
                                                                 alt={f.label}
                                                                 style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }}
                                                             />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setValue(f.key, '')}
+                                                                onClick={() => setValue(fk, '')}
                                                                 title="이미지 제거"
                                                                 style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                                             >
@@ -325,46 +409,46 @@ export function DesignTemplateBlockEditor({
                                                     )}
                                                     <label className="chip" style={{ cursor: 'pointer' }}>
                                                         <Icon name="upload" style={{ fontSize: 16 }} />
-                                                        {uploadingKey === f.key ? '업로드 중…' : (values[f.key] ? '변경' : '업로드')}
+                                                        {uploadingKey === fk ? '업로드 중…' : (values[fk] ? '변경' : '업로드')}
                                                         <input
                                                             type="file"
                                                             accept="image/*"
                                                             style={{ display: 'none' }}
                                                             onChange={(e) => {
-                                                                handleImageUpload(f.key, e.target.files?.[0]);
+                                                                handleImageUpload(fk, e.target.files?.[0]);
                                                                 e.target.value = '';
                                                             }}
                                                         />
                                                     </label>
                                                 </div>
                                             ) : f.type === 'map-stops' ? (
-                                                <div ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}>
+                                                <div ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}>
                                                     <MapStopsField
-                                                        value={values[f.key] ?? f.default ?? ''}
-                                                        onChange={(next) => setValue(f.key, next)}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(fk, next)}
                                                     />
                                                 </div>
                                             ) : f.type === 'textarea' ? (
                                                 <textarea
-                                                    ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
+                                                    ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="inp"
                                                     rows={Math.min(6, Math.max(2, (f.default?.split('\n').length ?? 2)))}
-                                                    value={values[f.key] ?? f.default ?? ''}
+                                                    value={values[fk] ?? f.default ?? ''}
                                                     placeholder={f.default || ''}
-                                                    onChange={(e) => setValue(f.key, e.target.value)}
-                                                    onFocus={() => handleFieldFocus(f.key)}
-                                                    style={selectedField === f.key ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
+                                                    onChange={(e) => setValue(fk, e.target.value)}
+                                                    onFocus={() => handleFieldFocus(fk)}
+                                                    style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
                                             ) : (
                                                 <input
-                                                    ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
+                                                    ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     type="text"
                                                     className="inp"
-                                                    value={values[f.key] ?? f.default ?? ''}
+                                                    value={values[fk] ?? f.default ?? ''}
                                                     placeholder={f.default || ''}
-                                                    onChange={(e) => setValue(f.key, e.target.value)}
-                                                    onFocus={() => handleFieldFocus(f.key)}
-                                                    style={selectedField === f.key ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
+                                                    onChange={(e) => setValue(fk, e.target.value)}
+                                                    onFocus={() => handleFieldFocus(fk)}
+                                                    style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
                                             )}
                                             {f.help && f.type !== 'map-stops' && (
@@ -377,6 +461,19 @@ export function DesignTemplateBlockEditor({
                         </div>
                     );
                 })}
+
+                {removedDefs.length > 0 && (
+                    <div style={{ flex: 'none', border: '1px dashed var(--border-default)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+                        <div className="cell-muted" style={{ fontSize: 12, marginBottom: 8 }}>뺀 섹션 — 다시 넣으면 입력했던 내용이 그대로 돌아옵니다</div>
+                        <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                            {removedDefs.map(s => (
+                                <button key={s.id} type="button" className="chip" onClick={() => restoreSection(s.id)}>
+                                    <Icon name="add" style={{ fontSize: 15 }} />{s.id}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 </div>
             </div>
         </div>

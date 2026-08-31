@@ -1,4 +1,4 @@
-import type { DesignTemplateField } from './types';
+import type { DesignSectionDef, DesignTemplateField } from './types';
 
 /**
  * 「몽골 승마 트레킹 상세페이지」 디자인의 편집 가능 필드 목록.
@@ -180,4 +180,24 @@ export const horseTrekFields: DesignTemplateField[] = [
     { key: 'd1_stay', label: '숙박 이름', type: 'text', section: '13 1일차 상세', default: '여행자 게르 캠프' },
     { key: 'd1_stay_tags', label: '숙박 태그 (줄바꿈 구분)', type: 'textarea', section: '13 1일차 상세', default: '· 전기사용 가능\n· 샤워가능(외부/공용)\n· 화장실(외부/공용)' },
     { key: 'd1_exp', label: '포함체험 / 즐길거리', type: 'text', section: '13 1일차 상세', default: '초원 산책, 선셋 감상, 별 구경' },
+];
+
+/**
+ * 관리자에서 복제·삭제하는 단위인 섹션 목록 (템플릿의 실제 렌더 순서와 같아야 한다).
+ * fieldSections는 그 섹션이 포함하는 매니페스트 section 이름 — 복제 시 이 필드들이 함께 복사된다.
+ * repeatable: false는 한 상품에 하나만 있는 게 자연스러운 섹션(오프닝/히어로 등).
+ */
+export const horseTrekSectionDefs: DesignSectionDef[] = [
+    { id: '01 오프닝', fieldSections: ['01 오프닝'] },
+    { id: '02 별하늘 히어로', fieldSections: ['02 별하늘 히어로'] },
+    { id: '03 소개 배너', fieldSections: ['03 소개 배너'] },
+    { id: '04 이용자 특전', fieldSections: ['04 이용자 특전'] },
+    { id: '05 여행 고민', fieldSections: ['05 여행 고민'] },
+    { id: '06 숙소', fieldSections: ['06 숙소'], repeatable: true },
+    { id: '07 루트/지도', fieldSections: ['07 루트/지도', '08 일자별 카드'] },
+    { id: '09 고비 히어로', fieldSections: ['09 고비 히어로'], repeatable: true },
+    { id: '10 하이라이트', fieldSections: ['10 하이라이트'], repeatable: true },
+    { id: '11 은하수', fieldSections: ['11 은하수'], repeatable: true },
+    { id: '12 공항 도착', fieldSections: ['12 공항 도착'] },
+    { id: '13 1일차 상세', fieldSections: ['13 1일차 상세'], repeatable: true },
 ];

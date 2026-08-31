@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { DesignSectionInstance } from '../../../types/product';
 
 /**
  * 디자인 템플릿 — 코드로 내장된 상세페이지 디자인.
@@ -33,6 +34,21 @@ export interface DesignTemplateProps {
     v: (key: string) => string;
     /** true면 빈 이미지 슬롯에 안내 placeholder를 표시(관리자 미리보기용) */
     editing?: boolean;
+    /**
+     * 표시할 섹션 인스턴스 목록. 없으면 템플릿 기본 섹션 전체를 한 번씩 표시.
+     * 복제본은 같은 섹션을 접미사 붙은 key로 다시 렌더링한다.
+     */
+    instances?: DesignSectionInstance[];
+}
+
+/** 템플릿이 가진 섹션 정의 — 관리자에서 복제/삭제하는 단위 */
+export interface DesignSectionDef {
+    /** 섹션 id (관리자 목록에 그대로 표시된다) */
+    id: string;
+    /** 이 섹션이 포함하는 매니페스트 필드 section 이름들 */
+    fieldSections: string[];
+    /** false면 복제 버튼을 숨긴다 (한 번만 있어야 자연스러운 섹션) */
+    repeatable?: boolean;
 }
 
 export interface DesignTemplateDef {
@@ -42,6 +58,8 @@ export interface DesignTemplateDef {
     /** 디자인 원본 캔버스 폭(px). 화면에서는 컨테이너 폭에 맞춰 축소된다 */
     canvasWidth: number;
     fields: DesignTemplateField[];
+    /** 관리자에서 복제·삭제할 수 있는 섹션 목록 (표시 순서) */
+    sectionDefs: DesignSectionDef[];
     Component: React.ComponentType<DesignTemplateProps>;
     /**
      * 모바일 전용 디자인(별도 캔버스). 있으면 모바일 상세페이지는 이쪽을 렌더링한다.

@@ -1,5 +1,5 @@
 import type { DesignTemplateDef } from './types';
-import { horseTrekFields } from './horseTrekFields';
+import { horseTrekFields, horseTrekSectionDefs } from './horseTrekFields';
 import HorseTrekTemplate from './HorseTrekTemplate';
 import HorseTrekMobileTemplate from './HorseTrekMobileTemplate';
 
@@ -13,6 +13,7 @@ export const designTemplates: DesignTemplateDef[] = [
         name: '몽골 승마 트레킹 상세페이지',
         canvasWidth: 860,
         fields: horseTrekFields,
+        sectionDefs: horseTrekSectionDefs,
         Component: HorseTrekTemplate,
         mobile: {
             canvasWidth: 430,

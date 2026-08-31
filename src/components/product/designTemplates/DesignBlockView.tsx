@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../../types/product';
 import { getDesignTemplate } from './registry';
+import { resolveInstances } from './sections';
 
 /**
  * 고정폭 캔버스 디자인을 컨테이너 폭에 맞춰 축소해 보여주는 래퍼.
@@ -101,10 +102,17 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
             const key = el?.getAttribute('data-df');
             if (key) {
                 e.preventDefault();
-                onFieldClick(key);
+                // 복제된 섹션 안이면 그 섹션의 접미사를 붙여 복제본 필드를 가리킨다
+                const scope = el?.closest('[data-df-scope]')?.getAttribute('data-df-scope') || '';
+                onFieldClick(key + scope);
             }
         }
         : undefined;
+
+    // 선택된 필드가 복제본이면 key와 접미사를 나눠 해당 섹션 안만 하이라이트한다
+    const selAt = selectedField ? selectedField.lastIndexOf('@') : -1;
+    const selBase = selAt > 0 ? selectedField!.slice(0, selAt) : selectedField;
+    const selScope = selAt > 0 ? selectedField!.slice(selAt) : '';
 
     return (
         <div className={onFieldClick ? 'dtpl-clickable' : undefined} onClick={handleClick}>
@@ -112,11 +120,11 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
                 <style>{`
                     .dtpl-clickable [data-df] { cursor: pointer; pointer-events: auto; }
                     .dtpl-clickable [data-df]:hover { outline: 2px dashed rgba(6,196,160,0.75); outline-offset: 2px; }
-                    ${selectedField ? `.dtpl-clickable [data-df="${selectedField}"] { outline: 2px solid #06C4A0; outline-offset: 2px; }` : ''}
+                    ${selectedField ? `.dtpl-clickable [data-df-scope="${selScope}"] [data-df="${selBase}"] { outline: 2px solid #06C4A0; outline-offset: 2px; }` : ''}
                 `}</style>
             )}
             <ScaledDesign canvasWidth={canvasWidth}>
-                <Tpl v={v} editing={editing} />
+                <Tpl v={v} editing={editing} instances={resolveInstances(def, content?.sections)} />
             </ScaledDesign>
         </div>
     );

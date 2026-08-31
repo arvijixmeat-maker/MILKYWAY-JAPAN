@@ -144,6 +144,19 @@ export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayI
 export interface DesignBlockContent {
     templateId: string;
     values: Record<string, string>;
+    /**
+     * 표시할 섹션 목록 (순서대로). 없으면 템플릿의 기본 섹션 전체를 한 번씩 표시.
+     * 복제본은 id에 '#2' 같은 접미사가 붙고, 그 섹션의 입력값 key에도 같은 접미사가 붙는다.
+     * 섹션을 삭제하면 이 목록에서 빠진다 (입력값은 남아 있어 다시 추가하면 복원됨).
+     */
+    sections?: DesignSectionInstance[];
+}
+
+export interface DesignSectionInstance {
+    /** 인스턴스 고유 id — 원본은 def와 동일, 복제본은 `${def}#2` 형태 */
+    id: string;
+    /** 템플릿 섹션 id */
+    def: string;
 }
 
 export interface DetailContentBlock {
