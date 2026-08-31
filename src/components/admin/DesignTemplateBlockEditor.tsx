@@ -64,14 +64,17 @@ export function DesignTemplateBlockEditor({
     };
 
     const filledCount = (fields: DesignTemplateField[]) =>
-        fields.filter(f => (values[f.key] ?? '') !== '').length;
+        fields.filter(f => {
+            const raw = values[f.key] ?? '';
+            return raw !== '' && raw !== (f.default ?? '');
+        }).length;
 
     return (
         <div className="stack" style={{ gap: 10 }}>
             <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                 <span className="badge b-gray">{def.name}</span>
                 <span className="cell-muted" style={{ fontSize: 12 }}>
-                    비워둔 항목은 디자인 원본 문구가 표시됩니다
+                    원본 문구를 바로 고쳐 쓰세요 — 전부 지우면 원본으로 되돌아갑니다
                 </span>
                 <div className="spacer" />
                 <button type="button" className="chip" onClick={() => setShowPreview(p => !p)}>
@@ -171,7 +174,7 @@ export function DesignTemplateBlockEditor({
                                                 <textarea
                                                     className="inp"
                                                     rows={Math.min(6, Math.max(2, (f.default?.split('\n').length ?? 2)))}
-                                                    value={values[f.key] ?? ''}
+                                                    value={values[f.key] ?? f.default ?? ''}
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(f.key, e.target.value)}
                                                 />
@@ -179,7 +182,7 @@ export function DesignTemplateBlockEditor({
                                                 <input
                                                     type="text"
                                                     className="inp"
-                                                    value={values[f.key] ?? ''}
+                                                    value={values[f.key] ?? f.default ?? ''}
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(f.key, e.target.value)}
                                                 />
