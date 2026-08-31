@@ -140,7 +140,7 @@ export function DesignTemplateBlockEditor({
                     const open = openSection === sec.name;
                     const filled = filledCount(sec.fields);
                     return (
-                        <div key={sec.name} style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                        <div key={sec.name} style={{ flex: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
                             <button
                                 type="button"
                                 onClick={() => setOpenSection(open ? null : sec.name)}
