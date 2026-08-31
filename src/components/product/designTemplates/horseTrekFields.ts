@@ -81,7 +81,7 @@ export const horseTrekFields: DesignTemplateField[] = [
     { key: 'route_wide_img', label: '와이드 사진', type: 'image', section: '07 루트/지도' },
     { key: 'route_card_title', label: '지도 카드 제목', type: 'text', section: '07 루트/지도', default: '旅行ルート情報' },
     {
-        key: 'map_stops', label: '지도 경유지', type: 'textarea', section: '07 루트/지도',
+        key: 'map_stops', label: '지도 경유지', type: 'map-stops', section: '07 루트/지도',
         default: '울란바토르|ウランバートル\n체체를렉 초원|ツェツェルレグ草原\n쳉헤르 온천|ツェンヘル温泉\n테를지 국립공원|テレルジ国立公園',
         help: '한 줄에 한 곳: 지역명|표시문구|사진URL|위도,경도 (사진·좌표 생략 가능). 울란바토르·테를지·홉스굴·카라코룸·고비 등 주요 관광지는 이름만 넣으면 지도에 자동 표시되고, 미등록 지역은 마지막에 위도,경도를 넣으면 그 위치에 표시됩니다. 예: 새 캠프|新キャンプ||47.5,105.2',
     },

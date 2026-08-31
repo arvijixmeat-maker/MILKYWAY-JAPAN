@@ -338,8 +338,8 @@ export const AdminProductManage: React.FC = () => {
     return (
         <AdminLayout
             activePage="products"
-            title="상품 관리"
-            actions={
+            title={isModalOpen ? (selectedProduct ? '상품 수정' : '상품 추가') : '상품 관리'}
+            actions={!isModalOpen && (
                 <button
                     className="btn btn-ink"
                     onClick={() => {
@@ -349,9 +349,9 @@ export const AdminProductManage: React.FC = () => {
                 >
                     <Icon name="add" />상품 추가
                 </button>
-            }
+            )}
         >
-            <div className="route-anim">
+            <div className="route-anim" style={{ display: isModalOpen ? 'none' : undefined }}>
                 {/* Statistics Cards */}
                 <div className="prod-stats">
                     {STAT_CARDS.map((s) => (
@@ -608,7 +608,7 @@ interface ProductModalProps {
     onSave: (product: TourProduct) => void;
 }
 
-const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClose, onSave }) => {
+export const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClose, onSave }) => {
     const [formData, setFormData] = useState<Partial<TourProduct>>(
         product || {
             name: '',
@@ -637,6 +637,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     );
 
     const [currentTab, setCurrentTab] = useState<'basic' | 'details' | 'itinerary' | 'options' | 'includes'>('basic');
+
+    // 페이지형 편집 화면 — 목록에서 진입할 때 스크롤을 맨 위로
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, []);
 
     // Drag and Drop state
     const [draggedDetailIndex, setDraggedDetailIndex] = useState<number | null>(null);
@@ -1579,17 +1584,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,27,30,0.42)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 80, padding: 16, overflowY: 'auto' }}>
-            <div className="card" style={{ width: '100%', maxWidth: 920, margin: '32px 0', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="card" style={{ width: '100%' }}>
                 {/* Header */}
                 <div className="card-head">
+                    <button onClick={onClose} className="act-btn" title="목록으로" type="button">
+                        <Icon name="arrow_back" />
+                    </button>
                     <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-strong)', margin: 0 }}>
                         {product ? '상품 수정' : '상품 추가'}
                     </h2>
                     <div className="spacer" />
-                    <button onClick={onClose} className="act-btn" title="닫기" type="button">
-                        <Icon name="close" />
-                    </button>
                 </div>
 
                 {/* Tabs */}
@@ -1615,7 +1619,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="card-pad" style={{ maxHeight: '64vh', overflowY: 'auto' }}>
+                    <div className="card-pad">
                         {/* Basic Info Tab */}
                         {currentTab === 'basic' && (
                             <div style={{ maxWidth: 760 }}>
@@ -2588,8 +2592,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                         )}
                     </div>
 
-                    {/* Footer */}
-                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)' }}>
+                    {/* Footer — 페이지 스크롤 중에도 항상 보이는 저장 바 */}
+                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)', position: 'sticky', bottom: 0, background: 'var(--bg-card, #fff)', zIndex: 5 }}>
                         <button type="button" onClick={onClose} className="btn btn-ghost">
                             취소
                         </button>
@@ -2610,8 +2614,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                     onPick={handleSpotPick}
                     onClose={() => setSpotPickerForIndex(null)}
                 />
-            </div >
-        </div >
+        </div>
     );
 };
 

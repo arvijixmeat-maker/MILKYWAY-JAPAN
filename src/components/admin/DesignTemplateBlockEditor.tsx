@@ -3,8 +3,97 @@ import type { DesignBlockContent } from '../../types/product';
 import type { DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
+import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
+
+/**
+ * 지도 경유지 선택 UI — 지도에 좌표가 등록된 여행지 목록에서 골라 담는다.
+ * 저장 형식은 기존과 동일한 텍스트("지역명|일본어라벨" 줄 단위)라서
+ * 지도/템플릿 쪽은 그대로 동작하고, 직접 입력(좌표·사진)도 그대로 지원한다.
+ */
+function MapStopsField({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+    const [advanced, setAdvanced] = useState(false);
+    const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
+
+    const setLines = (next: string[]) => onChange(next.join('\n'));
+    const move = (i: number, dir: -1 | 1) => {
+        const next = [...lines];
+        const j = i + dir;
+        if (j < 0 || j >= next.length) return;
+        [next[i], next[j]] = [next[j], next[i]];
+        setLines(next);
+    };
+
+    const addDestination = (ko: string) => {
+        if (!ko) return;
+        const dest = MAP_DESTINATIONS.find(d => d.ko === ko);
+        if (!dest) return;
+        setLines([...lines, `${dest.ko}|${dest.ja}`]);
+    };
+
+    const groups = useMemo(() => {
+        const out: { name: string; items: typeof MAP_DESTINATIONS }[] = [];
+        for (const d of MAP_DESTINATIONS) {
+            const last = out[out.length - 1];
+            if (last && last.name === d.group) last.items.push(d);
+            else out.push({ name: d.group, items: [d] });
+        }
+        return out;
+    }, []);
+
+    return (
+        <div className="stack" style={{ gap: 8 }}>
+            {lines.length === 0 && (
+                <div className="cell-muted" style={{ fontSize: 12 }}>아래에서 여행지를 추가하면 지도에 순서대로 표시됩니다</div>
+            )}
+            {lines.map((line, i) => {
+                const [ko, ja] = line.split('|').map(s => s.trim());
+                return (
+                    <div key={`${line}-${i}`} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
+                        <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: '#06C4A0', color: '#fff', fontSize: 11, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {ko}{ja ? <span className="cell-muted" style={{ fontWeight: 500, marginLeft: 6 }}>{ja}</span> : null}
+                        </span>
+                        <button type="button" className="act-btn" title="위로" disabled={i === 0} onClick={() => move(i, -1)}><Icon name="arrow_upward" style={{ fontSize: 15 }} /></button>
+                        <button type="button" className="act-btn" title="아래로" disabled={i === lines.length - 1} onClick={() => move(i, 1)}><Icon name="arrow_downward" style={{ fontSize: 15 }} /></button>
+                        <button type="button" className="act-btn danger" title="삭제" onClick={() => setLines(lines.filter((_, idx) => idx !== i))}><Icon name="close" style={{ fontSize: 15 }} /></button>
+                    </div>
+                );
+            })}
+            <select
+                className="inp"
+                value=""
+                onChange={(e) => { addDestination(e.target.value); e.target.value = ''; }}
+            >
+                <option value="">＋ 여행지 추가…</option>
+                {groups.map(g => (
+                    <optgroup key={g.name} label={g.name}>
+                        {g.items.map(d => (
+                            <option key={d.ko} value={d.ko}>{d.ko} — {d.ja}</option>
+                        ))}
+                    </optgroup>
+                ))}
+            </select>
+            <button type="button" className="chip" style={{ alignSelf: 'flex-start' }} onClick={() => setAdvanced(a => !a)}>
+                <Icon name="edit_note" style={{ fontSize: 15 }} />{advanced ? '직접 입력 닫기' : '직접 입력 (목록에 없는 지역·좌표·사진)'}
+            </button>
+            {advanced && (
+                <>
+                    <textarea
+                        className="inp"
+                        rows={Math.max(3, lines.length + 1)}
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                    />
+                    <div className="muted" style={{ fontSize: 11 }}>
+                        한 줄에 한 곳: 지역명|표시문구|사진URL|위도,경도 (사진·좌표 생략 가능). 미등록 지역은 위도,경도를 넣으면 그 위치에 표시됩니다.
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
 
 /**
  * 'design' 상세 블록의 관리자 편집기 — 좌측 미리보기 / 우측 폼 분할.
@@ -200,6 +289,13 @@ export function DesignTemplateBlockEditor({
                                                         />
                                                     </label>
                                                 </div>
+                                            ) : f.type === 'map-stops' ? (
+                                                <div ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}>
+                                                    <MapStopsField
+                                                        value={values[f.key] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(f.key, next)}
+                                                    />
+                                                </div>
                                             ) : f.type === 'textarea' ? (
                                                 <textarea
                                                     ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
@@ -223,7 +319,7 @@ export function DesignTemplateBlockEditor({
                                                     style={selectedField === f.key ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
                                             )}
-                                            {f.help && (
+                                            {f.help && f.type !== 'map-stops' && (
                                                 <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{f.help}</div>
                                             )}
                                         </div>
