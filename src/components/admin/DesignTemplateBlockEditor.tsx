@@ -14,6 +14,7 @@ import { Icon } from './console/Icon';
  */
 function MapStopsField({ value, onChange }: { value: string; onChange: (next: string) => void }) {
     const [advanced, setAdvanced] = useState(false);
+    const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
     const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
 
     const setLines = (next: string[]) => onChange(next.join('\n'));
@@ -32,6 +33,36 @@ function MapStopsField({ value, onChange }: { value: string; onChange: (next: st
         setLines([...lines, `${dest.ko}|${dest.ja}`]);
     };
 
+    /** 한 줄 = 지역명|표시문구|사진URL|위도,경도 — 필드 단위로 안전하게 수정 */
+    const parseLine = (line: string) => {
+        const p = line.split('|').map(s => s.trim());
+        return { ko: p[0] || '', ja: p[1] || '', img: p[2] || '', coords: p[3] || '' };
+    };
+    const serializeLine = (p: { ko: string; ja: string; img: string; coords: string }) => {
+        const parts = [p.ko, p.ja, p.img, p.coords];
+        while (parts.length > 1 && !parts[parts.length - 1]) parts.pop();
+        return parts.join('|');
+    };
+    const setLineImage = (i: number, img: string) => {
+        const next = [...lines];
+        next[i] = serializeLine({ ...parseLine(next[i]), img });
+        setLines(next);
+    };
+
+    const handleStopImageUpload = async (i: number, file: File | undefined) => {
+        if (!file) return;
+        try {
+            setUploadingIdx(i);
+            const url = await uploadImage(file, 'product-details');
+            setLineImage(i, url);
+        } catch (error) {
+            console.error('Map stop image upload failed:', error);
+            alert('이미지 업로드 실패');
+        } finally {
+            setUploadingIdx(null);
+        }
+    };
+
     const groups = useMemo(() => {
         const out: { name: string; items: typeof MAP_DESTINATIONS }[] = [];
         for (const d of MAP_DESTINATIONS) {
@@ -48,13 +79,30 @@ function MapStopsField({ value, onChange }: { value: string; onChange: (next: st
                 <div className="cell-muted" style={{ fontSize: 12 }}>아래에서 여행지를 추가하면 지도에 순서대로 표시됩니다</div>
             )}
             {lines.map((line, i) => {
-                const [ko, ja] = line.split('|').map(s => s.trim());
+                const { ko, ja, img } = parseLine(line);
                 return (
-                    <div key={`${line}-${i}`} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
+                    <div key={`${ko}-${i}`} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
                         <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: '#06C4A0', color: '#fff', fontSize: 11, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
+                        {/* 원형 버블에 표시될 사진 — 클릭해서 업로드/변경 */}
+                        <label title={img ? '사진 변경' : '사진 업로드 (지도 원형에 표시)'} style={{ flex: 'none', width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: img ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
+                            {uploadingIdx === i
+                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#06C4A0' }} />
+                                : img
+                                    ? <img src={img} alt={ko} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    : <Icon name="add_a_photo" style={{ fontSize: 15, color: 'var(--text-muted)' }} />}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => { handleStopImageUpload(i, e.target.files?.[0]); e.target.value = ''; }}
+                            />
+                        </label>
                         <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {ko}{ja ? <span className="cell-muted" style={{ fontWeight: 500, marginLeft: 6 }}>{ja}</span> : null}
                         </span>
+                        {img && (
+                            <button type="button" className="act-btn" title="사진 제거" onClick={() => setLineImage(i, '')}><Icon name="image" style={{ fontSize: 15, color: 'var(--mrt-red)' }} /></button>
+                        )}
                         <button type="button" className="act-btn" title="위로" disabled={i === 0} onClick={() => move(i, -1)}><Icon name="arrow_upward" style={{ fontSize: 15 }} /></button>
                         <button type="button" className="act-btn" title="아래로" disabled={i === lines.length - 1} onClick={() => move(i, 1)}><Icon name="arrow_downward" style={{ fontSize: 15 }} /></button>
                         <button type="button" className="act-btn danger" title="삭제" onClick={() => setLines(lines.filter((_, idx) => idx !== i))}><Icon name="close" style={{ fontSize: 15 }} /></button>
