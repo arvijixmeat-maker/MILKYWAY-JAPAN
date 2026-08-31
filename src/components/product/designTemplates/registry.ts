@@ -1,6 +1,7 @@
 import type { DesignTemplateDef } from './types';
 import { horseTrekFields } from './horseTrekFields';
 import HorseTrekTemplate from './HorseTrekTemplate';
+import HorseTrekMobileTemplate from './HorseTrekMobileTemplate';
 
 /**
  * 사용 가능한 디자인 템플릿 목록.
@@ -13,6 +14,10 @@ export const designTemplates: DesignTemplateDef[] = [
         canvasWidth: 860,
         fields: horseTrekFields,
         Component: HorseTrekTemplate,
+        mobile: {
+            canvasWidth: 430,
+            Component: HorseTrekMobileTemplate,
+        },
     },
 ];
 

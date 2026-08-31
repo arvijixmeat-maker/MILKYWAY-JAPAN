@@ -20,6 +20,7 @@ export function DesignTemplateBlockEditor({
 }) {
     const def = getDesignTemplate(content?.templateId);
     const [showPreview, setShowPreview] = useState(false);
+    const [previewVariant, setPreviewVariant] = useState<'desktop' | 'mobile'>('desktop');
     const [uploadingKey, setUploadingKey] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>(null);
 
@@ -81,7 +82,27 @@ export function DesignTemplateBlockEditor({
 
             {showPreview && (
                 <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden', background: '#fff' }}>
-                    <DesignBlockView content={content} editing />
+                    {def.mobile && (
+                        <div className="row" style={{ gap: 6, padding: '8px 10px', borderBottom: '1px solid var(--border-default)' }}>
+                            {(['desktop', 'mobile'] as const).map(vt => (
+                                <button
+                                    key={vt}
+                                    type="button"
+                                    className="chip"
+                                    onClick={() => setPreviewVariant(vt)}
+                                    style={previewVariant === vt ? { background: 'var(--mrt-navy, #1a2b4a)', color: '#fff' } : undefined}
+                                >
+                                    {vt === 'desktop' ? 'PC' : '모바일'}
+                                </button>
+                            ))}
+                            <span className="cell-muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
+                                {previewVariant === 'mobile' ? '모바일 접속 시 이 디자인이 표시됩니다' : 'PC 접속 시 이 디자인이 표시됩니다'}
+                            </span>
+                        </div>
+                    )}
+                    <div style={{ maxWidth: previewVariant === 'mobile' ? 430 : undefined, margin: previewVariant === 'mobile' ? '0 auto' : undefined }}>
+                        <DesignBlockView content={content} editing variant={previewVariant} />
+                    </div>
                 </div>
             )}
 

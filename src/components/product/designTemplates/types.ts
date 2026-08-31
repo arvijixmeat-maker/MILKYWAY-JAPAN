@@ -43,4 +43,12 @@ export interface DesignTemplateDef {
     canvasWidth: number;
     fields: DesignTemplateField[];
     Component: React.ComponentType<DesignTemplateProps>;
+    /**
+     * 모바일 전용 디자인(별도 캔버스). 있으면 모바일 상세페이지는 이쪽을 렌더링한다.
+     * 필드 매니페스트는 데스크톱과 공유한다 — 같은 key, 같은 입력값.
+     */
+    mobile?: {
+        canvasWidth: number;
+        Component: React.ComponentType<DesignTemplateProps>;
+    };
 }

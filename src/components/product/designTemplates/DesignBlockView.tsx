@@ -41,10 +41,29 @@ function ScaledDesign({ canvasWidth, children }: { canvasWidth: number; children
 }
 
 /**
+ * 디자인 원본(Claude Design)이 로드하던 Noto Sans JP 중 사이트 전역 서브셋(400/500/700/800)에
+ * 없는 600 웨이트를 디자인 블록이 마운트될 때만 추가 로드한다.
+ * 빠지면 브라우저가 500/700으로 대체해 글자 폭·줄바꿈이 원본 디자인과 미묘하게 달라진다.
+ */
+function useDesignFonts() {
+    useEffect(() => {
+        const id = 'design-tpl-noto-600';
+        if (document.getElementById(id)) return;
+        const link = document.createElement('link');
+        link.id = id;
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@600&display=swap';
+        document.head.appendChild(link);
+    }, []);
+}
+
+/**
  * detailBlocks의 'design' 블록 렌더러 (모바일/데스크톱/관리자 미리보기 공용).
+ * variant='mobile'이면 템플릿의 모바일 전용 디자인(있을 때)을 렌더링한다.
  * editing=true면 빈 이미지 슬롯에 업로드 안내 placeholder를 표시한다.
  */
-export default function DesignBlockView({ content, editing }: { content: DesignBlockContent; editing?: boolean }) {
+export default function DesignBlockView({ content, editing, variant = 'desktop' }: { content: DesignBlockContent; editing?: boolean; variant?: 'desktop' | 'mobile' }) {
+    useDesignFonts();
     const def = getDesignTemplate(content?.templateId);
 
     const defaults: Record<string, string> = {};
@@ -64,9 +83,11 @@ export default function DesignBlockView({ content, editing }: { content: DesignB
         return null;
     }
 
-    const Tpl = def.Component;
+    const useMobile = variant === 'mobile' && !!def.mobile;
+    const Tpl = useMobile ? def.mobile!.Component : def.Component;
+    const canvasWidth = useMobile ? def.mobile!.canvasWidth : def.canvasWidth;
     return (
-        <ScaledDesign canvasWidth={def.canvasWidth}>
+        <ScaledDesign canvasWidth={canvasWidth}>
             <Tpl v={v} editing={editing} />
         </ScaledDesign>
     );

@@ -894,6 +894,7 @@ export const ProductDetail: React.FC = () => {
                                     <DesignBlockView
                                         key={block.id}
                                         content={block.content as DesignBlockContent}
+                                        variant="mobile"
                                     />
                                 );
                             }
