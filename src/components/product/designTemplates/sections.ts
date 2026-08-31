@@ -54,3 +54,15 @@ export function nextCopyId(sectionDefId: string, existing: DesignSectionInstance
     }
     return `${sectionDefId}#${Date.now()}`;
 }
+
+/** 복제 접미사(@2)를 뗀 원본 필드 key — 기본값 조회·미리보기 선택자에 쓴다 */
+export function baseKey(key: string): string {
+    const at = key.lastIndexOf('@');
+    return at > 0 && /^\d+$/.test(key.slice(at + 1)) ? key.slice(0, at) : key;
+}
+
+/** key가 속한 복제 접미사 ('' 또는 '@2') */
+export function scopeOf(key: string): string {
+    const at = key.lastIndexOf('@');
+    return at > 0 && /^\d+$/.test(key.slice(at + 1)) ? key.slice(at) : '';
+}

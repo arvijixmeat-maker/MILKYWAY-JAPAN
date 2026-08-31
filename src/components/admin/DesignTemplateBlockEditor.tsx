@@ -4,7 +4,7 @@ import type { DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
-import { fieldKeysOfSection, nextCopyId, resolveInstances, scopedKey } from '../product/designTemplates/sections';
+import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, scopedKey } from '../product/designTemplates/sections';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
@@ -208,10 +208,7 @@ export function DesignTemplateBlockEditor({
     /** 입력칸 포커스 → 미리보기의 해당 요소를 하이라이트하고 화면에 보이게 */
     const handleFieldFocus = (key: string) => {
         setSelectedField(key);
-        const at = key.lastIndexOf('@');
-        const base = at > 0 ? key.slice(0, at) : key;
-        const scope = at > 0 ? key.slice(at) : '';
-        previewRef.current?.querySelector(`[data-df-scope="${scope}"] [data-df="${base}"]`)
+        previewRef.current?.querySelector(`[data-df-scope="${scopeOf(key)}"] [data-df="${baseKey(key)}"]`)
             ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     };
 

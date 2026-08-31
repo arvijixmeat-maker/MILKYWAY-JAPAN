@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../../types/product';
 import { getDesignTemplate } from './registry';
-import { resolveInstances } from './sections';
+import { baseKey, resolveInstances, scopeOf } from './sections';
 
 /**
  * 고정폭 캔버스 디자인을 컨테이너 폭에 맞춰 축소해 보여주는 래퍼.
@@ -82,7 +82,10 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
     const values = content?.values || {};
     const v = (key: string) => {
         const raw = values[key];
-        return raw !== undefined && raw !== '' ? raw : (defaults[key] ?? '');
+        if (raw !== undefined && raw !== '') return raw;
+        // 복제 섹션의 key는 '@2' 접미사가 붙는다 — 값이 비었으면 원본 필드의 기본값을 쓴다
+        // (복제 직후 손대지 않은 항목이 빈칸으로 나오지 않도록)
+        return defaults[baseKey(key)] ?? '';
     };
 
     if (!def) {
@@ -110,9 +113,8 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
         : undefined;
 
     // 선택된 필드가 복제본이면 key와 접미사를 나눠 해당 섹션 안만 하이라이트한다
-    const selAt = selectedField ? selectedField.lastIndexOf('@') : -1;
-    const selBase = selAt > 0 ? selectedField!.slice(0, selAt) : selectedField;
-    const selScope = selAt > 0 ? selectedField!.slice(selAt) : '';
+    const selBase = selectedField ? baseKey(selectedField) : null;
+    const selScope = selectedField ? scopeOf(selectedField) : '';
 
     return (
         <div className={onFieldClick ? 'dtpl-clickable' : undefined} onClick={handleClick}>
