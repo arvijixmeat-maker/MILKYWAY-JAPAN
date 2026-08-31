@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../types/product';
 import type { DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
@@ -7,9 +7,9 @@ import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
 /**
- * 'design' 상세 블록의 관리자 편집기.
- * 템플릿 매니페스트(fields)를 읽어 섹션별로 텍스트 입력/이미지 업로드 폼을 자동 생성한다.
- * 값을 비워두면 디자인 원본 문구(default)가 그대로 사용된다.
+ * 'design' 상세 블록의 관리자 편집기 — 좌측 미리보기 / 우측 폼 분할.
+ * 미리보기의 문구·사진을 클릭하면 해당 입력칸이 열리고 포커스된다.
+ * 값을 전부 지우면 디자인 원본 문구(default)로 되돌아간다.
  */
 export function DesignTemplateBlockEditor({
     content,
@@ -19,10 +19,33 @@ export function DesignTemplateBlockEditor({
     onChange: (next: DesignBlockContent) => void;
 }) {
     const def = getDesignTemplate(content?.templateId);
-    const [showPreview, setShowPreview] = useState(false);
     const [previewVariant, setPreviewVariant] = useState<'desktop' | 'mobile'>('desktop');
     const [uploadingKey, setUploadingKey] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>(null);
+    const [selectedField, setSelectedField] = useState<string | null>(null);
+    const fieldRefs = useRef(new Map<string, HTMLElement>());
+    const previewRef = useRef<HTMLDivElement>(null);
+
+    /** 미리보기에서 필드 클릭 → 해당 섹션 열고 입력칸으로 스크롤 + 포커스 */
+    const handlePreviewFieldClick = (key: string) => {
+        const field = def?.fields.find(f => f.key === key);
+        if (!field) return;
+        setSelectedField(key);
+        setOpenSection(field.section);
+        // 섹션이 방금 열렸으면 입력칸이 다음 렌더에 생기므로 한 프레임 기다린다
+        setTimeout(() => {
+            const el = fieldRefs.current.get(key);
+            el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            (el as HTMLInputElement | HTMLTextAreaElement | null)?.focus?.({ preventScroll: true });
+        }, 60);
+    };
+
+    /** 입력칸 포커스 → 미리보기의 해당 요소를 하이라이트하고 화면에 보이게 */
+    const handleFieldFocus = (key: string) => {
+        setSelectedField(key);
+        previewRef.current?.querySelector(`[data-df="${key}"]`)
+            ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
 
     const sections = useMemo(() => {
         if (!def) return [] as { name: string; fields: DesignTemplateField[] }[];
@@ -71,45 +94,48 @@ export function DesignTemplateBlockEditor({
 
     return (
         <div className="stack" style={{ gap: 10 }}>
-            <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span className="badge b-gray">{def.name}</span>
                 <span className="cell-muted" style={{ fontSize: 12 }}>
-                    원본 문구를 바로 고쳐 쓰세요 — 전부 지우면 원본으로 되돌아갑니다
+                    미리보기의 문구·사진을 클릭하면 바로 편집할 수 있습니다 — 전부 지우면 원본으로 되돌아갑니다
                 </span>
                 <div className="spacer" />
-                <button type="button" className="chip" onClick={() => setShowPreview(p => !p)}>
-                    <Icon name={showPreview ? 'visibility' : 'preview'} style={{ fontSize: 16 }} />
-                    {showPreview ? '미리보기 닫기' : '미리보기'}
-                </button>
+                {def.mobile && (
+                    <div className="row" style={{ gap: 6 }}>
+                        {(['desktop', 'mobile'] as const).map(vt => (
+                            <button
+                                key={vt}
+                                type="button"
+                                className="chip"
+                                onClick={() => setPreviewVariant(vt)}
+                                style={previewVariant === vt ? { background: 'var(--mrt-navy, #1a2b4a)', color: '#fff' } : undefined}
+                            >
+                                {vt === 'desktop' ? 'PC' : '모바일'}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {showPreview && (
-                <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden', background: '#fff' }}>
-                    {def.mobile && (
-                        <div className="row" style={{ gap: 6, padding: '8px 10px', borderBottom: '1px solid var(--border-default)' }}>
-                            {(['desktop', 'mobile'] as const).map(vt => (
-                                <button
-                                    key={vt}
-                                    type="button"
-                                    className="chip"
-                                    onClick={() => setPreviewVariant(vt)}
-                                    style={previewVariant === vt ? { background: 'var(--mrt-navy, #1a2b4a)', color: '#fff' } : undefined}
-                                >
-                                    {vt === 'desktop' ? 'PC' : '모바일'}
-                                </button>
-                            ))}
-                            <span className="cell-muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
-                                {previewVariant === 'mobile' ? '모바일 접속 시 이 디자인이 표시됩니다' : 'PC 접속 시 이 디자인이 표시됩니다'}
-                            </span>
-                        </div>
-                    )}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                {/* 좌: 클릭 가능한 미리보기 */}
+                <div
+                    ref={previewRef}
+                    style={{ flex: 1, minWidth: 0, maxHeight: '78vh', overflowY: 'auto', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', background: '#fff' }}
+                >
                     <div style={{ maxWidth: previewVariant === 'mobile' ? 430 : undefined, margin: previewVariant === 'mobile' ? '0 auto' : undefined }}>
-                        <DesignBlockView content={content} editing variant={previewVariant} />
+                        <DesignBlockView
+                            content={content}
+                            editing
+                            variant={previewVariant}
+                            onFieldClick={handlePreviewFieldClick}
+                            selectedField={selectedField}
+                        />
                     </div>
                 </div>
-            )}
 
-            <div className="stack" style={{ gap: 6 }}>
+                {/* 우: 섹션별 폼 */}
+                <div className="stack" style={{ gap: 6, flex: '0 0 380px', maxHeight: '78vh', overflowY: 'auto' }}>
                 {sections.map(sec => {
                     const open = openSection === sec.name;
                     const filled = filledCount(sec.fields);
@@ -134,7 +160,11 @@ export function DesignTemplateBlockEditor({
                                                 {f.label}
                                             </label>
                                             {f.type === 'image' ? (
-                                                <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+                                                <div
+                                                    ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
+                                                    className="row"
+                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === f.key ? { outline: '2px solid rgba(6,196,160,0.5)', outlineOffset: 4, borderRadius: 6 } : {}) }}
+                                                >
                                                     {values[f.key] ? (
                                                         <div style={{ position: 'relative', flex: 'none' }}>
                                                             <img
@@ -172,19 +202,25 @@ export function DesignTemplateBlockEditor({
                                                 </div>
                                             ) : f.type === 'textarea' ? (
                                                 <textarea
+                                                    ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
                                                     className="inp"
                                                     rows={Math.min(6, Math.max(2, (f.default?.split('\n').length ?? 2)))}
                                                     value={values[f.key] ?? f.default ?? ''}
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(f.key, e.target.value)}
+                                                    onFocus={() => handleFieldFocus(f.key)}
+                                                    style={selectedField === f.key ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
                                             ) : (
                                                 <input
+                                                    ref={el => { if (el) fieldRefs.current.set(f.key, el); else fieldRefs.current.delete(f.key); }}
                                                     type="text"
                                                     className="inp"
                                                     value={values[f.key] ?? f.default ?? ''}
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(f.key, e.target.value)}
+                                                    onFocus={() => handleFieldFocus(f.key)}
+                                                    style={selectedField === f.key ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
                                             )}
                                             {f.help && (
@@ -197,6 +233,7 @@ export function DesignTemplateBlockEditor({
                         </div>
                     );
                 })}
+                </div>
             </div>
         </div>
     );

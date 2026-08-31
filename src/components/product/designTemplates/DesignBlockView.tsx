@@ -62,7 +62,15 @@ function useDesignFonts() {
  * variant='mobile'이면 템플릿의 모바일 전용 디자인(있을 때)을 렌더링한다.
  * editing=true면 빈 이미지 슬롯에 업로드 안내 placeholder를 표시한다.
  */
-export default function DesignBlockView({ content, editing, variant = 'desktop' }: { content: DesignBlockContent; editing?: boolean; variant?: 'desktop' | 'mobile' }) {
+export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField }: {
+    content: DesignBlockContent;
+    editing?: boolean;
+    variant?: 'desktop' | 'mobile';
+    /** 미리보기에서 문구/사진을 클릭하면 해당 필드 key로 호출 (관리자 편집기용) */
+    onFieldClick?: (key: string) => void;
+    /** 현재 편집 중인 필드 — 미리보기에서 초록 테두리로 표시 */
+    selectedField?: string | null;
+}) {
     useDesignFonts();
     const def = getDesignTemplate(content?.templateId);
 
@@ -86,9 +94,30 @@ export default function DesignBlockView({ content, editing, variant = 'desktop' 
     const useMobile = variant === 'mobile' && !!def.mobile;
     const Tpl = useMobile ? def.mobile!.Component : def.Component;
     const canvasWidth = useMobile ? def.mobile!.canvasWidth : def.canvasWidth;
+
+    const handleClick = onFieldClick
+        ? (e: React.MouseEvent<HTMLDivElement>) => {
+            const el = (e.target as HTMLElement).closest?.('[data-df]');
+            const key = el?.getAttribute('data-df');
+            if (key) {
+                e.preventDefault();
+                onFieldClick(key);
+            }
+        }
+        : undefined;
+
     return (
-        <ScaledDesign canvasWidth={canvasWidth}>
-            <Tpl v={v} editing={editing} />
-        </ScaledDesign>
+        <div className={onFieldClick ? 'dtpl-clickable' : undefined} onClick={handleClick}>
+            {onFieldClick && (
+                <style>{`
+                    .dtpl-clickable [data-df] { cursor: pointer; pointer-events: auto; }
+                    .dtpl-clickable [data-df]:hover { outline: 2px dashed rgba(6,196,160,0.75); outline-offset: 2px; }
+                    ${selectedField ? `.dtpl-clickable [data-df="${selectedField}"] { outline: 2px solid #06C4A0; outline-offset: 2px; }` : ''}
+                `}</style>
+            )}
+            <ScaledDesign canvasWidth={canvasWidth}>
+                <Tpl v={v} editing={editing} />
+            </ScaledDesign>
+        </div>
     );
 }
