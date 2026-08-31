@@ -1,11 +1,13 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
+import { DesignTemplateBlockEditor } from '../components/admin/DesignTemplateBlockEditor';
+import { designTemplates } from '../components/product/designTemplates/registry';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
-import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent } from '../types/product';
+import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent, DesignBlockContent } from '../types/product';
 import type { Category } from '../types/category';
 import type { Hotel } from '../types/hotel';
 import type { TouristSpot } from '../types/touristSpot';
@@ -336,8 +338,8 @@ export const AdminProductManage: React.FC = () => {
     return (
         <AdminLayout
             activePage="products"
-            title="상품 관리"
-            actions={
+            title={isModalOpen ? (selectedProduct ? '상품 수정' : '상품 추가') : '상품 관리'}
+            actions={!isModalOpen && (
                 <button
                     className="btn btn-ink"
                     onClick={() => {
@@ -347,9 +349,9 @@ export const AdminProductManage: React.FC = () => {
                 >
                     <Icon name="add" />상품 추가
                 </button>
-            }
+            )}
         >
-            <div className="route-anim">
+            <div className="route-anim" style={{ display: isModalOpen ? 'none' : undefined }}>
                 {/* Statistics Cards */}
                 <div className="prod-stats">
                     {STAT_CARDS.map((s) => (
@@ -606,7 +608,7 @@ interface ProductModalProps {
     onSave: (product: TourProduct) => void;
 }
 
-const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClose, onSave }) => {
+export const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClose, onSave }) => {
     const [formData, setFormData] = useState<Partial<TourProduct>>(
         product || {
             name: '',
@@ -635,6 +637,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     );
 
     const [currentTab, setCurrentTab] = useState<'basic' | 'details' | 'itinerary' | 'options' | 'includes'>('basic');
+
+    // 페이지형 편집 화면 — 목록에서 진입할 때 스크롤을 맨 위로
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, []);
 
     // Drag and Drop state
     const [draggedDetailIndex, setDraggedDetailIndex] = useState<number | null>(null);
@@ -789,10 +796,15 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
     // Detail Block Handlers
-    const addDetailBlock = (type: 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo', dayLabel?: string) => {
+    const addDetailBlock = (type: 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo' | 'design', dayLabel?: string, templateId?: string) => {
         let content: any = '';
 
-        if (type === 'slide') {
+        if (type === 'design') {
+            content = {
+                templateId: templateId || designTemplates[0]?.id || '',
+                values: {}
+            };
+        } else if (type === 'slide') {
             content = {
                 id: `slide-${Date.now()}`,
                 type: 'day',
@@ -1572,17 +1584,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
     };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,27,30,0.42)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 80, padding: 16, overflowY: 'auto' }}>
-            <div className="card" style={{ width: '100%', maxWidth: 920, margin: '32px 0', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="card" style={{ width: '100%' }}>
                 {/* Header */}
                 <div className="card-head">
+                    <button onClick={onClose} className="act-btn" title="목록으로" type="button">
+                        <Icon name="arrow_back" />
+                    </button>
                     <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-strong)', margin: 0 }}>
                         {product ? '상품 수정' : '상품 추가'}
                     </h2>
                     <div className="spacer" />
-                    <button onClick={onClose} className="act-btn" title="닫기" type="button">
-                        <Icon name="close" />
-                    </button>
                 </div>
 
                 {/* Tabs */}
@@ -1608,7 +1619,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="card-pad" style={{ maxHeight: '64vh', overflowY: 'auto' }}>
+                    <div className="card-pad">
                         {/* Basic Info Tab */}
                         {currentTab === 'basic' && (
                             <div style={{ maxWidth: 760 }}>
@@ -1933,6 +1944,23 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                             <button type="button" className="chip" onClick={() => addDetailBlock('divider')}>
                                                 <Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선/여백
                                             </button>
+                                            {designTemplates.length === 1 ? (
+                                                <button type="button" className="chip" onClick={() => addDetailBlock('design', undefined, designTemplates[0].id)}>
+                                                    <Icon name="auto_awesome" style={{ fontSize: 16 }} />디자인 템플릿
+                                                </button>
+                                            ) : (
+                                                <select
+                                                    onChange={(e) => { if (e.target.value) { addDetailBlock('design', undefined, e.target.value); e.target.value = ''; } }}
+                                                    defaultValue=""
+                                                    className="select"
+                                                    style={{ height: 36, fontSize: 13 }}
+                                                >
+                                                    <option value="" disabled>✨ 디자인 템플릿</option>
+                                                    {designTemplates.map(t => (
+                                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                         <div className="card-muted-note" style={{ marginBottom: 14 }}>
                                             <Icon name="info" />
@@ -1941,7 +1969,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
 
                                         <div className="stack" style={{ gap: 12 }}>
                                             {(formData.detailBlocks || []).map((block, index) => (
-                                                <div key={block.id} className="edit-row">
+                                                // 디자인 블록은 분할 편집기(미리보기+폼)라 860px 스택을 벗어나
+                                                // 데스크톱 콘텐츠 폭 전체를 쓴다
+                                                <div key={block.id} className="edit-row" style={block.type === 'design' ? { width: 'min(1380px, calc(100vw - var(--side-w) - 128px))' } : undefined}>
                                                     <div className="edit-move">
                                                         <button type="button" onClick={() => moveDetailBlock(index, index - 1)} disabled={index === 0}><Icon name="expand_less" /></button>
                                                         <button type="button" onClick={() => moveDetailBlock(index, index + 1)} disabled={index === (formData.detailBlocks?.length || 0) - 1}><Icon name="expand_more" /></button>
@@ -1950,7 +1980,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                         {/* Block Header */}
                                                         <div className="row" style={{ gap: 8, marginBottom: 10 }}>
                                                             <span className="badge b-gray">
-                                                                {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : 'DIVIDER')))}
+                                                                {block.type === 'image' ? 'SINGLE' : (block.type === 'slide' ? 'SLIDE' : (block.type === 'timeline' ? 'TIMELINE' : (block.type === 'dayInfo' ? 'DAY INFO' : (block.type === 'design' ? 'DESIGN' : 'DIVIDER'))))}
                                                             </span>
                                                             <span className="cell-muted" style={{ fontSize: 12 }}>{index + 1}번째 블록</span>
                                                         </div>
@@ -2084,6 +2114,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                                                                     <div className="inp-mini"><span className="pre"><Icon name="hotel" style={{ fontSize: 14 }} /></span><input value={(block.content as DayInfoContent).accommodation || ''} onChange={(e) => updateBlockContent(index, { ...(block.content as DayInfoContent), accommodation: e.target.value })} placeholder="개별화장실과 샤워실이 구비된 디럭스게르" /></div>
                                                                 </div>
                                                             </div>
+                                                        ) : block.type === 'design' ? (
+                                                            // DESIGN TEMPLATE BLOCK
+                                                            <DesignTemplateBlockEditor
+                                                                content={block.content as DesignBlockContent}
+                                                                onChange={(next) => updateBlockContent(index, next)}
+                                                            />
                                                         ) : (
                                                             // DIVIDER BLOCK
                                                             <div className="row" style={{ gap: 16, alignItems: 'flex-end' }}>
@@ -2558,8 +2594,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                         )}
                     </div>
 
-                    {/* Footer */}
-                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)' }}>
+                    {/* Footer — 페이지 스크롤 중에도 항상 보이는 저장 바 */}
+                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)', position: 'sticky', bottom: 0, background: 'var(--bg-card, #fff)', zIndex: 5 }}>
                         <button type="button" onClick={onClose} className="btn btn-ghost">
                             취소
                         </button>
@@ -2580,8 +2616,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClos
                     onPick={handleSpotPick}
                     onClose={() => setSpotPickerForIndex(null)}
                 />
-            </div >
-        </div >
+        </div>
     );
 };
 

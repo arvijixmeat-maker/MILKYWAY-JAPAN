@@ -134,11 +134,34 @@ export interface DayInfoContent {
     accommodationSubtitle?: string;  // hotels.name_local — small caption below the name
 }
 
-export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo';
+export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo' | 'design';
+
+/**
+ * 'design' 블록: 코드에 내장된 디자인 템플릿(src/components/product/designTemplates)을
+ * 렌더링한다. values는 템플릿 매니페스트의 field key → 관리자가 입력한 값(텍스트/이미지 URL).
+ * 비어 있는 key는 매니페스트의 default가 사용된다.
+ */
+export interface DesignBlockContent {
+    templateId: string;
+    values: Record<string, string>;
+    /**
+     * 표시할 섹션 목록 (순서대로). 없으면 템플릿의 기본 섹션 전체를 한 번씩 표시.
+     * 복제본은 id에 '#2' 같은 접미사가 붙고, 그 섹션의 입력값 key에도 같은 접미사가 붙는다.
+     * 섹션을 삭제하면 이 목록에서 빠진다 (입력값은 남아 있어 다시 추가하면 복원됨).
+     */
+    sections?: DesignSectionInstance[];
+}
+
+export interface DesignSectionInstance {
+    /** 인스턴스 고유 id — 원본은 def와 동일, 복제본은 `${def}#2` 형태 */
+    id: string;
+    /** 템플릿 섹션 id */
+    def: string;
+}
 
 export interface DetailContentBlock {
     id: string;
     type: DetailBlockType;
-    content: string | DetailSlide | DividerContent | TimelineContent | DayInfoContent;
+    content: string | DetailSlide | DividerContent | TimelineContent | DayInfoContent | DesignBlockContent;
 }
 

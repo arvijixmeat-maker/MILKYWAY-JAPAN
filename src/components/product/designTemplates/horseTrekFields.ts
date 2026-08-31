@@ -1,0 +1,203 @@
+import type { DesignSectionDef, DesignTemplateField } from './types';
+
+/**
+ * 「몽골 승마 트레킹 상세페이지」 디자인의 편집 가능 필드 목록.
+ * default는 원본 디자인(몽골 승마 트레킹 상세페이지.dc.html)의 문구를 그대로 옮긴 것.
+ * 줄바꿈이 있는 textarea 값은 \n 그대로 화면에 줄바꿈으로 표시된다.
+ */
+export const horseTrekFields: DesignTemplateField[] = [
+    // ── 01 오프닝 ──────────────────────────────────────────────
+    { key: 'op_line1', label: '상단 문구', type: 'text', section: '01 오프닝', default: '旅行終了,' },
+    { key: 'op_line2', label: '메인 문구', type: 'text', section: '01 오프닝', default: '冒険の始まり' },
+    { key: 'op_bg1', label: '배경 사진 1 (순환)', type: 'image', section: '01 오프닝' },
+    { key: 'op_bg2', label: '배경 사진 2 (순환)', type: 'image', section: '01 오프닝' },
+    { key: 'op_bg3', label: '배경 사진 3 (순환)', type: 'image', section: '01 오프닝' },
+
+    // ── 02 별하늘 히어로 ──────────────────────────────────────
+    { key: 'hero_kicker', label: '작은 제목', type: 'text', section: '02 별하늘 히어로', default: '世界三大星空観測地・モンゴル' },
+    { key: 'hero_title', label: '큰 제목', type: 'text', section: '02 별하늘 히어로', default: '毎晩、星空観賞' },
+    { key: 'hero_body', label: '본문', type: 'textarea', section: '02 별하늘 히어로', default: '街の明かりが届かない、モンゴルの夜。\n手を伸ばせば届きそうなほど、降り注ぐ満天の星。\n今、星にいちばん近い夜を過ごしてみませんか。' },
+    { key: 'hero_bg', label: '배경 사진 (은하수 아래 게르)', type: 'image', section: '02 별하늘 히어로' },
+    { key: 'hero_img1', label: '하단 사진 1 (밤 캠프)', type: 'image', section: '02 별하늘 히어로' },
+    { key: 'hero_img2', label: '하단 사진 2 (별 관측)', type: 'image', section: '02 별하늘 히어로' },
+
+    // ── 03 소개 배너 ──────────────────────────────────────────
+    { key: 'intro_title', label: '제목', type: 'text', section: '03 소개 배너', default: '本物のモンゴルに出会う。' },
+    { key: 'intro_body', label: '본문', type: 'textarea', section: '03 소개 배너', default: 'ありきたりな旅は嫌だけど、\n新しい体験には少し不安を感じていませんか？\nMilkyway Mongoliaと一緒に、\n冒険の世界へ、安心して一歩踏み出そう。' },
+    { key: 'intro_bg', label: '배경 사진 (산맥 아래 초원)', type: 'image', section: '03 소개 배너' },
+
+    // ── 04 이용자 특전 ────────────────────────────────────────
+    { key: 'perks_title', label: '제목', type: 'text', section: '04 이용자 특전', default: '2026年夏ツアーご利用者限定特典' },
+    { key: 'perks_sub', label: '부제', type: 'text', section: '04 이용자 특전', default: '― 4月〜10月出発のツアーが対象 ―' },
+    { key: 'perk1_img', label: '특전 1 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk1_title', label: '특전 1 제목', type: 'text', section: '04 이용자 특전', default: '空港送迎サービス' },
+    { key: 'perk1_sub', label: '특전 1 설명', type: 'text', section: '04 이용자 특전', default: '往復1回無料' },
+    { key: 'perk2_img', label: '특전 2 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk2_title', label: '특전 2 제목', type: 'text', section: '04 이용자 특전', default: 'コーヒーモカポット' },
+    { key: 'perk2_sub', label: '특전 2 설명', type: 'text', section: '04 이용자 특전', default: '6名様以下のグループ限定' },
+    { key: 'perk3_img', label: '특전 3 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk3_title', label: '특전 3 제목', type: 'text', section: '04 이용자 특전', default: 'キャンプ用チェア＆テーブル' },
+    { key: 'perk3_sub', label: '특전 3 설명', type: 'text', section: '04 이용자 특전', default: '6名様以下のグループ限定' },
+    { key: 'perk4_img', label: '특전 4 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk4_title', label: '특전 4 제목', type: 'text', section: '04 이용자 특전', default: 'モンゴル・ラクダソックス' },
+    { key: 'perk4_sub', label: '특전 4 설명', type: 'text', section: '04 이용자 특전', default: '6名様以下のグループ限定' },
+    { key: 'perk5_img', label: '특전 5 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk5_title', label: '특전 5 제목', type: 'text', section: '04 이용자 특전', default: '毎日ミネラルウォーターをご提供' },
+    { key: 'perk5_sub', label: '특전 5 설명', type: 'text', section: '04 이용자 특전', default: '※合計1L' },
+    { key: 'perk6_img', label: '특전 6 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk6_title', label: '특전 6 제목', type: 'text', section: '04 이용자 특전', default: '早朝の天の川ハンティング' },
+    { key: 'perk6_sub', label: '특전 6 설명', type: 'text', section: '04 이용자 특전', default: '6名様以下のグループ限定' },
+    { key: 'perk_air_img', label: '공항 배너 사진', type: 'image', section: '04 이용자 특전' },
+    { key: 'perk_air_title', label: '공항 배너 제목', type: 'text', section: '04 이용자 특전', default: '투어 진행 날에 속하는 공항 이동 무료' },
+    { key: 'perk_air_note', label: '공항 배너 설명', type: 'textarea', section: '04 이용자 특전', default: '* 본 투어 일정 외 이용 시 *\n공항 - 시내 편도 8만원/6명' },
+
+    // ── 05 여행 고민 (말풍선) ─────────────────────────────────
+    { key: 'worry_kicker', label: '작은 제목', type: 'text', section: '05 여행 고민', default: 'モンゴル旅行の計画…' },
+    { key: 'worry_title', label: '제목', type: 'text', section: '05 여행 고민', default: 'こんな経験、きっと一度はありませんか？' },
+    { key: 'worry1', label: '말풍선 1', type: 'textarea', section: '05 여행 고민', default: '一体いつ返事が来るの？返信が遅すぎる… 😧' },
+    { key: 'worry2', label: '말풍선 2', type: 'textarea', section: '05 여행 고민', default: '安いと思ってたのに、現地で結局いろいろ追加料金がかかるんだ…' },
+    { key: 'worry3', label: '말풍선 3', type: 'textarea', section: '05 여행 고민', default: '日本語が全然通じなくて、不安だし不便でした… 😵' },
+    { key: 'worry4', label: '말풍선 4', type: 'textarea', section: '05 여행 고민', default: 'お湯が出ないって本当？🥶 私、冷たい水でシャワーなんて無理〜😭' },
+    { key: 'worry5', label: '말풍선 5', type: 'textarea', section: '05 여행 고민', default: 'えっ…ゲルのトイレって汲み取り式なの！？😨' },
+
+    // ── 06 숙소 ───────────────────────────────────────────────
+    { key: 'ger_kicker', label: '작은 제목', type: 'text', section: '06 숙소', default: 'モンゴリア銀河は、違う。' },
+    { key: 'ger_sub', label: '부제', type: 'text', section: '06 숙소', default: '現地視察を重ね、私たちが実際に確かめて選びました。' },
+    { key: 'ger_title1', label: '제목 첫 줄', type: 'text', section: '06 숙소', default: '旅行者キャンプでも、追加料金なしで' },
+    { key: 'ger_title2', label: '제목 강조 줄', type: 'text', section: '06 숙소', default: '高級ゲルに宿泊' },
+    { key: 'ger_img1', label: '사진 1 (게르 내부)', type: 'image', section: '06 숙소' },
+    { key: 'ger_img2', label: '사진 2 (화장실)', type: 'image', section: '06 숙소' },
+    { key: 'ger_img3', label: '사진 3 (샤워실)', type: 'image', section: '06 숙소' },
+    { key: 'ger_img4', label: '사진 4 (고급형 게르)', type: 'image', section: '06 숙소' },
+    { key: 'ger_check1', label: '체크 항목 1', type: 'text', section: '06 숙소', default: '温水シャワー (ゲル内)' },
+    { key: 'ger_check2', label: '체크 항목 2', type: 'text', section: '06 숙소', default: '洋式トイレ (ゲル内)' },
+    { key: 'ger_check3', label: '체크 항목 3', type: 'text', section: '06 숙소', default: '電気使用可能' },
+    { key: 'ger_note', label: '하단 주석', type: 'text', section: '06 숙소', default: '一般ゲルと高級ゲルでは、室内設備の充実度や快適さに違いがあります。' },
+
+    // ── 07 루트 소개 + 지도 ───────────────────────────────────
+    { key: 'route_intro_title', label: '인트로 제목', type: 'text', section: '07 루트/지도', default: 'それでは、ツアーで訪れる場所を詳しく見ていきましょう。' },
+    { key: 'route_intro_p1', label: '인트로 문단 1', type: 'textarea', section: '07 루트/지도', default: '新しくリニューアルしたツアー日程です。' },
+    { key: 'route_intro_p2', label: '인트로 문단 2', type: 'textarea', section: '07 루트/지도', default: 'モンゴルを代表する絶景を、一度に満喫できる旅です。' },
+    { key: 'route_wide_img', label: '와이드 사진', type: 'image', section: '07 루트/지도' },
+    { key: 'route_card_title', label: '지도 카드 제목', type: 'text', section: '07 루트/지도', default: '旅行ルート情報' },
+    {
+        key: 'map_stops', label: '지도 경유지', type: 'map-stops', section: '07 루트/지도',
+        default: '울란바토르|ウランバートル\n체체를렉 초원|ツェツェルレグ草原\n쳉헤르 온천|ツェンヘル温泉\n테를지 국립공원|テレルジ国立公園',
+        help: '한 줄에 한 곳: 지역명|표시문구|사진URL|위도,경도 (사진·좌표 생략 가능). 울란바토르·테를지·홉스굴·카라코룸·고비 등 주요 관광지는 이름만 넣으면 지도에 자동 표시되고, 미등록 지역은 마지막에 위도,경도를 넣으면 그 위치에 표시됩니다. 예: 새 캠프|新キャンプ||47.5,105.2',
+    },
+    { key: 'spots_label', label: '관광 스팟 라벨', type: 'text', section: '07 루트/지도', default: 'ツアーで訪れる観光スポット' },
+    { key: 'spots_hint', label: '스와이프 안내', type: 'text', section: '07 루트/지도', default: '横にスワイプしてご覧ください →' },
+
+    // ── 08 일자별 카드 (5장) ──────────────────────────────────
+    { key: 'day1_img', label: '1일차 사진', type: 'image', section: '08 일자별 카드' },
+    { key: 'day1_badge', label: '1일차 뱃지', type: 'text', section: '08 일자별 카드', default: '1日目' },
+    { key: 'day1_title', label: '1일차 제목', type: 'text', section: '08 일자별 카드', default: 'ウランバートル到着、草原へ' },
+    { key: 'day1_body', label: '1일차 설명', type: 'textarea', section: '08 일자별 카드', default: '空港からそのまま草原へ移動し、\n初日の夜はゲルキャンプで過ごします。' },
+    { key: 'day2_img', label: '2일차 사진', type: 'image', section: '08 일자별 카드' },
+    { key: 'day2_badge', label: '2일차 뱃지', type: 'text', section: '08 일자별 카드', default: '2日目' },
+    { key: 'day2_title', label: '2일차 제목', type: 'text', section: '08 일자별 카드', default: '乗馬トレッキング開始、渓谷でキャンプ' },
+    { key: 'day2_body', label: '2일차 설명', type: 'textarea', section: '08 일자별 카드', default: '現地の遊牧民と一緒に馬に乗り、\n川沿いの渓谷で一夜を過ごします。' },
+    { key: 'day3_img', label: '3일차 사진', type: 'image', section: '08 일자별 카드' },
+    { key: 'day3_badge', label: '3일차 뱃지', type: 'text', section: '08 일자별 카드', default: '3日目' },
+    { key: 'day3_title', label: '3일차 제목', type: 'text', section: '08 일자별 카드', default: '高原草原の乗馬・露天温泉' },
+    { key: 'day3_body', label: '3일차 설명', type: 'textarea', section: '08 일자별 카드', default: '高原の尾根を越える一日乗馬の後、\nモンゴルの露天温泉で疲れを癒します。' },
+    { key: 'day4_img', label: '4일차 사진', type: 'image', section: '08 일자별 카드' },
+    { key: 'day4_badge', label: '4일차 뱃지', type: 'text', section: '08 일자별 카드', default: '4日目' },
+    { key: 'day4_title', label: '4일차 제목', type: 'text', section: '08 일자별 카드', default: 'テレルジ国立公園' },
+    { key: 'day4_body', label: '4일차 설명', type: 'textarea', section: '08 일자별 카드', default: 'イヌワシ体験や亀岩など、\nテレルジの代表的な自然名所を訪れます。' },
+    { key: 'day5_img', label: '5일차 사진', type: 'image', section: '08 일자별 카드' },
+    { key: 'day5_badge', label: '5일차 뱃지', type: 'text', section: '08 일자별 카드', default: '5日目' },
+    { key: 'day5_title', label: '5일차 제목', type: 'text', section: '08 일자별 카드', default: '最後のツアー、自由に巡るウランバートル' },
+    { key: 'day5_body', label: '5일차 설명', type: 'textarea', section: '08 일자별 카드', default: '国営百貨店やカシミヤショップを巡り、\nモンゴルでの最後の時間を楽しみます。' },
+
+    // ── 09 고비 히어로 ────────────────────────────────────────
+    { key: 'gobi_hero_img', label: '배경 사진', type: 'image', section: '09 고비 히어로' },
+    { key: 'gobi_kicker', label: '작은 제목', type: 'text', section: '09 고비 히어로', default: '최대한 빠르게 고비 핵심을 둘러보고 싶다면' },
+    { key: 'gobi_title', label: '큰 제목', type: 'text', section: '09 고비 히어로', default: '고비 4박 5일 시그니처 코스' },
+    { key: 'gobi_body', label: '본문', type: 'textarea', section: '09 고비 히어로', default: '바가가즈링출로 + 욜링암\n고비 + 바양작 + 차강소브라가' },
+
+    // ── 10 하이라이트 ─────────────────────────────────────────
+    { key: 'hl_title', label: '제목', type: 'text', section: '10 하이라이트', default: '旅程のハイライト' },
+    { key: 'hl_hint', label: '스와이프 안내', type: 'text', section: '10 하이라이트', default: '横にスワイプしてご覧ください →' },
+    { key: 'pt1_img', label: '포인트 1 사진', type: 'image', section: '10 하이라이트' },
+    { key: 'pt1_caption', label: '포인트 1 캡션', type: 'text', section: '10 하이라이트', default: '遊牧民ゲル訪問' },
+    { key: 'pt2_img', label: '포인트 2 사진', type: 'image', section: '10 하이라이트' },
+    { key: 'pt2_caption', label: '포인트 2 캡션', type: 'text', section: '10 하이라이트', default: '乗馬体験' },
+    { key: 'pt3_img', label: '포인트 3 사진', type: 'image', section: '10 하이라이트' },
+    { key: 'pt3_caption', label: '포인트 3 캡션', type: 'text', section: '10 하이라이트', default: 'ラクダ乗り体験' },
+    { key: 'pt4_img', label: '포인트 4 사진', type: 'image', section: '10 하이라이트' },
+    { key: 'pt4_caption', label: '포인트 4 캡션', type: 'text', section: '10 하이라이트', default: 'モンゴル伝統衣装体験' },
+    { key: 'pt5_img', label: '포인트 5 사진', type: 'image', section: '10 하이라이트' },
+    { key: 'pt5_caption', label: '포인트 5 캡션', type: 'text', section: '10 하이라이트', default: 'イヌワシを腕に乗せて記念撮影' },
+    { key: 'and_word', label: '연결 문구', type: 'text', section: '10 하이라이트', default: 'そして,' },
+
+    // ── 11 은하수 ─────────────────────────────────────────────
+    { key: 'mw_img', label: '은하수 사진', type: 'image', section: '11 은하수' },
+    { key: 'mw_caption', label: '캡션', type: 'text', section: '11 은하수', default: '夜空に輝く天の川観賞まで' },
+
+    // ── 12 공항 도착 ──────────────────────────────────────────
+    { key: 'arr_from', label: '출발지', type: 'text', section: '12 공항 도착', default: '日本の空港' },
+    { key: 'arr_to', label: '도착지', type: 'text', section: '12 공항 도착', default: 'チンギス・ハーン国際空港' },
+    { key: 'arr_img', label: '공항 사진', type: 'image', section: '12 공항 도착' },
+    { key: 'arr_lead', label: '리드 문구', type: 'textarea', section: '12 공항 도착', default: '日本から約5時間のフライトで、\nチンギス・ハーン国際空港に到着。' },
+    { key: 'arr_body', label: '픽업 안내 본문', type: 'textarea', section: '12 공항 도착', default: 'チンギス・ハーン国際空港へのお迎えが可能です。また、ご自身で手配されたウランバートル市内のホテルにご宿泊の場合は、ガイドがホテルまでお迎えに伺い、合流後そのままツアーを開始できます。  ご予約・ご相談の際に、フライトの到着時間またはホテル名・住所をお知らせください。お客様のスケジュールに合わせて、お迎え場所と時間をご案内いたします。' },
+    { key: 'arr_band1', label: '민트 배너 1줄', type: 'text', section: '12 공항 도착', default: '空港送迎は、1グループにつき往復1回無料でご提供いたします♪' },
+    { key: 'arr_band2', label: '민트 배너 2줄', type: 'text', section: '12 공항 도착', default: 'グループの皆様で到着時間を合わせて、無料送迎をご利用ください！' },
+    { key: 'welcome_img', label: '웰컴카드 사진', type: 'image', section: '12 공항 도착' },
+    { key: 'welcome_side', label: '사진 옆 문구', type: 'textarea', section: '12 공항 도착', default: 'Welcome\nTo\nMongolia' },
+    { key: 'welcome_caption', label: '하단 캡션', type: 'text', section: '12 공항 도착', default: '担当ガイドが、チーム名が書かれたボードを持ってお待ちしています♪' },
+
+    // ── 13 1일차 상세 ─────────────────────────────────────────
+    { key: 'd1_hero_img', label: '상단 배경 사진', type: 'image', section: '13 1일차 상세' },
+    { key: 'd1_title', label: '섹션 제목', type: 'text', section: '13 1일차 상세', default: '첫째날. 초원으로' },
+    { key: 'tab1_label', label: '탭 1 라벨', type: 'text', section: '13 1일차 상세', default: '1DAY' },
+    { key: 'tab1_text', label: '탭 1 내용', type: 'text', section: '13 1일차 상세', default: '초원 게르 캠프' },
+    { key: 'tab2_label', label: '탭 2 라벨', type: 'text', section: '13 1일차 상세', default: '2DAY' },
+    { key: 'tab2_text', label: '탭 2 내용', type: 'text', section: '13 1일차 상세', default: '승마 트레킹, 계곡 야영' },
+    { key: 'tab3_label', label: '탭 3 라벨', type: 'text', section: '13 1일차 상세', default: '3DAY' },
+    { key: 'tab3_text', label: '탭 3 내용', type: 'text', section: '13 1일차 상세', default: '쳉헤르 온천' },
+    { key: 'tab4_label', label: '탭 4 라벨', type: 'text', section: '13 1일차 상세', default: '4DAY' },
+    { key: 'tab4_text', label: '탭 4 내용', type: 'text', section: '13 1일차 상세', default: '테를지' },
+    { key: 'tab5_label', label: '탭 5 라벨', type: 'text', section: '13 1일차 상세', default: '5DAY' },
+    { key: 'tab5_text', label: '탭 5 내용', type: 'text', section: '13 1일차 상세', default: '울란바토르 시내관광' },
+    { key: 'd1_kicker', label: '카드 작은 제목', type: 'text', section: '13 1일차 상세', default: '몽골 초원에서 보내는 첫 밤' },
+    { key: 'd1_head', label: '카드 큰 제목', type: 'text', section: '13 1일차 상세', default: '초원 게르 캠프' },
+    { key: 'd1_body', label: '카드 본문', type: 'textarea', section: '13 1일차 상세', default: '공항에서 곧바로 도시를 벗어나 초원으로 향합니다.\n포장도로가 끝나면 지평선만 남는 길이 이어지고,\n해가 기울 무렵 오늘 묵을 게르 캠프에 도착합니다.\n첫날은 무리하지 않고, 초원의 밤에 눈을 맞추는 시간입니다.' },
+    { key: 'd1_img1', label: '사진 1 (게르 캠프)', type: 'image', section: '13 1일차 상세' },
+    { key: 'd1_img2', label: '사진 2 (초원)', type: 'image', section: '13 1일차 상세' },
+    { key: 'd1_img3', label: '사진 3 (캠프 석식)', type: 'image', section: '13 1일차 상세' },
+    { key: 'd1_img4', label: '사진 4 (초원의 밤)', type: 'image', section: '13 1일차 상세' },
+    { key: 'd1_route_title', label: '이동 경로 제목', type: 'text', section: '13 1일차 상세', default: '울란바토르 › 초원' },
+    { key: 'd1_t1', label: '일정 1 시간', type: 'text', section: '13 1일차 상세', default: '10:00' },
+    { key: 'd1_e1', label: '일정 1 내용', type: 'textarea', section: '13 1일차 상세', default: '울란바토르 공항 픽업\n환전 / 장보기' },
+    { key: 'd1_t2', label: '일정 2 시간', type: 'text', section: '13 1일차 상세', default: '13:00' },
+    { key: 'd1_e2', label: '일정 2 내용', type: 'textarea', section: '13 1일차 상세', default: '중식\n초원으로 이동' },
+    { key: 'd1_t3', label: '일정 3 시간', type: 'text', section: '13 1일차 상세', default: '19:00' },
+    { key: 'd1_e3', label: '일정 3 내용', type: 'textarea', section: '13 1일차 상세', default: '캠프 도착 및 석식\n자유시간 (선셋, 별 구경)' },
+    { key: 'd1_meal_b', label: '조식', type: 'text', section: '13 1일차 상세', default: '없음' },
+    { key: 'd1_meal_l', label: '중식', type: 'text', section: '13 1일차 상세', default: '현지식' },
+    { key: 'd1_meal_d', label: '석식', type: 'text', section: '13 1일차 상세', default: '캠프식' },
+    { key: 'd1_stay', label: '숙박 이름', type: 'text', section: '13 1일차 상세', default: '여행자 게르 캠프' },
+    { key: 'd1_stay_tags', label: '숙박 태그 (줄바꿈 구분)', type: 'textarea', section: '13 1일차 상세', default: '· 전기사용 가능\n· 샤워가능(외부/공용)\n· 화장실(외부/공용)' },
+    { key: 'd1_exp', label: '포함체험 / 즐길거리', type: 'text', section: '13 1일차 상세', default: '초원 산책, 선셋 감상, 별 구경' },
+];
+
+/**
+ * 관리자에서 복제·삭제하는 단위인 섹션 목록 (템플릿의 실제 렌더 순서와 같아야 한다).
+ * fieldSections는 그 섹션이 포함하는 매니페스트 section 이름 — 복제 시 이 필드들이 함께 복사된다.
+ * repeatable: false는 한 상품에 하나만 있는 게 자연스러운 섹션(오프닝/히어로 등).
+ */
+export const horseTrekSectionDefs: DesignSectionDef[] = [
+    { id: '01 오프닝', fieldSections: ['01 오프닝'] },
+    { id: '02 별하늘 히어로', fieldSections: ['02 별하늘 히어로'] },
+    { id: '03 소개 배너', fieldSections: ['03 소개 배너'] },
+    { id: '04 이용자 특전', fieldSections: ['04 이용자 특전'] },
+    { id: '05 여행 고민', fieldSections: ['05 여행 고민'] },
+    { id: '06 숙소', fieldSections: ['06 숙소'], repeatable: true },
+    { id: '07 루트/지도', fieldSections: ['07 루트/지도', '08 일자별 카드'] },
+    { id: '09 고비 히어로', fieldSections: ['09 고비 히어로'], repeatable: true },
+    { id: '10 하이라이트', fieldSections: ['10 하이라이트'], repeatable: true },
+    { id: '11 은하수', fieldSections: ['11 은하수'], repeatable: true },
+    { id: '12 공항 도착', fieldSections: ['12 공항 도착'] },
+    { id: '13 1일차 상세', fieldSections: ['13 1일차 상세'], repeatable: true },
+];
