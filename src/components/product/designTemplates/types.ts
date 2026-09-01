@@ -85,6 +85,11 @@ export interface DesignTemplateDef {
     /** 디자인 원본 캔버스 폭(px). 화면에서는 컨테이너 폭에 맞춰 축소된다 */
     canvasWidth: number;
     fields: DesignTemplateField[];
+    /**
+     * 이 섹션(def id)까지 렌더한 뒤 상품 일정탭의 일정표를 삽입한다.
+     * 상세페이지가 itinerarySlot을 넘겨줄 때만 적용된다.
+     */
+    itineraryAfter?: string;
     /** 관리자에서 복제·삭제할 수 있는 섹션 목록 (표시 순서) */
     sectionDefs: DesignSectionDef[];
     Component: React.ComponentType<DesignTemplateProps>;

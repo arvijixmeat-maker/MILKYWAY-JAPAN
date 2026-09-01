@@ -64,7 +64,7 @@ function useDesignFonts() {
  * variant='mobile'이면 템플릿의 모바일 전용 디자인(있을 때)을 렌더링한다.
  * editing=true면 빈 이미지 슬롯에 업로드 안내 placeholder를 표시한다.
  */
-export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField }: {
+export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField, itinerarySlot }: {
     content: DesignBlockContent;
     editing?: boolean;
     variant?: 'desktop' | 'mobile';
@@ -72,6 +72,11 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
     onFieldClick?: (key: string) => void;
     /** 현재 편집 중인 필드 — 미리보기에서 초록 테두리로 표시 */
     selectedField?: string | null;
+    /**
+     * 상품 일정탭의 일정표. 템플릿의 itineraryAfter 섹션 뒤에 끼워 넣고
+     * 나머지 섹션(여행의 순간들부터)으로 이어간다.
+     */
+    itinerarySlot?: React.ReactNode;
 }) {
     useDesignFonts();
     // 사이트 공통 기본값 — 상품마다 다시 올리지 않아도 되는 사진·문구
@@ -131,9 +136,35 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
                     ${selectedField ? `.dtpl-clickable [data-df-scope="${selScope}"] [data-df="${selBase}"] { outline: 2px solid #06C4A0; outline-offset: 2px; }` : ''}
                 `}</style>
             )}
-            <ScaledDesign canvasWidth={canvasWidth}>
-                <Tpl v={v} editing={editing} instances={resolveInstances(def, content?.sections)} />
-            </ScaledDesign>
+            {(() => {
+                const instances = resolveInstances(def, content?.sections);
+                // 일정표 삽입: itineraryAfter 섹션까지 렌더 → 일정표 → 나머지 섹션
+                const splitAt = itinerarySlot && def.itineraryAfter
+                    ? instances.findIndex(i => i.def === def.itineraryAfter)
+                    : -1;
+                if (splitAt === -1) {
+                    return (
+                        <ScaledDesign canvasWidth={canvasWidth}>
+                            <Tpl v={v} editing={editing} instances={instances} />
+                        </ScaledDesign>
+                    );
+                }
+                const head = instances.slice(0, splitAt + 1);
+                const tail = instances.slice(splitAt + 1);
+                return (
+                    <>
+                        <ScaledDesign canvasWidth={canvasWidth}>
+                            <Tpl v={v} editing={editing} instances={head} />
+                        </ScaledDesign>
+                        {itinerarySlot}
+                        {tail.length > 0 && (
+                            <ScaledDesign canvasWidth={canvasWidth}>
+                                <Tpl v={v} editing={editing} instances={tail} />
+                            </ScaledDesign>
+                        )}
+                    </>
+                );
+            })()}
         </div>
     );
 }

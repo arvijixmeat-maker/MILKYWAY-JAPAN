@@ -113,13 +113,16 @@ export function ProductDetailDesktop({
     const hasItineraryContent =
         (product.itineraryBlocks && product.itineraryBlocks.some(isMeaningfulItineraryBlock)) ||
         (product.itineraryImages && product.itineraryImages.length > 0);
+    // 디자인 템플릿 블록이 있으면 일정표가 디자인 중간(공항 도착 뒤)에 들어가므로
+    // 별도 詳細日程 섹션은 중복 표시하지 않는다
+    const hasDesignBlock = (product.detailBlocks ?? []).some(b => b.type === 'design');
     const visibleSections = useMemo(
         () => ALL_SECTIONS.filter((s) => {
             if (s.id === 'details') return hasDetailContent;
-            if (s.id === 'itinerary') return hasItineraryContent;
+            if (s.id === 'itinerary') return hasItineraryContent && !hasDesignBlock;
             return true;
         }),
-        [hasDetailContent, hasItineraryContent]
+        [hasDetailContent, hasItineraryContent, hasDesignBlock]
     );
 
     // Scroll observers (sticky bar + active section)
@@ -440,7 +443,7 @@ export function ProductDetailDesktop({
                             </Section>
                         )}
 
-                        {hasItineraryContent && (
+                        {hasItineraryContent && !hasDesignBlock && (
                             <Section id="itinerary" title="詳細日程" eyebrow="Day-by-Day Itinerary">
                                 <Timeline product={product} />
                             </Section>
@@ -977,6 +980,10 @@ function GallerySection({ gallery, onOpen }: { gallery: string[]; onOpen: () => 
 }
 
 function DetailBlocksRenderer({ product }: { product: TourProduct }) {
+    // 디자인 블록 중간(공항 도착 뒤)에 끼워 넣을 일정표가 있는지
+    const hasItinerary =
+        (product.itineraryBlocks && product.itineraryBlocks.some(isMeaningfulItineraryBlock)) ||
+        (product.itineraryImages && product.itineraryImages.length > 0);
     const blocks = product.detailBlocks ?? [];
     const slides = product.detailSlides ?? [];
     const detailImages = product.detailImages ?? [];
@@ -1018,7 +1025,18 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                         );
                     }
                     if (b.type === 'design') {
-                        return <DesignBlockView key={b.id || i} content={b.content as DesignBlockContent} />;
+                        return (
+                            <DesignBlockView
+                                key={b.id || i}
+                                content={b.content as DesignBlockContent}
+                                // 일정탭의 일정표를 디자인 중간(공항 도착 뒤)에 끼워 넣는다
+                                itinerarySlot={hasItinerary ? (
+                                    <div style={{ padding: '48px 0' }}>
+                                        <Timeline product={product} />
+                                    </div>
+                                ) : undefined}
+                            />
+                        );
                     }
                     return null;
                 })}

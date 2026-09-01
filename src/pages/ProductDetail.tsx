@@ -506,6 +506,10 @@ export const ProductDetail: React.FC = () => {
         (product.itineraryBlocks?.length ?? 0) > 0 ||
         (product.itineraryImages?.length ?? 0) > 0;
 
+    // 디자인 템플릿 블록이 있으면 일정표를 디자인 중간(공항 도착 뒤)에 끼워 넣으므로
+    // 별도 일정 섹션은 중복 표시하지 않는다
+    const hasDesignBlock = (product.detailBlocks ?? []).some(b => b.type === 'design');
+
     const hasGuideContent =
         (product.included?.length ?? 0) > 0 ||
         (product.excluded?.length ?? 0) > 0;
@@ -895,6 +899,13 @@ export const ProductDetail: React.FC = () => {
                                         key={block.id}
                                         content={block.content as DesignBlockContent}
                                         variant="mobile"
+                                        // 일정탭의 일정표를 디자인 중간(공항 도착 뒤)에 끼워 넣는다
+                                        itinerarySlot={hasItineraryContent ? (
+                                            <div className="bg-white dark:bg-background-dark px-6 pt-6 pb-8">
+                                                <h3 className="text-lg font-bold mb-4">{t('product_detail.itinerary_title')}</h3>
+                                                <MobileItineraryTimeline product={product} />
+                                            </div>
+                                        ) : undefined}
                                     />
                                 );
                             }
@@ -969,7 +980,7 @@ export const ProductDetail: React.FC = () => {
             {/* Itinerary Section — new tab/spine timeline. Handles dayInfo,
                 timeline events with images, hotel + meals per day, and falls
                 back to flat image stack for legacy image-only products. */}
-            {hasItineraryContent && (
+            {hasItineraryContent && !hasDesignBlock && (
                 <div className="bg-white dark:bg-background-dark mt-2 px-6 pt-6 pb-8" id="itinerary">
                     <h3 className="text-lg font-bold mb-4">{t('product_detail.itinerary_title')}</h3>
                     <MobileItineraryTimeline product={product} />

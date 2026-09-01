@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../types/product';
 import type { DesignPreset, DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
@@ -10,7 +10,6 @@ import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
 /** 일수에 맞춰 자동으로 개수가 맞춰지는 일차별 상세 섹션 */
-const DAY_SECTION = '13 1일차 상세';
 
 /**
  * 지도 경유지 선택 UI — 지도에 좌표가 등록된 여행지 목록에서 골라 담는다.
@@ -273,19 +272,6 @@ export function DesignTemplateBlockEditor({
      */
     const values = useMemo(() => content.values || {}, [content.values]);
 
-    /** 표시할 DAY 개수 — 모든 일차 카드가 함께 쓰는 값이라 접미사 없이 읽는다 */
-    const dayCountOf = useCallback(() => {
-        const raw = values['d1_day_count'] ?? def?.fields.find(f => f.key === 'd1_day_count')?.default ?? '5';
-        return Math.min(8, Math.max(1, Number(raw) || 5));
-    }, [values, def]);
-
-    /** 이 일차 카드의 일정표 줄 수 (카드마다 다를 수 있어 접미사를 붙여 읽는다) */
-    const schedCountOf = useCallback((instId: string) => {
-        const raw = values[scopedKey('d1_sched_count', instId)]
-            ?? def?.fields.find(f => f.key === 'd1_sched_count')?.default ?? '3';
-        return Math.min(6, Math.max(1, Number(raw) || 3));
-    }, [values, def]);
-
     const sections = useMemo(() => {
         if (!def) return [] as { instId: string; defId: string; name: string; copyNo: number; fields: { field: DesignTemplateField; key: string }[] }[];
         return instances.map(inst => {
@@ -295,21 +281,11 @@ export function DesignTemplateBlockEditor({
             return {
                 instId: inst.id,
                 defId: inst.def,
-                name: inst.def === DAY_SECTION
-                    ? `13 일차별 상세 (DAY ${hash === -1 ? 1 : inst.id.slice(hash + 1)})`
-                    : (hash === -1 ? inst.id : `${inst.def} (복제 ${inst.id.slice(hash + 1)})`),
+                name: hash === -1 ? inst.id : `${inst.def} (복제 ${inst.id.slice(hash + 1)})`,
                 copyNo: hash === -1 ? 1 : Number(inst.id.slice(hash + 1)),
                 fields: def.fields
                     .filter(f => names.has(f.section))
-                    // 일수·줄 수를 넘는 칸은 숨긴다 (3일을 골랐으면 4~8일차 입력칸은 안 보이게)
-                    .filter(f => {
-                        const tab = /^tab(\d)_(?:label|text)$/.exec(f.key);
-                        if (tab) return Number(tab[1]) <= dayCountOf();
-                        const row = /^d1_[te](\d)$/.exec(f.key);
-                        if (row) return Number(row[1]) <= schedCountOf(inst.id);
-                        return true;
-                    })
-                    // 모든 일차가 함께 쓰는 값(일수·DAY 탭)은 첫 카드에서만 편집한다
+                    // 복제본과 공유하는 값은 원본 섹션에서만 편집한다
                     .filter(f => !f.shared || inst.id === inst.def)
                     .map(f => ({
                         field: f,
@@ -318,7 +294,7 @@ export function DesignTemplateBlockEditor({
                     })),
             };
         });
-    }, [def, instances, dayCountOf, schedCountOf]);
+    }, [def, instances]);
 
     /** 미리보기에서 필드 클릭 → 해당 섹션 열고 입력칸으로 스크롤 + 포커스 */
     const handlePreviewFieldClick = (key: string) => {
@@ -404,29 +380,6 @@ export function DesignTemplateBlockEditor({
     }
 
     /**
-     * 「일정 일수」를 바꾸면 일차별 상세 섹션 개수를 자동으로 맞춘다.
-     * 3박 4일(4)을 고르면 DAY1~DAY4 카드 4개가 생기고, 줄이면 뒤쪽이 빠진다.
-     * 값(입력한 문구·사진)은 지우지 않으므로 다시 늘리면 그대로 돌아온다.
-     */
-    const syncDaySections = (next: DesignBlockContent, count: number): DesignBlockContent => {
-        if (!def || !Number.isFinite(count)) return next;
-        const n = Math.min(8, Math.max(1, Math.round(count)));
-        const cur = resolveInstances(def, next.sections);
-        const others = cur.filter(s => s.def !== DAY_SECTION);
-        const days = cur.filter(s => s.def === DAY_SECTION);
-        if (days.length === n) return next;
-
-        const wanted = Array.from({ length: n }, (_, i) =>
-            i === 0 ? { id: DAY_SECTION, def: DAY_SECTION } : { id: `${DAY_SECTION}#${i + 1}`, def: DAY_SECTION });
-        // 일차 카드는 원래 자리(첫 일차 카드가 있던 위치)에 이어서 놓는다
-        const at = cur.findIndex(s => s.def === DAY_SECTION);
-        const merged = [...others];
-        merged.splice(at === -1 ? others.length : at, 0, ...wanted);
-        return { ...next, sections: merged };
-    };
-
-
-    /**
      * 미리보기에서 올린 사진을 "공통 사진"으로 저장한다.
      * 저장 후에는 이 상품도 공통 사진을 따라가도록 개별 값을 비운다
      * (화면은 그대로지만, 나중에 공통 사진을 바꾸면 이 상품에도 반영된다).
@@ -456,9 +409,7 @@ export function DesignTemplateBlockEditor({
     };
 
     const setValue = (key: string, value: string) => {
-        let next: DesignBlockContent = { ...content, values: { ...values, [key]: value } };
-        if (key === 'd1_day_count') next = syncDaySections(next, Number(value));
-        onChange(next);
+        onChange({ ...content, values: { ...values, [key]: value } });
     };
 
     const handleImageUpload = async (key: string, file: File | undefined) => {
@@ -540,6 +491,11 @@ export function DesignTemplateBlockEditor({
                             variant={previewVariant}
                             onFieldClick={handlePreviewFieldClick}
                             selectedField={selectedField}
+                            itinerarySlot={(
+                                <div style={{ padding: '28px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: 12, margin: '8px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+                                    📋 이 자리에 상품의 <b>일정탭</b>에서 작성한 일정표가 표시됩니다
+                                </div>
+                            )}
                         />
                     </div>
                 </div>

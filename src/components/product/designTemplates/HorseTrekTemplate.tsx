@@ -35,10 +35,6 @@ function Lines({ k, text, style }: { k?: string; text: string; style?: React.CSS
     return <div data-df={k} style={{ whiteSpace: 'pre-line', ...style }}>{text}</div>;
 }
 
-function SectionDot() {
-    return <div style={{ width: 34, height: 34, borderRadius: '50%', background: MINT, flex: 'none' }} />;
-}
-
 /** 줄 단위 목록 — 각 줄을 개별 div로 (gap 적용) */
 function LineList({ k, text, style, itemStyle }: { k?: string; text: string; style?: React.CSSProperties; itemStyle?: React.CSSProperties }) {
     const items = text.split('\n').map(s => s.trim()).filter(Boolean);
@@ -77,8 +73,6 @@ function makeS(v: (k: string) => string, instances: DesignSectionInstance[]) {
 
 export default function HorseTrekTemplate({ v, editing, instances }: DesignTemplateProps) {
     const list = instances ?? horseTrekSectionDefs.map(s => ({ id: s.id, def: s.id }));
-    // 일수와 DAY 탭 목록은 모든 일차 카드가 공유한다 (복제본에서도 같은 값을 읽도록 스코프 없는 getter)
-    const sharedV = v;
     const S = makeS(v, list);
 
     return (
@@ -579,107 +573,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                 </section>
             ))}
 
-            {/* ── 13 1일차 상세 ─────────────────────────────── */}
-            {S('13 1일차 상세', (v, dayIdx) => {
-                const dayCount = Math.min(8, Math.max(1, Number(sharedV('d1_day_count')) || 5));
-                const tabs = Array.from({ length: dayCount }, (_, i) => i + 1)
-                    .map(n => ({ n, label: sharedV(`tab${n}_label`), text: sharedV(`tab${n}_text`) }));
-                const schedCount = Math.min(6, Math.max(1, Number(v('d1_sched_count')) || 3));
-                const schedule = Array.from({ length: schedCount }, (_, i) => i + 1)
-                    .map(n => ({ n, time: v(`d1_t${n}`), body: v(`d1_e${n}`) }))
-                    // 관리자 편집 중에는 빈 줄도 보여 채워 넣게 하고, 실제 페이지에서는 숨긴다
-                    .filter(r => editing || r.time || r.body);
-                return (
-                <section style={{ position: 'relative', background: '#EFFEF9', padding: '60px 0 90px' }}>
-                    <div style={{ position: 'relative', height: 470, overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: '#DFFFF4' }}>
-                            <Slot k="d1_hero_img" src={v('d1_hero_img')} label="1일차 초원 사진" editing={editing} alt="草原" />
-                        </div>
-                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
-                        <div style={{ position: 'relative', pointerEvents: 'none', padding: '56px 60px 0' }}>
-                            <h2 style={{ margin: 0, fontSize: 46, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 18px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title') || `DAY ${dayIdx + 1}`}</span></h2>
-                            <div style={{ marginTop: 38, display: 'grid', gridTemplateColumns: `repeat(${dayCount}, 1fr)`, gap: 10 }}>
-                                {tabs.map((t, i) => (
-                                    <div key={t.n} style={{ display: 'flex', flexDirection: 'column', gap: 8, opacity: i === dayIdx ? 1 : 0.72 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            {i === dayIdx
-                                                ? <div style={{ width: 14, height: 14, borderRadius: '50%', background: MINT, boxShadow: '0 0 0 4px rgba(255,255,255,0.45)' }} />
-                                                : <div style={{ width: 11, height: 11, borderRadius: '50%', background: 'rgba(255,255,255,0.85)' }} />}
-                                            <div style={{ fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${t.n}_label`}>{t.label}</span></div>
-                                        </div>
-                                        <div style={{ fontSize: 19, fontWeight: i === dayIdx ? 700 : 600, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}><span data-df={`tab${t.n}_text`}>{t.text}</span></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-    
-                    <div style={{ margin: '-70px 40px 0', position: 'relative', background: '#fff', borderRadius: 40, boxShadow: '0 24px 60px rgba(0,51,46,0.10)', padding: '60px 56px 66px' }}>
-                        <div style={{ fontSize: 26, fontWeight: 700, color: DEEP, letterSpacing: '-0.03em' }}><span data-df="d1_kicker">{v('d1_kicker')}</span></div>
-                        <h3 style={{ margin: '16px 0 0', fontSize: 46, fontWeight: 800, letterSpacing: '-0.045em', color: TEAL }}><span data-df="d1_head">{v('d1_head')}</span></h3>
-                        <Lines k="d1_body" text={v('d1_body')} style={{ margin: '34px 0 0', fontSize: 23, lineHeight: 1.75, fontWeight: 500, color: '#4a4a4a', letterSpacing: '-0.02em', textWrap: 'pretty' } as React.CSSProperties} />
-    
-                        <div style={{ marginTop: 44, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                            {[1, 2, 3, 4].map(n => (
-                                <div key={n} style={{ position: 'relative', height: 250, borderRadius: 18, overflow: 'hidden', background: '#EFFEF9' }}>
-                                    <Slot k={`d1_img${n}`} src={v(`d1_img${n}`)} label={`1일차 사진 ${n}`} editing={editing} alt="1日目" />
-                                </div>
-                            ))}
-                        </div>
-    
-                        <div style={{ marginTop: 52, display: 'grid', gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,1fr)', gap: 48, alignItems: 'start' }}>
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <SectionDot />
-                                    <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}><span data-df="d1_route_title">{v('d1_route_title')}</span></div>
-                                </div>
-                                <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                                    {schedule.map((s, i) => (
-                                        <div key={i} style={{ display: 'flex', gap: 20 }}>
-                                            <div style={{ flex: '0 0 82px', fontSize: 21, fontWeight: 800, color: TEAL, letterSpacing: '-0.02em' }}><span data-df={`d1_t${i + 1}`}>{s.time}</span></div>
-                                            <Lines k={`d1_e${i + 1}`} text={s.body} style={{ fontSize: 21, lineHeight: 1.55, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <SectionDot />
-                                        <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>お食事情報</div>
-                                    </div>
-                                    <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}>
-                                        <div style={{ display: 'flex', gap: 18 }}><div style={{ flex: '0 0 62px' }}>朝食</div><div data-df="d1_meal_b">{v('d1_meal_b')}</div></div>
-                                        <div style={{ display: 'flex', gap: 18 }}><div style={{ flex: '0 0 62px' }}>昼食</div><div data-df="d1_meal_l">{v('d1_meal_l')}</div></div>
-                                        <div style={{ display: 'flex', gap: 18 }}><div style={{ flex: '0 0 62px' }}>夕食</div><div data-df="d1_meal_d">{v('d1_meal_d')}</div></div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <SectionDot />
-                                        <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>宿泊情報</div>
-                                    </div>
-                                    <div style={{ marginTop: 20, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}><span data-df="d1_stay">{v('d1_stay')}</span></div>
-                                    <div data-df="d1_stay_tags" style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: '10px 22px', fontSize: 19, fontWeight: 600, color: TEAL, letterSpacing: '-0.02em' }}>
-                                        {v('d1_stay_tags').split('\n').map(s => s.trim()).filter(Boolean).map((t, i) => <div key={i}>{t}</div>)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-    
-                        <div style={{ marginTop: 48, height: 1, background: '#EFFEF9' }} />
-                        <div style={{ marginTop: 36 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <SectionDot />
-                                <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>含まれる体験・アクティビティ</div>
-                            </div>
-                            <div style={{ marginTop: 18, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}><span data-df="d1_exp">{v('d1_exp')}</span></div>
-                        </div>
-                    </div>
-                </section>
-                );
-            })}
-
+            
             {/* ── 16 여행의 순간들 ──────────────────────────── */}
             {S('16 여행의 순간들', (v) => (
                 <section style={{ background: '#fff', padding: '100px 40px 110px' }}>

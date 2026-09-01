@@ -75,8 +75,6 @@ function makeS(v: (k: string) => string, instances: DesignSectionInstance[]) {
 
 export default function HorseTrekMobileTemplate({ v, editing, instances }: DesignTemplateProps) {
     const list = instances ?? horseTrekSectionDefs.map(s => ({ id: s.id, def: s.id }));
-    // 일수와 DAY 탭 목록은 모든 일차 카드가 공유한다 (복제본에서도 같은 값을 읽도록 스코프 없는 getter)
-    const sharedV = v;
     const S = makeS(v, list);
 
     return (
@@ -580,105 +578,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                 </section>
             ))}
 
-            {/* ── 13 1일차 상세 ─────────────────────────────── */}
-            {S('13 1일차 상세', (v, dayIdx) => {
-                const dayCount = Math.min(8, Math.max(1, Number(sharedV('d1_day_count')) || 5));
-                const tabs = Array.from({ length: dayCount }, (_, i) => i + 1)
-                    .map(n => ({ n, label: sharedV(`tab${n}_label`), text: sharedV(`tab${n}_text`) }));
-                const schedCount = Math.min(6, Math.max(1, Number(v('d1_sched_count')) || 3));
-                const schedule = Array.from({ length: schedCount }, (_, i) => i + 1)
-                    .map(n => ({ n, time: v(`d1_t${n}`), body: v(`d1_e${n}`) }))
-                    // 관리자 편집 중에는 빈 줄도 보여 채워 넣게 하고, 실제 페이지에서는 숨긴다
-                    .filter(r => editing || r.time || r.body);
-                return (
-                <section style={{ position: 'relative', background: '#EFFEF9', padding: '30px 0 45px' }}>
-                    <div style={{ position: 'relative', height: 235, overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: '#DFFFF4' }}>
-                            <Slot k="d1_hero_img" src={v('d1_hero_img')} label="1일차 초원 사진" editing={editing} alt="草原" />
-                        </div>
-                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
-                        <div style={{ position: 'relative', pointerEvents: 'none', padding: '28px 30px 0' }}>
-                            <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 9px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title') || `DAY ${dayIdx + 1}`}</span></h2>
-                            <div style={{ marginTop: 19, display: 'grid', gridTemplateColumns: `repeat(${dayCount}, 1fr)`, gap: 5 }}>
-                                {tabs.map((t, i) => (
-                                    <div key={t.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, opacity: i === dayIdx ? 1 : 0.38 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                            {i === dayIdx
-                                                ? <div style={{ width: 7, height: 7, borderRadius: '50%', background: MINT, animation: 'htmDayPulse 2.2s ease-in-out infinite' }} />
-                                                : <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.85)' }} />}
-                                            <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${t.n}_label`}>{t.label}</span></div>
-                                        </div>
-                                        <div style={{ fontSize: 13, fontWeight: i === dayIdx ? 700 : 600, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}><span data-df={`tab${t.n}_text`}>{t.text}</span></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ margin: '-35px 20px 0', position: 'relative', background: '#fff', borderRadius: 20, boxShadow: '0 12px 30px rgba(0,51,46,0.10)', padding: '30px 28px 33px' }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: DEEP, letterSpacing: '-0.03em' }}><span data-df="d1_kicker">{v('d1_kicker')}</span></div>
-                        <h3 style={{ margin: '8px 0 0', fontSize: 25, fontWeight: 800, letterSpacing: '-0.045em', color: TEAL }}><span data-df="d1_head">{v('d1_head')}</span></h3>
-                        <Lines k="d1_body" text={v('d1_body')} style={{ margin: '17px 0 0', fontSize: 13, lineHeight: 1.75, fontWeight: 500, color: '#4a4a4a', letterSpacing: '-0.02em', textWrap: 'pretty' } as React.CSSProperties} />
-
-                        <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-                            {[1, 2, 3, 4].map(n => (
-                                <div key={n} style={{ position: 'relative', height: 125, borderRadius: 9, overflow: 'hidden', background: '#EFFEF9' }}>
-                                    <Slot k={`d1_img${n}`} src={v(`d1_img${n}`)} label={`1일차 사진 ${n}`} editing={editing} alt="1日目" />
-                                </div>
-                            ))}
-                        </div>
-
-                        <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 18 }}>
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <div style={{ width: 15, height: 15, borderRadius: '50%', background: MINT, flex: 'none' }} />
-                                    <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}><span data-df="d1_route_title">{v('d1_route_title')}</span></div>
-                                </div>
-                                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    {schedule.map(s => (
-                                        <div key={s.n} style={{ display: 'flex', gap: 12 }}>
-                                            <div style={{ flex: '0 0 43px', fontSize: 14, fontWeight: 700, color: '#2b2b2b', letterSpacing: '-0.02em' }}><span data-df={`d1_t${s.n}`}>{s.time}</span></div>
-                                            <Lines k={`d1_e${s.n}`} text={s.body} style={{ fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '15px 0', borderTop: '1px solid #EFEFEF', borderBottom: '1px solid #EFEFEF' }}>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                        <div style={{ width: 13, height: 13, borderRadius: '50%', background: MINT, flex: 'none' }} />
-                                        <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>お食事情報</div>
-                                    </div>
-                                    <div style={{ marginTop: 9, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}>
-                                        <div style={{ display: 'flex', gap: 10 }}><div style={{ flex: '0 0 32px' }}>朝食</div><div data-df="d1_meal_b">{v('d1_meal_b')}</div></div>
-                                        <div style={{ display: 'flex', gap: 10 }}><div style={{ flex: '0 0 32px' }}>昼食</div><div data-df="d1_meal_l">{v('d1_meal_l')}</div></div>
-                                        <div style={{ display: 'flex', gap: 10 }}><div style={{ flex: '0 0 32px' }}>夕食</div><div data-df="d1_meal_d">{v('d1_meal_d')}</div></div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                        <div style={{ width: 13, height: 13, borderRadius: '50%', background: MINT, flex: 'none' }} />
-                                        <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>宿泊情報</div>
-                                    </div>
-                                    <div style={{ marginTop: 9, fontSize: 13, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}><span data-df="d1_stay">{v('d1_stay')}</span></div>
-                                    <LineList k="d1_stay_tags" text={v('d1_stay_tags')} style={{ marginTop: 7, display: 'flex', flexDirection: 'column', gap: 5, fontSize: 13, fontWeight: 600, color: TEAL, letterSpacing: '-0.025em' }} />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '4px 10px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                    <div style={{ width: 13, height: 13, borderRadius: '50%', background: MINT, flex: 'none' }} />
-                                    <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>含まれる体験・アクティビティ</div>
-                                </div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}><span data-df="d1_exp">{v('d1_exp')}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                );
-            })}
-
+            
             {/* ── 16 여행의 순간들 ──────────────────────────── */}
             {S('16 여행의 순간들', (v) => (
                 <section style={{ background: '#fff', padding: '50px 20px 55px' }}>
