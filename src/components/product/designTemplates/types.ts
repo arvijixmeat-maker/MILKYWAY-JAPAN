@@ -26,13 +26,21 @@ export interface DesignTemplateField {
      * 자주 쓰는 값 — 관리자 폼에 버튼으로 표시되고, 누르면 그 값으로 채워진다.
      * text 필드용(하나만 선택). 목록에 없는 값은 직접 입력하면 된다.
      */
-    presets?: string[];
+    presets?: DesignPreset[];
     /**
      * 자주 쓰는 줄 — textarea 필드용(여러 개 선택).
      * 버튼을 누르면 해당 줄이 추가되고, 다시 누르면 빠진다.
      */
-    presetLines?: string[];
+    presetLines?: DesignPreset[];
 }
+
+/**
+ * 프리셋 항목.
+ * 문자열이면 버튼 라벨과 입력값이 같고,
+ * { label, value }면 버튼은 label(관리자용 한국어)로 보이되 실제로 들어가는 값은
+ * value(고객에게 보이는 일본어)가 된다.
+ */
+export type DesignPreset = string | { label: string; value: string };
 
 export interface DesignTemplateValues {
     /** field key → 관리자가 입력한 값(텍스트 또는 이미지 URL) */
