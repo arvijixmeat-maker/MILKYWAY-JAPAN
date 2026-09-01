@@ -834,7 +834,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                 const image = new Image();
                 image.onload = () => resolve(image);
                 image.onerror = () => reject(new Error('피켓 디자인을 불러오지 못했습니다.'));
-                image.src = '/assets/guide-picket-template.png';
+                // 파일명을 버전 고정해 CDN/브라우저가 이전 흰색 템플릿을 재사용하지 않게 한다.
+                image.src = '/assets/guide-picket-template-dark-v2.png';
             });
             try { await document.fonts?.ready; } catch { /* 시스템 글꼴로 계속 진행 */ }
 
