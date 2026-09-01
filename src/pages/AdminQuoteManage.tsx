@@ -113,7 +113,10 @@ export const AdminQuoteManage: React.FC = () => {
             let bankAccount = { bankName: '', accountNumber: '', accountHolder: '' };
             try {
                 const settings = await api.settings.get('bank_account');
-                if (settings?.value) bankAccount = settings.value;
+                // 설정 값은 문자열(JSON)로 저장된다 — 객체로 들어오는 경우도 있어 둘 다 처리
+                const raw = settings?.value;
+                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (parsed && typeof parsed === 'object') bankAccount = parsed;
             } catch { /* 설정 없으면 빈 값 */ }
 
             // 2. 예약 생성

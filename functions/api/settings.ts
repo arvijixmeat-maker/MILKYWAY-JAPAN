@@ -2,10 +2,16 @@ import { Hono } from 'hono';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /api/settings
+// GET /api/settings          → 전체 설정을 { 키: 값 } 으로
+// GET /api/settings?key=xxx  → 그 설정 하나만 { key, value } 로 (없으면 value: null)
 app.get('/', async (c) => {
     const db = c.env.DB;
+    const key = c.req.query('key');
     try {
+        if (key) {
+            const row = await db.prepare('SELECT key, value FROM settings WHERE key = ?').bind(key).first();
+            return c.json({ key, value: (row as any)?.value ?? null });
+        }
         const result = await db.prepare('SELECT * FROM settings').all();
         const settings: Record<string, string> = {};
         for (const row of result.results as any[]) {
