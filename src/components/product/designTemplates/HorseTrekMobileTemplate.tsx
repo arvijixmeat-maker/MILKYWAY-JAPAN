@@ -580,8 +580,14 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 13 1일차 상세 ─────────────────────────────── */}
             {S('13 1일차 상세', (v) => {
-                const tabs = [1, 2, 3, 4, 5].map(n => ({ n, label: v(`tab${n}_label`), text: v(`tab${n}_text`) }));
-                const schedule = [1, 2, 3].map(n => ({ n, time: v(`d1_t${n}`), body: v(`d1_e${n}`) }));
+                const dayCount = Math.min(8, Math.max(1, Number(v('d1_day_count')) || 5));
+                const tabs = Array.from({ length: dayCount }, (_, i) => i + 1)
+                    .map(n => ({ n, label: v(`tab${n}_label`), text: v(`tab${n}_text`) }));
+                const schedCount = Math.min(6, Math.max(1, Number(v('d1_sched_count')) || 3));
+                const schedule = Array.from({ length: schedCount }, (_, i) => i + 1)
+                    .map(n => ({ n, time: v(`d1_t${n}`), body: v(`d1_e${n}`) }))
+                    // 관리자 편집 중에는 빈 줄도 보여 채워 넣게 하고, 실제 페이지에서는 숨긴다
+                    .filter(r => editing || r.time || r.body);
                 return (
                 <section style={{ position: 'relative', background: '#EFFEF9', padding: '30px 0 45px' }}>
                     <div style={{ position: 'relative', height: 235, overflow: 'hidden' }}>
@@ -591,7 +597,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
                         <div style={{ position: 'relative', pointerEvents: 'none', padding: '28px 30px 0' }}>
                             <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 9px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title')}</span></h2>
-                            <div style={{ marginTop: 19, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5 }}>
+                            <div style={{ marginTop: 19, display: 'grid', gridTemplateColumns: `repeat(${dayCount}, 1fr)`, gap: 5 }}>
                                 {tabs.map((t, i) => (
                                     <div key={t.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, opacity: i === 0 ? 1 : 0.38 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
