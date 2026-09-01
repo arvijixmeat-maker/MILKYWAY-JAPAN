@@ -638,12 +638,12 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <SectionDot />
-                                        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}>식사정보</div>
+                                        <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}>お食事情報</div>
                                     </div>
                                     <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}>
-                                        <div>조식 <span style={{ color: '#C8FFEF' }}>|</span> <span data-df="d1_meal_b">{v('d1_meal_b')}</span></div>
-                                        <div>중식 <span style={{ color: '#C8FFEF' }}>|</span> <span data-df="d1_meal_l">{v('d1_meal_l')}</span></div>
-                                        <div>석식 <span style={{ color: '#C8FFEF' }}>|</span> <span data-df="d1_meal_d">{v('d1_meal_d')}</span></div>
+                                        <div style={{ display: 'flex', gap: 18 }}><div style={{ flex: '0 0 62px' }}>朝食</div><div data-df="d1_meal_b">{v('d1_meal_b')}</div></div>
+                                        <div style={{ display: 'flex', gap: 18 }}><div style={{ flex: '0 0 62px' }}>昼食</div><div data-df="d1_meal_l">{v('d1_meal_l')}</div></div>
+                                        <div style={{ display: 'flex', gap: 18 }}><div style={{ flex: '0 0 62px' }}>夕食</div><div data-df="d1_meal_d">{v('d1_meal_d')}</div></div>
                                     </div>
                                 </div>
                                 <div>
