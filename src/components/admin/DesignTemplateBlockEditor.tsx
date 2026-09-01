@@ -5,8 +5,7 @@ import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, scopedKey } from '../product/designTemplates/sections';
-import { useDesignGlobalDefaults } from '../product/designTemplates/globalDefaults';
-import { DesignSharedAssetsPanel } from './DesignSharedAssetsPanel';
+import { saveDesignDefaults, useAllDesignDefaults, useDesignGlobalDefaults } from '../product/designTemplates/globalDefaults';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
@@ -256,9 +255,10 @@ export function DesignTemplateBlockEditor({
     const [uploadingKey, setUploadingKey] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>(null);
     const [selectedField, setSelectedField] = useState<string | null>(null);
-    const [showShared, setShowShared] = useState(false);
+    const [savingShared, setSavingShared] = useState(false);
     // 사이트 공통 이미지 — 상품에 따로 올리지 않은 자리에 자동으로 들어간다
     const sharedAssets = useDesignGlobalDefaults(content?.templateId);
+    const allDefaults = useAllDesignDefaults();
     const fieldRefs = useRef(new Map<string, HTMLElement>());
     const previewRef = useRef<HTMLDivElement>(null);
 
@@ -353,6 +353,19 @@ export function DesignTemplateBlockEditor({
         [def, instances],
     );
 
+    const values = useMemo(() => content.values || {}, [content.values]);
+    /**
+     * 이 상품에서 직접 올린 사진들의 key.
+     * 복제 섹션(@2 이후 = 2일차·3일차처럼 일차마다 다른 사진)은 공통 대상이 아니다.
+     */
+    const ownImageKeys = useMemo(() => {
+        if (!def) return [] as string[];
+        const imageKeys = new Set(def.fields.filter(f => f.type === 'image').map(f => f.key));
+        return Object.keys(values).filter(k => scopeOf(k) === '' && imageKeys.has(k) && values[k]);
+    }, [def, values]);
+
+    const sharedCount = Object.values(sharedAssets).filter(Boolean).length;
+
     if (!def) {
         return (
             <div className="card-muted-note">
@@ -362,7 +375,6 @@ export function DesignTemplateBlockEditor({
         );
     }
 
-    const values = content.values || {};
     /**
      * 「일정 일수」를 바꾸면 일차별 상세 섹션 개수를 자동으로 맞춘다.
      * 3박 4일(4)을 고르면 DAY1~DAY4 카드 4개가 생기고, 줄이면 뒤쪽이 빠진다.
@@ -383,6 +395,36 @@ export function DesignTemplateBlockEditor({
         const merged = [...others];
         merged.splice(at === -1 ? others.length : at, 0, ...wanted);
         return { ...next, sections: merged };
+    };
+
+
+    /**
+     * 미리보기에서 올린 사진을 "공통 사진"으로 저장한다.
+     * 저장 후에는 이 상품도 공통 사진을 따라가도록 개별 값을 비운다
+     * (화면은 그대로지만, 나중에 공통 사진을 바꾸면 이 상품에도 반영된다).
+     */
+    const saveOwnImagesAsShared = async () => {
+        if (!def || ownImageKeys.length === 0) return;
+        const ok = window.confirm(
+            `지금 올린 사진 ${ownImageKeys.length}장을 모든 상품이 함께 쓰는 공통 사진으로 저장할까요?\n\n` +
+            '이 상품 화면은 그대로이고, 앞으로 새로 만드는 상품에도 같은 사진이 자동으로 들어갑니다.',
+        );
+        if (!ok) return;
+        setSavingShared(true);
+        try {
+            const nextShared = { ...sharedAssets };
+            for (const k of ownImageKeys) nextShared[k] = values[k];
+            await saveDesignDefaults({ ...allDefaults, [def.id]: nextShared });
+            // 공통으로 올라갔으므로 이 상품의 개별 사진은 비워 공통을 따라가게 한다
+            const nextValues = { ...values };
+            for (const k of ownImageKeys) delete nextValues[k];
+            onChange({ ...content, values: nextValues });
+        } catch (e) {
+            console.error('Failed to save shared design images:', e);
+            alert('공통 사진 저장에 실패했습니다');
+        } finally {
+            setSavingShared(false);
+        }
     };
 
     const setValue = (key: string, value: string) => {
@@ -419,15 +461,25 @@ export function DesignTemplateBlockEditor({
                     미리보기의 문구·사진을 클릭하면 바로 편집할 수 있습니다 — 전부 지우면 원본으로 되돌아갑니다
                 </span>
                 <div className="spacer" />
+                {sharedCount > 0 && (
+                    <span className="cell-muted" style={{ fontSize: 12 }}>
+                        공통 사진 {sharedCount}장 사용 중
+                    </span>
+                )}
                 <button
                     type="button"
                     className="chip"
-                    onClick={() => setShowShared(s => !s)}
-                    title="모든 상품에 공통으로 들어가는 사진을 한 번만 등록합니다"
-                    style={showShared ? { borderColor: '#06C4A0', color: '#029F85' } : undefined}
+                    onClick={saveOwnImagesAsShared}
+                    disabled={ownImageKeys.length === 0 || savingShared}
+                    title={
+                        ownImageKeys.length === 0
+                            ? '이 상품에 직접 올린 사진이 없습니다'
+                            : '미리보기에서 올린 사진들을 모든 상품이 함께 쓰는 공통 사진으로 저장합니다'
+                    }
+                    style={ownImageKeys.length > 0 ? { borderColor: '#06C4A0', color: '#029F85' } : undefined}
                 >
                     <Icon name="photo_library" style={{ fontSize: 16 }} />
-                    공통 이미지
+                    {savingShared ? '저장 중…' : `올린 사진 ${ownImageKeys.length}장을 공통으로 저장`}
                 </button>
                 {def.mobile && (
                     <div className="row" style={{ gap: 6 }}>
@@ -446,7 +498,6 @@ export function DesignTemplateBlockEditor({
                 )}
             </div>
 
-            {showShared && <DesignSharedAssetsPanel def={def} />}
 
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 {/* 좌: 클릭 가능한 미리보기 */}
