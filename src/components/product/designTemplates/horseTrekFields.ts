@@ -152,13 +152,13 @@ export const horseTrekFields: DesignTemplateField[] = [
     { key: 'd1_hero_img', label: '상단 배경 사진', type: 'image', section: '13 1일차 상세' },
     { key: 'd1_title', label: '섹션 제목 (비우면 DAY 번호 자동)', type: 'text', section: '13 1일차 상세', default: '' },
     {
-        key: 'd1_day_count', label: '일정 일수 (표시할 DAY 개수)', type: 'text', section: '13 1일차 상세', default: '5',
+        key: 'd1_day_count', label: '일정 일수 (표시할 DAY 개수)', type: 'text', section: '13 1일차 상세', default: '5', shared: true,
         presets: ['2', '3', '4', '5', '6', '7', '8'],
         help: '3박 4일이면 4를 고르세요. 고른 개수만큼만 DAY 탭이 표시됩니다.',
     },
-    { key: 'tab1_label', label: '1일차 라벨', type: 'text', section: '13 1일차 상세', default: '1DAY' },
+    { key: 'tab1_label', label: '1일차 라벨', type: 'text', section: '13 1일차 상세', default: '1DAY', shared: true },
     {
-        key: 'tab1_text', label: '1일차 목적지', type: 'text', section: '13 1일차 상세', default: '草原ゲルキャンプ',
+        key: 'tab1_text', label: '1일차 목적지', type: 'text', section: '13 1일차 상세', default: '草原ゲルキャンプ', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -176,9 +176,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab2_label', label: '2일차 라벨', type: 'text', section: '13 1일차 상세', default: '2DAY' },
+    { key: 'tab2_label', label: '2일차 라벨', type: 'text', section: '13 1일차 상세', default: '2DAY', shared: true },
     {
-        key: 'tab2_text', label: '2일차 목적지', type: 'text', section: '13 1일차 상세', default: '乗馬トレッキング',
+        key: 'tab2_text', label: '2일차 목적지', type: 'text', section: '13 1일차 상세', default: '乗馬トレッキング', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -196,9 +196,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab3_label', label: '3일차 라벨', type: 'text', section: '13 1일차 상세', default: '3DAY' },
+    { key: 'tab3_label', label: '3일차 라벨', type: 'text', section: '13 1일차 상세', default: '3DAY', shared: true },
     {
-        key: 'tab3_text', label: '3일차 목적지', type: 'text', section: '13 1일차 상세', default: 'ツェンヘル温泉',
+        key: 'tab3_text', label: '3일차 목적지', type: 'text', section: '13 1일차 상세', default: 'ツェンヘル温泉', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -216,9 +216,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab4_label', label: '4일차 라벨', type: 'text', section: '13 1일차 상세', default: '4DAY' },
+    { key: 'tab4_label', label: '4일차 라벨', type: 'text', section: '13 1일차 상세', default: '4DAY', shared: true },
     {
-        key: 'tab4_text', label: '4일차 목적지', type: 'text', section: '13 1일차 상세', default: 'エルセンタサルハイ',
+        key: 'tab4_text', label: '4일차 목적지', type: 'text', section: '13 1일차 상세', default: 'エルセンタサルハイ', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -236,9 +236,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab5_label', label: '5일차 라벨', type: 'text', section: '13 1일차 상세', default: '5DAY' },
+    { key: 'tab5_label', label: '5일차 라벨', type: 'text', section: '13 1일차 상세', default: '5DAY', shared: true },
     {
-        key: 'tab5_text', label: '5일차 목적지', type: 'text', section: '13 1일차 상세', default: 'ウランバートル市内観光',
+        key: 'tab5_text', label: '5일차 목적지', type: 'text', section: '13 1일차 상세', default: 'ウランバートル市内観光', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -256,9 +256,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab6_label', label: '6일차 라벨', type: 'text', section: '13 1일차 상세', default: '6DAY' },
+    { key: 'tab6_label', label: '6일차 라벨', type: 'text', section: '13 1일차 상세', default: '6DAY', shared: true },
     {
-        key: 'tab6_text', label: '6일차 목적지', type: 'text', section: '13 1일차 상세', default: '',
+        key: 'tab6_text', label: '6일차 목적지', type: 'text', section: '13 1일차 상세', default: '', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -276,9 +276,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab7_label', label: '7일차 라벨', type: 'text', section: '13 1일차 상세', default: '7DAY' },
+    { key: 'tab7_label', label: '7일차 라벨', type: 'text', section: '13 1일차 상세', default: '7DAY', shared: true },
     {
-        key: 'tab7_text', label: '7일차 목적지', type: 'text', section: '13 1일차 상세', default: '',
+        key: 'tab7_text', label: '7일차 목적지', type: 'text', section: '13 1일차 상세', default: '', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },
@@ -296,9 +296,9 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '귀국', value: '帰国' },
         ],
     },
-    { key: 'tab8_label', label: '8일차 라벨', type: 'text', section: '13 1일차 상세', default: '8DAY' },
+    { key: 'tab8_label', label: '8일차 라벨', type: 'text', section: '13 1일차 상세', default: '8DAY', shared: true },
     {
-        key: 'tab8_text', label: '8일차 목적지', type: 'text', section: '13 1일차 상세', default: '',
+        key: 'tab8_text', label: '8일차 목적지', type: 'text', section: '13 1일차 상세', default: '', shared: true,
         presets: [
             { label: '울란바토르', value: 'ウランバートル' },
             { label: '초원 게르 캠프', value: '草原ゲルキャンプ' },

@@ -20,6 +20,11 @@ export interface DesignTemplateField {
     section: string;
     /** 값이 비어있을 때 사용할 기본값 (텍스트 전용; 이미지 기본값은 빈 슬롯) */
     default?: string;
+    /**
+     * 모든 일차 카드가 함께 쓰는 값 (일수, DAY 탭 목록 등).
+     * 복제된 섹션에서도 접미사 없이 같은 값을 읽고 쓴다.
+     */
+    shared?: boolean;
     /** 입력 형식 안내 (선택) */
     help?: string;
     /**

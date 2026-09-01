@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../types/product';
 import type { DesignPreset, DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
@@ -271,6 +271,21 @@ export function DesignTemplateBlockEditor({
      * 폼에 표시할 섹션 목록 — 인스턴스(복제본 포함) × 그 섹션이 가진 매니페스트 필드.
      * 복제본은 필드 key에 접미사가 붙어 원본과 값이 분리된다.
      */
+    const values = useMemo(() => content.values || {}, [content.values]);
+
+    /** 표시할 DAY 개수 — 모든 일차 카드가 함께 쓰는 값이라 접미사 없이 읽는다 */
+    const dayCountOf = useCallback(() => {
+        const raw = values['d1_day_count'] ?? def?.fields.find(f => f.key === 'd1_day_count')?.default ?? '5';
+        return Math.min(8, Math.max(1, Number(raw) || 5));
+    }, [values, def]);
+
+    /** 이 일차 카드의 일정표 줄 수 (카드마다 다를 수 있어 접미사를 붙여 읽는다) */
+    const schedCountOf = useCallback((instId: string) => {
+        const raw = values[scopedKey('d1_sched_count', instId)]
+            ?? def?.fields.find(f => f.key === 'd1_sched_count')?.default ?? '3';
+        return Math.min(6, Math.max(1, Number(raw) || 3));
+    }, [values, def]);
+
     const sections = useMemo(() => {
         if (!def) return [] as { instId: string; defId: string; name: string; copyNo: number; fields: { field: DesignTemplateField; key: string }[] }[];
         return instances.map(inst => {
@@ -286,10 +301,24 @@ export function DesignTemplateBlockEditor({
                 copyNo: hash === -1 ? 1 : Number(inst.id.slice(hash + 1)),
                 fields: def.fields
                     .filter(f => names.has(f.section))
-                    .map(f => ({ field: f, key: scopedKey(f.key, inst.id) })),
+                    // 일수·줄 수를 넘는 칸은 숨긴다 (3일을 골랐으면 4~8일차 입력칸은 안 보이게)
+                    .filter(f => {
+                        const tab = /^tab(\d)_(?:label|text)$/.exec(f.key);
+                        if (tab) return Number(tab[1]) <= dayCountOf();
+                        const row = /^d1_[te](\d)$/.exec(f.key);
+                        if (row) return Number(row[1]) <= schedCountOf(inst.id);
+                        return true;
+                    })
+                    // 모든 일차가 함께 쓰는 값(일수·DAY 탭)은 첫 카드에서만 편집한다
+                    .filter(f => !f.shared || inst.id === inst.def)
+                    .map(f => ({
+                        field: f,
+                        // 공유 필드는 접미사 없이 저장해야 템플릿이 읽는 값과 일치한다
+                        key: f.shared ? f.key : scopedKey(f.key, inst.id),
+                    })),
             };
         });
-    }, [def, instances]);
+    }, [def, instances, dayCountOf, schedCountOf]);
 
     /** 미리보기에서 필드 클릭 → 해당 섹션 열고 입력칸으로 스크롤 + 포커스 */
     const handlePreviewFieldClick = (key: string) => {
@@ -353,7 +382,6 @@ export function DesignTemplateBlockEditor({
         [def, instances],
     );
 
-    const values = useMemo(() => content.values || {}, [content.values]);
     /**
      * 이 상품에서 직접 올린 사진들의 key.
      * 복제 섹션(@2 이후 = 2일차·3일차처럼 일차마다 다른 사진)은 공통 대상이 아니다.
