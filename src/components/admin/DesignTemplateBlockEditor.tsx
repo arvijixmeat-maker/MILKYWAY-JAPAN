@@ -5,6 +5,8 @@ import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, scopedKey } from '../product/designTemplates/sections';
+import { useDesignGlobalDefaults } from '../product/designTemplates/globalDefaults';
+import { DesignSharedAssetsPanel } from './DesignSharedAssetsPanel';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
@@ -254,6 +256,9 @@ export function DesignTemplateBlockEditor({
     const [uploadingKey, setUploadingKey] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>(null);
     const [selectedField, setSelectedField] = useState<string | null>(null);
+    const [showShared, setShowShared] = useState(false);
+    // 사이트 공통 이미지 — 상품에 따로 올리지 않은 자리에 자동으로 들어간다
+    const sharedAssets = useDesignGlobalDefaults(content?.templateId);
     const fieldRefs = useRef(new Map<string, HTMLElement>());
     const previewRef = useRef<HTMLDivElement>(null);
 
@@ -414,6 +419,16 @@ export function DesignTemplateBlockEditor({
                     미리보기의 문구·사진을 클릭하면 바로 편집할 수 있습니다 — 전부 지우면 원본으로 되돌아갑니다
                 </span>
                 <div className="spacer" />
+                <button
+                    type="button"
+                    className="chip"
+                    onClick={() => setShowShared(s => !s)}
+                    title="모든 상품에 공통으로 들어가는 사진을 한 번만 등록합니다"
+                    style={showShared ? { borderColor: '#06C4A0', color: '#029F85' } : undefined}
+                >
+                    <Icon name="photo_library" style={{ fontSize: 16 }} />
+                    공통 이미지
+                </button>
                 {def.mobile && (
                     <div className="row" style={{ gap: 6 }}>
                         {(['desktop', 'mobile'] as const).map(vt => (
@@ -430,6 +445,8 @@ export function DesignTemplateBlockEditor({
                     </div>
                 )}
             </div>
+
+            {showShared && <DesignSharedAssetsPanel def={def} />}
 
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 {/* 좌: 클릭 가능한 미리보기 */}
@@ -517,6 +534,21 @@ export function DesignTemplateBlockEditor({
                                                             >
                                                                 <Icon name="close" style={{ fontSize: 14 }} />
                                                             </button>
+                                                        </div>
+                                                    ) : sharedAssets[baseKey(fk)] ? (
+                                                        // 상품에 따로 올리지 않았고 공통 이미지가 있는 경우
+                                                        <div style={{ position: 'relative', flex: 'none' }}>
+                                                            <img
+                                                                src={sharedAssets[baseKey(fk)]}
+                                                                alt={f.label}
+                                                                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid #06C4A0' }}
+                                                            />
+                                                            <span
+                                                                title="공통 이미지를 사용 중입니다. 이 상품만 다르게 하려면 업로드하세요."
+                                                                style={{ position: 'absolute', left: -4, bottom: -6, padding: '1px 6px', borderRadius: 500, background: '#06C4A0', color: '#fff', fontSize: 10, fontWeight: 800 }}
+                                                            >
+                                                                공통
+                                                            </span>
                                                         </div>
                                                     ) : (
                                                         <div style={{ width: 72, height: 72, borderRadius: 'var(--r-md)', border: '1px dashed var(--border-default)', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', flex: 'none' }}>

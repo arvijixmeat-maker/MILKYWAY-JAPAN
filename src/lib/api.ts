@@ -110,6 +110,16 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value })
         }),
+        /**
+         * 설정을 { 키: 값 } 형태로 저장 — PUT /api/settings가 기대하는 형식 그대로.
+         * (위의 save는 {key, value} 객체를 그대로 보내므로, 실제로는 key·value라는
+         *  이름의 설정 칸 두 개에 저장된다 — 여러 설정이 서로 덮어쓰게 되니 주의)
+         */
+        saveMany: async (data: Record<string, string>) => request(`${API_BASE}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
     },
     faqs: {
         list: async () => request(`${API_BASE}/faqs`),
