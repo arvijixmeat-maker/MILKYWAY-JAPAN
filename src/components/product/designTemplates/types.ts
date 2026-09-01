@@ -28,10 +28,14 @@ export interface DesignTemplateField {
      */
     presets?: DesignPreset[];
     /**
-     * 자주 쓰는 줄 — textarea 필드용(여러 개 선택).
-     * 버튼을 누르면 해당 줄이 추가되고, 다시 누르면 빠진다.
+     * 자주 쓰는 항목 — 여러 개 선택.
+     * 버튼을 누르면 추가되고, 다시 누르면 빠진다.
+     * 기본은 줄바꿈으로 이어붙이며, presetSeparator를 주면 그 문자로 이어붙인다
+     * (예: 한 줄에 「乗馬体験、サンドボード体験」처럼 나열하는 항목).
      */
     presetLines?: DesignPreset[];
+    /** presetLines를 이어붙일 구분자 (기본: 줄바꿈) */
+    presetSeparator?: string;
 }
 
 /**

@@ -244,7 +244,25 @@ export const horseTrekFields: DesignTemplateField[] = [
             { label: '와이파이 사용 가능', value: '· Wi-Fi利用可能' },
         ],
     },
-    { key: 'd1_exp', label: '포함체험 / 즐길거리', type: 'text', section: '13 1일차 상세', default: '초원 산책, 선셋 감상, 별 구경' },
+    {
+        key: 'd1_exp', label: '포함체험 / 즐길거리', type: 'text', section: '13 1일차 상세',
+        default: '草原散策、サンセット鑑賞、星空観賞',
+        presetSeparator: '、',
+        presetLines: [
+            { label: '승마 체험', value: '乗馬体験' },
+            { label: '모래썰매 체험', value: 'サンドボード体験' },
+            { label: '낙타 체험', value: 'ラクダ乗り体験' },
+            { label: '독수리 체험', value: 'イヌワシ体験' },
+            { label: '유목민 게르 방문', value: '遊牧民ゲル訪問' },
+            { label: '전통의상 착용', value: 'モンゴル伝統衣装体験' },
+            { label: '초원 산책', value: '草原散策' },
+            { label: '선셋 감상', value: 'サンセット鑑賞' },
+            { label: '별 구경', value: '星空観賞' },
+            { label: '노천온천', value: '露天温泉' },
+            { label: '허르헉 체험', value: 'ホルホグ体験' },
+            { label: '시내 관광', value: '市内観光' },
+        ],
+    },
 
     // ── 06 숙소 — 일반 게르 페이지 (모바일 v3의 2페이지 슬라이더 중 2번째) ──
     { key: 'ger_hint1', label: '슬라이드 안내 (고급)', type: 'text', section: '06 숙소', default: '横にスライドしてください' },

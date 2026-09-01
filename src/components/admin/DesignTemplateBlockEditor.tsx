@@ -192,15 +192,15 @@ function PresetChips({ presets, value, onPick }: { presets: DesignPreset[]; valu
  * 자주 쓰는 줄 버튼 — 누르면 그 줄이 추가되고, 다시 누르면 빠진다.
  * 순서는 프리셋 목록 순서를 따르고, 직접 입력한 줄은 뒤에 남는다.
  */
-function PresetLineChips({ presetLines, value, onChange }: { presetLines: DesignPreset[]; value: string; onChange: (v: string) => void }) {
+function PresetLineChips({ presetLines, value, onChange, separator = '\n' }: { presetLines: DesignPreset[]; value: string; onChange: (v: string) => void; separator?: string }) {
     const items = normPresets(presetLines);
     const known = items.map(p => p.value);
-    const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
+    const lines = value.split(separator).map(s => s.trim()).filter(Boolean);
     const translated = items.some(p => p.label !== p.value);
     const toggle = (line: string) => {
         const next = lines.includes(line) ? lines.filter(l => l !== line) : [...lines, line];
-        // 프리셋에 있는 줄은 목록 순서대로, 직접 입력한 줄은 그 뒤에
-        onChange([...known.filter(k => next.includes(k)), ...next.filter(l => !known.includes(l))].join('\n'));
+        // 프리셋에 있는 항목은 목록 순서대로, 직접 입력한 항목은 그 뒤에
+        onChange([...known.filter(k => next.includes(k)), ...next.filter(l => !known.includes(l))].join(separator));
     };
     return (
         <>
@@ -520,6 +520,7 @@ export function DesignTemplateBlockEditor({
                                                 {f.presetLines && (
                                                     <PresetLineChips
                                                         presetLines={f.presetLines}
+                                                        separator={f.presetSeparator}
                                                         value={values[fk] ?? f.default ?? ''}
                                                         onChange={(next) => setValue(fk, next)}
                                                     />
@@ -542,6 +543,14 @@ export function DesignTemplateBlockEditor({
                                                         presets={f.presets}
                                                         value={values[fk] ?? f.default ?? ''}
                                                         onPick={(p) => setValue(fk, p)}
+                                                    />
+                                                )}
+                                                {f.presetLines && (
+                                                    <PresetLineChips
+                                                        presetLines={f.presetLines}
+                                                        separator={f.presetSeparator}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(fk, next)}
                                                     />
                                                 )}
                                                 <input
