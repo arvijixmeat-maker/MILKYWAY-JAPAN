@@ -298,7 +298,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.35) 100%)' }} />
                     <div style={{ position: 'relative', pointerEvents: 'none', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '120px 60px 80px', boxSizing: 'border-box', textAlign: 'center' }}>
                         <div style={{ fontSize: 27, fontWeight: 600, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em', textShadow: '0 2px 14px rgba(0,0,0,0.4)' }}><span data-df="gobi_kicker">{v('gobi_kicker')}</span></div>
-                        <h2 style={{ margin: '26px 0 0', fontSize: 62, lineHeight: 1.18, fontWeight: 800, letterSpacing: '-0.045em', color: '#fff', textShadow: '0 3px 22px rgba(0,0,0,0.45)' }}><span data-df="gobi_title">{v('gobi_title')}</span></h2>
+                        <h2 style={{ margin: '26px 0 0', fontSize: 62, lineHeight: 1.18, fontWeight: 800, letterSpacing: '-0.045em', color: '#fff', textShadow: '0 3px 22px rgba(0,0,0,0.45)' }}><span data-df="gobi_title">{v('gobi_title')}</span> <span data-df="gobi_title2">{v('gobi_title2')}</span></h2>
                         <div style={{ marginTop: 14, width: 520, height: 5, borderRadius: 3, background: MINT }} />
                         <Lines k="gobi_body" text={v('gobi_body')} style={{ margin: '34px 0 0', fontSize: 38, lineHeight: 1.42, fontWeight: 700, letterSpacing: '-0.035em', color: '#fff', textShadow: '0 2px 18px rgba(0,0,0,0.45)' }} />
                     </div>
