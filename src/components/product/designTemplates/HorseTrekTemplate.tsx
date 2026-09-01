@@ -99,6 +99,17 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                     50% { box-shadow:0 0 0 14px rgba(6,196,160,0.25); }
                 }
                 @keyframes htMealMarquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+                /* 일본어·한국어 줄바꿈 품질 — 금칙처리(line-break:strict)로 촉음·구두점이
+                   줄 첫머리에 오지 않게 한다. 한국어 라벨처럼 띄어쓰기가 있는 곳만
+                   개별적으로 keep-all을 준다(단어 중간이 끊기지 않도록).
+                   text-wrap:pretty/balance는 마지막 줄에 한 글자만 남는 것을 막는다. */
+                .ht-design {
+                    word-break: normal;
+                    overflow-wrap: break-word;
+                    line-break: strict;
+                }
+                .ht-design * { text-wrap: pretty; }
+                .ht-design h1, .ht-design h2, .ht-design h3 { text-wrap: balance; }
                 .ht-design .ht-bubble { position:relative; }
                 .ht-design .ht-bubble::after {
                     content:''; position:absolute; bottom:-14px; width:0; height:0;
@@ -193,7 +204,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                         {[1, 2, 3, 4, 5, 6].map(n => (
                             <div key={n} style={{ position: 'relative', height: 250, borderRadius: 20, overflow: 'hidden', background: '#EFFEF9' }}>
                                 <Slot k={`perk${n}_img`} src={v(`perk${n}_img`)} label={`특전 ${n} 사진`} editing={editing} alt={v(`perk${n}_title`)} />
-                                <div style={{ position: 'absolute', inset: 'auto 0 0 0', pointerEvents: 'none', padding: '26px 16px 22px', background: 'linear-gradient(180deg, rgba(0,51,46,0) 0%, rgba(0,51,46,0.72) 100%)', textAlign: 'center', color: '#fff', wordBreak: 'keep-all' }}>
+                                <div style={{ position: 'absolute', inset: 'auto 0 0 0', pointerEvents: 'none', padding: '26px 16px 22px', background: 'linear-gradient(180deg, rgba(0,51,46,0) 0%, rgba(0,51,46,0.72) 100%)', textAlign: 'center', color: '#fff' }}>
                                     <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.03em' }}><span data-df={`perk${n}_title`}>{v(`perk${n}_title`)}</span></div>
                                     <div style={{ marginTop: 6, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em' }}><span data-df={`perk${n}_sub`}>{v(`perk${n}_sub`)}</span></div>
                                 </div>
@@ -206,7 +217,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 05 여행 고민 (말풍선) ─────────────────────── */}
             {S('05 여행 고민', (v) => (
-                <section style={{ background: '#fff', padding: '110px 50px 120px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '110px 50px 120px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.04em', color: '#9a9a9a' }}><span data-df="worry_kicker">{v('worry_kicker')}</span></div>
                         <h2 style={{ margin: '14px 0 0', fontSize: 43, fontWeight: 800, letterSpacing: '-0.05em', color: '#2b2b2b' }}><span data-df="worry_title">{v('worry_title')}</span></h2>
@@ -231,7 +242,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 06 숙소 ──────────────────────────────────── */}
             {S('06 숙소', (v) => (
-                <section style={{ background: '#fff', padding: '100px 40px 96px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 40px 96px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 23, fontWeight: 700, color: MINT, letterSpacing: '-0.02em' }}><span data-df="ger_kicker">{v('ger_kicker')}</span></div>
                         <div style={{ marginTop: 14, fontSize: 30, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.03em' }}><span data-df="ger_sub">{v('ger_sub')}</span></div>
@@ -291,7 +302,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 14 전용차량 ───────────────────────────────── */}
             {S('14 전용차량', (v) => (
-                <section style={{ background: '#fff', padding: '100px 40px 90px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 40px 90px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#8a8a8a', letterSpacing: '-0.03em' }}><span data-df="veh_kicker">{v('veh_kicker')}</span></div>
                         <h2 style={{ margin: '18px 0 0', fontSize: 54, lineHeight: 1.22, fontWeight: 800, letterSpacing: '-0.045em', color: DEEP }}>
@@ -321,7 +332,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 15 식사 안내 ──────────────────────────────── */}
             {S('15 식사 안내', (v) => (
-                <section style={{ position: 'relative', overflow: 'hidden', padding: '0 0 110px', wordBreak: 'keep-all', background: '#fff' }}>
+                <section style={{ position: 'relative', overflow: 'hidden', padding: '0 0 110px', background: '#fff' }}>
                     <div style={{ position: 'relative', paddingTop: 70, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', width: 'max-content', gap: 22, animation: 'htMealMarquee 26s linear infinite' }}>
                             {[0, 1].flatMap(rep => [1, 2, 3, 4, 5, 6].map(n => (
@@ -479,7 +490,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 11 은하수 ─────────────────────────────────── */}
             {S('11 은하수', (v) => (
-                <section style={{ position: 'relative', background: '#02100E', wordBreak: 'keep-all' }}>
+                <section style={{ position: 'relative', background: '#02100E' }}>
                     <div style={{ position: 'relative', height: 640, overflow: 'hidden', background: '#02100E' }}>
                         <div style={{ position: 'absolute', inset: 0, background: '#0B1F1B' }}>
                             <Slot k="mw_img" src={v('mw_img')} label="은하수 사진" editing={editing} alt="天の川" />
@@ -506,7 +517,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 12 공항 도착 ──────────────────────────────── */}
             {S('12 공항 도착', (v) => (
-                <section style={{ background: '#fff', padding: '100px 0 0', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 0 0' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.04em', color: '#c9c9c9' }}><span data-df="arr_from">{v('arr_from')}</span></div>
                         <div style={{ marginTop: 22, width: 3, height: 78, background: MINT }} />
@@ -533,7 +544,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
     
                     <div style={{ padding: '70px 60px 100px' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 20 }}>
-                            <div style={{ position: 'relative', flex: '0 0 470px', height: 430, background: '#EFFEF9', borderRadius: 6, overflow: 'hidden' }}>
+                            <div style={{ position: 'relative', flex: '0 1 470px', minWidth: 0, height: 430, background: '#EFFEF9', borderRadius: 6, overflow: 'hidden' }}>
                                 <Slot k="welcome_img" src={v('welcome_img')} label="픽업기사 웰컴카드 사진" editing={editing} alt="ウェルカムボード" />
                             </div>
                             <div style={{ flex: '0 0 280px', paddingTop: 96, color: MINT }}>
@@ -579,7 +590,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
                         <div style={{ position: 'relative', pointerEvents: 'none', padding: '56px 60px 0' }}>
                             <h2 style={{ margin: 0, fontSize: 46, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 18px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title')}</span></h2>
-                            <div style={{ marginTop: 38, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, wordBreak: 'keep-all' }}>
+                            <div style={{ marginTop: 38, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                                 {tabs.map((t, i) => (
                                     <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, opacity: i === 0 ? 1 : 0.72 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -588,14 +599,14 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                                                 : <div style={{ width: 11, height: 11, borderRadius: '50%', background: 'rgba(255,255,255,0.85)' }} />}
                                             <div style={{ fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${i + 1}_label`}>{t.label}</span></div>
                                         </div>
-                                        <div style={{ fontSize: 19, fontWeight: i === 0 ? 700 : 600, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${i + 1}_text`}>{t.text}</span></div>
+                                        <div style={{ fontSize: 19, fontWeight: i === 0 ? 700 : 600, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}><span data-df={`tab${i + 1}_text`}>{t.text}</span></div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </div>
     
-                    <div style={{ margin: '-70px 40px 0', position: 'relative', background: '#fff', borderRadius: 40, boxShadow: '0 24px 60px rgba(0,51,46,0.10)', padding: '60px 56px 66px', wordBreak: 'keep-all' }}>
+                    <div style={{ margin: '-70px 40px 0', position: 'relative', background: '#fff', borderRadius: 40, boxShadow: '0 24px 60px rgba(0,51,46,0.10)', padding: '60px 56px 66px' }}>
                         <div style={{ fontSize: 26, fontWeight: 700, color: DEEP, letterSpacing: '-0.03em' }}><span data-df="d1_kicker">{v('d1_kicker')}</span></div>
                         <h3 style={{ margin: '16px 0 0', fontSize: 46, fontWeight: 800, letterSpacing: '-0.045em', color: TEAL }}><span data-df="d1_head">{v('d1_head')}</span></h3>
                         <Lines k="d1_body" text={v('d1_body')} style={{ margin: '34px 0 0', fontSize: 23, lineHeight: 1.75, fontWeight: 500, color: '#4a4a4a', letterSpacing: '-0.02em', textWrap: 'pretty' } as React.CSSProperties} />
@@ -663,7 +674,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 16 여행의 순간들 ──────────────────────────── */}
             {S('16 여행의 순간들', (v) => (
-                <section style={{ background: '#fff', padding: '100px 40px 110px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 40px 110px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.05fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                             <div style={{ position: 'relative', height: 520, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
@@ -701,7 +712,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 17 포함/불포함 ────────────────────────────── */}
             {S('17 포함/불포함', (v) => (
-                <section style={{ position: 'relative', overflow: 'hidden', background: DEEP, padding: '0 0 80px', wordBreak: 'keep-all' }}>
+                <section style={{ position: 'relative', overflow: 'hidden', background: DEEP, padding: '0 0 80px' }}>
                     <div style={{ position: 'absolute', inset: 0, background: '#0A6558' }}>
                         <Slot k="notice_bg" src={v('notice_bg')} label="초원 배경 사진" editing={editing} alt="草原" />
                     </div>
@@ -732,7 +743,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                 const head = v('price_head').split('|').map(x => x.trim());
                 const rows = v('price_rows').split('\n').map(x => x.trim()).filter(Boolean).map(r => r.split('|').map(c => c.trim()));
                 return (
-                <section style={{ background: '#EFFEF9', padding: '70px 40px 110px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#EFFEF9', padding: '70px 40px 110px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 26, fontWeight: 700, color: '#5a5a5a', letterSpacing: '-0.03em' }}><span data-df="price_kicker">{v('price_kicker')}</span></div>
                         <h2 style={{ margin: '14px 0 0', fontSize: 56, fontWeight: 800, letterSpacing: '-0.05em', color: DEEP }}><span data-df="price_title">{v('price_title')}</span></h2>
@@ -769,7 +780,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                 const gtCols = 'minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.8fr)';
                 const gtHead = v('gt_head').split('|').map(x => x.trim());
                 return (
-                <section style={{ background: '#fff', padding: '100px 50px 110px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 50px 110px' }}>
                     <h2 style={{ margin: 0, textAlign: 'center', fontSize: 46, fontWeight: 800, letterSpacing: '-0.045em', color: '#2b2b2b' }}><span data-df="terms_title">{v('terms_title')}</span></h2>
 
                     <div style={{ marginTop: 58 }}>
@@ -818,7 +829,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 20 FAQ ────────────────────────────────────── */}
             {S('20 FAQ', (v) => (
-                <section style={{ background: '#EFFEF9', padding: '90px 50px 110px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#EFFEF9', padding: '90px 50px 110px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 64, fontWeight: 900, letterSpacing: '-0.04em', color: MINT }}><span data-df="faq_title">{v('faq_title')}</span></div>
                         <div style={{ marginTop: 4, fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', color: '#2b2b2b' }}><span data-df="faq_sub">{v('faq_sub')}</span></div>

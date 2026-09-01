@@ -97,6 +97,17 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                     90% { top:100%; opacity:0.9; }
                     100% { top:100%; opacity:0; }
                 }
+                /* 일본어·한국어 줄바꿈 품질 — 금칙처리(line-break:strict)로 촉음·구두점이
+                   줄 첫머리에 오지 않게 한다. 한국어 라벨처럼 띄어쓰기가 있는 곳만
+                   개별적으로 keep-all을 준다(단어 중간이 끊기지 않도록).
+                   text-wrap:pretty/balance는 마지막 줄에 한 글자만 남는 것을 막는다. */
+                .htm-design {
+                    word-break: normal;
+                    overflow-wrap: break-word;
+                    line-break: strict;
+                }
+                .htm-design * { text-wrap: pretty; }
+                .htm-design h1, .htm-design h2, .htm-design h3 { text-wrap: balance; }
                 .htm-design .htm-bubble { position:relative; }
                 .htm-design .htm-bubble::after {
                     content:''; position:absolute; bottom:-7px; width:0; height:0;
@@ -190,7 +201,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                         {[1, 2, 3, 4, 5, 6].map(n => (
                             <div key={n} style={{ position: 'relative', height: 160, borderRadius: 10, overflow: 'hidden', background: '#EFFEF9' }}>
                                 <Slot k={`perk${n}_img`} src={v(`perk${n}_img`)} label={`특전 ${n} 사진`} editing={editing} alt={v(`perk${n}_title`)} />
-                                <div style={{ position: 'absolute', inset: 'auto 0 0 0', pointerEvents: 'none', padding: '13px 8px 11px', background: 'linear-gradient(180deg, rgba(0,51,46,0) 0%, rgba(0,51,46,0.72) 100%)', textAlign: 'center', color: '#fff', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                                <div style={{ position: 'absolute', inset: 'auto 0 0 0', pointerEvents: 'none', padding: '13px 8px 11px', background: 'linear-gradient(180deg, rgba(0,51,46,0) 0%, rgba(0,51,46,0.72) 100%)', textAlign: 'center', color: '#fff' }}>
                                     <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.03em' }}><span data-df={`perk${n}_title`}>{v(`perk${n}_title`)}</span></div>
                                     <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, letterSpacing: '-0.02em' }}><span data-df={`perk${n}_sub`}>{v(`perk${n}_sub`)}</span></div>
                                 </div>
@@ -202,7 +213,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 05 여행 고민 (말풍선) ─────────────────────── */}
             {S('05 여행 고민', (v) => (
-                <section style={{ background: '#fff', padding: '55px 25px 60px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#fff', padding: '55px 25px 60px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.04em', color: '#9a9a9a' }}><span data-df="worry_kicker">{v('worry_kicker')}</span></div>
                         <h2 style={{ margin: '7px 0 0', fontSize: 24, fontWeight: 800, letterSpacing: '-0.05em', color: '#2b2b2b' }}><span data-df="worry_title">{v('worry_title')}</span></h2>
@@ -227,7 +238,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 06 숙소 (고급 / 일반 2페이지) ──────────────── */}
             {S('06 숙소', (v) => (
-                <section style={{ background: '#fff', padding: '50px 20px 48px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#fff', padding: '50px 20px 48px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: MINT, letterSpacing: '-0.02em' }}><span data-df="ger_kicker">{v('ger_kicker')}</span></div>
                         <div style={{ marginTop: 7, fontSize: 17, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.03em' }}><span data-df="ger_sub">{v('ger_sub')}</span></div>
@@ -287,7 +298,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 14 전용차량 ───────────────────────────────── */}
             {S('14 전용차량', (v) => (
-                <section style={{ background: '#fff', padding: '50px 20px 45px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#fff', padding: '50px 20px 45px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#8a8a8a', letterSpacing: '-0.03em' }}><span data-df="veh_kicker">{v('veh_kicker')}</span></div>
                         <h2 style={{ margin: '9px 0 0', fontSize: 30, lineHeight: 1.22, fontWeight: 800, letterSpacing: '-0.045em', color: DEEP }}>
@@ -319,7 +330,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
             {S('15 식사 안내', (v) => {
                 const mealImgs = [1, 2, 3, 4, 5, 6];
                 return (
-                <section style={{ position: 'relative', overflow: 'hidden', padding: '0 0 55px', wordBreak: 'normal', overflowWrap: 'anywhere', background: '#fff' }}>
+                <section style={{ position: 'relative', overflow: 'hidden', padding: '0 0 55px', background: '#fff' }}>
                     {/* 상단 흐르는 사진 띠 — 6장을 두 번 이어 붙여 무한 스크롤 */}
                     <div style={{ position: 'relative', paddingTop: 35, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', width: 'max-content', gap: 11, animation: 'htmMealMarquee 26s linear infinite' }}>
@@ -398,7 +409,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                             <iframe data-df="map_stops" src={mapUrl} title="몽골 지도 위 여정 지점" scrolling="no" style={{ width: '100%', maxWidth: 380, aspectRatio: '760/990', border: 0, display: 'block' }} loading="lazy" />
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                             <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.035em', color: DEEP }}><span data-df="spots_label">{v('spots_label')}</span></div>
                             <div style={{ fontSize: 13, fontWeight: 600, color: TEAL, letterSpacing: '-0.02em' }}><span data-df="spots_hint">{v('spots_hint')}</span></div>
                         </div>
@@ -479,7 +490,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 11 은하수 ─────────────────────────────────── */}
             {S('11 은하수', (v) => (
-                <section style={{ position: 'relative', background: '#02100E', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ position: 'relative', background: '#02100E' }}>
                     <div style={{ position: 'relative', height: 320, overflow: 'hidden', background: '#02100E' }}>
                         <div style={{ position: 'absolute', inset: 0, background: '#0B1F1B' }}>
                             <Slot k="mw_img" src={v('mw_img')} label="은하수 사진" editing={editing} alt="天の川" />
@@ -507,7 +518,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 12 공항 도착 ──────────────────────────────── */}
             {S('12 공항 도착', (v) => (
-                <section style={{ background: '#fff', padding: '50px 0 0', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#fff', padding: '50px 0 0' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.04em', color: '#c9c9c9' }}><span data-df="arr_from">{v('arr_from')}</span></div>
                         <div style={{ marginTop: 11, width: 2, height: 39, background: MINT }} />
@@ -580,7 +591,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
                         <div style={{ position: 'relative', pointerEvents: 'none', padding: '28px 30px 0' }}>
                             <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 9px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title')}</span></h2>
-                            <div style={{ marginTop: 19, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                            <div style={{ marginTop: 19, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5 }}>
                                 {tabs.map((t, i) => (
                                     <div key={t.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, opacity: i === 0 ? 1 : 0.38 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -589,14 +600,14 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                                                 : <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.85)' }} />}
                                             <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${t.n}_label`}>{t.label}</span></div>
                                         </div>
-                                        <div style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 600, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${t.n}_text`}>{t.text}</span></div>
+                                        <div style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 600, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}><span data-df={`tab${t.n}_text`}>{t.text}</span></div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ margin: '-35px 20px 0', position: 'relative', background: '#fff', borderRadius: 20, boxShadow: '0 12px 30px rgba(0,51,46,0.10)', padding: '30px 28px 33px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                    <div style={{ margin: '-35px 20px 0', position: 'relative', background: '#fff', borderRadius: 20, boxShadow: '0 12px 30px rgba(0,51,46,0.10)', padding: '30px 28px 33px' }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: DEEP, letterSpacing: '-0.03em' }}><span data-df="d1_kicker">{v('d1_kicker')}</span></div>
                         <h3 style={{ margin: '8px 0 0', fontSize: 25, fontWeight: 800, letterSpacing: '-0.045em', color: TEAL }}><span data-df="d1_head">{v('d1_head')}</span></h3>
                         <Lines k="d1_body" text={v('d1_body')} style={{ margin: '17px 0 0', fontSize: 13, lineHeight: 1.75, fontWeight: 500, color: '#4a4a4a', letterSpacing: '-0.02em', textWrap: 'pretty' } as React.CSSProperties} />
@@ -662,7 +673,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 16 여행의 순간들 ──────────────────────────── */}
             {S('16 여행의 순간들', (v) => (
-                <section style={{ background: '#fff', padding: '50px 20px 55px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#fff', padding: '50px 20px 55px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.05fr) minmax(0,1fr)', gap: 8, alignItems: 'start' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <div style={{ position: 'relative', height: 260, borderRadius: 8, overflow: 'hidden', background: '#EFFEF9' }}>
@@ -700,7 +711,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 17 포함/불포함 ────────────────────────────── */}
             {S('17 포함/불포함', (v) => (
-                <section style={{ position: 'relative', overflow: 'hidden', background: DEEP, padding: '0 0 40px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ position: 'relative', overflow: 'hidden', background: DEEP, padding: '0 0 40px' }}>
                     <div style={{ position: 'absolute', inset: 0, background: '#0A6558' }}>
                         <Slot k="notice_bg" src={v('notice_bg')} label="초원 배경 사진" editing={editing} alt="草原" />
                     </div>
@@ -735,7 +746,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                 const head = v('price_head').split('|').map(s => s.trim());
                 const rows = v('price_rows').split('\n').map(s => s.trim()).filter(Boolean).map(r => r.split('|').map(c => c.trim()));
                 return (
-                <section style={{ background: '#EFFEF9', padding: '35px 20px 55px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#EFFEF9', padding: '35px 20px 55px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#5a5a5a', letterSpacing: '-0.03em' }}><span data-df="price_kicker">{v('price_kicker')}</span></div>
                         <h2 style={{ margin: '7px 0 0', fontSize: 31, fontWeight: 800, letterSpacing: '-0.05em', color: DEEP }}><span data-df="price_title">{v('price_title')}</span></h2>
@@ -774,10 +785,10 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 19 예약 전 확인사항 ───────────────────────── */}
             {S('19 예약 전 확인사항', (v) => {
-                const gtCols = 'minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.8fr)';
+                const gtCols = 'minmax(0,1.25fr) minmax(0,1.05fr) minmax(0,1.7fr)';
                 const gtHead = v('gt_head').split('|').map(s => s.trim());
                 return (
-                <section style={{ background: '#fff', padding: '50px 25px 55px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#fff', padding: '50px 25px 55px' }}>
                     <h2 style={{ margin: 0, textAlign: 'center', fontSize: 25, fontWeight: 800, letterSpacing: '-0.045em', color: '#2b2b2b' }}><span data-df="terms_title">{v('terms_title')}</span></h2>
 
                     <div style={{ marginTop: 29 }}>
@@ -805,13 +816,13 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                             </div>
                             {[1, 2, 3, 4].map((n, i) => (
                                 <div key={n} style={{ display: 'grid', gridTemplateColumns: gtCols, alignItems: 'center', borderBottom: i === 3 ? undefined : '1px solid #EFEFEF' }}>
-                                    <Lines k={`gt${n}_name`} text={v(`gt${n}_name`)} style={{ padding: '10px 5px', textAlign: 'center', fontSize: 13, fontWeight: 800, color: '#2b2b2b', letterSpacing: '-0.03em' }} />
+                                    <Lines k={`gt${n}_name`} text={v(`gt${n}_name`)} style={{ padding: '10px 3px', textAlign: 'center', fontSize: 12.5, fontWeight: 800, color: '#2b2b2b', letterSpacing: '-0.04em' }} />
                                     <div style={{ padding: '7px 8px' }}>
                                         <div style={{ position: 'relative', height: 60, borderRadius: 4, overflow: 'hidden', background: '#EFFEF9' }}>
                                             <Slot k={`gt${n}_img`} src={v(`gt${n}_img`)} label="사진" editing={editing} alt="ゲル" />
                                         </div>
                                     </div>
-                                    <Lines k={`gt${n}_spec`} text={v(`gt${n}_spec`)} style={{ padding: '9px 10px', fontSize: 13, lineHeight: 1.65, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                                    <Lines k={`gt${n}_spec`} text={v(`gt${n}_spec`)} style={{ padding: '9px 8px', fontSize: 12.5, lineHeight: 1.7, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.03em' }} />
                                 </div>
                             ))}
                         </div>
@@ -827,7 +838,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
 
             {/* ── 20 FAQ ────────────────────────────────────── */}
             {S('20 FAQ', (v) => (
-                <section style={{ background: '#EFFEF9', padding: '45px 25px 55px', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <section style={{ background: '#EFFEF9', padding: '45px 25px 55px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 35, fontWeight: 900, letterSpacing: '-0.04em', color: MINT }}><span data-df="faq_title">{v('faq_title')}</span></div>
                         <div style={{ marginTop: 2, fontSize: 19, fontWeight: 800, letterSpacing: '-0.04em', color: '#2b2b2b' }}><span data-df="faq_sub">{v('faq_sub')}</span></div>
