@@ -150,7 +150,7 @@ export const horseTrekFields: DesignTemplateField[] = [
 
     // ── 13 1일차 상세 ─────────────────────────────────────────
     { key: 'd1_hero_img', label: '상단 배경 사진', type: 'image', section: '13 1일차 상세' },
-    { key: 'd1_title', label: '섹션 제목', type: 'text', section: '13 1일차 상세', default: 'DAY 1' },
+    { key: 'd1_title', label: '섹션 제목 (비우면 DAY 번호 자동)', type: 'text', section: '13 1일차 상세', default: '' },
     {
         key: 'd1_day_count', label: '일정 일수 (표시할 DAY 개수)', type: 'text', section: '13 1일차 상세', default: '5',
         presets: ['2', '3', '4', '5', '6', '7', '8'],

@@ -8,6 +8,9 @@ import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, sco
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
 
+/** 일수에 맞춰 자동으로 개수가 맞춰지는 일차별 상세 섹션 */
+const DAY_SECTION = '13 1일차 상세';
+
 /**
  * 지도 경유지 선택 UI — 지도에 좌표가 등록된 여행지 목록에서 골라 담는다.
  * 저장 형식은 기존과 동일한 텍스트("지역명|일본어라벨" 줄 단위)라서
@@ -272,7 +275,9 @@ export function DesignTemplateBlockEditor({
             return {
                 instId: inst.id,
                 defId: inst.def,
-                name: hash === -1 ? inst.id : `${inst.def} (복제 ${inst.id.slice(hash + 1)})`,
+                name: inst.def === DAY_SECTION
+                    ? `13 일차별 상세 (DAY ${hash === -1 ? 1 : inst.id.slice(hash + 1)})`
+                    : (hash === -1 ? inst.id : `${inst.def} (복제 ${inst.id.slice(hash + 1)})`),
                 copyNo: hash === -1 ? 1 : Number(inst.id.slice(hash + 1)),
                 fields: def.fields
                     .filter(f => names.has(f.section))
@@ -353,8 +358,32 @@ export function DesignTemplateBlockEditor({
     }
 
     const values = content.values || {};
+    /**
+     * 「일정 일수」를 바꾸면 일차별 상세 섹션 개수를 자동으로 맞춘다.
+     * 3박 4일(4)을 고르면 DAY1~DAY4 카드 4개가 생기고, 줄이면 뒤쪽이 빠진다.
+     * 값(입력한 문구·사진)은 지우지 않으므로 다시 늘리면 그대로 돌아온다.
+     */
+    const syncDaySections = (next: DesignBlockContent, count: number): DesignBlockContent => {
+        if (!def || !Number.isFinite(count)) return next;
+        const n = Math.min(8, Math.max(1, Math.round(count)));
+        const cur = resolveInstances(def, next.sections);
+        const others = cur.filter(s => s.def !== DAY_SECTION);
+        const days = cur.filter(s => s.def === DAY_SECTION);
+        if (days.length === n) return next;
+
+        const wanted = Array.from({ length: n }, (_, i) =>
+            i === 0 ? { id: DAY_SECTION, def: DAY_SECTION } : { id: `${DAY_SECTION}#${i + 1}`, def: DAY_SECTION });
+        // 일차 카드는 원래 자리(첫 일차 카드가 있던 위치)에 이어서 놓는다
+        const at = cur.findIndex(s => s.def === DAY_SECTION);
+        const merged = [...others];
+        merged.splice(at === -1 ? others.length : at, 0, ...wanted);
+        return { ...next, sections: merged };
+    };
+
     const setValue = (key: string, value: string) => {
-        onChange({ ...content, values: { ...values, [key]: value } });
+        let next: DesignBlockContent = { ...content, values: { ...values, [key]: value } };
+        if (key === 'd1_day_count') next = syncDaySections(next, Number(value));
+        onChange(next);
     };
 
     const handleImageUpload = async (key: string, file: File | undefined) => {

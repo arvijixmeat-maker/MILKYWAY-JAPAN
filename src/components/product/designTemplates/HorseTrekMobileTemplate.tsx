@@ -66,15 +66,17 @@ function Dots({ count, hint }: { count: number; hint?: string }) {
  * (컴포넌트가 아니라 함수 — 렌더마다 새 컴포넌트를 만들면 입력 포커스가 끊긴다)
  */
 function makeS(v: (k: string) => string, instances: DesignSectionInstance[]) {
-    return (id: string, render: (v: (k: string) => string) => React.ReactNode) =>
-        instances.filter(inst => inst.def === id).map(inst => {
+    return (id: string, render: (v: (k: string) => string, idx: number) => React.ReactNode) =>
+        instances.filter(inst => inst.def === id).map((inst, idx) => {
             const sv = inst.id === inst.def ? v : (k: string) => v(scopedKey(k, inst.id));
-            return <div key={inst.id} data-df-scope={suffixOf(inst.id)}>{render(sv)}</div>;
+            return <div key={inst.id} data-df-scope={suffixOf(inst.id)}>{render(sv, idx)}</div>;
         });
 }
 
 export default function HorseTrekMobileTemplate({ v, editing, instances }: DesignTemplateProps) {
     const list = instances ?? horseTrekSectionDefs.map(s => ({ id: s.id, def: s.id }));
+    // 일수와 DAY 탭 목록은 모든 일차 카드가 공유한다 (복제본에서도 같은 값을 읽도록 스코프 없는 getter)
+    const sharedV = v;
     const S = makeS(v, list);
 
     return (
@@ -579,10 +581,10 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
             ))}
 
             {/* ── 13 1일차 상세 ─────────────────────────────── */}
-            {S('13 1일차 상세', (v) => {
-                const dayCount = Math.min(8, Math.max(1, Number(v('d1_day_count')) || 5));
+            {S('13 1일차 상세', (v, dayIdx) => {
+                const dayCount = Math.min(8, Math.max(1, Number(sharedV('d1_day_count')) || 5));
                 const tabs = Array.from({ length: dayCount }, (_, i) => i + 1)
-                    .map(n => ({ n, label: v(`tab${n}_label`), text: v(`tab${n}_text`) }));
+                    .map(n => ({ n, label: sharedV(`tab${n}_label`), text: sharedV(`tab${n}_text`) }));
                 const schedCount = Math.min(6, Math.max(1, Number(v('d1_sched_count')) || 3));
                 const schedule = Array.from({ length: schedCount }, (_, i) => i + 1)
                     .map(n => ({ n, time: v(`d1_t${n}`), body: v(`d1_e${n}`) }))
@@ -596,17 +598,17 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                         </div>
                         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
                         <div style={{ position: 'relative', pointerEvents: 'none', padding: '28px 30px 0' }}>
-                            <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 9px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title')}</span></h2>
+                            <h2 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 9px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title') || `DAY ${dayIdx + 1}`}</span></h2>
                             <div style={{ marginTop: 19, display: 'grid', gridTemplateColumns: `repeat(${dayCount}, 1fr)`, gap: 5 }}>
                                 {tabs.map((t, i) => (
-                                    <div key={t.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, opacity: i === 0 ? 1 : 0.38 }}>
+                                    <div key={t.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, opacity: i === dayIdx ? 1 : 0.38 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                            {i === 0
+                                            {i === dayIdx
                                                 ? <div style={{ width: 7, height: 7, borderRadius: '50%', background: MINT, animation: 'htmDayPulse 2.2s ease-in-out infinite' }} />
                                                 : <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.85)' }} />}
                                             <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${t.n}_label`}>{t.label}</span></div>
                                         </div>
-                                        <div style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 600, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}><span data-df={`tab${t.n}_text`}>{t.text}</span></div>
+                                        <div style={{ fontSize: 13, fontWeight: i === dayIdx ? 700 : 600, color: '#fff', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}><span data-df={`tab${t.n}_text`}>{t.text}</span></div>
                                     </div>
                                 ))}
                             </div>
