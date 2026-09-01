@@ -22,6 +22,16 @@ export interface DesignTemplateField {
     default?: string;
     /** 입력 형식 안내 (선택) */
     help?: string;
+    /**
+     * 자주 쓰는 값 — 관리자 폼에 버튼으로 표시되고, 누르면 그 값으로 채워진다.
+     * text 필드용(하나만 선택). 목록에 없는 값은 직접 입력하면 된다.
+     */
+    presets?: string[];
+    /**
+     * 자주 쓰는 줄 — textarea 필드용(여러 개 선택).
+     * 버튼을 누르면 해당 줄이 추가되고, 다시 누르면 빠진다.
+     */
+    presetLines?: string[];
 }
 
 export interface DesignTemplateValues {

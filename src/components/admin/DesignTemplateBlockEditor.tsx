@@ -145,6 +145,73 @@ function MapStopsField({ value, onChange }: { value: string; onChange: (next: st
 }
 
 /**
+ * 자주 쓰는 값 버튼 — 누르면 입력칸이 그 값으로 채워진다.
+ * (직접 입력도 그대로 가능. 목록에 없는 값은 타이핑하면 된다)
+ */
+function PresetChips({ presets, value, onPick }: { presets: string[]; value: string; onPick: (v: string) => void }) {
+    return (
+        <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+            {presets.map(p => (
+                <button
+                    key={p}
+                    type="button"
+                    onClick={() => onPick(p)}
+                    title={`"${p}"(으)로 채우기`}
+                    style={{
+                        padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                        border: '1px solid', ...(value === p
+                            ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                            : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
+                    }}
+                >
+                    {p}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+/**
+ * 자주 쓰는 줄 버튼 — 누르면 그 줄이 추가되고, 다시 누르면 빠진다.
+ * 순서는 프리셋 목록 순서를 따르고, 직접 입력한 줄은 뒤에 남는다.
+ */
+function PresetLineChips({ presetLines, value, onChange }: { presetLines: string[]; value: string; onChange: (v: string) => void }) {
+    const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
+    const toggle = (line: string) => {
+        const next = lines.includes(line)
+            ? lines.filter(l => l !== line)
+            : [...lines, line];
+        // 프리셋에 있는 줄은 목록 순서대로, 직접 입력한 줄은 그 뒤에
+        const known = presetLines.filter(p => next.includes(p));
+        const custom = next.filter(l => !presetLines.includes(l));
+        onChange([...known, ...custom].join('\n'));
+    };
+    return (
+        <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+            {presetLines.map(p => {
+                const on = lines.includes(p);
+                return (
+                    <button
+                        key={p}
+                        type="button"
+                        onClick={() => toggle(p)}
+                        title={on ? '빼기' : '추가'}
+                        style={{
+                            padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                            border: '1px solid', ...(on
+                                ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
+                        }}
+                    >
+                        {on ? '✓ ' : '+ '}{p}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+/**
  * 'design' 상세 블록의 관리자 편집기 — 좌측 미리보기 / 우측 폼 분할.
  * 미리보기의 문구·사진을 클릭하면 해당 입력칸이 열리고 포커스된다.
  * 값을 전부 지우면 디자인 원본 문구(default)로 되돌아간다.
@@ -426,6 +493,14 @@ export function DesignTemplateBlockEditor({
                                                     />
                                                 </div>
                                             ) : f.type === 'textarea' ? (
+                                                <>
+                                                {f.presetLines && (
+                                                    <PresetLineChips
+                                                        presetLines={f.presetLines}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(fk, next)}
+                                                    />
+                                                )}
                                                 <textarea
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="inp"
@@ -436,7 +511,16 @@ export function DesignTemplateBlockEditor({
                                                     onFocus={() => handleFieldFocus(fk)}
                                                     style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
+                                                </>
                                             ) : (
+                                                <>
+                                                {f.presets && (
+                                                    <PresetChips
+                                                        presets={f.presets}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onPick={(p) => setValue(fk, p)}
+                                                    />
+                                                )}
                                                 <input
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     type="text"
@@ -447,6 +531,7 @@ export function DesignTemplateBlockEditor({
                                                     onFocus={() => handleFieldFocus(fk)}
                                                     style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
+                                                </>
                                             )}
                                             {f.help && f.type !== 'map-stops' && (
                                                 <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{f.help}</div>

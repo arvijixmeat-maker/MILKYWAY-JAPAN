@@ -175,11 +175,15 @@ export const horseTrekFields: DesignTemplateField[] = [
     { key: 'd1_e2', label: '일정 2 내용', type: 'textarea', section: '13 1일차 상세', default: '중식\n초원으로 이동' },
     { key: 'd1_t3', label: '일정 3 시간', type: 'text', section: '13 1일차 상세', default: '19:00' },
     { key: 'd1_e3', label: '일정 3 내용', type: 'textarea', section: '13 1일차 상세', default: '캠프 도착 및 석식\n자유시간 (선셋, 별 구경)' },
-    { key: 'd1_meal_b', label: '조식', type: 'text', section: '13 1일차 상세', default: '없음' },
-    { key: 'd1_meal_l', label: '중식', type: 'text', section: '13 1일차 상세', default: '현지식' },
-    { key: 'd1_meal_d', label: '석식', type: 'text', section: '13 1일차 상세', default: '캠프식' },
-    { key: 'd1_stay', label: '숙박 이름', type: 'text', section: '13 1일차 상세', default: '여행자 게르 캠프' },
-    { key: 'd1_stay_tags', label: '숙박 태그 (줄바꿈 구분)', type: 'textarea', section: '13 1일차 상세', default: '· 전기사용 가능\n· 샤워가능(외부/공용)\n· 화장실(외부/공용)' },
+    { key: 'd1_meal_b', label: '조식', type: 'text', section: '13 1일차 상세', default: '없음', presets: ['없음', '현지식', '캠프식', '호텔식', '특식(허르헉)', '샤브샤브', '도시락', '기내식', '자유식'] },
+    { key: 'd1_meal_l', label: '중식', type: 'text', section: '13 1일차 상세', default: '현지식', presets: ['없음', '현지식', '캠프식', '호텔식', '특식(허르헉)', '샤브샤브', '도시락', '기내식', '자유식'] },
+    { key: 'd1_meal_d', label: '석식', type: 'text', section: '13 1일차 상세', default: '캠프식', presets: ['없음', '현지식', '캠프식', '호텔식', '특식(허르헉)', '샤브샤브', '도시락', '기내식', '자유식'] },
+    { key: 'd1_stay', label: '숙박 이름', type: 'text', section: '13 1일차 상세', default: '여행자 게르 캠프', presets: ['여행자 게르 캠프', '고급 게르', '일반 게르', '모던 게르', '모던 펜션', '4성급 호텔', '3성급 호텔', '게스트하우스'] },
+    {
+        key: 'd1_stay_tags', label: '숙박 태그 (줄바꿈 구분)', type: 'textarea', section: '13 1일차 상세',
+        default: '· 전기사용 가능\n· 샤워가능(외부/공용)\n· 화장실(외부/공용)',
+        presetLines: ['· 전기사용 가능', '· 샤워가능(외부/공용)', '· 샤워가능(게르 내)', '· 화장실(외부/공용)', '· 화장실(게르 내)', '· 온수 사용 가능', '· 난방 완비', '· 와이파이 사용 가능'],
+    },
     { key: 'd1_exp', label: '포함체험 / 즐길거리', type: 'text', section: '13 1일차 상세', default: '초원 산책, 선셋 감상, 별 구경' },
 
     // ── 06 숙소 — 일반 게르 페이지 (모바일 v3의 2페이지 슬라이더 중 2번째) ──
