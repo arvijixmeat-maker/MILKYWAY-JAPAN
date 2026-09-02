@@ -2119,6 +2119,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                             <DesignTemplateBlockEditor
                                                                 content={block.content as DesignBlockContent}
                                                                 onChange={(next) => updateBlockContent(index, next)}
+                                                                pricingOptions={formData.pricingOptions}
                                                             />
                                                         ) : (
                                                             // DIVIDER BLOCK

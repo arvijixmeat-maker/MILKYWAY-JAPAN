@@ -18,6 +18,7 @@ import { MobileItineraryTimeline } from '../components/product/MobileItineraryTi
 
 import type { TourProduct, DetailSlide, DividerContent, DesignBlockContent } from '../types/product';
 import DesignBlockView from '../components/product/designTemplates/DesignBlockView';
+import { priceRowsFromOptions } from '../components/product/designTemplates/pricing';
 
 // Hide broken product images gracefully instead of showing the browser's default error icon.
 const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -906,6 +907,11 @@ export const ProductDetail: React.FC = () => {
                                                 <MobileItineraryTimeline product={product} />
                                             </div>
                                         ) : undefined}
+                                        // 가격/옵션 탭의 인원별 가격 → 디자인 가격표에 자동 반영
+                                        valueOverrides={(() => {
+                                            const rows = priceRowsFromOptions(product.pricingOptions);
+                                            return rows ? { price_rows: rows } : undefined;
+                                        })()}
                                     />
                                 );
                             }

@@ -64,7 +64,7 @@ function useDesignFonts() {
  * variant='mobile'이면 템플릿의 모바일 전용 디자인(있을 때)을 렌더링한다.
  * editing=true면 빈 이미지 슬롯에 업로드 안내 placeholder를 표시한다.
  */
-export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField, itinerarySlot }: {
+export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField, itinerarySlot, valueOverrides }: {
     content: DesignBlockContent;
     editing?: boolean;
     variant?: 'desktop' | 'mobile';
@@ -77,6 +77,11 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
      * 나머지 섹션(여행의 순간들부터)으로 이어간다.
      */
     itinerarySlot?: React.ReactNode;
+    /**
+     * 상품 데이터에서 자동으로 채우는 값 (예: 가격/옵션 탭의 인원별 가격 → price_rows).
+     * 템플릿에 직접 입력한 값보다 우선한다 — 상품 정보 탭이 원본이기 때문.
+     */
+    valueOverrides?: Record<string, string>;
 }) {
     useDesignFonts();
     // 사이트 공통 기본값 — 상품마다 다시 올리지 않아도 되는 사진·문구
@@ -89,6 +94,8 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
     }
     const values = content?.values || {};
     const v = (key: string) => {
+        const auto = valueOverrides?.[baseKey(key)];
+        if (auto !== undefined && auto !== '') return auto;
         const raw = values[key];
         if (raw !== undefined && raw !== '') return raw;
         // 복제 섹션의 key는 '@2' 접미사가 붙으므로 원본 key로 되돌려 찾는다
