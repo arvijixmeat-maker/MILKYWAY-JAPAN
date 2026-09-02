@@ -26,15 +26,34 @@ export function defaultInstances(def: DesignTemplateDef): DesignSectionInstance[
     return def.sectionDefs.map(s => ({ id: s.id, def: s.id }));
 }
 
-/** content.sections가 없으면 기본 목록으로 채워 돌려준다 */
+/**
+ * content.sections가 없으면 기본 목록으로 채워 돌려준다.
+ * 저장된 목록이 있어도 그 뒤 템플릿에 새로 생긴 섹션은 템플릿 순서대로 채워 넣고,
+ * 템플릿에서 사라진 섹션은 걸러낸다 (템플릿이 바뀐 뒤에도 안전하게).
+ * hidden(뺀 섹션) 인스턴스도 포함해 돌려주므로, 상세페이지 렌더 쪽에서는
+ * visibleInstances()를 쓰거나 hidden을 걸러야 한다.
+ */
 export function resolveInstances(
     def: DesignTemplateDef,
     sections: DesignSectionInstance[] | undefined,
 ): DesignSectionInstance[] {
     if (!sections || sections.length === 0) return defaultInstances(def);
-    // 템플릿에 더 이상 없는 섹션은 걸러낸다 (템플릿이 바뀐 뒤에도 안전하게)
     const known = new Set(def.sectionDefs.map(s => s.id));
-    return sections.filter(s => known.has(s.def));
+    const byDef = new Map<string, DesignSectionInstance[]>();
+    for (const s of sections) {
+        if (!known.has(s.def)) continue;
+        const list = byDef.get(s.def);
+        if (list) list.push(s); else byDef.set(s.def, [s]);
+    }
+    return def.sectionDefs.flatMap(sd => byDef.get(sd.id) ?? [{ id: sd.id, def: sd.id }]);
+}
+
+/** 상세페이지에 실제로 표시할 섹션 목록 (뺀 섹션 제외) */
+export function visibleInstances(
+    def: DesignTemplateDef,
+    sections: DesignSectionInstance[] | undefined,
+): DesignSectionInstance[] {
+    return resolveInstances(def, sections).filter(s => !s.hidden);
 }
 
 /** 해당 섹션 def에 속한 매니페스트 필드 key 목록 */

@@ -274,7 +274,7 @@ export function DesignTemplateBlockEditor({
 
     const sections = useMemo(() => {
         if (!def) return [] as { instId: string; defId: string; name: string; copyNo: number; fields: { field: DesignTemplateField; key: string }[] }[];
-        return instances.map(inst => {
+        return instances.filter(inst => !inst.hidden).map(inst => {
             const sec = def.sectionDefs.find(s => s.id === inst.def)!;
             const names = new Set(sec.fieldSections);
             const hash = inst.id.indexOf('#');
@@ -336,25 +336,36 @@ export function DesignTemplateBlockEditor({
         setOpenSection(newId);
     };
 
-    /** 섹션 삭제 — 목록에서만 제거(입력값은 남아 다시 추가하면 복원) */
+    /** 섹션 빼기 — 마지막 하나면 hidden 표시로 남긴다 (템플릿에 새 섹션이 생겨도 삭제가 유지되도록) */
     const removeSection = (instId: string) => {
         if (!window.confirm('이 섹션을 상세페이지에서 빼시겠습니까? 입력한 내용은 남아 있습니다.')) return;
-        onChange({ ...content, sections: instances.filter(s => s.id !== instId) });
+        const target = instances.find(s => s.id === instId);
+        if (!target) return;
+        const others = instances.some(s => s.def === target.def && s.id !== instId && !s.hidden);
+        const next = others
+            ? instances.filter(s => s.id !== instId)
+            : instances.map(s => (s.id === instId ? { ...s, hidden: true } : s));
+        onChange({ ...content, sections: next });
         if (openSection === instId) setOpenSection(null);
     };
 
-    /** 삭제한 섹션 다시 추가 */
+    /** 뺀 섹션 다시 넣기 */
     const restoreSection = (defId: string) => {
         if (!def) return;
-        const order = def.sectionDefs.map(s => s.id);
-        const next = [...instances, { id: defId, def: defId }]
-            .sort((a, b) => order.indexOf(a.def) - order.indexOf(b.def));
+        const hiddenOne = instances.find(s => s.def === defId && s.hidden);
+        const next = hiddenOne
+            ? instances.map(s => (s.id === hiddenOne.id ? { id: s.id, def: s.def } : s))
+            : (() => {
+                const order = def.sectionDefs.map(s => s.id);
+                return [...instances, { id: defId, def: defId }]
+                    .sort((a, b) => order.indexOf(a.def) - order.indexOf(b.def));
+            })();
         onChange({ ...content, sections: next });
-        setOpenSection(defId);
+        setOpenSection(hiddenOne ? hiddenOne.id : defId);
     };
 
     const removedDefs = useMemo(
-        () => (def ? def.sectionDefs.filter(s => !instances.some(i => i.def === s.id)) : []),
+        () => (def ? def.sectionDefs.filter(s => !instances.some(i => i.def === s.id && !i.hidden)) : []),
         [def, instances],
     );
 

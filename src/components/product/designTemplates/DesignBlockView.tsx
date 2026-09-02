@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../../types/product';
 import { getDesignTemplate } from './registry';
-import { baseKey, resolveInstances, scopeOf } from './sections';
+import { baseKey, scopeOf, visibleInstances } from './sections';
 import { useDesignGlobalDefaults } from './globalDefaults';
 
 /**
@@ -137,7 +137,7 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
                 `}</style>
             )}
             {(() => {
-                const instances = resolveInstances(def, content?.sections);
+                const instances = visibleInstances(def, content?.sections);
                 // 일정표 삽입: itineraryAfter 섹션까지 렌더 → 일정표 → 나머지 섹션
                 const splitAt = itinerarySlot && def.itineraryAfter
                     ? instances.findIndex(i => i.def === def.itineraryAfter)
