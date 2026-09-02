@@ -88,27 +88,12 @@ export const horseTrekFields: DesignTemplateField[] = [
     { key: 'spots_label', label: '관광 스팟 라벨', type: 'text', section: '07 루트/지도', default: 'ツアーで訪れる観光スポット' },
     { key: 'spots_hint', label: '스와이프 안내', type: 'text', section: '07 루트/지도', default: '横にスワイプしてご覧ください →' },
 
-    // ── 08 일자별 카드 (5장) ──────────────────────────────────
-    { key: 'day1_img', label: '1일차 사진', type: 'image', section: '08 일자별 카드' },
-    { key: 'day1_badge', label: '1일차 뱃지', type: 'text', section: '08 일자별 카드', default: '1日目' },
-    { key: 'day1_title', label: '1일차 제목', type: 'text', section: '08 일자별 카드', default: 'ウランバートル到着、草原へ' },
-    { key: 'day1_body', label: '1일차 설명', type: 'textarea', section: '08 일자별 카드', default: '空港からそのまま草原へ移動し、\n初日の夜はゲルキャンプで過ごします。' },
-    { key: 'day2_img', label: '2일차 사진', type: 'image', section: '08 일자별 카드' },
-    { key: 'day2_badge', label: '2일차 뱃지', type: 'text', section: '08 일자별 카드', default: '2日目' },
-    { key: 'day2_title', label: '2일차 제목', type: 'text', section: '08 일자별 카드', default: '乗馬トレッキング開始、渓谷でキャンプ' },
-    { key: 'day2_body', label: '2일차 설명', type: 'textarea', section: '08 일자별 카드', default: '現地の遊牧民と一緒に馬に乗り、\n川沿いの渓谷で一夜を過ごします。' },
-    { key: 'day3_img', label: '3일차 사진', type: 'image', section: '08 일자별 카드' },
-    { key: 'day3_badge', label: '3일차 뱃지', type: 'text', section: '08 일자별 카드', default: '3日目' },
-    { key: 'day3_title', label: '3일차 제목', type: 'text', section: '08 일자별 카드', default: '高原草原の乗馬・露天温泉' },
-    { key: 'day3_body', label: '3일차 설명', type: 'textarea', section: '08 일자별 카드', default: '高原の尾根を越える一日乗馬の後、\nモンゴルの露天温泉で疲れを癒します。' },
-    { key: 'day4_img', label: '4일차 사진', type: 'image', section: '08 일자별 카드' },
-    { key: 'day4_badge', label: '4일차 뱃지', type: 'text', section: '08 일자별 카드', default: '4日目' },
-    { key: 'day4_title', label: '4일차 제목', type: 'text', section: '08 일자별 카드', default: 'テレルジ国立公園' },
-    { key: 'day4_body', label: '4일차 설명', type: 'textarea', section: '08 일자별 카드', default: 'イヌワシ体験や亀岩など、\nテレルジの代表的な自然名所を訪れます。' },
-    { key: 'day5_img', label: '5일차 사진', type: 'image', section: '08 일자별 카드' },
-    { key: 'day5_badge', label: '5일차 뱃지', type: 'text', section: '08 일자별 카드', default: '5日目' },
-    { key: 'day5_title', label: '5일차 제목', type: 'text', section: '08 일자별 카드', default: '最後のツアー、自由に巡るウランバートル' },
-    { key: 'day5_body', label: '5일차 설명', type: 'textarea', section: '08 일자별 카드', default: '国営百貨店やカシミヤショップを巡り、\nモンゴルでの最後の時間を楽しみます。' },
+    // ── 08 방문 여행지 카드 ──────────────────────────────────
+    {
+        key: 'spot_cards', label: '방문 여행지', type: 'spot-cards', section: '08 방문 여행지',
+        default: 'ウランバートル|\nツェンヘル温泉|\nテレルジ国立公園|',
+        help: '한 줄에 한 곳: 표시이름|사진URL. 「관광지 마스터에서 추가」를 누르면 이름과 대표 사진이 자동으로 들어갑니다.',
+    },
 
     // ── 09 고비 히어로 ────────────────────────────────────────
     { key: 'gobi_hero_img', label: '배경 사진', type: 'image', section: '09 고비 히어로' },
@@ -311,7 +296,7 @@ export const horseTrekSectionDefs: DesignSectionDef[] = [
     { id: '06 숙소', fieldSections: ['06 숙소'], repeatable: true },
     { id: '14 전용차량', fieldSections: ['14 전용차량'], repeatable: true },
     { id: '15 식사 안내', fieldSections: ['15 식사 안내'], repeatable: true },
-    { id: '07 루트/지도', fieldSections: ['07 루트/지도', '08 일자별 카드'] },
+    { id: '07 루트/지도', fieldSections: ['07 루트/지도', '08 방문 여행지'] },
     { id: '09 고비 히어로', fieldSections: ['09 고비 히어로'], repeatable: true },
     { id: '10 하이라이트', fieldSections: ['10 하이라이트'], repeatable: true },
     { id: '11 은하수', fieldSections: ['11 은하수'], repeatable: true },
