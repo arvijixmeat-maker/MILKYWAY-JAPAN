@@ -834,7 +834,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                 const image = new Image();
                 image.onload = () => resolve(image);
                 image.onerror = () => reject(new Error('피켓 디자인을 불러오지 못했습니다.'));
-                image.src = '/assets/guide-picket-template.png';
+                // 파일명을 버전 고정해 CDN/브라우저가 이전 흰색 템플릿을 재사용하지 않게 한다.
+                image.src = '/assets/guide-picket-template-dark-v2.png';
             });
             try { await document.fonts?.ready; } catch { /* 시스템 글꼴로 계속 진행 */ }
 
@@ -845,46 +846,56 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             if (!ctx) throw new Error('이미지 생성 기능을 사용할 수 없습니다.');
             ctx.drawImage(template, 0, 0);
 
-            // 고객명: 빈 하늘 영역 중앙. 긴 이름은 한 줄에 들어올 때까지 자동 축소한다.
-            const nameMaxWidth = canvas.width * 0.86;
-            let nameFontSize = Math.round(canvas.width * 0.13);
-            const nameFontFamily = '"Arial Black", "Helvetica Neue", Arial, sans-serif';
+            // 고객명: 첨부 피켓처럼 포스터 중앙을 가득 채운 민트 그라데이션 타이포.
+            // 긴 이름은 한 줄에 들어올 때까지 자동 축소한다.
+            const nameMaxWidth = canvas.width * 0.92;
+            let nameFontSize = Math.round(canvas.width * 0.17);
+            const nameFontFamily = '"Arial Black", Impact, "Noto Sans JP", "Helvetica Neue", Arial, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.font = `900 ${nameFontSize}px ${nameFontFamily}`;
-            while (ctx.measureText(customerName).width > nameMaxWidth && nameFontSize > 68) {
+            while (ctx.measureText(customerName).width > nameMaxWidth && nameFontSize > 62) {
                 nameFontSize -= 2;
                 ctx.font = `900 ${nameFontSize}px ${nameFontFamily}`;
             }
+            const nameY = canvas.height * 0.625;
+            const nameGradient = ctx.createLinearGradient(
+                0,
+                nameY - nameFontSize * 0.58,
+                0,
+                nameY + nameFontSize * 0.58,
+            );
+            nameGradient.addColorStop(0, '#F7FFFD');
+            nameGradient.addColorStop(0.38, '#D2F8F1');
+            nameGradient.addColorStop(1, '#5CCDBB');
             ctx.save();
-            ctx.shadowColor = 'rgba(0, 32, 42, 0.32)';
-            ctx.shadowBlur = Math.max(5, canvas.width * 0.006);
-            ctx.shadowOffsetY = Math.max(4, canvas.height * 0.005);
+            ctx.shadowColor = 'rgba(0, 18, 20, 0.72)';
+            ctx.shadowBlur = Math.max(4, canvas.width * 0.004);
+            ctx.shadowOffsetY = Math.max(4, canvas.height * 0.004);
             ctx.lineJoin = 'round';
-            ctx.lineWidth = Math.max(4, canvas.width * 0.004);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.96)';
-            ctx.fillStyle = '#006879';
-            const nameY = canvas.height * 0.60;
+            ctx.lineWidth = Math.max(1.5, canvas.width * 0.0015);
+            ctx.strokeStyle = 'rgba(226, 255, 250, 0.34)';
+            ctx.fillStyle = nameGradient;
             ctx.strokeText(customerName, canvas.width / 2, nameY, nameMaxWidth);
             ctx.fillText(customerName, canvas.width / 2, nameY, nameMaxWidth);
             ctx.restore();
 
-            // 날짜: 원본의 청록색 배너 정중앙.
+            // 날짜: 하단 검정 플라크 정중앙.
             const dateMaxWidth = canvas.width * 0.31;
             let dateFontSize = Math.round(canvas.width * 0.033);
             ctx.font = `900 ${dateFontSize}px "Arial Black", Arial, sans-serif`;
-            while (ctx.measureText(period).width > dateMaxWidth && dateFontSize > 28) {
+            while (ctx.measureText(period).width > dateMaxWidth && dateFontSize > 26) {
                 dateFontSize -= 1;
                 ctx.font = `900 ${dateFontSize}px "Arial Black", Arial, sans-serif`;
             }
             ctx.save();
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#FFFFFF';
-            ctx.shadowColor = 'rgba(0, 20, 28, 0.45)';
-            ctx.shadowBlur = 3;
-            ctx.shadowOffsetY = 2;
-            ctx.fillText(period, canvas.width / 2, canvas.height * 0.722, dateMaxWidth);
+            ctx.fillStyle = '#8DE6D5';
+            ctx.shadowColor = 'rgba(115, 239, 216, 0.22)';
+            ctx.shadowBlur = Math.max(2, canvas.width * 0.002);
+            ctx.shadowOffsetY = 1;
+            ctx.fillText(period, canvas.width / 2, canvas.height * 0.79, dateMaxWidth);
             ctx.restore();
 
             const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(
