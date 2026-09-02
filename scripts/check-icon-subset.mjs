@@ -41,7 +41,25 @@ if (!m) {
     console.error('index.html에서 icon_names= 파라미터를 찾지 못했습니다.');
     process.exit(1);
 }
-const subset = new Set(m[1].split(','));
+const names = m[1].split(',');
+const subset = new Set(names);
+
+// ⚠ 중복 이름이 있으면 Google Fonts가 요청 전체를 400으로 거부해
+// 사이트의 모든 아이콘이 빈 칸으로 나온다 (2026-09-02 photo_library 중복 사고).
+if (names.length !== subset.size) {
+    const seen = new Set();
+    const dups = names.filter(n => (seen.has(n) ? true : (seen.add(n), false)));
+    console.error('✗ index.html icon_names에 중복 이름이 있습니다 (Google Fonts가 400을 반환함):');
+    for (const d of new Set(dups)) console.error('   -', d);
+    process.exit(1);
+}
+
+// 두 <link>(preload + stylesheet)의 목록이 서로 다르면 한쪽만 고친 것
+const all = [...html.matchAll(/icon_names=([a-z0-9_,]+)/g)].map(x => x[1]);
+if (new Set(all).size > 1) {
+    console.error('✗ index.html의 icon_names 두 곳(preload/stylesheet)이 서로 다릅니다. 둘 다 같게 고치세요.');
+    process.exit(1);
+}
 
 const tokens = new Set();
 const files = [...walk(join(root, 'src')), join(root, 'index.html')];
