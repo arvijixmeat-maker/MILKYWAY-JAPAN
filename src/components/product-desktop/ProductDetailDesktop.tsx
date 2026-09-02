@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, DesignBlockContent, ProductFAQ, TourPricingOption } from '../../types/product';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
+import { priceRowsFromOptions } from '../product/designTemplates/pricing';
 import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { TagChip, type TagTone } from '../desktop-primitives/TagChip';
@@ -1035,6 +1036,11 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                                         <Timeline product={product} />
                                     </div>
                                 ) : undefined}
+                                // 가격/옵션 탭의 인원별 가격 → 디자인 가격표에 자동 반영
+                                valueOverrides={(() => {
+                                    const rows = priceRowsFromOptions(product.pricingOptions);
+                                    return rows ? { price_rows: rows } : undefined;
+                                })()}
                             />
                         );
                     }

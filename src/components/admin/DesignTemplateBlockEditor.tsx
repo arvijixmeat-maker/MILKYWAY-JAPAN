@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
-import type { DesignBlockContent } from '../../types/product';
+import type { DesignBlockContent, TourPricingOption } from '../../types/product';
 import type { DesignPreset, DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
+import { priceRowsFromOptions } from '../product/designTemplates/pricing';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, scopedKey } from '../product/designTemplates/sections';
 import { saveDesignDefaults, useAllDesignDefaults, useDesignGlobalDefaults } from '../product/designTemplates/globalDefaults';
@@ -245,11 +246,17 @@ function PresetLineChips({ presetLines, value, onChange, separator = '\n' }: { p
 export function DesignTemplateBlockEditor({
     content,
     onChange,
+    pricingOptions,
 }: {
     content: DesignBlockContent;
     onChange: (next: DesignBlockContent) => void;
+    /** 상품 「가격/옵션」 탭의 인원별 가격 — 있으면 디자인 가격표에 자동 반영된다 */
+    pricingOptions?: TourPricingOption[];
 }) {
     const def = getDesignTemplate(content?.templateId);
+    // 가격/옵션 탭 값이 있으면 가격표는 자동 반영 (직접 입력 불가)
+    const autoPriceRows = priceRowsFromOptions(pricingOptions);
+    const valueOverrides = autoPriceRows ? { price_rows: autoPriceRows } : undefined;
     const [previewVariant, setPreviewVariant] = useState<'desktop' | 'mobile'>('desktop');
     const [uploadingKey, setUploadingKey] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>(null);
@@ -502,6 +509,7 @@ export function DesignTemplateBlockEditor({
                             variant={previewVariant}
                             onFieldClick={handlePreviewFieldClick}
                             selectedField={selectedField}
+                            valueOverrides={valueOverrides}
                             itinerarySlot={(
                                 <div style={{ padding: '28px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: 12, margin: '8px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
                                     📋 이 자리에 상품의 <b>일정탭</b>에서 작성한 일정표가 표시됩니다
@@ -559,7 +567,17 @@ export function DesignTemplateBlockEditor({
                                             <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
                                                 {f.label}
                                             </label>
-                                            {f.type === 'image' ? (
+                                            {valueOverrides?.[baseKey(fk)] !== undefined ? (
+                                                <div
+                                                    ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
+                                                    style={{ border: '1px dashed var(--border-default)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg-muted, #f8fafc)' }}
+                                                >
+                                                    <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                                                        「가격/옵션」 탭의 인원별 가격이 자동으로 반영됩니다. 수정은 그 탭에서 해 주세요.
+                                                    </div>
+                                                    <pre style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap', color: 'var(--text-muted)' }}>{valueOverrides[baseKey(fk)]}</pre>
+                                                </div>
+                                            ) : f.type === 'image' ? (
                                                 <div
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="row"
