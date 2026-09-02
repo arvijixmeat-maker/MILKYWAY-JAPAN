@@ -9,14 +9,106 @@ import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, sco
 import { saveDesignDefaults, useAllDesignDefaults, useDesignGlobalDefaults } from '../product/designTemplates/globalDefaults';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
-
-/** 일수에 맞춰 자동으로 개수가 맞춰지는 일차별 상세 섹션 */
+import { useDesignSpots } from '../product/designTemplates/designSpots';
 
 /**
  * 지도 경유지 선택 UI — 지도에 좌표가 등록된 여행지 목록에서 골라 담는다.
  * 저장 형식은 기존과 동일한 텍스트("지역명|일본어라벨" 줄 단위)라서
  * 지도/템플릿 쪽은 그대로 동작하고, 직접 입력(좌표·사진)도 그대로 지원한다.
  */
+/** 방문 여행지 카드 목록 — 「여행지 사진」 페이지에 등록한 목록에서 골라 담고, 이름·사진을 줄 단위로 관리한다 */
+function SpotCardsField({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+    const registered = useDesignSpots();
+    const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+    const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
+    const setLines = (next: string[]) => onChange(next.join('\n'));
+
+    const parseLine = (line: string) => {
+        const p = line.split('|').map(x => x.trim());
+        return { title: p[0] || '', img: p[1] || '' };
+    };
+    const serializeLine = (p: { title: string; img: string }) => (p.img ? `${p.title}|${p.img}` : `${p.title}|`);
+    const patch = (i: number, part: Partial<{ title: string; img: string }>) => {
+        const next = [...lines];
+        next[i] = serializeLine({ ...parseLine(next[i]), ...part });
+        setLines(next);
+    };
+    const move = (i: number, dir: -1 | 1) => {
+        const next = [...lines];
+        const j = i + dir;
+        if (j < 0 || j >= next.length) return;
+        [next[i], next[j]] = [next[j], next[i]];
+        setLines(next);
+    };
+    const addRegistered = (name: string, image: string) => {
+        setLines([...lines, serializeLine({ title: name, img: image })]);
+    };
+    const handleUpload = async (i: number, file: File | undefined) => {
+        if (!file) return;
+        try {
+            setUploadingIdx(i);
+            patch(i, { img: await uploadImage(file, 'product-details') });
+        } catch (error) {
+            console.error('Spot card image upload failed:', error);
+            alert('이미지 업로드 실패');
+        } finally {
+            setUploadingIdx(null);
+        }
+    };
+
+    return (
+        <div className="stack" style={{ gap: 8 }}>
+            {lines.length === 0 && (
+                <div className="cell-muted" style={{ fontSize: 12 }}>아래에서 여행지를 추가하면 카드가 순서대로 표시됩니다</div>
+            )}
+            {lines.map((line, i) => {
+                const { title, img } = parseLine(line);
+                return (
+                    <div key={i} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
+                        <label title={img ? '사진 변경' : '사진 업로드'} style={{ flex: 'none', width: 44, height: 44, borderRadius: 8, overflow: 'hidden', border: img ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
+                            {uploadingIdx === i
+                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#06C4A0' }} />
+                                : img
+                                    ? <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    : <Icon name="add_a_photo" style={{ fontSize: 15, color: 'var(--text-muted)' }} />}
+                            <input type="file" accept="image/*" style={{ display: 'none' }}
+                                onChange={(e) => { handleUpload(i, e.target.files?.[0]); e.target.value = ''; }} />
+                        </label>
+                        <input
+                            className="inp"
+                            style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700 }}
+                            value={title}
+                            placeholder="여행지 이름 (일본어 표기)"
+                            onChange={(e) => patch(i, { title: e.target.value })}
+                        />
+                        <button type="button" className="act-btn" title="위로" onClick={() => move(i, -1)}><Icon name="arrow_upward" style={{ fontSize: 15 }} /></button>
+                        <button type="button" className="act-btn" title="아래로" onClick={() => move(i, 1)}><Icon name="arrow_downward" style={{ fontSize: 15 }} /></button>
+                        <button type="button" className="act-btn" title="카드 제거" onClick={() => setLines(lines.filter((_, j) => j !== i))}><Icon name="close" style={{ fontSize: 15, color: 'var(--mrt-red)' }} /></button>
+                    </div>
+                );
+            })}
+            <div style={{ border: '1px dashed var(--border-default)', borderRadius: 8, padding: '8px 10px' }}>
+                <div className="cell-muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                    등록된 여행지 — 누르면 카드에 추가됩니다
+                    <a href="/admin/design-spots" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#06C4A0', fontWeight: 700 }}>여행지 등록 관리 ↗</a>
+                </div>
+                {registered.length === 0 ? (
+                    <div className="cell-muted" style={{ fontSize: 12 }}>아직 등록된 여행지가 없습니다. 「여행지 사진」 페이지에서 사진+이름을 등록해 주세요.</div>
+                ) : (
+                    <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                        {registered.map(sp => (
+                            <button key={sp.id} type="button" className="chip" title={`${sp.name} 카드 추가`} onClick={() => addRegistered(sp.name, sp.image)} style={{ paddingLeft: 4 }}>
+                                <img src={sp.image} alt="" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }} />
+                                {sp.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function MapStopsField({ value, onChange }: { value: string; onChange: (next: string) => void }) {
     const [advanced, setAdvanced] = useState(false);
     const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
@@ -632,6 +724,13 @@ export function DesignTemplateBlockEditor({
                                                             }}
                                                         />
                                                     </label>
+                                                </div>
+                                            ) : f.type === 'spot-cards' ? (
+                                                <div ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}>
+                                                    <SpotCardsField
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(fk, next)}
+                                                    />
                                                 </div>
                                             ) : f.type === 'map-stops' ? (
                                                 <div ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}>

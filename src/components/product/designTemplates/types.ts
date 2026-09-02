@@ -9,7 +9,7 @@ import type { DesignSectionInstance } from '../../../types/product';
  * 관리자 페이지는 매니페스트를 읽어 자동으로 폼을 생성하고,
  * 입력값은 상품 detailBlocks 안의 design 블록(content.values)에 저장된다.
  */
-export type DesignFieldType = 'text' | 'textarea' | 'image' | 'map-stops';
+export type DesignFieldType = 'text' | 'textarea' | 'image' | 'map-stops' | 'spot-cards';
 
 export interface DesignTemplateField {
     key: string;

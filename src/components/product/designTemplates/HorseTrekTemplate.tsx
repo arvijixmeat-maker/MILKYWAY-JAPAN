@@ -383,7 +383,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
             {S('07 루트/지도', (v) => {
                 const mapStops = v('map_stops').split('\n').map(s => s.trim()).filter(Boolean).join(';');
                 const mapUrl = `/designs/mongolia-map.html?stops=${encodeURIComponent(mapStops)}`;
-                const dayCards = [1, 2, 3, 4, 5].map(n => ({ n, img: v(`day${n}_img`), badge: v(`day${n}_badge`), title: v(`day${n}_title`), body: v(`day${n}_body`), offset: n % 2 === 0 }));
+                const spotCards = v('spot_cards').split('\n').map(s => s.trim()).filter(Boolean).map((line, i) => { const p = line.split('|').map(x => x.trim()); return { i, title: p[0] || '', img: p[1] || '', offset: i % 2 === 1 }; });
                 return (
                 <section style={{ position: 'relative', background: 'linear-gradient(180deg, #C8FFEF 0%, #EFFEF9 32%, #EFFEF9 100%)', paddingBottom: 90 }}>
                     <div style={{ padding: '110px 70px 60px', textAlign: 'center' }}>
@@ -409,13 +409,12 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                             <div style={{ fontSize: 15, fontWeight: 600, color: TEAL, letterSpacing: '-0.02em' }}><span data-df="spots_hint">{v('spots_hint')}</span></div>
                         </div>
                         <div className="ht-scroll" style={{ margin: '20px -56px 0 0', display: 'flex', alignItems: 'flex-start', gap: 22, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none', padding: '4px 56px 16px 0' } as React.CSSProperties}>
-                            {dayCards.map(c => (
-                                <div key={c.n} style={{ flex: '0 0 340px', marginTop: c.offset ? 34 : 0, scrollSnapAlign: 'start', background: '#0B1F1B', borderRadius: 26, overflow: 'hidden' }}>
+                            {spotCards.map(c => (
+                                <div key={c.i} style={{ flex: '0 0 340px', marginTop: c.offset ? 34 : 0, scrollSnapAlign: 'start', background: '#0B1F1B', borderRadius: 26, overflow: 'hidden' }}>
                                     <div style={{ position: 'relative', height: 420, background: '#123028' }}>
-                                        <Slot k={`day${c.n}_img`} src={c.img} label={`${c.badge} 사진`} editing={editing} alt={c.title} />
+                                        <Slot k="spot_cards" src={c.img} label={`${c.title} 사진`} editing={editing} alt={c.title} />
                                         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(11,31,27,0.45) 0%, rgba(11,31,27,0.1) 40%, rgba(11,31,27,0.88) 100%)' }} />
-                                        <div style={{ position: 'absolute', top: 18, left: 18, fontSize: 17, fontWeight: 800, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.85)' }}><span data-df={`day${c.n}_badge`}>{c.badge}</span></div>
-                                        <div style={{ position: 'absolute', left: 24, right: 24, bottom: 26, fontSize: 20, lineHeight: 1.35, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 4px 22px rgba(0,0,0,0.5)' }}><span data-df={`day${c.n}_title`}>{c.title}</span></div>
+                                        <div style={{ position: 'absolute', left: 24, right: 24, bottom: 26, fontSize: 20, lineHeight: 1.35, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 4px 22px rgba(0,0,0,0.5)' }}><span data-df="spot_cards">{c.title}</span></div>
                                     </div>
                                 </div>
                             ))}

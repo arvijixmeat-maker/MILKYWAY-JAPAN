@@ -35,6 +35,7 @@ const settingItems: NavItem[] = [
     { id: 'categories', icon: 'category', label: '카테고리 관리', href: '/admin/categories' },
     { id: 'hotels', icon: 'hotel', label: '호텔 마스터', href: '/admin/hotels' },
     { id: 'tourist-spots', icon: 'location_on', label: '관광지 마스터', href: '/admin/tourist-spots' },
+    { id: 'design-spots', icon: 'photo_library', label: '여행지 사진', href: '/admin/design-spots' },
     { id: 'guide-intro', icon: 'translate', label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
 ];
 
