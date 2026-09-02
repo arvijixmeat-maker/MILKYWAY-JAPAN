@@ -1,12 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../types/product';
-import type { DesignTemplateField } from '../product/designTemplates/types';
+import type { DesignPreset, DesignTemplateField } from '../product/designTemplates/types';
 import { getDesignTemplate } from '../product/designTemplates/registry';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { baseKey, fieldKeysOfSection, nextCopyId, resolveInstances, scopeOf, scopedKey } from '../product/designTemplates/sections';
+import { saveDesignDefaults, useAllDesignDefaults, useDesignGlobalDefaults } from '../product/designTemplates/globalDefaults';
 import { uploadImage } from '../../utils/upload';
 import { Icon } from './console/Icon';
+
+/** 일수에 맞춰 자동으로 개수가 맞춰지는 일차별 상세 섹션 */
 
 /**
  * 지도 경유지 선택 UI — 지도에 좌표가 등록된 여행지 목록에서 골라 담는다.
@@ -145,6 +148,96 @@ function MapStopsField({ value, onChange }: { value: string; onChange: (next: st
 }
 
 /**
+ * 프리셋을 { label, value }로 정규화.
+ * 버튼에는 관리자가 알아보기 쉬운 label(한국어)을, 실제 입력값에는 value(일본어)를 쓴다.
+ */
+function normPresets(presets: DesignPreset[]): { label: string; value: string }[] {
+    return presets.map(p => (typeof p === 'string' ? { label: p, value: p } : p));
+}
+
+/**
+ * 자주 쓰는 값 버튼 — 누르면 입력칸이 그 값으로 채워진다.
+ * (직접 입력도 그대로 가능. 목록에 없는 값은 타이핑하면 된다)
+ */
+function PresetChips({ presets, value, onPick }: { presets: DesignPreset[]; value: string; onPick: (v: string) => void }) {
+    const items = normPresets(presets);
+    const translated = items.some(p => p.label !== p.value);
+    return (
+        <>
+            <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+                {items.map(p => (
+                    <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => onPick(p.value)}
+                        title={p.label === p.value ? `"${p.value}"(으)로 채우기` : `페이지에는 "${p.value}"로 표시됩니다`}
+                        style={{
+                            padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                            border: '1px solid', ...(value === p.value
+                                ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
+                        }}
+                    >
+                        {p.label}
+                    </button>
+                ))}
+            </div>
+            {translated && (
+                <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>
+                    한국어로 고르면 페이지에는 일본어로 표시됩니다
+                </div>
+            )}
+        </>
+    );
+}
+
+/**
+ * 자주 쓰는 줄 버튼 — 누르면 그 줄이 추가되고, 다시 누르면 빠진다.
+ * 순서는 프리셋 목록 순서를 따르고, 직접 입력한 줄은 뒤에 남는다.
+ */
+function PresetLineChips({ presetLines, value, onChange, separator = '\n' }: { presetLines: DesignPreset[]; value: string; onChange: (v: string) => void; separator?: string }) {
+    const items = normPresets(presetLines);
+    const known = items.map(p => p.value);
+    const lines = value.split(separator).map(s => s.trim()).filter(Boolean);
+    const translated = items.some(p => p.label !== p.value);
+    const toggle = (line: string) => {
+        const next = lines.includes(line) ? lines.filter(l => l !== line) : [...lines, line];
+        // 프리셋에 있는 항목은 목록 순서대로, 직접 입력한 항목은 그 뒤에
+        onChange([...known.filter(k => next.includes(k)), ...next.filter(l => !known.includes(l))].join(separator));
+    };
+    return (
+        <>
+            <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+                {items.map(p => {
+                    const on = lines.includes(p.value);
+                    return (
+                        <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => toggle(p.value)}
+                            title={`${on ? '빼기' : '추가'} — 페이지 표시: ${p.value}`}
+                            style={{
+                                padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                                border: '1px solid', ...(on
+                                    ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                    : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
+                            }}
+                        >
+                            {on ? '✓ ' : '+ '}{p.label}
+                        </button>
+                    );
+                })}
+            </div>
+            {translated && (
+                <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>
+                    한국어로 고르면 페이지에는 일본어로 표시됩니다
+                </div>
+            )}
+        </>
+    );
+}
+
+/**
  * 'design' 상세 블록의 관리자 편집기 — 좌측 미리보기 / 우측 폼 분할.
  * 미리보기의 문구·사진을 클릭하면 해당 입력칸이 열리고 포커스된다.
  * 값을 전부 지우면 디자인 원본 문구(default)로 되돌아간다.
@@ -161,6 +254,10 @@ export function DesignTemplateBlockEditor({
     const [uploadingKey, setUploadingKey] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>(null);
     const [selectedField, setSelectedField] = useState<string | null>(null);
+    const [savingShared, setSavingShared] = useState(false);
+    // 사이트 공통 이미지 — 상품에 따로 올리지 않은 자리에 자동으로 들어간다
+    const sharedAssets = useDesignGlobalDefaults(content?.templateId);
+    const allDefaults = useAllDesignDefaults();
     const fieldRefs = useRef(new Map<string, HTMLElement>());
     const previewRef = useRef<HTMLDivElement>(null);
 
@@ -173,9 +270,11 @@ export function DesignTemplateBlockEditor({
      * 폼에 표시할 섹션 목록 — 인스턴스(복제본 포함) × 그 섹션이 가진 매니페스트 필드.
      * 복제본은 필드 key에 접미사가 붙어 원본과 값이 분리된다.
      */
+    const values = useMemo(() => content.values || {}, [content.values]);
+
     const sections = useMemo(() => {
         if (!def) return [] as { instId: string; defId: string; name: string; copyNo: number; fields: { field: DesignTemplateField; key: string }[] }[];
-        return instances.map(inst => {
+        return instances.filter(inst => !inst.hidden).map(inst => {
             const sec = def.sectionDefs.find(s => s.id === inst.def)!;
             const names = new Set(sec.fieldSections);
             const hash = inst.id.indexOf('#');
@@ -186,7 +285,13 @@ export function DesignTemplateBlockEditor({
                 copyNo: hash === -1 ? 1 : Number(inst.id.slice(hash + 1)),
                 fields: def.fields
                     .filter(f => names.has(f.section))
-                    .map(f => ({ field: f, key: scopedKey(f.key, inst.id) })),
+                    // 복제본과 공유하는 값은 원본 섹션에서만 편집한다
+                    .filter(f => !f.shared || inst.id === inst.def)
+                    .map(f => ({
+                        field: f,
+                        // 공유 필드는 접미사 없이 저장해야 템플릿이 읽는 값과 일치한다
+                        key: f.shared ? f.key : scopedKey(f.key, inst.id),
+                    })),
             };
         });
     }, [def, instances]);
@@ -231,27 +336,50 @@ export function DesignTemplateBlockEditor({
         setOpenSection(newId);
     };
 
-    /** 섹션 삭제 — 목록에서만 제거(입력값은 남아 다시 추가하면 복원) */
+    /** 섹션 빼기 — 마지막 하나면 hidden 표시로 남긴다 (템플릿에 새 섹션이 생겨도 삭제가 유지되도록) */
     const removeSection = (instId: string) => {
         if (!window.confirm('이 섹션을 상세페이지에서 빼시겠습니까? 입력한 내용은 남아 있습니다.')) return;
-        onChange({ ...content, sections: instances.filter(s => s.id !== instId) });
+        const target = instances.find(s => s.id === instId);
+        if (!target) return;
+        const others = instances.some(s => s.def === target.def && s.id !== instId && !s.hidden);
+        const next = others
+            ? instances.filter(s => s.id !== instId)
+            : instances.map(s => (s.id === instId ? { ...s, hidden: true } : s));
+        onChange({ ...content, sections: next });
         if (openSection === instId) setOpenSection(null);
     };
 
-    /** 삭제한 섹션 다시 추가 */
+    /** 뺀 섹션 다시 넣기 */
     const restoreSection = (defId: string) => {
         if (!def) return;
-        const order = def.sectionDefs.map(s => s.id);
-        const next = [...instances, { id: defId, def: defId }]
-            .sort((a, b) => order.indexOf(a.def) - order.indexOf(b.def));
+        const hiddenOne = instances.find(s => s.def === defId && s.hidden);
+        const next = hiddenOne
+            ? instances.map(s => (s.id === hiddenOne.id ? { id: s.id, def: s.def } : s))
+            : (() => {
+                const order = def.sectionDefs.map(s => s.id);
+                return [...instances, { id: defId, def: defId }]
+                    .sort((a, b) => order.indexOf(a.def) - order.indexOf(b.def));
+            })();
         onChange({ ...content, sections: next });
-        setOpenSection(defId);
+        setOpenSection(hiddenOne ? hiddenOne.id : defId);
     };
 
     const removedDefs = useMemo(
-        () => (def ? def.sectionDefs.filter(s => !instances.some(i => i.def === s.id)) : []),
+        () => (def ? def.sectionDefs.filter(s => !instances.some(i => i.def === s.id && !i.hidden)) : []),
         [def, instances],
     );
+
+    /**
+     * 이 상품에서 직접 올린 사진들의 key.
+     * 복제 섹션(@2 이후 = 2일차·3일차처럼 일차마다 다른 사진)은 공통 대상이 아니다.
+     */
+    const ownImageKeys = useMemo(() => {
+        if (!def) return [] as string[];
+        const imageKeys = new Set(def.fields.filter(f => f.type === 'image').map(f => f.key));
+        return Object.keys(values).filter(k => scopeOf(k) === '' && imageKeys.has(k) && values[k]);
+    }, [def, values]);
+
+    const sharedCount = Object.values(sharedAssets).filter(Boolean).length;
 
     if (!def) {
         return (
@@ -262,7 +390,35 @@ export function DesignTemplateBlockEditor({
         );
     }
 
-    const values = content.values || {};
+    /**
+     * 미리보기에서 올린 사진을 "공통 사진"으로 저장한다.
+     * 저장 후에는 이 상품도 공통 사진을 따라가도록 개별 값을 비운다
+     * (화면은 그대로지만, 나중에 공통 사진을 바꾸면 이 상품에도 반영된다).
+     */
+    const saveOwnImagesAsShared = async () => {
+        if (!def || ownImageKeys.length === 0) return;
+        const ok = window.confirm(
+            `지금 올린 사진 ${ownImageKeys.length}장을 모든 상품이 함께 쓰는 공통 사진으로 저장할까요?\n\n` +
+            '이 상품 화면은 그대로이고, 앞으로 새로 만드는 상품에도 같은 사진이 자동으로 들어갑니다.',
+        );
+        if (!ok) return;
+        setSavingShared(true);
+        try {
+            const nextShared = { ...sharedAssets };
+            for (const k of ownImageKeys) nextShared[k] = values[k];
+            await saveDesignDefaults({ ...allDefaults, [def.id]: nextShared });
+            // 공통으로 올라갔으므로 이 상품의 개별 사진은 비워 공통을 따라가게 한다
+            const nextValues = { ...values };
+            for (const k of ownImageKeys) delete nextValues[k];
+            onChange({ ...content, values: nextValues });
+        } catch (e) {
+            console.error('Failed to save shared design images:', e);
+            alert('공통 사진 저장에 실패했습니다');
+        } finally {
+            setSavingShared(false);
+        }
+    };
+
     const setValue = (key: string, value: string) => {
         onChange({ ...content, values: { ...values, [key]: value } });
     };
@@ -295,6 +451,26 @@ export function DesignTemplateBlockEditor({
                     미리보기의 문구·사진을 클릭하면 바로 편집할 수 있습니다 — 전부 지우면 원본으로 되돌아갑니다
                 </span>
                 <div className="spacer" />
+                {sharedCount > 0 && (
+                    <span className="cell-muted" style={{ fontSize: 12 }}>
+                        공통 사진 {sharedCount}장 사용 중
+                    </span>
+                )}
+                <button
+                    type="button"
+                    className="chip"
+                    onClick={saveOwnImagesAsShared}
+                    disabled={ownImageKeys.length === 0 || savingShared}
+                    title={
+                        ownImageKeys.length === 0
+                            ? '이 상품에 직접 올린 사진이 없습니다'
+                            : '미리보기에서 올린 사진들을 모든 상품이 함께 쓰는 공통 사진으로 저장합니다'
+                    }
+                    style={ownImageKeys.length > 0 ? { borderColor: '#06C4A0', color: '#029F85' } : undefined}
+                >
+                    <Icon name="photo_library" style={{ fontSize: 16 }} />
+                    {savingShared ? '저장 중…' : `올린 사진 ${ownImageKeys.length}장을 공통으로 저장`}
+                </button>
                 {def.mobile && (
                     <div className="row" style={{ gap: 6 }}>
                         {(['desktop', 'mobile'] as const).map(vt => (
@@ -312,6 +488,7 @@ export function DesignTemplateBlockEditor({
                 )}
             </div>
 
+
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 {/* 좌: 클릭 가능한 미리보기 */}
                 <div
@@ -325,6 +502,11 @@ export function DesignTemplateBlockEditor({
                             variant={previewVariant}
                             onFieldClick={handlePreviewFieldClick}
                             selectedField={selectedField}
+                            itinerarySlot={(
+                                <div style={{ padding: '28px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: 12, margin: '8px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+                                    📋 이 자리에 상품의 <b>일정탭</b>에서 작성한 일정표가 표시됩니다
+                                </div>
+                            )}
                         />
                     </div>
                 </div>
@@ -399,6 +581,21 @@ export function DesignTemplateBlockEditor({
                                                                 <Icon name="close" style={{ fontSize: 14 }} />
                                                             </button>
                                                         </div>
+                                                    ) : sharedAssets[baseKey(fk)] ? (
+                                                        // 상품에 따로 올리지 않았고 공통 이미지가 있는 경우
+                                                        <div style={{ position: 'relative', flex: 'none' }}>
+                                                            <img
+                                                                src={sharedAssets[baseKey(fk)]}
+                                                                alt={f.label}
+                                                                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid #06C4A0' }}
+                                                            />
+                                                            <span
+                                                                title="공통 이미지를 사용 중입니다. 이 상품만 다르게 하려면 업로드하세요."
+                                                                style={{ position: 'absolute', left: -4, bottom: -6, padding: '1px 6px', borderRadius: 500, background: '#06C4A0', color: '#fff', fontSize: 10, fontWeight: 800 }}
+                                                            >
+                                                                공통
+                                                            </span>
+                                                        </div>
                                                     ) : (
                                                         <div style={{ width: 72, height: 72, borderRadius: 'var(--r-md)', border: '1px dashed var(--border-default)', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', flex: 'none' }}>
                                                             <Icon name="image" style={{ fontSize: 20 }} />
@@ -426,6 +623,15 @@ export function DesignTemplateBlockEditor({
                                                     />
                                                 </div>
                                             ) : f.type === 'textarea' ? (
+                                                <>
+                                                {f.presetLines && (
+                                                    <PresetLineChips
+                                                        presetLines={f.presetLines}
+                                                        separator={f.presetSeparator}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(fk, next)}
+                                                    />
+                                                )}
                                                 <textarea
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="inp"
@@ -436,7 +642,24 @@ export function DesignTemplateBlockEditor({
                                                     onFocus={() => handleFieldFocus(fk)}
                                                     style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
+                                                </>
                                             ) : (
+                                                <>
+                                                {f.presets && (
+                                                    <PresetChips
+                                                        presets={f.presets}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onPick={(p) => setValue(fk, p)}
+                                                    />
+                                                )}
+                                                {f.presetLines && (
+                                                    <PresetLineChips
+                                                        presetLines={f.presetLines}
+                                                        separator={f.presetSeparator}
+                                                        value={values[fk] ?? f.default ?? ''}
+                                                        onChange={(next) => setValue(fk, next)}
+                                                    />
+                                                )}
                                                 <input
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     type="text"
@@ -447,6 +670,7 @@ export function DesignTemplateBlockEditor({
                                                     onFocus={() => handleFieldFocus(fk)}
                                                     style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
                                                 />
+                                                </>
                                             )}
                                             {f.help && f.type !== 'map-stops' && (
                                                 <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{f.help}</div>

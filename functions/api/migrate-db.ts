@@ -454,6 +454,36 @@ app.get('/', async (c) => {
         }
     }
 
+    // ── settings 정리 ────────────────────────────────────────────────
+    // api.settings.save(key, value)가 {key, value} 객체를 그대로 보내던 탓에
+    // 설정이 제 이름이 아니라 'key' / 'value' 라는 칸에 저장되고 있었다.
+    // (그래서 설정을 두 개 이상 쓰면 서로 덮어썼다.)
+    // 저장 형식을 고쳤으므로, 남아 있는 값을 제 이름으로 옮기고 잘못된 칸을 지운다.
+    try {
+        const strayName = await c.env.DB.prepare("SELECT value FROM settings WHERE key = 'key'").first();
+        const strayValue = await c.env.DB.prepare("SELECT value FROM settings WHERE key = 'value'").first();
+        const realKey = (strayName as any)?.value;
+        const realValue = (strayValue as any)?.value;
+
+        if (realKey && realValue) {
+            const existing = await c.env.DB.prepare('SELECT value FROM settings WHERE key = ?').bind(realKey).first();
+            if (existing) {
+                migrationResults.push(`settings: '${realKey}' already set, kept as is`);
+            } else {
+                await c.env.DB.prepare(
+                    "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+                ).bind(realKey, realValue).run();
+                migrationResults.push(`settings: moved stray value into '${realKey}'`);
+            }
+        }
+        if (realKey || realValue) {
+            await c.env.DB.prepare("DELETE FROM settings WHERE key IN ('key', 'value')").run();
+            migrationResults.push('settings: removed stray key/value rows');
+        }
+    } catch (e: any) {
+        migrationResults.push(`Skipped settings cleanup: ${e.message}`);
+    }
+
     return c.json({
         success: true,
         message: "Migrations executed",

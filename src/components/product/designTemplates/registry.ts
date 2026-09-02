@@ -14,6 +14,8 @@ export const designTemplates: DesignTemplateDef[] = [
         canvasWidth: 860,
         fields: horseTrekFields,
         sectionDefs: horseTrekSectionDefs,
+        // 이 섹션까지 렌더한 뒤 상품 일정탭의 일정표를 끼워 넣고, 나머지 섹션으로 이어간다
+        itineraryAfter: '12 공항 도착',
         Component: HorseTrekTemplate,
         mobile: {
             canvasWidth: 430,

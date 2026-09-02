@@ -157,6 +157,8 @@ export interface DesignSectionInstance {
     id: string;
     /** 템플릿 섹션 id */
     def: string;
+    /** true면 상세페이지에서 숨긴다 (관리자가 뺀 섹션 — 값은 남아 있어 복원 가능) */
+    hidden?: boolean;
 }
 
 export interface DetailContentBlock {

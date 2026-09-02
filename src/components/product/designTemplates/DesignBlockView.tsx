@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesignBlockContent } from '../../../types/product';
 import { getDesignTemplate } from './registry';
-import { baseKey, resolveInstances, scopeOf } from './sections';
+import { baseKey, scopeOf, visibleInstances } from './sections';
+import { useDesignGlobalDefaults } from './globalDefaults';
 
 /**
  * 고정폭 캔버스 디자인을 컨테이너 폭에 맞춰 축소해 보여주는 래퍼.
@@ -63,7 +64,7 @@ function useDesignFonts() {
  * variant='mobile'이면 템플릿의 모바일 전용 디자인(있을 때)을 렌더링한다.
  * editing=true면 빈 이미지 슬롯에 업로드 안내 placeholder를 표시한다.
  */
-export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField }: {
+export default function DesignBlockView({ content, editing, variant = 'desktop', onFieldClick, selectedField, itinerarySlot }: {
     content: DesignBlockContent;
     editing?: boolean;
     variant?: 'desktop' | 'mobile';
@@ -71,8 +72,15 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
     onFieldClick?: (key: string) => void;
     /** 현재 편집 중인 필드 — 미리보기에서 초록 테두리로 표시 */
     selectedField?: string | null;
+    /**
+     * 상품 일정탭의 일정표. 템플릿의 itineraryAfter 섹션 뒤에 끼워 넣고
+     * 나머지 섹션(여행의 순간들부터)으로 이어간다.
+     */
+    itinerarySlot?: React.ReactNode;
 }) {
     useDesignFonts();
+    // 사이트 공통 기본값 — 상품마다 다시 올리지 않아도 되는 사진·문구
+    const globalDefaults = useDesignGlobalDefaults(content?.templateId);
     const def = getDesignTemplate(content?.templateId);
 
     const defaults: Record<string, string> = {};
@@ -83,9 +91,12 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
     const v = (key: string) => {
         const raw = values[key];
         if (raw !== undefined && raw !== '') return raw;
-        // 복제 섹션의 key는 '@2' 접미사가 붙는다 — 값이 비었으면 원본 필드의 기본값을 쓴다
-        // (복제 직후 손대지 않은 항목이 빈칸으로 나오지 않도록)
-        return defaults[baseKey(key)] ?? '';
+        // 복제 섹션의 key는 '@2' 접미사가 붙으므로 원본 key로 되돌려 찾는다
+        const base = baseKey(key);
+        // 상품에 값이 없으면 사이트 공통값 → 원본 디자인 기본값 순으로 사용
+        const shared = globalDefaults[base];
+        if (shared !== undefined && shared !== '') return shared;
+        return defaults[base] ?? '';
     };
 
     if (!def) {
@@ -125,9 +136,35 @@ export default function DesignBlockView({ content, editing, variant = 'desktop',
                     ${selectedField ? `.dtpl-clickable [data-df-scope="${selScope}"] [data-df="${selBase}"] { outline: 2px solid #06C4A0; outline-offset: 2px; }` : ''}
                 `}</style>
             )}
-            <ScaledDesign canvasWidth={canvasWidth}>
-                <Tpl v={v} editing={editing} instances={resolveInstances(def, content?.sections)} />
-            </ScaledDesign>
+            {(() => {
+                const instances = visibleInstances(def, content?.sections);
+                // 일정표 삽입: itineraryAfter 섹션까지 렌더 → 일정표 → 나머지 섹션
+                const splitAt = itinerarySlot && def.itineraryAfter
+                    ? instances.findIndex(i => i.def === def.itineraryAfter)
+                    : -1;
+                if (splitAt === -1) {
+                    return (
+                        <ScaledDesign canvasWidth={canvasWidth}>
+                            <Tpl v={v} editing={editing} instances={instances} />
+                        </ScaledDesign>
+                    );
+                }
+                const head = instances.slice(0, splitAt + 1);
+                const tail = instances.slice(splitAt + 1);
+                return (
+                    <>
+                        <ScaledDesign canvasWidth={canvasWidth}>
+                            <Tpl v={v} editing={editing} instances={head} />
+                        </ScaledDesign>
+                        {itinerarySlot}
+                        {tail.length > 0 && (
+                            <ScaledDesign canvasWidth={canvasWidth}>
+                                <Tpl v={v} editing={editing} instances={tail} />
+                            </ScaledDesign>
+                        )}
+                    </>
+                );
+            })()}
         </div>
     );
 }

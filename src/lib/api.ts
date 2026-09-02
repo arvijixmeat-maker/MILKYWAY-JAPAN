@@ -105,10 +105,17 @@ export const api = {
     },
     settings: {
         get: async (key?: string) => request(`${API_BASE}/settings${key ? `?key=${key}` : ''}`),
+        /** 설정 하나를 저장한다 */
         save: async (key: string, value: any) => request(`${API_BASE}/settings`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, value })
+            body: JSON.stringify({ [key]: value })
+        }),
+        /** 여러 설정을 한 번에 저장한다 */
+        saveMany: async (data: Record<string, string>) => request(`${API_BASE}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
         }),
     },
     faqs: {

@@ -20,9 +20,36 @@ export interface DesignTemplateField {
     section: string;
     /** 값이 비어있을 때 사용할 기본값 (텍스트 전용; 이미지 기본값은 빈 슬롯) */
     default?: string;
+    /**
+     * 모든 일차 카드가 함께 쓰는 값 (일수, DAY 탭 목록 등).
+     * 복제된 섹션에서도 접미사 없이 같은 값을 읽고 쓴다.
+     */
+    shared?: boolean;
     /** 입력 형식 안내 (선택) */
     help?: string;
+    /**
+     * 자주 쓰는 값 — 관리자 폼에 버튼으로 표시되고, 누르면 그 값으로 채워진다.
+     * text 필드용(하나만 선택). 목록에 없는 값은 직접 입력하면 된다.
+     */
+    presets?: DesignPreset[];
+    /**
+     * 자주 쓰는 항목 — 여러 개 선택.
+     * 버튼을 누르면 추가되고, 다시 누르면 빠진다.
+     * 기본은 줄바꿈으로 이어붙이며, presetSeparator를 주면 그 문자로 이어붙인다
+     * (예: 한 줄에 「乗馬体験、サンドボード体験」처럼 나열하는 항목).
+     */
+    presetLines?: DesignPreset[];
+    /** presetLines를 이어붙일 구분자 (기본: 줄바꿈) */
+    presetSeparator?: string;
 }
+
+/**
+ * 프리셋 항목.
+ * 문자열이면 버튼 라벨과 입력값이 같고,
+ * { label, value }면 버튼은 label(관리자용 한국어)로 보이되 실제로 들어가는 값은
+ * value(고객에게 보이는 일본어)가 된다.
+ */
+export type DesignPreset = string | { label: string; value: string };
 
 export interface DesignTemplateValues {
     /** field key → 관리자가 입력한 값(텍스트 또는 이미지 URL) */
@@ -58,6 +85,11 @@ export interface DesignTemplateDef {
     /** 디자인 원본 캔버스 폭(px). 화면에서는 컨테이너 폭에 맞춰 축소된다 */
     canvasWidth: number;
     fields: DesignTemplateField[];
+    /**
+     * 이 섹션(def id)까지 렌더한 뒤 상품 일정탭의 일정표를 삽입한다.
+     * 상세페이지가 itinerarySlot을 넘겨줄 때만 적용된다.
+     */
+    itineraryAfter?: string;
     /** 관리자에서 복제·삭제할 수 있는 섹션 목록 (표시 순서) */
     sectionDefs: DesignSectionDef[];
     Component: React.ComponentType<DesignTemplateProps>;

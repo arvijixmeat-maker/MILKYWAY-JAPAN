@@ -16,9 +16,9 @@ const DEEP = '#00332E';
 const TEAL = '#029F85';
 
 /** 빈 값이면 매니페스트 default가 이미 병합돼 들어온다(v getter). */
-function Slot({ k, src, label, editing, alt }: { k?: string; src: string; label: string; editing?: boolean; alt: string }) {
+function Slot({ k, src, label, editing, alt, contain }: { k?: string; src: string; label: string; editing?: boolean; alt: string; contain?: boolean }) {
     if (src) {
-        return <img data-df={k} src={src} alt={alt} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" decoding="async" />;
+        return <img data-df={k} src={src} alt={alt} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: contain ? 'contain' : 'cover' }} loading="lazy" decoding="async" />;
     }
     if (editing) {
         return (
@@ -35,8 +35,26 @@ function Lines({ k, text, style }: { k?: string; text: string; style?: React.CSS
     return <div data-df={k} style={{ whiteSpace: 'pre-line', ...style }}>{text}</div>;
 }
 
-function SectionDot() {
-    return <div style={{ width: 34, height: 34, borderRadius: '50%', background: MINT, flex: 'none' }} />;
+/** 줄 단위 목록 — 각 줄을 개별 div로 (gap 적용) */
+function LineList({ k, text, style, itemStyle }: { k?: string; text: string; style?: React.CSSProperties; itemStyle?: React.CSSProperties }) {
+    const items = text.split('\n').map(s => s.trim()).filter(Boolean);
+    return (
+        <div data-df={k} style={style}>
+            {items.map((t, i) => <div key={i} style={itemStyle}>{t}</div>)}
+        </div>
+    );
+}
+
+/** 슬라이더 하단 페이지 도트 (정적 표시 — 실제 스크롤은 마우스/트랙패드로) */
+function Dots({ count, hint }: { count: number; hint?: string }) {
+    return (
+        <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            {Array.from({ length: count }, (_, i) => (
+                <div key={i} style={{ width: 11, height: 11, borderRadius: '50%', background: i === 0 ? MINT : '#D5E7E1' }} />
+            ))}
+            {hint && <div style={{ marginLeft: 8, fontSize: 19, fontWeight: 700, color: '#8a8a8a', letterSpacing: '-0.03em' }}>{hint}</div>}
+        </div>
+    );
 }
 
 /**
@@ -46,10 +64,10 @@ function SectionDot() {
  * (컴포넌트가 아니라 함수 — 렌더마다 새 컴포넌트를 만들면 입력 포커스가 끊긴다)
  */
 function makeS(v: (k: string) => string, instances: DesignSectionInstance[]) {
-    return (id: string, render: (v: (k: string) => string) => React.ReactNode) =>
-        instances.filter(inst => inst.def === id).map(inst => {
+    return (id: string, render: (v: (k: string) => string, idx: number) => React.ReactNode) =>
+        instances.filter(inst => inst.def === id).map((inst, idx) => {
             const sv = inst.id === inst.def ? v : (k: string) => v(scopedKey(k, inst.id));
-            return <div key={inst.id} data-df-scope={suffixOf(inst.id)}>{render(sv)}</div>;
+            return <div key={inst.id} data-df-scope={suffixOf(inst.id)}>{render(sv, idx)}</div>;
         });
 }
 
@@ -72,6 +90,22 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                     40% { top:100%; opacity:0; }
                     100% { top:100%; opacity:0; }
                 }
+                @keyframes htDayPulse {
+                    0%,100% { box-shadow:0 0 0 4px rgba(255,255,255,0.45); }
+                    50% { box-shadow:0 0 0 14px rgba(6,196,160,0.25); }
+                }
+                @keyframes htMealMarquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+                /* 일본어·한국어 줄바꿈 품질 — 금칙처리(line-break:strict)로 촉음·구두점이
+                   줄 첫머리에 오지 않게 한다. 한국어 라벨처럼 띄어쓰기가 있는 곳만
+                   개별적으로 keep-all을 준다(단어 중간이 끊기지 않도록).
+                   text-wrap:pretty/balance는 마지막 줄에 한 글자만 남는 것을 막는다. */
+                .ht-design {
+                    word-break: normal;
+                    overflow-wrap: break-word;
+                    line-break: strict;
+                }
+                .ht-design * { text-wrap: pretty; }
+                .ht-design h1, .ht-design h2, .ht-design h3 { text-wrap: balance; }
                 .ht-design .ht-bubble { position:relative; }
                 .ht-design .ht-bubble::after {
                     content:''; position:absolute; bottom:-14px; width:0; height:0;
@@ -166,7 +200,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                         {[1, 2, 3, 4, 5, 6].map(n => (
                             <div key={n} style={{ position: 'relative', height: 250, borderRadius: 20, overflow: 'hidden', background: '#EFFEF9' }}>
                                 <Slot k={`perk${n}_img`} src={v(`perk${n}_img`)} label={`특전 ${n} 사진`} editing={editing} alt={v(`perk${n}_title`)} />
-                                <div style={{ position: 'absolute', inset: 'auto 0 0 0', pointerEvents: 'none', padding: '26px 16px 22px', background: 'linear-gradient(180deg, rgba(0,51,46,0) 0%, rgba(0,51,46,0.72) 100%)', textAlign: 'center', color: '#fff', wordBreak: 'keep-all' }}>
+                                <div style={{ position: 'absolute', inset: 'auto 0 0 0', pointerEvents: 'none', padding: '26px 16px 22px', background: 'linear-gradient(180deg, rgba(0,51,46,0) 0%, rgba(0,51,46,0.72) 100%)', textAlign: 'center', color: '#fff' }}>
                                     <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.03em' }}><span data-df={`perk${n}_title`}>{v(`perk${n}_title`)}</span></div>
                                     <div style={{ marginTop: 6, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em' }}><span data-df={`perk${n}_sub`}>{v(`perk${n}_sub`)}</span></div>
                                 </div>
@@ -174,21 +208,12 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                         ))}
                     </div>
     
-                    <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'stretch', border: '1px solid #C8FFEF', borderRadius: 20, overflow: 'hidden' }}>
-                        <div style={{ position: 'relative', minHeight: 250, background: '#EFFEF9' }}>
-                            <Slot k="perk_air_img" src={v('perk_air_img')} label="공항 사진" editing={editing} alt="空港" />
-                        </div>
-                        <div style={{ padding: '44px 34px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, textAlign: 'center', wordBreak: 'keep-all', textWrap: 'pretty' } as React.CSSProperties}>
-                            <div style={{ fontSize: 24, fontWeight: 800, color: DEEP, letterSpacing: '-0.02em' }}><span data-df="perk_air_title">{v('perk_air_title')}</span></div>
-                            <Lines k="perk_air_note" text={v('perk_air_note')} style={{ fontSize: 21, lineHeight: 1.6, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.02em' }} />
-                        </div>
-                    </div>
                 </section>
             ))}
 
             {/* ── 05 여행 고민 (말풍선) ─────────────────────── */}
             {S('05 여행 고민', (v) => (
-                <section style={{ background: '#fff', padding: '110px 50px 120px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '110px 50px 120px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.04em', color: '#9a9a9a' }}><span data-df="worry_kicker">{v('worry_kicker')}</span></div>
                         <h2 style={{ margin: '14px 0 0', fontSize: 43, fontWeight: 800, letterSpacing: '-0.05em', color: '#2b2b2b' }}><span data-df="worry_title">{v('worry_title')}</span></h2>
@@ -213,7 +238,7 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 06 숙소 ──────────────────────────────────── */}
             {S('06 숙소', (v) => (
-                <section style={{ background: '#fff', padding: '100px 40px 96px', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 40px 96px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: 23, fontWeight: 700, color: MINT, letterSpacing: '-0.02em' }}><span data-df="ger_kicker">{v('ger_kicker')}</span></div>
                         <div style={{ marginTop: 14, fontSize: 30, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.03em' }}><span data-df="ger_sub">{v('ger_sub')}</span></div>
@@ -222,22 +247,135 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                             <div style={{ color: TEAL }}><span data-df="ger_title2">{v('ger_title2')}</span></div>
                         </h2>
                     </div>
-                    <div style={{ marginTop: 52, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        {[1, 2, 3, 4].map(n => (
-                            <div key={n} style={{ position: 'relative', height: 280, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
-                                <Slot k={`ger_img${n}`} src={v(`ger_img${n}`)} label={`숙소 사진 ${n}`} editing={editing} alt="高級ゲル" />
+                    <div className="ht-scroll" style={{ marginTop: 52, display: 'flex', gap: 24, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
+                        {/* 1페이지 — 고급 게르 */}
+                        <div style={{ flex: '0 0 100%', scrollSnapAlign: 'start', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            {[1, 2, 3, 4].map(n => (
+                                <div key={n} style={{ position: 'relative', height: 280, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                    <Slot k={`ger_img${n}`} src={v(`ger_img${n}`)} label={`숙소 사진 ${n}`} editing={editing} alt="高級ゲル" />
+                                </div>
+                            ))}
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <Dots count={2} hint={v('ger_hint1')} />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1', marginTop: 18, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 40px' }}>
+                                {[1, 2, 3].map(n => v(`ger_check${n}`) && (
+                                    <div key={n} data-df={`ger_check${n}`} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}>
+                                        <div style={{ color: MINT }}>✓</div>
+                                        <div>{v(`ger_check${n}`)}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ gridColumn: '1 / -1', marginTop: 20, textAlign: 'center', fontSize: 20, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.02em' }}><span data-df="ger_note">{v('ger_note')}</span></div>
+                        </div>
+
+                        {/* 2페이지 — 일반 게르 */}
+                        <div style={{ flex: '0 0 100%', scrollSnapAlign: 'start', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignContent: 'start' }}>
+                            {[1, 2, 3, 4].map(n => (
+                                <div key={n} style={{ position: 'relative', height: 280, borderRadius: 16, overflow: 'hidden', background: '#F2F2F2' }}>
+                                    <Slot k={`ger_std_img${n}`} src={v(`ger_std_img${n}`)} label={`일반 게르 사진 ${n}`} editing={editing} alt="一般ゲル" />
+                                    <div style={{ position: 'absolute', left: 14, top: 14, pointerEvents: 'none', padding: '6px 16px', borderRadius: 8, background: 'rgba(43,43,43,0.78)', color: '#fff', fontSize: 18, fontWeight: 800, letterSpacing: '-0.03em' }}>
+                                        <span data-df="ger_std_badge">{v('ger_std_badge')}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <Dots count={2} hint={v('ger_hint2')} />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1', marginTop: 18, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 40px' }}>
+                                {[1, 2, 3].map(n => v(`ger_std_check${n}`) && (
+                                    <div key={n} data-df={`ger_std_check${n}`} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: '#8a8a8a' }}>
+                                        <div style={{ color: '#B9B9B9' }}>✕</div>
+                                        <div>{v(`ger_std_check${n}`)}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            ))}
+
+
+            {/* ── 14 전용차량 ───────────────────────────────── */}
+            {S('14 전용차량', (v) => (
+                <section style={{ background: '#fff', padding: '100px 40px 90px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#8a8a8a', letterSpacing: '-0.03em' }}><span data-df="veh_kicker">{v('veh_kicker')}</span></div>
+                        <h2 style={{ margin: '18px 0 0', fontSize: 54, lineHeight: 1.22, fontWeight: 800, letterSpacing: '-0.045em', color: DEEP }}>
+                            <div><span data-df="veh_title">{v('veh_title')}</span></div>
+                            <div style={{ color: TEAL, fontSize: 36 }}><span data-df="veh_sub">{v('veh_sub')}</span></div>
+                        </h2>
+                        <Lines k="veh_body" text={v('veh_body')} style={{ margin: '30px 0 0', fontSize: 23, lineHeight: 1.7, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.025em' }} />
+                    </div>
+
+                    <div className="ht-scroll" style={{ margin: '44px -40px 0 0', display: 'flex', alignItems: 'flex-start', gap: 20, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none', padding: '0 40px 14px 0' } as React.CSSProperties}>
+                        {[1, 2, 3, 4, 5].map(n => (
+                            <div key={n} style={{ flex: '0 0 380px', scrollSnapAlign: 'start', borderRadius: 18, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <div style={{ position: 'relative', height: 280, background: '#EFFEF9' }}>
+                                    <Slot k={`veh${n}_img`} src={v(`veh${n}_img`)} label={`차량 ${n} 사진`} editing={editing} alt={v(`veh${n}_name`)} />
+                                </div>
+                                <div style={{ padding: '26px 24px 34px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: TEAL }}><span data-df={`veh${n}_name`}>{v(`veh${n}_name`)}</span></div>
+                                </div>
                             </div>
                         ))}
                     </div>
-                    <div style={{ marginTop: 38, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 40px' }}>
-                        {[v('ger_check1'), v('ger_check2'), v('ger_check3')].map((c, i) => c && (
-                            <div key={i} data-df={`ger_check${i + 1}`} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}>
-                                <div style={{ color: MINT }}>✓</div>
-                                <div>{c}</div>
-                            </div>
-                        ))}
+
+                    <Dots count={5} hint={v('veh_hint')} />
+                    <Lines k="veh_note" text={v('veh_note')} style={{ margin: '44px 0 0', textAlign: 'center', fontSize: 20, lineHeight: 1.65, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.02em' }} />
+                </section>
+            ))}
+
+            {/* ── 15 식사 안내 ──────────────────────────────── */}
+            {S('15 식사 안내', (v) => (
+                <section style={{ position: 'relative', overflow: 'hidden', padding: '0 0 110px', background: '#fff' }}>
+                    <div style={{ position: 'relative', paddingTop: 70, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', width: 'max-content', gap: 22, animation: 'htMealMarquee 26s linear infinite' }}>
+                            {[0, 1].flatMap(rep => [1, 2, 3, 4, 5, 6].map(n => (
+                                <div key={`${rep}-${n}`} style={{ position: 'relative', flex: '0 0 300px', height: 340, borderRadius: 22, overflow: 'hidden', background: '#123028' }}>
+                                    <Slot k={rep === 0 ? `meal_img${n}` : undefined} src={v(`meal_img${n}`)} label={`식사 사진 ${n}`} editing={editing && rep === 0} alt="お食事" />
+                                </div>
+                            )))}
+                        </div>
                     </div>
-                    <div style={{ marginTop: 24, textAlign: 'center', fontSize: 20, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.02em' }}><span data-df="ger_note">{v('ger_note')}</span></div>
+
+                    <div style={{ position: 'relative', padding: '70px 40px 0', textAlign: 'center' }}>
+                        <div style={{ fontSize: 26, fontWeight: 700, color: '#8a8a8a', letterSpacing: '-0.03em' }}><span data-df="meal_kicker">{v('meal_kicker')}</span></div>
+                        <h2 style={{ margin: '14px 0 0', fontSize: 54, fontWeight: 800, letterSpacing: '-0.045em', color: DEEP }}>
+                            <span data-df="meal_title1" style={{ whiteSpace: 'pre-wrap' }}>{v('meal_title1')}</span>
+                            <span data-df="meal_title2" style={{ whiteSpace: 'pre-wrap', color: TEAL }}>{v('meal_title2')}</span>
+                        </h2>
+                    </div>
+
+                    <div style={{ position: 'relative', padding: '0 40px' }}>
+                        <LineList k="meal_points" text={v('meal_points')} style={{ marginTop: 26, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, fontSize: 24, fontWeight: 700, color: '#3a3a3a', letterSpacing: '-0.03em' }} />
+
+                        <div style={{ marginTop: 44 }}>
+                            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.04em', color: TEAL }}><span data-df="meal_local_title">{v('meal_local_title')}</span></div>
+                            <Lines k="meal_local_body" text={v('meal_local_body')} style={{ marginTop: 16, fontSize: 21, lineHeight: 1.75, fontWeight: 600, color: '#4a4a4a', letterSpacing: '-0.025em' }} />
+                        </div>
+                        <div style={{ marginTop: 44 }}>
+                            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.04em', color: TEAL }}><span data-df="meal_camp_title">{v('meal_camp_title')}</span></div>
+                            <Lines k="meal_camp_body" text={v('meal_camp_body')} style={{ marginTop: 16, fontSize: 21, lineHeight: 1.75, fontWeight: 600, color: '#4a4a4a', letterSpacing: '-0.025em' }} />
+                        </div>
+
+                        <div className="ht-scroll" style={{ margin: '52px -40px 0 0', display: 'flex', alignItems: 'flex-start', gap: 24, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none', padding: '0 40px 14px 0' } as React.CSSProperties}>
+                            {[1, 2].map(n => (
+                                <div key={n} style={{ flex: '0 0 100%', scrollSnapAlign: 'start' }}>
+                                    <div style={{ position: 'relative', height: 420, borderRadius: 24, overflow: 'hidden', background: '#EFFEF9' }}>
+                                        <Slot k={`sp${n}_img`} src={v(`sp${n}_img`)} label={`특별식 ${n} 사진`} editing={editing} alt={v(`sp${n}_title`)} />
+                                    </div>
+                                    <Dots count={2} hint={v('meal_hint')} />
+                                    <LineList k={`sp${n}_tags`} text={v(`sp${n}_tags`)} style={{ marginTop: 26, display: 'flex', flexWrap: 'wrap', gap: 18, fontSize: 22, fontWeight: 700, color: TEAL, letterSpacing: '-0.03em' }} />
+                                    <div style={{ marginTop: 20 }}>
+                                        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.04em', color: TEAL }}><span data-df={`sp${n}_title`}>{v(`sp${n}_title`)}</span></div>
+                                        <Lines k={`sp${n}_body`} text={v(`sp${n}_body`)} style={{ marginTop: 16, fontSize: 21, lineHeight: 1.75, fontWeight: 600, color: '#4a4a4a', letterSpacing: '-0.025em' }} />
+                                        <div style={{ marginTop: 20, fontSize: 19, fontWeight: 800, color: TEAL, letterSpacing: '-0.03em' }}><span data-df={`sp${n}_note`}>{v(`sp${n}_note`)}</span></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </section>
             ))}
 
@@ -271,15 +409,13 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                             <div style={{ fontSize: 15, fontWeight: 600, color: TEAL, letterSpacing: '-0.02em' }}><span data-df="spots_hint">{v('spots_hint')}</span></div>
                         </div>
                         <div className="ht-scroll" style={{ margin: '20px -56px 0 0', display: 'flex', alignItems: 'flex-start', gap: 22, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none', padding: '4px 56px 16px 0' } as React.CSSProperties}>
-                            {dayCards.map((c, i) => (
-                                <div key={i} style={{ flex: '0 0 300px', marginTop: c.offset ? 34 : 0, scrollSnapAlign: 'start', background: '#fff', borderRadius: 26, boxShadow: '0 14px 34px rgba(0,51,46,0.10)', overflow: 'hidden' }}>
-                                    <div style={{ position: 'relative', height: 190, background: '#C8FFEF' }}>
+                            {dayCards.map(c => (
+                                <div key={c.n} style={{ flex: '0 0 340px', marginTop: c.offset ? 34 : 0, scrollSnapAlign: 'start', background: '#0B1F1B', borderRadius: 26, overflow: 'hidden' }}>
+                                    <div style={{ position: 'relative', height: 420, background: '#123028' }}>
                                         <Slot k={`day${c.n}_img`} src={c.img} label={`${c.badge} 사진`} editing={editing} alt={c.title} />
-                                        <div style={{ position: 'absolute', top: 14, left: 14, pointerEvents: 'none', padding: '7px 16px', borderRadius: 999, background: MINT, color: '#fff', fontSize: 17, fontWeight: 800, letterSpacing: '-0.03em' }}><span data-df={`day${c.n}_badge`}>{c.badge}</span></div>
-                                    </div>
-                                    <div style={{ padding: '22px 24px 28px' }}>
-                                        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}><span data-df={`day${c.n}_title`}>{c.title}</span></div>
-                                        <Lines k={`day${c.n}_body`} text={c.body} style={{ margin: '12px 0 0', fontSize: 19, lineHeight: 1.6, fontWeight: 500, color: '#5a5a5a', letterSpacing: '-0.02em' }} />
+                                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(11,31,27,0.45) 0%, rgba(11,31,27,0.1) 40%, rgba(11,31,27,0.88) 100%)' }} />
+                                        <div style={{ position: 'absolute', top: 18, left: 18, fontSize: 17, fontWeight: 800, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.85)' }}><span data-df={`day${c.n}_badge`}>{c.badge}</span></div>
+                                        <div style={{ position: 'absolute', left: 24, right: 24, bottom: 26, fontSize: 20, lineHeight: 1.35, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 4px 22px rgba(0,0,0,0.5)' }}><span data-df={`day${c.n}_title`}>{c.title}</span></div>
                                     </div>
                                 </div>
                             ))}
@@ -296,14 +432,24 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
                         <Slot k="gobi_hero_img" src={v('gobi_hero_img')} label="고비 히어로 배경 사진" editing={editing} alt="ゴビ" />
                     </div>
                     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.35) 100%)' }} />
-                    <div style={{ position: 'relative', pointerEvents: 'none', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '120px 60px 80px', boxSizing: 'border-box', textAlign: 'center' }}>
-                        <div style={{ fontSize: 27, fontWeight: 600, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em', textShadow: '0 2px 14px rgba(0,0,0,0.4)' }}><span data-df="gobi_kicker">{v('gobi_kicker')}</span></div>
-                        <h2 style={{ margin: '26px 0 0', fontSize: 62, lineHeight: 1.18, fontWeight: 800, letterSpacing: '-0.045em', color: '#fff', textShadow: '0 3px 22px rgba(0,0,0,0.45)' }}><span data-df="gobi_title">{v('gobi_title')}</span></h2>
-                        <div style={{ marginTop: 14, width: 520, height: 5, borderRadius: 3, background: MINT }} />
-                        <Lines k="gobi_body" text={v('gobi_body')} style={{ margin: '34px 0 0', fontSize: 38, lineHeight: 1.42, fontWeight: 700, letterSpacing: '-0.035em', color: '#fff', textShadow: '0 2px 18px rgba(0,0,0,0.45)' }} />
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(6,196,160,0.16) 0%, rgba(0,51,46,0.05) 40%, rgba(6,196,160,0.34) 100%)', mixBlendMode: 'multiply' }} />
+                    <div style={{ position: 'absolute', left: 0, right: 0, top: 40, pointerEvents: 'none', padding: '0 46px', color: '#fff' }}>
+                        <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+                            <div>MILKY WAY</div>
+                            <div>Mongolia</div>
+                        </div>
+                    </div>
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 88, pointerEvents: 'none', padding: '0 46px', color: '#fff', textAlign: 'center' }}>
+                        <div style={{ fontSize: 96, lineHeight: 0.96, fontWeight: 900, letterSpacing: '0.02em', textShadow: '0 6px 30px rgba(0,0,0,0.4)' }}><span data-df="gobi_title">{v('gobi_title')}</span></div>
+                        <div style={{ marginTop: 10, fontSize: 52, lineHeight: 1.05, fontWeight: 900, letterSpacing: '0.16em', textShadow: '0 4px 22px rgba(0,0,0,0.4)' }}><span data-df="gobi_title2">{v('gobi_title2')}</span></div>
+                        <div style={{ margin: '30px auto 0', maxWidth: 620, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 20, lineHeight: 1.6, fontWeight: 600, letterSpacing: '-0.01em', textShadow: '0 2px 12px rgba(0,0,0,0.55)' }}>
+                            <div data-df="gobi_kicker">{v('gobi_kicker')}</div>
+                            <Lines k="gobi_body" text={v('gobi_body')} />
+                        </div>
                     </div>
                 </section>
             ))}
+
 
             {/* ── 10 하이라이트 ─────────────────────────────── */}
             {S('10 하이라이트', (v) => {
@@ -340,18 +486,34 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
 
             {/* ── 11 은하수 ─────────────────────────────────── */}
             {S('11 은하수', (v) => (
-                <section style={{ position: 'relative', height: 720, overflow: 'hidden', background: DEEP }}>
-                    <div style={{ position: 'absolute', inset: 0, background: '#0E5349' }}>
-                        <Slot k="mw_img" src={v('mw_img')} label="은하수 사진" editing={editing} alt="天の川" />
+                <section style={{ position: 'relative', background: '#02100E' }}>
+                    <div style={{ position: 'relative', height: 640, overflow: 'hidden', background: '#02100E' }}>
+                        <div style={{ position: 'absolute', inset: 0, background: '#0B1F1B' }}>
+                            <Slot k="mw_img" src={v('mw_img')} label="은하수 사진" editing={editing} alt="天の川" />
+                        </div>
+                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(2,16,14,0.3) 0%, rgba(2,16,14,0.05) 40%, rgba(2,16,14,0.9) 100%)' }} />
                     </div>
-                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.35) 0%, rgba(0,51,46,0) 45%, rgba(0,51,46,0.78) 100%)' }} />
-                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 130, pointerEvents: 'none', textAlign: 'center', color: '#fff', fontSize: 56, lineHeight: 1.6, fontWeight: 600, letterSpacing: '-0.02em', textShadow: '0 2px 16px rgba(0,0,0,0.6)' }}><span data-df="mw_caption">{v('mw_caption')}</span></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 56, alignItems: 'start', padding: '0 50px 64px', marginTop: -150, position: 'relative' }}>
+                        <Lines k="mw_caption" text={v('mw_caption')} style={{ fontSize: 46, lineHeight: 1.32, fontWeight: 800, letterSpacing: '-0.045em', color: '#fff', textShadow: '0 4px 26px rgba(0,0,0,0.5)' }} />
+                        <div style={{ paddingTop: 14 }}>
+                            <div style={{ width: 54, height: 3, background: '#fff' }} />
+                            <LineList k="mw_body" text={v('mw_body')} style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 8, fontSize: 21, lineHeight: 1.7, fontWeight: 600, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.82)' }} />
+                        </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 6, background: '#02100E', padding: '0 0 6px' }}>
+                        {[1, 2, 3, 4].map(n => (
+                            <div key={n} style={{ position: 'relative', height: 300, overflow: 'hidden', background: '#0B1F1B' }}>
+                                <Slot k={`milky_img${n}`} src={v(`milky_img${n}`)} label={`은하수 사진 ${n}`} editing={editing} alt="天の川" />
+                            </div>
+                        ))}
+                    </div>
                 </section>
             ))}
 
+
             {/* ── 12 공항 도착 ──────────────────────────────── */}
             {S('12 공항 도착', (v) => (
-                <section style={{ background: '#fff', padding: '100px 0 0', wordBreak: 'keep-all' }}>
+                <section style={{ background: '#fff', padding: '100px 0 0' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.04em', color: '#c9c9c9' }}><span data-df="arr_from">{v('arr_from')}</span></div>
                         <div style={{ marginTop: 22, width: 3, height: 78, background: MINT }} />
@@ -378,110 +540,216 @@ export default function HorseTrekTemplate({ v, editing, instances }: DesignTempl
     
                     <div style={{ padding: '70px 60px 100px' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 20 }}>
-                            <div style={{ position: 'relative', flex: '0 0 470px', height: 430, background: '#EFFEF9', borderRadius: 6, overflow: 'hidden' }}>
+                            <div style={{ position: 'relative', flex: '0 1 470px', minWidth: 0, height: 430, background: '#EFFEF9', borderRadius: 6, overflow: 'hidden' }}>
                                 <Slot k="welcome_img" src={v('welcome_img')} label="픽업기사 웰컴카드 사진" editing={editing} alt="ウェルカムボード" />
                             </div>
-                            <Lines k="welcome_side" text={v('welcome_side')} style={{ flex: '0 0 auto', paddingTop: 130, whiteSpace: 'pre-line', fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: '#2b2b2b' }} />
+                            <div style={{ flex: '0 0 280px', paddingTop: 96, color: MINT }}>
+                                <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1 }}><span data-df="welcome_w1">{v('welcome_w1')}</span></div>
+                                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ fontSize: 74, fontWeight: 900, letterSpacing: '-0.06em', lineHeight: 0.9, textTransform: 'uppercase' }}><span data-df="welcome_w2">{v('welcome_w2')}</span></div>
+                                    <div style={{ flex: 1, height: 56, background: MINT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0 8px' }}>
+                                        {[1, 2, 3].map(n => (
+                                            <div key={n} style={{ position: 'relative', flex: 1, height: 44 }}>
+                                                <Slot k={`mn_icon${n}`} src={v(`mn_icon${n}`)} label="아이콘" editing={editing} alt="" contain />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: 6, fontSize: 47, fontWeight: 900, letterSpacing: '-0.055em', lineHeight: 0.95, textTransform: 'uppercase' }}><span data-df="welcome_w3">{v('welcome_w3')}</span></div>
+                                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ flex: 1, height: 44, background: MINT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0 8px' }}>
+                                        {[4, 5, 6].map(n => (
+                                            <div key={n} style={{ position: 'relative', flex: 1, height: 34 }}>
+                                                <Slot k={`mn_icon${n}`} src={v(`mn_icon${n}`)} label="아이콘" editing={editing} alt="" contain />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: MINT }} />
+                                </div>
+                            </div>
                         </div>
                         <div style={{ marginTop: 34, textAlign: 'center', fontSize: 27, lineHeight: 1.5, fontWeight: 700, letterSpacing: '-0.035em', color: '#2b2b2b' }}><span data-df="welcome_caption">{v('welcome_caption')}</span></div>
                     </div>
                 </section>
             ))}
 
-            {/* ── 13 1일차 상세 ─────────────────────────────── */}
-            {S('13 1일차 상세', (v) => {
-                const tabs = [1, 2, 3, 4, 5].map(n => ({ label: v(`tab${n}_label`), text: v(`tab${n}_text`) }));
-                const schedule = [1, 2, 3].map(n => ({ time: v(`d1_t${n}`), body: v(`d1_e${n}`) }));
-                return (
-                <section style={{ position: 'relative', background: '#EFFEF9', padding: '60px 0 90px' }}>
-                    <div style={{ position: 'relative', height: 470, overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: '#DFFFF4' }}>
-                            <Slot k="d1_hero_img" src={v('d1_hero_img')} label="1일차 초원 사진" editing={editing} alt="草原" />
+            
+            {/* ── 16 여행의 순간들 ──────────────────────────── */}
+            {S('16 여행의 순간들', (v) => (
+                <section style={{ background: '#fff', padding: '100px 40px 110px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.05fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div style={{ position: 'relative', height: 520, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img1" src={v('moment_img1')} label="절벽 위 인생샷" editing={editing} alt="" />
+                            </div>
+                            <div style={{ position: 'relative', height: 330, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img2" src={v('moment_img2')} label="캠프파이어" editing={editing} alt="" />
+                            </div>
+                            <Lines k="moment_text1" text={v('moment_text1')} style={{ padding: '36px 4px 30px', fontSize: 38, lineHeight: 1.26, fontWeight: 900, letterSpacing: '-0.045em', color: '#CFE3DC' }} />
+                            <div style={{ position: 'relative', height: 430, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img3" src={v('moment_img3')} label="샌드보딩" editing={editing} alt="" />
+                            </div>
+                            <div style={{ position: 'relative', height: 300, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img4" src={v('moment_img4')} label="허르헉 조리" editing={editing} alt="" />
+                            </div>
                         </div>
-                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.22) 55%, rgba(0,51,46,0.1) 100%)' }} />
-                        <div style={{ position: 'relative', pointerEvents: 'none', padding: '56px 60px 0' }}>
-                            <h2 style={{ margin: 0, fontSize: 46, fontWeight: 800, letterSpacing: '-0.04em', color: '#fff', textShadow: '0 2px 18px rgba(0,0,0,0.35)' }}><span data-df="d1_title">{v('d1_title')}</span></h2>
-                            <div style={{ marginTop: 38, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, wordBreak: 'keep-all' }}>
-                                {tabs.map((t, i) => (
-                                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, opacity: i === 0 ? 1 : 0.72 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            {i === 0
-                                                ? <div style={{ width: 14, height: 14, borderRadius: '50%', background: MINT, boxShadow: '0 0 0 4px rgba(255,255,255,0.45)' }} />
-                                                : <div style={{ width: 11, height: 11, borderRadius: '50%', background: 'rgba(255,255,255,0.85)' }} />}
-                                            <div style={{ fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${i + 1}_label`}>{t.label}</span></div>
-                                        </div>
-                                        <div style={{ fontSize: 19, fontWeight: i === 0 ? 700 : 600, color: '#fff', letterSpacing: '-0.02em' }}><span data-df={`tab${i + 1}_text`}>{t.text}</span></div>
-                                    </div>
-                                ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <Lines k="moment_text2" text={v('moment_text2')} style={{ padding: '44px 4px 34px', textAlign: 'right', fontSize: 56, lineHeight: 1.2, fontWeight: 900, letterSpacing: '-0.05em', color: '#CFE3DC' }} />
+                            <div style={{ position: 'relative', height: 470, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img5" src={v('moment_img5')} label="낙타 트레킹" editing={editing} alt="" />
+                            </div>
+                            <div style={{ position: 'relative', height: 300, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img6" src={v('moment_img6')} label="양털 기념품" editing={editing} alt="" />
+                            </div>
+                            <div style={{ position: 'relative', height: 420, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img7" src={v('moment_img7')} label="단체 점프" editing={editing} alt="" />
+                            </div>
+                            <div style={{ position: 'relative', height: 340, borderRadius: 16, overflow: 'hidden', background: '#EFFEF9' }}>
+                                <Slot k="moment_img8" src={v('moment_img8')} label="별 관측" editing={editing} alt="" />
                             </div>
                         </div>
                     </div>
-    
-                    <div style={{ margin: '-70px 40px 0', position: 'relative', background: '#fff', borderRadius: 40, boxShadow: '0 24px 60px rgba(0,51,46,0.10)', padding: '60px 56px 66px', wordBreak: 'keep-all' }}>
-                        <div style={{ fontSize: 26, fontWeight: 700, color: DEEP, letterSpacing: '-0.03em' }}><span data-df="d1_kicker">{v('d1_kicker')}</span></div>
-                        <h3 style={{ margin: '16px 0 0', fontSize: 46, fontWeight: 800, letterSpacing: '-0.045em', color: TEAL }}><span data-df="d1_head">{v('d1_head')}</span></h3>
-                        <Lines k="d1_body" text={v('d1_body')} style={{ margin: '34px 0 0', fontSize: 23, lineHeight: 1.75, fontWeight: 500, color: '#4a4a4a', letterSpacing: '-0.02em', textWrap: 'pretty' } as React.CSSProperties} />
-    
-                        <div style={{ marginTop: 44, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                            {[1, 2, 3, 4].map(n => (
-                                <div key={n} style={{ position: 'relative', height: 250, borderRadius: 18, overflow: 'hidden', background: '#EFFEF9' }}>
-                                    <Slot k={`d1_img${n}`} src={v(`d1_img${n}`)} label={`1일차 사진 ${n}`} editing={editing} alt="1日目" />
+                </section>
+            ))}
+
+            {/* ── 17 포함/불포함 ────────────────────────────── */}
+            {S('17 포함/불포함', (v) => (
+                <section style={{ position: 'relative', overflow: 'hidden', background: DEEP, padding: '0 0 80px' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: '#0A6558' }}>
+                        <Slot k="notice_bg" src={v('notice_bg')} label="초원 배경 사진" editing={editing} alt="草原" />
+                    </div>
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,51,46,0.62) 0%, rgba(0,51,46,0.42) 45%, rgba(0,51,46,0.7) 100%)' }} />
+                    <div style={{ position: 'relative', padding: '86px 40px 0', textAlign: 'center' }}>
+                        <h2 style={{ margin: 0, fontSize: 96, lineHeight: 1, fontWeight: 900, letterSpacing: '-0.04em', color: MINT, textShadow: '0 6px 30px rgba(0,0,0,0.35)' }}><span data-df="notice_title">{v('notice_title')}</span></h2>
+                        <div style={{ marginTop: 18, fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: 'rgba(255,255,255,0.85)' }}><span data-df="notice_sub">{v('notice_sub')}</span></div>
+                    </div>
+                    <div style={{ position: 'relative', margin: '52px 50px 0', background: '#fff', padding: '48px 52px 52px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <div style={{ flex: '0 0 34px', height: 34, borderRadius: '50%', background: MINT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800 }}>✓</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}><span data-df="inc_title">{v('inc_title')}</span></div>
+                        </div>
+                        <LineList k="inc_items" text={v('inc_items')} style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 13, fontSize: 22, lineHeight: 1.45, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                        <div style={{ margin: '38px 0', height: 1, background: '#e2e2e2' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <div style={{ flex: '0 0 34px', height: 34, borderRadius: '50%', background: '#C2B8A3', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, fontWeight: 800 }}>✕</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: '#2b2b2b' }}><span data-df="exc_title">{v('exc_title')}</span></div>
+                        </div>
+                        <LineList k="exc_items" text={v('exc_items')} style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 13, fontSize: 22, lineHeight: 1.45, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                    </div>
+                </section>
+            ))}
+
+            {/* ── 18 투어 가격 ──────────────────────────────── */}
+            {S('18 투어 가격', (v) => {
+                const cols = 'minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.9fr)';
+                const head = v('price_head').split('|').map(x => x.trim());
+                const rows = v('price_rows').split('\n').map(x => x.trim()).filter(Boolean).map(r => r.split('|').map(c => c.trim()));
+                return (
+                <section style={{ background: '#EFFEF9', padding: '70px 40px 110px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 26, fontWeight: 700, color: '#5a5a5a', letterSpacing: '-0.03em' }}><span data-df="price_kicker">{v('price_kicker')}</span></div>
+                        <h2 style={{ margin: '14px 0 0', fontSize: 56, fontWeight: 800, letterSpacing: '-0.05em', color: DEEP }}><span data-df="price_title">{v('price_title')}</span></h2>
+                    </div>
+                    <div style={{ marginTop: 44, borderRadius: 20, overflow: 'hidden', background: '#fff' }}>
+                        <div data-df="price_head" style={{ display: 'grid', gridTemplateColumns: cols, background: DEEP, color: '#fff', fontSize: 21, fontWeight: 800, letterSpacing: '-0.03em', textAlign: 'center' }}>
+                            {head.map((h, i) => <div key={i} style={{ padding: '20px 8px' }}>{h}</div>)}
+                        </div>
+                        <div data-df="price_rows">
+                            {rows.map((r, i) => (
+                                <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', textAlign: 'center', padding: '22px 0', borderBottom: i === rows.length - 1 ? undefined : '1px solid #F0F0F0' }}>
+                                    {r.map((c, j) => <div key={j} style={{ fontSize: 26, fontWeight: 800, color: j === r.length - 1 ? TEAL : '#2b2b2b' }}>{c}</div>)}
                                 </div>
                             ))}
                         </div>
-    
-                        <div style={{ marginTop: 52, display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 44 }}>
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <SectionDot />
-                                    <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}><span data-df="d1_route_title">{v('d1_route_title')}</span></div>
-                                </div>
-                                <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                                    {schedule.map((s, i) => (
-                                        <div key={i} style={{ display: 'flex', gap: 20 }}>
-                                            <div style={{ flex: '0 0 82px', fontSize: 21, fontWeight: 800, color: TEAL, letterSpacing: '-0.02em' }}><span data-df={`d1_t${i + 1}`}>{s.time}</span></div>
-                                            <Lines k={`d1_e${i + 1}`} text={s.body} style={{ fontSize: 21, lineHeight: 1.55, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }} />
-                                        </div>
-                                    ))}
-                                </div>
+                    </div>
+                    <div style={{ marginTop: 36, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px 24px' }}>
+                        {[1, 2].map(n => (
+                            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ padding: '8px 20px', borderRadius: 999, background: DEEP, color: '#fff', fontSize: 19, fontWeight: 800, letterSpacing: '-0.03em' }}><span data-df={`price_tag${n}`}>{v(`price_tag${n}`)}</span></div>
+                                <div style={{ fontSize: 20, fontWeight: 600, color: '#4a4a4a', letterSpacing: '-0.025em' }}><span data-df={`price_tag${n}_desc`}>{v(`price_tag${n}_desc`)}</span></div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <SectionDot />
-                                        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}>식사정보</div>
-                                    </div>
-                                    <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}>
-                                        <div>조식 <span style={{ color: '#C8FFEF' }}>|</span> <span data-df="d1_meal_b">{v('d1_meal_b')}</span></div>
-                                        <div>중식 <span style={{ color: '#C8FFEF' }}>|</span> <span data-df="d1_meal_l">{v('d1_meal_l')}</span></div>
-                                        <div>석식 <span style={{ color: '#C8FFEF' }}>|</span> <span data-df="d1_meal_d">{v('d1_meal_d')}</span></div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <SectionDot />
-                                        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}>숙박정보</div>
-                                    </div>
-                                    <div style={{ marginTop: 20, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}><span data-df="d1_stay">{v('d1_stay')}</span></div>
-                                    <div data-df="d1_stay_tags" style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: '10px 22px', fontSize: 19, fontWeight: 600, color: TEAL, letterSpacing: '-0.02em' }}>
-                                        {v('d1_stay_tags').split('\n').map(s => s.trim()).filter(Boolean).map((t, i) => <div key={i}>{t}</div>)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-    
-                        <div style={{ marginTop: 48, height: 1, background: '#EFFEF9' }} />
-                        <div style={{ marginTop: 36 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <SectionDot />
-                                <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: DEEP }}>포함체험 / 즐길거리</div>
-                            </div>
-                            <div style={{ marginTop: 18, fontSize: 21, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.02em' }}><span data-df="d1_exp">{v('d1_exp')}</span></div>
-                        </div>
+                        ))}
+                    </div>
+                    <div style={{ position: 'relative', marginTop: 56, height: 320, borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
+                        <Slot k="price_img" src={v('price_img')} label="사막 낙타 사진" editing={editing} alt="ラクダ" />
                     </div>
                 </section>
                 );
             })}
+
+            {/* ── 19 예약 전 확인사항 ───────────────────────── */}
+            {S('19 예약 전 확인사항', (v) => {
+                const gtCols = 'minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.8fr)';
+                const gtHead = v('gt_head').split('|').map(x => x.trim());
+                return (
+                <section style={{ background: '#fff', padding: '100px 50px 110px' }}>
+                    <h2 style={{ margin: 0, textAlign: 'center', fontSize: 46, fontWeight: 800, letterSpacing: '-0.045em', color: '#2b2b2b' }}><span data-df="terms_title">{v('terms_title')}</span></h2>
+
+                    <div style={{ marginTop: 58 }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: DEEP }}><span data-df="cancel_title">{v('cancel_title')}</span></div>
+                        <LineList k="cancel_body" text={v('cancel_body')} style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 16, fontSize: 21, lineHeight: 1.6, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                        <LineList k="cancel_box" text={v('cancel_box')} style={{ marginTop: 26, padding: '24px 30px', background: '#EFFEF9', display: 'flex', flexDirection: 'column', gap: 10, fontSize: 21, fontWeight: 800, color: DEEP, letterSpacing: '-0.03em' }} />
+                    </div>
+
+                    <div style={{ marginTop: 56 }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: DEEP }}><span data-df="tour_title">{v('tour_title')}</span></div>
+                        <LineList k="tour_body" text={v('tour_body')} style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 18, fontSize: 18, lineHeight: 1.75, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                        <div style={{ marginTop: 30, padding: '22px 0', background: '#111', textAlign: 'center', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}><span data-df="tour_banner">{v('tour_banner')}</span></div>
+                    </div>
+
+                    <div style={{ marginTop: 56 }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: DEEP }}><span data-df="gerstay_title">{v('gerstay_title')}</span></div>
+                        <div style={{ marginTop: 20, fontSize: 21, lineHeight: 1.6, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }}>
+                            <div>· <span data-df="gerstay_lead" style={{ color: TEAL, fontWeight: 800 }}>{v('gerstay_lead')}</span></div>
+                            <Lines k="gerstay_body" text={v('gerstay_body')} style={{ paddingLeft: 16 }} />
+                        </div>
+                        <div style={{ marginTop: 40, border: '1px solid #E4EFEA', borderRadius: 14, overflow: 'hidden' }}>
+                            <div data-df="gt_head" style={{ display: 'grid', gridTemplateColumns: gtCols, background: '#edf6f3', textAlign: 'center', fontSize: 21, fontWeight: 800, color: '#2b2b2b', letterSpacing: '-0.03em' }}>
+                                {gtHead.map((h, i) => <div key={i} style={{ padding: '16px 10px' }}>{h}</div>)}
+                            </div>
+                            {[1, 2, 3, 4].map((n, i) => (
+                                <div key={n} style={{ display: 'grid', gridTemplateColumns: gtCols, alignItems: 'center', borderBottom: i === 3 ? undefined : '1px solid #EFEFEF' }}>
+                                    <Lines k={`gt${n}_name`} text={v(`gt${n}_name`)} style={{ padding: '20px 10px', textAlign: 'center', fontSize: 20, fontWeight: 800, color: '#2b2b2b', letterSpacing: '-0.03em' }} />
+                                    <div style={{ padding: '14px 16px' }}>
+                                        <div style={{ position: 'relative', height: 120, borderRadius: 8, overflow: 'hidden', background: '#EFFEF9' }}>
+                                            <Slot k={`gt${n}_img`} src={v(`gt${n}_img`)} label="사진" editing={editing} alt="ゲル" />
+                                        </div>
+                                    </div>
+                                    <Lines k={`gt${n}_spec`} text={v(`gt${n}_spec`)} style={{ padding: '18px 20px', fontSize: 19, lineHeight: 1.65, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: 56 }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: DEEP }}><span data-df="animal_title">{v('animal_title')}</span></div>
+                        <LineList k="animal_body" text={v('animal_body')} style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 16, fontSize: 21, lineHeight: 1.6, fontWeight: 600, color: '#3a3a3a', letterSpacing: '-0.025em' }} />
+                    </div>
+                </section>
+                );
+            })}
+
+            {/* ── 20 FAQ ────────────────────────────────────── */}
+            {S('20 FAQ', (v) => (
+                <section style={{ background: '#EFFEF9', padding: '90px 50px 110px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 64, fontWeight: 900, letterSpacing: '-0.04em', color: MINT }}><span data-df="faq_title">{v('faq_title')}</span></div>
+                        <div style={{ marginTop: 4, fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', color: '#2b2b2b' }}><span data-df="faq_sub">{v('faq_sub')}</span></div>
+                    </div>
+                    <div style={{ marginTop: 44, border: '1px solid #CFEFE3', borderRadius: 26, background: '#fff', padding: '46px 46px 50px' }}>
+                        {[1, 2, 3, 4, 5].map((n, i) => (
+                            <React.Fragment key={n}>
+                                {i > 0 && <div style={{ margin: '36px 0', height: 1, background: '#E8F3EE' }} />}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                                    <div style={{ flex: '0 0 40px', height: 40, borderRadius: 10, background: MINT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em' }}>Q.</div>
+                                    <div style={{ fontSize: 23, lineHeight: 1.45, fontWeight: 800, letterSpacing: '-0.03em', color: TEAL, paddingTop: 6 }}><span data-df={`faq${n}_q`}>{v(`faq${n}_q`)}</span></div>
+                                </div>
+                                <Lines k={`faq${n}_a`} text={v(`faq${n}_a`)} style={{ margin: '18px 0 0 56px', fontSize: 20, lineHeight: 1.65, fontWeight: 600, color: '#5a5a5a', letterSpacing: '-0.025em' }} />
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </section>
+            ))}
         </div>
     );
 }
