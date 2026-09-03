@@ -86,6 +86,20 @@ const monthKey = (iso?: string) => {
     if (Number.isNaN(d.getTime())) return '';
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
+// 오늘 (yyyy-mm-dd, 로컬 기준)
+const todayKey = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+// 투어가 이미 끝났는가 — 종료일(없으면 출발일)이 오늘보다 앞이면 지난 투어
+const isPastTour = (r: { startDate?: string; endDate?: string }, today: string) => {
+    const last = r.endDate || r.startDate;
+    if (!last) return false;
+    const d = new Date(last);
+    if (Number.isNaN(d.getTime())) return false;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return key < today;
+};
 // startDate + offset일 → yyyy-mm-dd (date input용 기본값)
 const isoOffset = (start?: string, offset = 0) => {
     if (!start) return '';
@@ -175,7 +189,10 @@ export const AdminAccommodationOps: React.FC = () => {
     const monthOptions = useMemo(() => {
         const set = new Set<string>();
         base.forEach(r => { const k = monthKey(r.startDate); if (k) set.add(k); });
-        return Array.from(set).sort().reverse();
+        const thisMonth = todayKey().slice(0, 7);
+        const all = Array.from(set).sort();
+        // 다가오는 달은 가까운 순, 지난 달은 최근 순
+        return { upcoming: all.filter(m => m >= thisMonth), past: all.filter(m => m < thisMonth).reverse() };
     }, [base]);
     const regionOptions = useMemo(() => {
         const set = new Set<string>();
@@ -183,9 +200,14 @@ export const AdminAccommodationOps: React.FC = () => {
         return Array.from(set).sort();
     }, [base]);
     const filtered = useMemo(() => {
+        const today = todayKey();
         const needle = q.trim().toLowerCase();
         return base.filter(r => {
-            if (month !== 'all' && monthKey(r.startDate) !== month) return false;
+            if (month === 'all') {
+                if (isPastTour(r, today)) return false;          // 기본: 진행 중 + 다가오는 투어만
+            } else if (month === 'past') {
+                if (!isPastTour(r, today)) return false;         // 지난 투어만
+            } else if (monthKey(r.startDate) !== month) return false;
             if (region !== 'all' && regionOf(r) !== region) return false;
             if (confirmFilter !== 'all') {
                 const done = summaryOf(r).allConfirmed;
@@ -198,6 +220,7 @@ export const AdminAccommodationOps: React.FC = () => {
             }
             return true;
         }).sort((a, b) => {
+            if (month === 'past') return (b.startDate || '').localeCompare(a.startDate || '');
             const da = summaryOf(a).allConfirmed ? 1 : 0;
             const db = summaryOf(b).allConfirmed ? 1 : 0;
             if (da !== db) return da - db;
@@ -343,8 +366,18 @@ export const AdminAccommodationOps: React.FC = () => {
                         <option value="all">Бүх захиалга</option>
                     </select>
                     <select className="select" value={month} onChange={e => setMonth(e.target.value)}>
-                        <option value="all">Бүх сар (ирэх)</option>
-                        {monthOptions.map(m => <option key={m} value={m}>{m.replace('-', '.')}</option>)}
+                        <option value="all">Ирэх аялал (өнөөдрөөс)</option>
+                        <option value="past">Өнгөрсөн аялал</option>
+                        {monthOptions.upcoming.length > 0 && (
+                            <optgroup label="Ирэх сар">
+                                {monthOptions.upcoming.map(m => <option key={m} value={m}>{m.replace('-', '.')}</option>)}
+                            </optgroup>
+                        )}
+                        {monthOptions.past.length > 0 && (
+                            <optgroup label="Өнгөрсөн сар">
+                                {monthOptions.past.map(m => <option key={m} value={m}>{m.replace('-', '.')}</option>)}
+                            </optgroup>
+                        )}
                     </select>
                     <select className="select" value={region} onChange={e => setRegion(e.target.value)}>
                         <option value="all">Бүх бүс нутаг</option>
