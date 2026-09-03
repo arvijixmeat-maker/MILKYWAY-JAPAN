@@ -12,6 +12,8 @@ export interface DesignSpot {
     id: string;
     /** 카드에 표시될 이름 — 운영 페이지에 그대로 나오므로 일본어로 */
     name: string;
+    /** 목록에서 고른 경우의 영어 표기 (관리자 표시용) */
+    en?: string;
     image: string;
 }
 

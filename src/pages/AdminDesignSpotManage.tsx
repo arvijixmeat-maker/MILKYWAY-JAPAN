@@ -1,25 +1,58 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { uploadImage } from '../utils/upload';
 import { loadDesignSpots, saveDesignSpots, type DesignSpot } from '../components/product/designTemplates/designSpots';
+import { MAP_DESTINATIONS, toJaDestinationName } from '../components/product/designTemplates/mapDestinations';
+
+const CUSTOM = '__custom__';
 
 /**
  * 여행지 사진 — 디자인 템플릿 「방문 여행지」 카드에서 바로 불러 쓰는
  * 이미지 + 이름만의 가벼운 등록 페이지. (관광지 마스터와 별개)
+ * 이름은 영어 목록에서 고르면 운영 페이지에는 공식 일본어 표기로 표시된다.
  */
 export const AdminDesignSpotManage: React.FC = () => {
     const [spots, setSpots] = useState<DesignSpot[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [newName, setNewName] = useState('');
+    const [converted, setConverted] = useState<string[]>([]);
+    const [pick, setPick] = useState('');            // 선택한 영어 표기 (또는 CUSTOM)
+    const [customName, setCustomName] = useState('');
     const [newImage, setNewImage] = useState('');
     const [uploadingNew, setUploadingNew] = useState(false);
     const [uploadingId, setUploadingId] = useState<string | null>(null);
-    const nameRef = useRef<HTMLInputElement>(null);
+    const selectRef = useRef<HTMLSelectElement>(null);
+
+    /** 영어 → 일본어 목록을 지역별로 묶는다 (지도 경유지와 같은 순서) */
+    const groups = useMemo(() => {
+        const out: { name: string; items: typeof MAP_DESTINATIONS }[] = [];
+        for (const d of MAP_DESTINATIONS) {
+            const last = out[out.length - 1];
+            if (last && last.name === d.group) last.items.push(d);
+            else out.push({ name: d.group, items: [d] });
+        }
+        return out;
+    }, []);
 
     useEffect(() => {
-        loadDesignSpots(true).then(v => { setSpots(v); setLoading(false); });
+        loadDesignSpots(true).then(async (v) => {
+            // 예전에 영어로 등록해 둔 이름은 공식 일본어 표기로 한 번 바꿔 저장한다
+            const changed: string[] = [];
+            const next = v.map(s => {
+                const ja = toJaDestinationName(s.name);
+                if (ja === s.name) return s;
+                changed.push(`${s.name} → ${ja}`);
+                const hit = MAP_DESTINATIONS.find(d => d.ja === ja);
+                return { ...s, name: ja, en: hit?.en ?? s.en };
+            });
+            setSpots(next);
+            setLoading(false);
+            if (changed.length > 0) {
+                setConverted(changed);
+                try { await saveDesignSpots(next); } catch (error) { console.error('Design spot auto-convert save failed:', error); }
+            }
+        });
     }, []);
 
     const persist = async (next: DesignSpot[]) => {
@@ -48,20 +81,20 @@ export const AdminDesignSpotManage: React.FC = () => {
         }
     };
 
+    const picked = pick && pick !== CUSTOM ? MAP_DESTINATIONS.find(d => d.en === pick) : undefined;
+    const previewName = picked ? picked.ja : (pick === CUSTOM ? toJaDestinationName(customName) : '');
+
     const addSpot = () => {
-        const name = newName.trim();
+        if (!pick) { alert('여행지를 목록에서 골라 주세요'); return; }
+        const name = previewName.trim();
         if (!name) { alert('여행지 이름을 입력해 주세요 (운영 페이지에 그대로 표시되므로 일본어 권장)'); return; }
         if (!newImage) { alert('사진을 올려 주세요'); return; }
-        persist([...spots, { id: `spot_${Date.now()}`, name, image: newImage }]);
-        setNewName('');
+        persist([...spots, { id: `spot_${Date.now()}`, name, en: picked?.en, image: newImage }]);
+        setPick('');
+        setCustomName('');
         setNewImage('');
-        nameRef.current?.focus();
+        selectRef.current?.focus();
     };
-
-    const rename = (id: string, name: string) => {
-        setSpots(spots.map(s => (s.id === id ? { ...s, name } : s)));
-    };
-    const renameCommit = () => persist(spots);
 
     const replaceImage = async (id: string, file: File | undefined) => {
         if (!file) return;
@@ -77,6 +110,21 @@ export const AdminDesignSpotManage: React.FC = () => {
         }
     };
 
+    /** 기존 카드의 이름을 목록에서 다시 고른다 (영어 → 일본어) */
+    const repick = (id: string, en: string) => {
+        if (en === CUSTOM) {
+            const typed = window.prompt('여행지 이름을 직접 입력 (일본어 권장)');
+            if (typed === null) return;
+            const name = toJaDestinationName(typed).trim();
+            if (!name) return;
+            persist(spots.map(s => (s.id === id ? { ...s, name, en: undefined } : s)));
+            return;
+        }
+        const hit = MAP_DESTINATIONS.find(d => d.en === en);
+        if (!hit) return;
+        persist(spots.map(s => (s.id === id ? { ...s, name: hit.ja, en: hit.en } : s)));
+    };
+
     const removeSpot = (id: string) => {
         const target = spots.find(s => s.id === id);
         if (!target) return;
@@ -84,14 +132,32 @@ export const AdminDesignSpotManage: React.FC = () => {
         persist(spots.filter(s => s.id !== id));
     };
 
+    const destinationOptions = () => (
+        <>
+            <option value="">여행지 선택 (영어)</option>
+            {groups.map(g => (
+                <optgroup key={g.name} label={g.name}>
+                    {g.items.map(d => <option key={d.en} value={d.en}>{d.en} — {d.ja}</option>)}
+                </optgroup>
+            ))}
+            <option value={CUSTOM}>직접 입력…</option>
+        </>
+    );
+
     return (
         <AdminLayout
             activePage="design-spots"
             title="여행지 사진"
-            description="디자인 템플릿의 「방문 여행지」 카드에서 바로 골라 쓰는 목록입니다. 이름은 운영 페이지에 그대로 표시되므로 일본어로 입력해 주세요."
+            description="디자인 템플릿의 「방문 여행지」 카드에서 바로 골라 쓰는 목록입니다. 영어로 고르면 운영 페이지에는 공식 일본어 표기로 표시됩니다."
             showSearch={false}
             actions={saving ? <span className="cell-muted" style={{ fontSize: 12 }}>저장 중…</span> : undefined}
         >
+            {converted.length > 0 && (
+                <div className="card" style={{ padding: '10px 14px', marginBottom: 12, fontSize: 13, borderLeft: '3px solid #06C4A0' }}>
+                    영어로 등록돼 있던 이름을 공식 일본어 표기로 바꿨습니다: {converted.join(', ')}
+                </div>
+            )}
+
             {/* 새 여행지 등록 */}
             <div className="card" style={{ padding: 16, marginBottom: 16 }}>
                 <div className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -104,15 +170,24 @@ export const AdminDesignSpotManage: React.FC = () => {
                         <input type="file" accept="image/*" style={{ display: 'none' }}
                             onChange={(e) => { handleNewUpload(e.target.files?.[0]); e.target.value = ''; }} />
                     </label>
-                    <input
-                        ref={nameRef}
-                        className="inp"
-                        style={{ flex: 1, minWidth: 200 }}
-                        value={newName}
-                        placeholder="여행지 이름 (예: テレルジ国立公園)"
-                        onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') addSpot(); }}
-                    />
+                    <select ref={selectRef} className="inp" style={{ flex: 1, minWidth: 240 }} value={pick} onChange={(e) => setPick(e.target.value)}>
+                        {destinationOptions()}
+                    </select>
+                    {pick === CUSTOM && (
+                        <input
+                            className="inp"
+                            style={{ flex: 1, minWidth: 200 }}
+                            value={customName}
+                            placeholder="여행지 이름 직접 입력 (일본어 권장)"
+                            onChange={(e) => setCustomName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') addSpot(); }}
+                        />
+                    )}
+                    {previewName && (
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0f766e', whiteSpace: 'nowrap' }}>
+                            페이지 표시: {previewName}
+                        </span>
+                    )}
                     <button type="button" className="btn btn-primary" onClick={addSpot}>
                         <Icon name="add" />여행지 등록
                     </button>
@@ -123,9 +198,9 @@ export const AdminDesignSpotManage: React.FC = () => {
             {loading ? (
                 <div className="cell-muted" style={{ padding: 24 }}>불러오는 중…</div>
             ) : spots.length === 0 ? (
-                <div className="cell-muted" style={{ padding: 24 }}>등록된 여행지가 없습니다. 위에서 사진과 이름을 등록해 주세요.</div>
+                <div className="cell-muted" style={{ padding: 24 }}>등록된 여행지가 없습니다. 위에서 사진을 올리고 여행지를 골라 등록해 주세요.</div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
                     {spots.map(s => (
                         <div key={s.id} className="card" style={{ overflow: 'hidden' }}>
                             <label title="사진 변경" style={{ display: 'block', position: 'relative', aspectRatio: '4/3', cursor: 'pointer', background: 'var(--bg-muted, #f0f1f3)' }}>
@@ -135,18 +210,19 @@ export const AdminDesignSpotManage: React.FC = () => {
                                 <input type="file" accept="image/*" style={{ display: 'none' }}
                                     onChange={(e) => { replaceImage(s.id, e.target.files?.[0]); e.target.value = ''; }} />
                             </label>
-                            <div className="row" style={{ gap: 6, alignItems: 'center', padding: '8px 10px' }}>
-                                <input
-                                    className="inp"
-                                    style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700 }}
-                                    value={s.name}
-                                    onChange={(e) => rename(s.id, e.target.value)}
-                                    onBlur={renameCommit}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                                />
-                                <button type="button" className="act-btn" title="삭제" onClick={() => removeSpot(s.id)}>
-                                    <Icon name="delete" style={{ fontSize: 16, color: 'var(--mrt-red)' }} />
-                                </button>
+                            <div style={{ padding: '8px 10px' }}>
+                                <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 14, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                                        {s.en && <div className="cell-muted" style={{ fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.en}</div>}
+                                    </div>
+                                    <button type="button" className="act-btn" title="삭제" onClick={() => removeSpot(s.id)}>
+                                        <Icon name="delete" style={{ fontSize: 16, color: 'var(--mrt-red)' }} />
+                                    </button>
+                                </div>
+                                <select className="inp" style={{ width: '100%', marginTop: 6, fontSize: 12 }} value={s.en ?? ''} onChange={(e) => repick(s.id, e.target.value)} title="이름 다시 고르기">
+                                    {destinationOptions()}
+                                </select>
                             </div>
                         </div>
                     ))}
