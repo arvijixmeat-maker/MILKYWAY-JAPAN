@@ -147,6 +147,7 @@ export const AdminAccommodationOps: React.FC = () => {
 
     const [q, setQ] = useState('');
     const [month, setMonth] = useState('all');
+    const [year, setYear] = useState(() => new Date().getFullYear());
     const [region, setRegion] = useState('all');
     const [confirmFilter, setConfirmFilter] = useState<'all' | 'pending' | 'done'>('all');
     const [scope, setScope] = useState<'confirmed' | 'all'>('confirmed');
@@ -186,13 +187,19 @@ export const AdminAccommodationOps: React.FC = () => {
 
     const base = useMemo(() => reservations.filter(r => scope === 'all' ? true
         : (CONFIRMED_STATUSES.includes(r.status || '') || r.depositStatus === 'paid' || r.type === 'quote')), [reservations, scope]);
-    const monthOptions = useMemo(() => {
-        const set = new Set<string>();
-        base.forEach(r => { const k = monthKey(r.startDate); if (k) set.add(k); });
-        const thisMonth = todayKey().slice(0, 7);
-        const all = Array.from(set).sort();
-        // 다가오는 달은 가까운 순, 지난 달은 최근 순
-        return { upcoming: all.filter(m => m >= thisMonth), past: all.filter(m => m < thisMonth).reverse() };
+    /** 연도 막대에 표시할 월별 건수 + 이동 가능한 연도 범위 */
+    const monthStats = useMemo(() => {
+        const perMonth = new Map<string, number>();
+        const years = new Set<number>();
+        base.forEach(r => {
+            const k = monthKey(r.startDate);
+            if (!k) return;
+            perMonth.set(k, (perMonth.get(k) || 0) + 1);
+            years.add(Number(k.slice(0, 4)));
+        });
+        years.add(new Date().getFullYear());
+        const list = Array.from(years).sort();
+        return { perMonth, minYear: list[0], maxYear: list[list.length - 1], total: base.length };
     }, [base]);
     const regionOptions = useMemo(() => {
         const set = new Set<string>();
@@ -203,11 +210,7 @@ export const AdminAccommodationOps: React.FC = () => {
         const today = todayKey();
         const needle = q.trim().toLowerCase();
         return base.filter(r => {
-            if (month === 'all') {
-                if (isPastTour(r, today)) return false;          // 기본: 진행 중 + 다가오는 투어만
-            } else if (month === 'past') {
-                if (!isPastTour(r, today)) return false;         // 지난 투어만
-            } else if (monthKey(r.startDate) !== month) return false;
+            if (month !== 'all' && monthKey(r.startDate) !== month) return false;
             if (region !== 'all' && regionOf(r) !== region) return false;
             if (confirmFilter !== 'all') {
                 const done = summaryOf(r).allConfirmed;
@@ -220,7 +223,12 @@ export const AdminAccommodationOps: React.FC = () => {
             }
             return true;
         }).sort((a, b) => {
-            if (month === 'past') return (b.startDate || '').localeCompare(a.startDate || '');
+            // 끝난 투어는 항상 아래로, 그 안에서는 최근에 끝난 것부터
+            const pa = isPastTour(a, today) ? 1 : 0;
+            const pb = isPastTour(b, today) ? 1 : 0;
+            if (pa !== pb) return pa - pb;
+            if (pa === 1) return (b.startDate || '').localeCompare(a.startDate || '');
+            // 다가오는 투어는 미확정 먼저 → 출발일 가까운 순
             const da = summaryOf(a).allConfirmed ? 1 : 0;
             const db = summaryOf(b).allConfirmed ? 1 : 0;
             if (da !== db) return da - db;
@@ -365,20 +373,6 @@ export const AdminAccommodationOps: React.FC = () => {
                         <option value="confirmed">Зөвхөн баталгаажсан</option>
                         <option value="all">Бүх захиалга</option>
                     </select>
-                    <select className="select" value={month} onChange={e => setMonth(e.target.value)}>
-                        <option value="all">Ирэх аялал (өнөөдрөөс)</option>
-                        <option value="past">Өнгөрсөн аялал</option>
-                        {monthOptions.upcoming.length > 0 && (
-                            <optgroup label="Ирэх сар">
-                                {monthOptions.upcoming.map(m => <option key={m} value={m}>{m.replace('-', '.')}</option>)}
-                            </optgroup>
-                        )}
-                        {monthOptions.past.length > 0 && (
-                            <optgroup label="Өнгөрсөн сар">
-                                {monthOptions.past.map(m => <option key={m} value={m}>{m.replace('-', '.')}</option>)}
-                            </optgroup>
-                        )}
-                    </select>
                     <select className="select" value={region} onChange={e => setRegion(e.target.value)}>
                         <option value="all">Бүх бүс нутаг</option>
                         {regionOptions.map(rg => <option key={rg} value={rg}>{rg}</option>)}
@@ -394,6 +388,61 @@ export const AdminAccommodationOps: React.FC = () => {
                         <span style={{ color: '#B45309', fontWeight: 700 }}>Батлаагүй {counts.pending}</span> ·{' '}
                         <span style={{ color: '#0F7A43', fontWeight: 700 }}>Баталгаажсан {counts.done}</span>
                     </span>
+                </div>
+
+                {/* 출발월 막대 — 연도 이동 + 월별 건수, 누르면 그 달만 표시 */}
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginTop: 10, overflowX: 'auto' }}>
+                    <div className="row" style={{ gap: 6, alignItems: 'center', flex: 'none' }}>
+                        <Icon name="calendar_month" style={{ fontSize: 18, color: 'var(--text-muted)' }} />
+                        <span className="cell-muted" style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>Явах сар</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setMonth('all')}
+                        style={{
+                            flex: 'none', border: 0, cursor: 'pointer', borderRadius: 999, padding: '6px 14px',
+                            fontSize: 12.5, fontWeight: 800, whiteSpace: 'nowrap',
+                            background: month === 'all' ? '#06C4A0' : 'var(--bg-muted, #f1f3f5)',
+                            color: month === 'all' ? '#fff' : 'var(--text-muted)',
+                        }}
+                    >
+                        Бүгд {monthStats.total}
+                    </button>
+                    <div className="row" style={{ gap: 4, alignItems: 'center', flex: 'none' }}>
+                        <button type="button" className="act-btn" title="Өмнөх жил" disabled={year <= monthStats.minYear} onClick={() => setYear(y => y - 1)}>
+                            <Icon name="chevron_left" style={{ fontSize: 16 }} />
+                        </button>
+                        <b style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{year} он</b>
+                        <button type="button" className="act-btn" title="Дараа жил" disabled={year >= monthStats.maxYear} onClick={() => setYear(y => y + 1)}>
+                            <Icon name="chevron_right" style={{ fontSize: 16 }} />
+                        </button>
+                    </div>
+                    <div className="row" style={{ gap: 6, flex: 1, minWidth: 0 }}>
+                        {Array.from({ length: 12 }, (_, i) => {
+                            const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+                            const n = monthStats.perMonth.get(key) || 0;
+                            const active = month === key;
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    disabled={n === 0}
+                                    onClick={() => setMonth(key)}
+                                    title={n === 0 ? 'Захиалга байхгүй' : `${i + 1}-р сар — ${n} захиалга`}
+                                    style={{
+                                        flex: '1 1 0', minWidth: 62, cursor: n === 0 ? 'default' : 'pointer',
+                                        borderRadius: 10, padding: '7px 4px', textAlign: 'center', lineHeight: 1.25,
+                                        border: active ? '2px solid #06C4A0' : '1px solid var(--border-default)',
+                                        background: active ? 'rgba(6,196,160,0.08)' : '#fff',
+                                        opacity: n === 0 ? 0.45 : 1,
+                                    }}
+                                >
+                                    <div style={{ fontSize: 12.5, fontWeight: 800, color: n === 0 ? 'var(--text-muted)' : 'var(--text-strong)' }}>{i + 1}-р сар</div>
+                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: n === 0 ? 'var(--text-muted)' : '#06C4A0' }}>{n === 0 ? '-' : `${n}`}</div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 <div className="card">
