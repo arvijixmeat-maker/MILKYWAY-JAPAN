@@ -1,4 +1,5 @@
 import React from 'react';
+import { toJaDestinationName } from './mapDestinations';
 import type { DesignTemplateProps } from './types';
 import type { DesignSectionInstance } from '../../../types/product';
 import { horseTrekSectionDefs } from './horseTrekFields';
@@ -388,7 +389,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
             {S('07 루트/지도', (v) => {
                 const mapStops = v('map_stops').split('\n').map(s => s.trim()).filter(Boolean).join(';');
                 const mapUrl = `/designs/mongolia-map.html?stops=${encodeURIComponent(mapStops)}`;
-                const spotCards = v('spot_cards').split('\n').map(s => s.trim()).filter(Boolean).map((line, i) => { const p = line.split('|').map(x => x.trim()); return { i, title: p[0] || '', img: p[1] || '', offset: i % 2 === 1 }; });
+                const spotCards = v('spot_cards').split('\n').map(s => s.trim()).filter(Boolean).map((line, i) => { const p = line.split('|').map(x => x.trim()); return { i, title: toJaDestinationName(p[0] || ''), img: p[1] || '', offset: i % 2 === 1 }; });
                 return (
                 <section style={{ position: 'relative', background: 'linear-gradient(180deg, #C8FFEF 0%, #EFFEF9 32%, #EFFEF9 100%)', paddingBottom: 45 }}>
                     <div style={{ padding: '55px 35px 30px', textAlign: 'center' }}>
