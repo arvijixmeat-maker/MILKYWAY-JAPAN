@@ -63,7 +63,7 @@ function DayPicker({ currentProductId, onPick }: { currentProductId?: string; on
     const filtered = useMemo(() => {
         const needle = q.trim().toLowerCase();
         if (!needle) return days;
-        return days.filter(d => `${d.title} ${d.description} ${d.dayLabel} ${d.productName}`.toLowerCase().includes(needle));
+        return days.filter(d => `${d.tags.join(' ')} ${d.title} ${d.description} ${d.dayLabel} ${d.productName}`.toLowerCase().includes(needle));
     }, [days, q]);
 
     /** 상품별로 묶어서 표시 (검색 결과 순서 유지) */
@@ -103,7 +103,7 @@ function DayPicker({ currentProductId, onPick }: { currentProductId?: string; on
                     type="text"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="여행지·일정 제목·상품명 검색 (예: テレルジ, ミニゴビ)"
+                    placeholder="여행지·일정 제목·상품명 검색 (예: Terelj, テレルジ, ミニゴビ)"
                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 />
             </div>
@@ -142,8 +142,11 @@ function DayPicker({ currentProductId, onPick }: { currentProductId?: string; on
                                                             : <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800" />}
                                                     </td>
                                                     <td className="px-2 py-2">
+                                                        {d.tags.length > 0 && (
+                                                            <div data-import-tags className="text-[11.5px] font-bold text-teal-700 dark:text-teal-300 tracking-tight">{d.tags.join(' / ')}</div>
+                                                        )}
                                                         <div className="font-semibold text-slate-900 dark:text-white">
-                                                            {d.dayLabel && <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 mr-1.5">{d.dayLabel}</span>}
+                                                            {d.dayLabel && <span className="text-[11px] font-bold text-slate-400 mr-1.5">{d.dayLabel}</span>}
                                                             {d.title || '(제목 없음)'}
                                                         </div>
                                                         {d.description && <div className="text-[11px] text-slate-400 truncate max-w-[420px]">{d.description}</div>}
