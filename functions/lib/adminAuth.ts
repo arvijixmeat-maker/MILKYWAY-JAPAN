@@ -7,7 +7,7 @@ import { initializeLucia } from './auth';
  * Verifies the session cookie and checks that the user has 'admin' role.
  * Use this on any API route that should only be accessible by admins.
  */
-export const requireAdmin = async (c: Context<{ Bindings: any }>, next: Next) => {
+export const requireAdmin = async (c: Context<{ Bindings: any; Variables: { user: any } }>, next: Next) => {
     const lucia = initializeLucia(c.env.DB);
     const sessionId = getCookie(c, lucia.sessionCookieName);
 
@@ -24,6 +24,9 @@ export const requireAdmin = async (c: Context<{ Bindings: any }>, next: Next) =>
     if (user.role !== 'admin') {
         return c.json({ error: 'Forbidden' }, 403);
     }
+
+    // Mutation handlers use the authenticated actor for audit logs.
+    c.set('user', user);
 
     // Refresh session cookie if needed
     if (session.fresh) {

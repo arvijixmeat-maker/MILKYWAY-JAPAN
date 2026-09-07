@@ -123,6 +123,8 @@ export const AdminQuoteManage: React.FC = () => {
             const newReservation = await api.reservations.create({
                 user_id: selectedRequest.userId || null,
                 type: 'quote',
+                quote_id: selectedRequest.id,
+                idempotency_key: `quote-conversion:${selectedRequest.id}`,
                 product_name: `${selectedRequest.destination} 맞춤견적`,
                 customer_name: selectedRequest.name,
                 customer_phone: selectedRequest.phone,
@@ -288,7 +290,7 @@ export const AdminQuoteManage: React.FC = () => {
         processing: { tone: 'b-amber', label: '작성중' },
         answered: { tone: 'b-blue', label: '발송됨' },
         converted: { tone: 'b-gray', label: '전환됨' },
-        completed: { tone: 'b-gray', label: '답변완료' },
+        cancelled: { tone: 'b-red', label: '취소됨' },
     };
     const statusMeta = (status: string) => STATUS_META[status] || { tone: 'b-gray', label: status };
 
@@ -309,12 +311,12 @@ export const AdminQuoteManage: React.FC = () => {
 
         // status options shown in the dropdown menu (preserves original keys)
         const OPTIONS: Array<{ key: string; tone: string; label: string }> = [
-            { key: 'pending_payment', tone: 'b-amber', label: '입금 대기' },
-            { key: 'paid', tone: 'b-blue', label: '결제 완료' },
-            { key: 'confirmed', tone: 'b-green', label: '예약 확정' },
-            { key: 'cancelled', tone: 'b-red', label: '취소됨' },
-            { key: 'converted', tone: 'b-gray', label: '예약 전환' },
+            { key: 'new', tone: 'b-purple', label: '신규' },
+            { key: 'processing', tone: 'b-amber', label: '작성중' },
+            { key: 'answered', tone: 'b-blue', label: '발송됨' },
             { key: 'reservation_requested', tone: 'b-purple', label: '예약 요청' },
+            { key: 'converted', tone: 'b-gray', label: '예약 전환' },
+            { key: 'cancelled', tone: 'b-red', label: '취소됨' },
         ];
 
         const current = OPTIONS.find(o => o.key === status) || statusMeta(status);
