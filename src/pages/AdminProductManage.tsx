@@ -952,6 +952,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                 accommodationDescription: hotel.description || '',
                 accommodationAddress: hotel.address || '',
                 accommodationSubtitle: hotel.name_local || '',
+                accommodationAmenities: hotel.amenities && hotel.amenities.length > 0 ? [...hotel.amenities] : [],
             });
         } else if (kind === 'timeline' && block.type === 'timeline') {
             // For a TIMELINE block: push hotel data into title + description + images.
@@ -2212,6 +2213,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                             <input type="text" className="inp" style={{ width: 120 }} value={c.time || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'time', e.target.value)} placeholder="시간 (선택)" />
                                                             <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={c.title || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'title', e.target.value)} placeholder="일정 제목 (예: 자이승 전망대)" />
                                                         </div>
+                                                        <input type="text" className="inp" value={c.badge || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'badge', e.target.value)} placeholder="강조 배지 (선택, 예: 환전 / 장보기) — 넣으면 설명이 배지 달린 강조 박스로 표시" />
                                                         <textarea className="inp" value={c.description || ''} onChange={(e) => updateTimelineInBlock('itinerary', flatIndex, 'description', e.target.value)} placeholder="상세 설명" rows={2} />
                                                         <input type="file" accept="image/*" multiple onChange={(e) => handleTimelineBlockImages('itinerary', flatIndex, e.target.files)} className="inp" style={{ height: 'auto', paddingTop: 8, paddingBottom: 8, fontSize: 13 }} />
                                                         {c.images?.length > 0 && (

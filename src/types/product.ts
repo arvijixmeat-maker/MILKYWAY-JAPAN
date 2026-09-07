@@ -101,6 +101,8 @@ export interface TimelineContent {
     title: string;
     description: string;
     images: string[];
+    /** 강조 배지 문구 (예: 환전 / 장보기) — 있으면 설명이 배지 달린 강조 박스로 표시된다 */
+    badge?: string;
 }
 
 export interface DayInfoContent {
@@ -132,6 +134,8 @@ export interface DayInfoContent {
     accommodationDescription?: string;
     accommodationAddress?: string;
     accommodationSubtitle?: string;  // hotels.name_local — small caption below the name
+    /** 숙소 마스터의 편의시설 스냅샷 (「宿泊のご案内」 박스에 · 항목으로 표시) */
+    accommodationAmenities?: string[];
 }
 
 export type DetailBlockType = 'image' | 'slide' | 'divider' | 'timeline' | 'dayInfo' | 'design';

@@ -233,7 +233,15 @@ function DaySection({ day, index, all, u, fs, onOpen }: {
                                     <div style={dot} />
                                     <div style={spine} />
                                     <div style={itemTitle}>{[t.time, t.title].filter(Boolean).join(' ')}</div>
-                                    {t.description && <div style={itemBody}>{t.description}</div>}
+                                    {t.badge ? (
+                                        // 강조 박스 — 검은 배지 + 설명 (디자인의 「환전 / 장보기」 박스)
+                                        <div style={{ marginTop: u(20), padding: `${u(24)}px ${u(26)}px`, borderRadius: u(14), background: '#F3F8F6' }}>
+                                            <div style={badge}>{t.badge}</div>
+                                            {t.description && <div style={{ ...itemBody, marginTop: u(14), fontSize: fs(19, 13) }}>{t.description}</div>}
+                                        </div>
+                                    ) : (
+                                        t.description && <div style={itemBody}>{t.description}</div>
+                                    )}
                                     {photos.length > 0 && (
                                         <div style={{ marginTop: u(22), display: 'grid', gridTemplateColumns: photos.length === 1 ? '1fr' : '1fr 1fr', gap: u(14) }}>
                                             {photos.map((src, j) => <Photo key={j} src={src} group={photos} idx={j} height={u(230)} radius={u(14)} />)}
@@ -265,6 +273,7 @@ function DaySection({ day, index, all, u, fs, onOpen }: {
                                 <div style={{ marginTop: u(20), padding: `${u(22)}px ${u(26)}px`, borderRadius: u(14), border: `2px solid ${LINE}` }}>
                                     <div style={badge}>宿泊のご案内</div>
                                     <div style={{ marginTop: u(14), display: 'flex', flexWrap: 'wrap', gap: `${u(8)}px ${u(22)}px`, fontSize: fs(19, 13), fontWeight: 700, color: TEAL, letterSpacing: '-0.02em' }}>
+                                        {(d.accommodationAmenities ?? []).filter(Boolean).map((a, i) => <div key={i}>· {a}</div>)}
                                         {d.accommodationSubtitle && <div>· {d.accommodationSubtitle}</div>}
                                         {d.accommodationAddress && <div>· {d.accommodationAddress}</div>}
                                     </div>
