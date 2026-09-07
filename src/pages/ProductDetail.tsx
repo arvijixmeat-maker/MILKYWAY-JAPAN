@@ -18,6 +18,7 @@ import { MobileItineraryTimeline } from '../components/product/MobileItineraryTi
 
 import type { TourProduct, DetailSlide, DividerContent, DesignBlockContent } from '../types/product';
 import DesignBlockView from '../components/product/designTemplates/DesignBlockView';
+import { DesignItinerary } from '../components/product/designTemplates/DesignItinerary';
 import { priceRowsFromOptions } from '../components/product/designTemplates/pricing';
 
 // Hide broken product images gracefully instead of showing the browser's default error icon.
@@ -901,12 +902,7 @@ export const ProductDetail: React.FC = () => {
                                         content={block.content as DesignBlockContent}
                                         variant="mobile"
                                         // 일정탭의 일정표를 디자인 중간(공항 도착 뒤)에 끼워 넣는다
-                                        itinerarySlot={hasItineraryContent ? (
-                                            <div className="bg-white dark:bg-background-dark px-6 pt-6 pb-8">
-                                                <h3 className="text-lg font-bold mb-4">{t('product_detail.itinerary_title')}</h3>
-                                                <MobileItineraryTimeline product={product} />
-                                            </div>
-                                        ) : undefined}
+                                        itinerarySlot={hasItineraryContent ? <DesignItinerary product={product} variant="mobile" /> : undefined}
                                         // 가격/옵션 탭의 인원별 가격 → 디자인 가격표에 자동 반영
                                         valueOverrides={(() => {
                                             const rows = priceRowsFromOptions(product.pricingOptions);
