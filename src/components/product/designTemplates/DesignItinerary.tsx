@@ -146,11 +146,13 @@ function DaySection({ day, index, all, S, onOpen }: {
     const d = day.dayInfo;
     const dayLabel = d.dayLabel || `${index + 1}日目`;
     const timeline = day.events.filter(b => b.type === 'timeline').map(b => b.content as TimelineContent);
-    const gridPhotos = day.events.flatMap(blockImages);
+    // 카드 상단 그리드: 일차 정보에 직접 올린 사진(최대 5장) 우선, 없으면 이미지 블록 사진
+    const gallery = (d.galleryImages ?? []).filter(Boolean).slice(0, 5);
+    const gridPhotos = gallery.length > 0 ? gallery : day.events.flatMap(blockImages);
     const timelinePhotos = timeline.flatMap(t => (t.images ?? []).filter(Boolean));
     const accPhotos = (d.accommodationImages ?? []).filter(Boolean);
-    // 히어로 사진: 상단 그리드 → 타임라인 → 숙소 순으로 처음 나오는 사진
-    const hero = gridPhotos[0] || timelinePhotos[0] || accPhotos[0] || '';
+    // 히어로 사진: 직접 올린 히어로 사진 → 상단 그리드 → 타임라인 → 숙소 순
+    const hero = d.heroImage || gridPhotos[0] || timelinePhotos[0] || accPhotos[0] || '';
     const meals = [
         d.meals?.breakfast && `朝食：${d.meals.breakfast}`,
         d.meals?.lunch && `昼食：${d.meals.lunch}`,

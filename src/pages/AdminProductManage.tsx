@@ -1457,6 +1457,26 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
         }
     };
     
+    /** 일정 상세 디자인용 사진 — 일차 정보 블록에 히어로 1장 / 상단 그리드 최대 5장을 직접 올린다 */
+    const handleDayInfoDesignImages = async (flatIndex: number, kind: 'hero' | 'gallery', files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        try {
+            const urls = await Promise.all(Array.from(files).map(file => uploadImage(file, 'product-details')));
+            const blocks = [...(formData.itineraryBlocks || [])];
+            const block = blocks[flatIndex];
+            if (!block || block.type !== 'dayInfo') return;
+            const dc = block.content as DayInfoContent;
+            const next = kind === 'hero'
+                ? { ...dc, heroImage: urls[0] }
+                : { ...dc, galleryImages: [...(dc.galleryImages || []), ...urls].slice(0, 5) };
+            blocks[flatIndex] = { ...block, content: next };
+            setFormData({ ...formData, itineraryBlocks: blocks });
+        } catch (error) {
+            console.error('Day design images upload failed:', error);
+            alert('이미지 업로드 실패');
+        }
+    };
+
     const removeTimelineBlockImage = (blocksArray: 'detail' | 'itinerary', blockIndex: number, imgIndex: number) => {
         const blocks = [...(blocksArray === 'detail' ? (formData.detailBlocks || []) : (formData.itineraryBlocks || []))];
         const block = blocks[blockIndex];
@@ -2363,6 +2383,41 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                         )}
                                                                     </div>
 
+                                                                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+                                                                        <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 2 }}><Icon name="photo_library" style={{ fontSize: 16, verticalAlign: '-3px' }} /> 디자인 사진 (일정 상세 디자인 전용)</label>
+                                                                        <p className="muted" style={{ fontSize: 11.5, margin: '0 0 8px' }}>히어로 배경 1장 + 카드 상단 사진 최대 5장. 비워 두면 이 일차의 일정 사진에서 자동으로 채워집니다.</p>
+                                                                        <div className="row" style={{ gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                                            <div>
+                                                                                <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>히어로 배경</div>
+                                                                                <label title={dc.heroImage ? '사진 변경' : '사진 업로드'} style={{ display: 'block', position: 'relative', width: 120, height: 72, borderRadius: 'var(--r-md)', overflow: 'hidden', border: dc.heroImage ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', background: 'var(--bg-muted, #f8f9fa)' }}>
+                                                                                    {dc.heroImage
+                                                                                        ? <img src={getOptimizedImageUrl(dc.heroImage, 'productThumbnail')} alt="히어로" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                                        : <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-muted)' }}><Icon name="add_a_photo" style={{ fontSize: 18 }} /></span>}
+                                                                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { handleDayInfoDesignImages(day.dayInfoFlatIndex, 'hero', e.target.files); e.target.value = ''; }} />
+                                                                                </label>
+                                                                                {dc.heroImage && (
+                                                                                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 4 }} onClick={() => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, heroImage: undefined })}>제거</button>
+                                                                                )}
+                                                                            </div>
+                                                                            <div style={{ flex: 1, minWidth: 260 }}>
+                                                                                <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>카드 상단 사진 ({(dc.galleryImages || []).length}/5) — 2열 배치, 홀수 장이면 마지막이 와이드</div>
+                                                                                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                                                                                    {(dc.galleryImages || []).map((img, gi) => (
+                                                                                        <div key={gi} style={{ position: 'relative', flex: 'none' }}>
+                                                                                            <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`상단 사진 ${gi + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
+                                                                                            <button type="button" onClick={() => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, galleryImages: (dc.galleryImages || []).filter((_, k) => k !== gi) })} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                    {(dc.galleryImages || []).length < 5 && (
+                                                                                        <label title="사진 추가" style={{ width: 72, height: 72, borderRadius: 'var(--r-md)', border: '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', background: 'var(--bg-muted, #f8f9fa)' }}>
+                                                                                            <Icon name="add_a_photo" style={{ fontSize: 18 }} />
+                                                                                            <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => { handleDayInfoDesignImages(day.dayInfoFlatIndex, 'gallery', e.target.files); e.target.value = ''; }} />
+                                                                                        </label>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
                                                                     <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
                                                                         <label className="cell-strong" style={{ fontSize: 12.5, display: 'block', marginBottom: 8 }}><Icon name="timeline" style={{ fontSize: 16, verticalAlign: '-3px' }} /> 이 일차의 주요 일정</label>
                                                                         {day.events.length === 0 && (
