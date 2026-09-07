@@ -49,6 +49,31 @@ const loadProductIncExc = async (db: any, productName?: string | null): Promise<
     }
 };
 
+// 예약 상품명으로 products 테이블의 일정탭 블록(itinerary_blocks)을 로드.
+// 확정일정표가 상품 상세페이지와 같은 「일정 상세」 디자인·내용을 쓰기 위한 단일 출처.
+type ProductItinerary = { id: string; name: string; itineraryBlocks: unknown[]; itineraryImages: string[] };
+type ProductRow = { id: string; name: string; itinerary_blocks?: string | null; itinerary_images?: string | null };
+const parseJsonArray = (v: unknown): unknown[] => {
+    try { const p = JSON.parse(typeof v === 'string' && v ? v : '[]'); return Array.isArray(p) ? p : []; } catch { return []; }
+};
+const loadProductItinerary = async (
+    db: { prepare: (sql: string) => { bind: (...args: unknown[]) => { first: () => Promise<unknown> } } },
+    productName?: string | null,
+): Promise<ProductItinerary | null> => {
+    if (!productName) return null;
+    try {
+        const prod = await db.prepare('SELECT id, name, itinerary_blocks, itinerary_images FROM products WHERE name = ? LIMIT 1').bind(productName).first() as ProductRow | null;
+        if (!prod) return null;
+        return {
+            id: prod.id,
+            name: prod.name,
+            itineraryBlocks: parseJsonArray(prod.itinerary_blocks),
+            itineraryImages: parseJsonArray(prod.itinerary_images).filter((x): x is string => typeof x === 'string' && !!x),
+        };
+    } catch {
+        return null;
+    }
+};
 // GET /api/documents/itinerary/:reservationId
 // Public endpoint — no auth. Returns everything the itinerary page needs.
 app.get('/itinerary/:reservationId', async (c) => {
@@ -135,6 +160,7 @@ app.get('/itinerary/:reservationId', async (c) => {
     }
 
     const productIncExc = await loadProductIncExc(db, reservation.product_name);
+    const productItinerary = await loadProductItinerary(db, reservation.product_name);
 
     return c.json({
         reservation: {
@@ -153,6 +179,7 @@ app.get('/itinerary/:reservationId', async (c) => {
         days: mergedDays,
         productIncluded: productIncExc.included,
         productExcluded: productIncExc.excluded,
+        product: productItinerary,
     });
 });
 

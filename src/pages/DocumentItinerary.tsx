@@ -11,6 +11,9 @@ import {
 } from '../components/document/ItineraryDocParts';
 import { COMPANY_INFO, EMBASSY_INFO, LOCAL_EMERGENCY } from '../constants/company';
 import { GuideItineraryPrint } from '../components/document/GuideItineraryPrint';
+import { DesignItinerary } from '../components/product/designTemplates/DesignItinerary';
+import { dayDate as computeDayDate } from '../components/document/ItineraryDocParts';
+import type { TourProduct, DetailContentBlock, DayInfoContent } from '../types/product';
 
 /**
  * 確定日程表（고객용）— "確定日程表.dc.html"(모바일) + "確定日程表_PC.dc.html"(PC) 디자인 적용.
@@ -83,6 +86,38 @@ interface ItineraryData {
     days: DayData[];
     productIncluded?: string[];
     productExcluded?: string[];
+    /** 예약 상품의 일정탭 블록 — 있으면 상품 상세페이지와 같은 「일정 상세」 디자인으로 그린다 */
+    product?: { id: string; name: string; itineraryBlocks: DetailContentBlock[]; itineraryImages: string[] } | null;
+}
+
+const toList = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x) : (typeof v === 'string' && v ? [v] : []);
+
+/**
+ * 상품 일정탭 블록에 이 예약의 정보를 얹는다:
+ *  - 일차 날짜: 출발일 기준으로 계산 (문서용 날짜 표기)
+ *  - 숙소: 숙소 배정에서 확정한 숙소가 있으면 상품 기본 숙소 대신 그것을 표시
+ */
+function buildDesignProduct(data: ItineraryData): TourProduct | null {
+    const p = data.product;
+    if (!p || !p.itineraryBlocks || p.itineraryBlocks.length === 0) return null;
+    let n = 0;
+    const blocks = p.itineraryBlocks.map(b => {
+        if (b.type !== 'dayInfo') return b;
+        n++;
+        const c = b.content as DayInfoContent;
+        const assigned = data.days.find(d => d.day === n)?.accommodation;
+        const next: DayInfoContent = { ...c, dayDate: computeDayDate(data.reservation.startDate, n) || c.dayDate };
+        if (assigned && assigned.name) {
+            next.accommodation = assigned.name;
+            next.accommodationSubtitle = assigned.type || undefined;
+            next.accommodationAddress = assigned.location || undefined;
+            next.accommodationDescription = assigned.description || undefined;
+            next.accommodationImages = toList(assigned.images);
+            next.accommodationAmenities = toList(assigned.facilities);
+        }
+        return { ...b, content: next };
+    });
+    return { id: p.id, name: p.name, itineraryBlocks: blocks, itineraryImages: p.itineraryImages || [] } as unknown as TourProduct;
 }
 // 가이드 控え(관리자→localStorage 전달, 고객 미노출)
 interface GuideExtra {
@@ -414,7 +449,11 @@ export const DocumentItinerary: React.FC = () => {
 
     const heroBadge = { text: 'ご予約確定' };
     const heroChips = [`🗓 ${durationChip}`, `👤 ${reservation.travelers || '-'}名`, '🚐 専用車'];
-    const itinerary = <DayTimelineBlock days={days} m={m} startDate={reservation.startDate} heading={detail.title || 'ご旅行日程表'} />;
+    // 상품 일정탭이 있으면 상품 상세페이지와 똑같은 「일정 상세」 디자인으로, 없으면 기존 문서 타임라인으로
+    const designProduct = guideMode ? null : buildDesignProduct(data);
+    const itinerary = designProduct
+        ? <DesignItinerary product={designProduct} variant={m ? 'mobile' : 'desktop'} />
+        : <DayTimelineBlock days={days} m={m} startDate={reservation.startDate} heading={detail.title || 'ご旅行日程表'} />;
     const infoBlock = <InfoBlock items={infoItems} m={m} />;
 
     return (
@@ -445,13 +484,13 @@ export const DocumentItinerary: React.FC = () => {
                         <>
                             {/* ガイド控え가 있으면 여행기간까지 포함하므로 ご旅行情報는 중복 → 숨김 */}
                             {!guideExtra && infoBlock}
-                            <div style={{ padding: '22px 18px 8px', borderTop: `8px solid ${SECTION}` }}>{itinerary}</div>
+                            <div style={{ padding: designProduct ? '0 0 8px' : '22px 18px 8px', borderTop: `8px solid ${SECTION}` }}>{itinerary}</div>
                             {includedBlock}
                             {!guideMode && safetyBlock}
                         </>
                     ) : (
                         <>
-                            <div style={{ padding: '40px 56px 8px' }}>{itinerary}</div>
+                            <div style={{ padding: designProduct ? '24px 0 8px' : '40px 56px 8px' }}>{itinerary}</div>
                             {!guideExtra && infoBlock}
                             <div style={{ height: 32 }} />
                             {includedBlock}
