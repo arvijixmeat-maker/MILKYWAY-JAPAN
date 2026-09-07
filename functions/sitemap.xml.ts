@@ -10,7 +10,7 @@ interface Env {
 
 interface SitemapUrl {
     loc: string;
-    lastmod: string;
+    lastmod?: string;
     changefreq: string;
     priority: string;
     images?: string[];
@@ -44,26 +44,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             .from(products)
             .where(eq(products.status, 'active'));
 
-        const today = new Date().toISOString().split('T')[0];
         const baseUrl = SEO_CONSTANTS.SITE_URL;
 
         // Base static URLs (homepage uses trailing slash to match <link rel="canonical">)
         const urls: SitemapUrl[] = [
-            { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
-            { loc: `${baseUrl}/products`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-            { loc: `${baseUrl}/travel-guide`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-            { loc: `${baseUrl}/travel-mates`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-            { loc: `${baseUrl}/reviews`, lastmod: today, changefreq: 'daily', priority: '0.8' },
-            { loc: `${baseUrl}/custom-estimate`, lastmod: today, changefreq: 'monthly', priority: '0.7' },
-            { loc: `${baseUrl}/about`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-            { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-            { loc: `${baseUrl}/privacy-policy`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
-            { loc: `${baseUrl}/terms-of-service`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
+            { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0' },
+            { loc: `${baseUrl}/products`, changefreq: 'daily', priority: '0.9' },
+            { loc: `${baseUrl}/travel-guide`, changefreq: 'daily', priority: '0.9' },
+            { loc: `${baseUrl}/travel-mates`, changefreq: 'weekly', priority: '0.8' },
+            { loc: `${baseUrl}/reviews`, changefreq: 'daily', priority: '0.8' },
+            { loc: `${baseUrl}/custom-estimate`, changefreq: 'monthly', priority: '0.7' },
+            { loc: `${baseUrl}/about`, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/faq`, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/privacy-policy`, changefreq: 'yearly', priority: '0.3' },
+            { loc: `${baseUrl}/terms-of-service`, changefreq: 'yearly', priority: '0.3' },
         ];
 
         // Add dynamic product URLs (with up to 5 images each for Google Image Search)
         activeProducts.forEach(product => {
-            const lastModFormat = product.updatedAt ? product.updatedAt.split(' ')[0] : today;
+            const lastModFormat = product.updatedAt ? product.updatedAt.split(' ')[0] : undefined;
             const images: string[] = [];
             try {
                 const parsed = JSON.parse(product.mainImages || '[]');
@@ -78,7 +77,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 // mainImages may be malformed JSON for legacy rows — skip images, keep the URL
             }
             urls.push({
-                loc: `${baseUrl}/products/${product.id}`,
+                loc: `${baseUrl}/products/${encodeURIComponent(product.id)}`,
                 lastmod: lastModFormat,
                 changefreq: 'weekly',
                 priority: '0.8',
@@ -87,7 +86,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         });
 
         // Add dynamic category landing page URLs (/category/:slug)
-        // NOTE: categories table has no updated_at/created_at columns, so we use today's date.
+        // Categories currently have no trustworthy updated_at value, so omit lastmod.
         try {
             const categoriesResult = await context.env.DB.prepare(
                 "SELECT id FROM categories WHERE (type = 'product' OR type IS NULL) AND is_active = 1 AND id != 'all'"
@@ -95,8 +94,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             if (categoriesResult && categoriesResult.results) {
                 categoriesResult.results.forEach((cat: any) => {
                     urls.push({
-                        loc: `${baseUrl}/category/${cat.id}`,
-                        lastmod: today,
+                        loc: `${baseUrl}/category/${encodeURIComponent(String(cat.id))}`,
                         changefreq: 'weekly',
                         priority: '0.8'
                     });
@@ -123,12 +121,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
         if (magazinesResult && magazinesResult.results) {
             magazinesResult.results.forEach((mag: any) => {
-                const lastModFormat = mag.updated_at ? String(mag.updated_at).split(' ')[0] : today;
+                const lastModFormat = mag.updated_at ? String(mag.updated_at).split(' ')[0] : undefined;
                 const images: string[] = [];
                 const abs = toAbsoluteImageUrl(mag.thumbnail, baseUrl);
                 if (abs) images.push(abs);
                 urls.push({
-                    loc: `${baseUrl}/travel-guide/${mag.id}`,
+                    loc: `${baseUrl}/travel-guide/${encodeURIComponent(String(mag.id))}`,
                     lastmod: lastModFormat,
                     changefreq: 'monthly',
                     priority: '0.7',
@@ -137,15 +135,43 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             });
         }
 
+        // Approved customer stories are durable trust content and should be discoverable.
+        try {
+            const reviewsResult = await context.env.DB.prepare(
+                'SELECT id, created_at, images FROM reviews WHERE is_approved = 1 ORDER BY created_at DESC'
+            ).all();
+            reviewsResult.results?.forEach((review: any) => {
+                const images: string[] = [];
+                try {
+                    const parsed = JSON.parse(review.images || '[]');
+                    if (Array.isArray(parsed)) {
+                        for (const raw of parsed.slice(0, 5)) {
+                            const absolute = toAbsoluteImageUrl(raw, baseUrl);
+                            if (absolute) images.push(absolute);
+                        }
+                    }
+                } catch { /* keep the review URL even if legacy image JSON is malformed */ }
+                urls.push({
+                    loc: `${baseUrl}/reviews/${encodeURIComponent(String(review.id))}`,
+                    lastmod: review.created_at ? String(review.created_at).split(' ')[0] : undefined,
+                    changefreq: 'yearly',
+                    priority: '0.6',
+                    images,
+                });
+            });
+        } catch (e) {
+            console.error('Failed to fetch approved reviews for sitemap:', e);
+        }
+
         const renderUrl = (url: SitemapUrl) => {
             const imageBlock = (url.images && url.images.length > 0)
                 ? '\n' + url.images.map(img =>
                     `    <image:image><image:loc>${xmlEscape(img)}</image:loc></image:image>`
                 ).join('\n')
                 : '';
+            const lastModified = url.lastmod ? `\n    <lastmod>${url.lastmod}</lastmod>` : '';
             return `  <url>
-    <loc>${xmlEscape(url.loc)}</loc>
-    <lastmod>${url.lastmod}</lastmod>
+    <loc>${xmlEscape(url.loc)}</loc>${lastModified}
     <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>${imageBlock}
   </url>`;

@@ -71,10 +71,13 @@ export const CategoryPage: React.FC = () => {
 
     if (!category) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 gap-3">
-                <p className="text-lg font-bold text-slate-800">カテゴリが見つかりません</p>
-                <p className="text-sm text-slate-500">URLをご確認ください。</p>
-            </div>
+            <>
+                <SEO title="カテゴリが見つかりません" description="指定されたツアーカテゴリは見つかりませんでした。" robots="noindex, nofollow" />
+                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 gap-3">
+                    <p className="text-lg font-bold text-slate-800">カテゴリが見つかりません</p>
+                    <p className="text-sm text-slate-500">URLをご確認ください。</p>
+                </div>
+            </>
         );
     }
 
@@ -127,6 +130,7 @@ export const CategoryPage: React.FC = () => {
     const collectionLd = {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
+        '@id': `${seoUrl}#collection`,
         name: `${category.name} | Milkyway Japan`,
         description: seoDescription,
         url: seoUrl,

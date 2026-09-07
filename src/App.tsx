@@ -40,6 +40,7 @@ const FAQPage = lazy(() => import('./pages/FAQ').then(module => ({ default: modu
 const TermsOfService = lazy(() => import('./pages/TermsOfService').then(module => ({ default: module.TermsOfService })))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
 const GuideApply = lazy(() => import('./pages/GuideApply').then(module => ({ default: module.GuideApply })))
+const NotFound = lazy(() => import('./pages/NotFound').then(module => ({ default: module.NotFound })))
 
 // MyPage components
 const MyPage = lazy(() => import('./pages/MyPage').then(module => ({ default: module.MyPage })))
@@ -179,6 +180,7 @@ function App() {
             <Route path="/guide-apply" element={<GuideApply />} />
             <Route path="/documents/itinerary/:reservationId" element={<DocumentItinerary />} />
             <Route path="/documents/contract/:reservationId" element={<DocumentContract />} />
+            <Route path="*" element={<Layout><NotFound /></Layout>} />
           </Routes>
         </Suspense>
       </NotificationProvider>
@@ -187,4 +189,3 @@ function App() {
 }
 
 export default App
-// trigger vercel deployment test
