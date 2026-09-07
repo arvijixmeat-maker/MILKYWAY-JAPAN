@@ -79,7 +79,7 @@ const tokens = `/* ============================================================
    ============================================================ */
 .admin-app-wrapper {
   /* brand */
-  --mrt-blue:#0F766E; --mrt-blue-strong:#0B5F59; --mrt-blue-50:#ECF8F6;
+  --mrt-blue:#3182F6; --mrt-blue-strong:#1B64DA; --mrt-blue-50:#EAF4FF;
   --mrt-purple:#5B65A6; --mrt-purple-2:#46518E; --mrt-purple-soft:#F0F1FA;
   --mrt-red:#E5484D; --mrt-red-soft:#FFF0F0; --mrt-green:#16845B; --mrt-green-soft:#EAF8F1; --mrt-star:#F59E0B;
   /* ink / neutral */
@@ -101,7 +101,7 @@ const tokens = `/* ============================================================
   --font-sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Roboto,system-ui,sans-serif;
   --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; --ls-snug:-0.02em;
   /* admin layout */
-  --side-w:248px; --header-h:82px; --content-max:1480px; --ring-blue:0 0 0 4px rgba(15,118,110,0.13);
+  --side-w:248px; --header-h:82px; --content-max:1480px; --ring-blue:0 0 0 4px rgba(49,130,246,0.15);
   /* base canvas */
   color:var(--text-body); background:var(--surface-canvas); -webkit-font-smoothing:antialiased; letter-spacing:var(--ls-snug);
 }

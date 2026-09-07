@@ -168,7 +168,7 @@ export const parseDayActivitiesText = (text: string): Activity[] =>
     (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
         const m = line.match(/^(\d{1,2}:\d{2})\s+(.*)$/);
         const title = m ? m[2] : line;
-        return { time: '', type: inferTypeForText(title), title, description: '' };
+        return { time: m ? m[1] : '', type: inferTypeForText(title), title, description: '' };
     });
 
 const encodeTemplateDescription = (description: string, documentSettings: DocumentSettings) =>

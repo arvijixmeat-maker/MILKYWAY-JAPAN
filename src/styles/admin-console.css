@@ -6,7 +6,7 @@
    ============================================================ */
 .admin-app-wrapper {
   /* brand */
-  --mrt-blue:#0F766E; --mrt-blue-strong:#0B5F59; --mrt-blue-50:#ECF8F6;
+  --mrt-blue:#3182F6; --mrt-blue-strong:#1B64DA; --mrt-blue-50:#EAF4FF;
   --mrt-purple:#5B65A6; --mrt-purple-2:#46518E; --mrt-purple-soft:#F0F1FA;
   --mrt-red:#E5484D; --mrt-red-soft:#FFF0F0; --mrt-green:#16845B; --mrt-green-soft:#EAF8F1; --mrt-star:#F59E0B;
   /* ink / neutral */
@@ -28,7 +28,7 @@
   --font-sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Roboto,system-ui,sans-serif;
   --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; --ls-snug:-0.02em;
   /* admin layout */
-  --side-w:248px; --header-h:82px; --content-max:1480px; --ring-blue:0 0 0 4px rgba(15,118,110,0.13);
+  --side-w:248px; --header-h:82px; --content-max:1480px; --ring-blue:0 0 0 4px rgba(49,130,246,0.15);
   /* base canvas */
   color:var(--text-body); background:var(--surface-canvas); -webkit-font-smoothing:antialiased; letter-spacing:var(--ls-snug);
 }
@@ -1186,7 +1186,7 @@
 .admin-app-wrapper .nav-item.active .material-symbols-outlined { color: var(--mrt-blue); }
 .admin-app-wrapper .side-foot { padding: 12px 14px 16px; border-top-color: #EFF1F3; }
 .admin-app-wrapper .side-account { padding: 10px; background: #F7F8FA; border: 1px solid #F0F2F4; }
-.admin-app-wrapper .side-account .av { background: #DFF3F0; color: var(--mrt-blue-strong); }
+.admin-app-wrapper .side-account .av { background: #EAF4FF; color: var(--mrt-blue-strong); }
 
 .admin-app-wrapper .header {
   padding: 0 32px;
@@ -1337,11 +1337,11 @@
 .admin-app-wrapper .bp-purple,
 .admin-app-wrapper .bp-red,
 .admin-app-wrapper .tpl-hero { background: var(--mrt-blue); }
-.admin-app-wrapper .trip-hero { background: #174A46; box-shadow: var(--shadow-sm); }
-.admin-app-wrapper .gi-preview { border-color: #D8ECE9; background: var(--mrt-blue-50); }
+.admin-app-wrapper .trip-hero { background: #245E9C; box-shadow: var(--shadow-sm); }
+.admin-app-wrapper .gi-preview { border-color: #D6E8FF; background: var(--mrt-blue-50); }
 .admin-app-wrapper .gi-ava { background: var(--mrt-blue); }
-.admin-app-wrapper .card-muted-note { border-color: #D8ECE9; }
-.admin-app-wrapper .login-brand { background: #174A46; }
+.admin-app-wrapper .card-muted-note { border-color: #D6E8FF; }
+.admin-app-wrapper .login-brand { background: #245E9C; }
 .admin-app-wrapper .login-brand::after { background: none; }
 .admin-app-wrapper .login-form-side { background: #F6F7F9; }
 .admin-app-wrapper .login-card {
