@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 interface Env {
     DB: any;
@@ -9,7 +10,7 @@ interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 // GET /api/tour-guides
-app.get('/', async (c) => {
+app.get('/', requireAdmin, async (c) => {
     const db = c.env.DB;
     try {
         const result = await db.prepare('SELECT * FROM guides ORDER BY created_at DESC').all();
@@ -74,7 +75,7 @@ app.post('/apply', async (c) => {
 });
 
 // POST /api/tour-guides (admin create)
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
@@ -99,7 +100,7 @@ app.post('/', async (c) => {
 });
 
 // PUT /api/tour-guides/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
@@ -124,7 +125,7 @@ app.put('/:id', async (c) => {
 });
 
 // DELETE /api/tour-guides/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {

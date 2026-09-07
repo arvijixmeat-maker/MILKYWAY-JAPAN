@@ -26,6 +26,7 @@ const PRIVATE_PATTERNS = [
     /^\/documents(?:\/|$)/,
     /^\/estimate(?:\/|$)/,
     /^\/estimate-complete$/,
+    /^\/guide(?:\/|$)/,
     /^\/login$/,
     /^\/my-booking(?:\/|$)/,
     /^\/mypage(?:\/|$)/,

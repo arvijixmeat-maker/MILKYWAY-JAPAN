@@ -22,7 +22,7 @@ interface AdminLayoutProps {
 
 const EYEBROW: Record<string, string> = {
     dashboard: '관리자 콘솔',
-    reservations: '예약 운영', quotes: '예약 운영', calendar: '예약 운영', guides: '예약 운영', 'accommodation-ops': '예약 운영',
+    reservations: '예약 운영', quotes: '예약 운영', calendar: '예약 운영', guides: '예약 운영', 'guide-settlements': '예약 운영', 'accommodation-ops': '예약 운영',
     products: '카탈로그',
     magazines: '콘텐츠', templates: '상품·자료', reviews: '콘텐츠', faq: '콘텐츠', 'tour-faqs': '콘텐츠',
     banners: '사이트 설정', categories: '사이트 설정', hotels: '상품·자료', accommodations: '상품·자료',
@@ -36,6 +36,7 @@ const PAGE_DESCRIPTION: Record<string, string> = {
     'accommodation-ops': '여행 일정별 숙소 배정 상태와 객실 정보를 관리하세요.',
     calendar: '확정된 투어 일정과 운영 준비 상태를 확인하세요.',
     guides: '가이드의 승인 상태, 언어, 전문 분야와 연락처를 관리하세요.',
+    'guide-settlements': '예약별 예산을 만들고 가이드 지출·영수증을 검토해 정산을 마감하세요.',
     products: '판매 상품과 노출 상태를 일관되게 관리하세요.',
     magazines: '여행 콘텐츠의 작성과 공개 상태를 관리하세요.',
     templates: '반복 업무에 사용하는 문서 템플릿을 관리하세요.',

@@ -75,6 +75,8 @@ const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(mo
 const AdminFAQManage = lazy(() => import('./pages/AdminFAQManage').then(module => ({ default: module.AdminFAQManage })))
 const AdminGuideIntroManage = lazy(() => import('./pages/AdminGuideIntroManage').then(module => ({ default: module.AdminGuideIntroManage })))
 const AdminTourFAQManage = lazy(() => import('./pages/AdminTourFAQManage').then(module => ({ default: module.AdminTourFAQManage })))
+const AdminGuideSettlementManage = lazy(() => import('./pages/AdminGuideSettlementManage').then(module => ({ default: module.AdminGuideSettlementManage })))
+const GuideSettlement = lazy(() => import('./pages/GuideSettlement').then(module => ({ default: module.GuideSettlement })))
 
 // Loading Component
 const PageLoader = () => (
@@ -86,12 +88,13 @@ const PageLoader = () => (
 function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isGuideAppRoute = location.pathname === '/guide' || location.pathname.startsWith('/guide/');
   const isGuidePrintRoute =
     location.pathname.startsWith('/documents/itinerary/') &&
     new URLSearchParams(location.search).get('guide') === '1';
   const appWrapperClass = isAdminRoute
     ? 'admin-app-wrapper'
-    : isGuidePrintRoute
+    : isGuidePrintRoute || isGuideAppRoute
       ? 'guide-document-wrapper'
       : 'mobile-app-wrapper';
 
@@ -99,18 +102,20 @@ function App() {
   useEffect(() => {
     if (isGuidePrintRoute) {
       document.body.style.backgroundColor = '#ffffff';
+    } else if (isGuideAppRoute) {
+      document.body.style.backgroundColor = '#f3f6f7';
     } else if (isAdminRoute) {
       document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#0f172a' : '#f6f7f9';
     } else {
       document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#111827' : '#f3f4f6';
     }
-  }, [isAdminRoute, isGuidePrintRoute]);
+  }, [isAdminRoute, isGuidePrintRoute, isGuideAppRoute]);
 
   return (
     <div className={appWrapperClass}>
       <SEO />
       <NotificationProvider>
-        {!isAdminRoute && !isGuidePrintRoute && <FloatingConsultation />}
+        {!isAdminRoute && !isGuidePrintRoute && !isGuideAppRoute && <FloatingConsultation />}
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -174,6 +179,9 @@ function App() {
             <Route path="/admin/faq" element={<AdminGuard><AdminFAQManage /></AdminGuard>} />
             <Route path="/admin/guide-intro" element={<AdminGuard><AdminGuideIntroManage /></AdminGuard>} />
             <Route path="/admin/tour-faqs" element={<AdminGuard><AdminTourFAQManage /></AdminGuard>} />
+            <Route path="/admin/guide-settlements" element={<AdminGuard><AdminGuideSettlementManage /></AdminGuard>} />
+            <Route path="/guide" element={<GuideSettlement />} />
+            <Route path="/guide/settlements/:id" element={<GuideSettlement />} />
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />

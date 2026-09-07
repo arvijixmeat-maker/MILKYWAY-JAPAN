@@ -26,6 +26,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
             { id: 'reservations', icon: 'confirmation_number', label: '예약·결제', description: '예약, 입금, 일정표와 계약서', href: '/admin/reservations', keywords: ['고객', '페이팔', '계약서', '일정표'] },
             { id: 'accommodation-ops', icon: 'bed', label: '숙소·차량 배정', description: '일자별 객실, 가이드와 차량 수배', href: '/admin/accommodation-ops', keywords: ['수배', '객실', '배정'] },
             { id: 'guides', icon: 'badge', label: '가이드 관리', description: '가이드 등록, 승인과 연락처', href: '/admin/guides', keywords: ['배정', '승인'] },
+            { id: 'guide-settlements', icon: 'receipt_long', label: '가이드 정산', description: '투어 예산, 지출 증빙과 정산 승인', href: '/admin/guide-settlements', keywords: ['비용', '영수증', '몽골', '정산'] },
             { id: 'calendar', icon: 'calendar_month', label: '출발 캘린더', description: '출발일과 준비 상태를 달력으로 확인', href: '/admin/calendar', keywords: ['일정', '출발'] },
         ],
     },
@@ -66,5 +67,6 @@ export const ADMIN_OPERATION_FLOW = [
     { id: 'reservations', step: '02', label: '예약·결제', href: '/admin/reservations' },
     { id: 'accommodation-ops', step: '03', label: '숙소·차량', href: '/admin/accommodation-ops' },
     { id: 'guides', step: '04', label: '가이드', href: '/admin/guides' },
-    { id: 'calendar', step: '05', label: '출발 관리', href: '/admin/calendar' },
+    { id: 'guide-settlements', step: '05', label: '비용 정산', href: '/admin/guide-settlements' },
+    { id: 'calendar', step: '06', label: '출발 관리', href: '/admin/calendar' },
 ];

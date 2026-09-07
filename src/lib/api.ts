@@ -234,6 +234,40 @@ export const api = {
         }),
         delete: async (id: string) => request(`${API_BASE}/tour-guides/${id}`, { method: 'DELETE' }),
     },
+    guideSettlements: {
+        list: async () => request(`${API_BASE}/guide-settlements`),
+        getAdmin: async (id: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/admin`),
+        create: async (data: Record<string, unknown>) => request(`${API_BASE}/guide-settlements`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        issueLink: async (id: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/access-link`, { method: 'POST' }),
+        setStatus: async (id: string, status: string, adminNote?: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, adminNote }),
+        }),
+        getGuide: async (id: string, token: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/guide?token=${encodeURIComponent(token)}`),
+        submit: async (id: string, token: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/submit?token=${encodeURIComponent(token)}`, { method: 'POST' }),
+        addItem: async (id: string, data: Record<string, unknown>, token?: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/items${token ? `?token=${encodeURIComponent(token)}` : ''}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        updateItem: async (id: string, itemId: string, data: Record<string, unknown>, token?: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+        deleteItem: async (id: string, itemId: string, token?: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`, { method: 'DELETE' }),
+        uploadReceipt: async (id: string, itemId: string, file: File, token?: string) => {
+            const body = new FormData();
+            body.append('file', file);
+            return request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}/receipts${token ? `?token=${encodeURIComponent(token)}` : ''}`, { method: 'POST', body });
+        },
+        deleteReceipt: async (id: string, receiptId: string, token?: string) => request(`${API_BASE}/guide-settlements/${encodeURIComponent(id)}/receipts/${encodeURIComponent(receiptId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`, { method: 'DELETE' }),
+    },
     guides: {
         list: async () => request(`${API_BASE}/guides`),
         get: async (id: string) => request(`${API_BASE}/guides/${id}`),
