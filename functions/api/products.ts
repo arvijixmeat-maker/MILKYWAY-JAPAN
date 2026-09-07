@@ -43,7 +43,6 @@ const preparePricingOptions = (value: any): PreparedPricing => {
     for (const item of raw) {
         const people = Number(item?.people);
         const pricePerPerson = Number(item?.pricePerPerson);
-        const depositPerPerson = Number(item?.depositPerPerson || 0);
 
         if (!Number.isInteger(people) || people < 1) {
             return { error: '인원별 가격의 인원은 1명 이상의 정수여야 합니다.' };
@@ -54,16 +53,12 @@ const preparePricingOptions = (value: any): PreparedPricing => {
         if (!Number.isFinite(pricePerPerson) || pricePerPerson <= 0) {
             return { error: `${people}명 기준 1인 총가격은 0보다 커야 합니다.` };
         }
-        if (!Number.isFinite(depositPerPerson) || depositPerPerson < 0 || depositPerPerson > pricePerPerson) {
-            return { error: `${people}명 기준 예약금은 0 이상이며 1인 총가격 이하여야 합니다.` };
-        }
-
         peopleSeen.add(people);
         options.push({
             people,
             pricePerPerson: Math.round(pricePerPerson),
-            depositPerPerson: Math.round(depositPerPerson),
-            localPaymentPerPerson: Math.max(0, Math.round(pricePerPerson - depositPerPerson)),
+            depositPerPerson: 0,
+            localPaymentPerPerson: Math.round(pricePerPerson),
         });
     }
 

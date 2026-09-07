@@ -1,8 +1,9 @@
 import type { TourPricingOption } from '../../../types/product';
+import { getReservationDeposit } from '../../../lib/tourPricing';
 
 /**
  * 상품 「가격/옵션」 탭의 인원별 가격을 디자인 템플릿 가격표(price_rows) 문자열로 변환.
- * 형식은 템플릿 표와 같다: 한 줄에 한 행, `참가인수|予約金|残金|1인 합계` (| 구분).
+ * 형식은 템플릿 표와 같다: 한 줄에 한 행, `참가인수|예약당 예약금|그룹 잔금|1인 합계` (| 구분).
  * 인원별 가격이 하나도 없으면 undefined — 템플릿에 직접 입력한 값/기본값이 그대로 쓰인다.
  */
 export function priceRowsFromOptions(options: TourPricingOption[] | undefined): string | undefined {
@@ -15,8 +16,9 @@ export function priceRowsFromOptions(options: TourPricingOption[] | undefined): 
         .sort((a, b) => a.people - b.people)
         .map(o => {
             const total = o.pricePerPerson > 0 ? o.pricePerPerson : o.depositPerPerson + o.localPaymentPerPerson;
-            const local = o.localPaymentPerPerson > 0 ? o.localPaymentPerPerson : Math.max(total - o.depositPerPerson, 0);
-            return `${o.people}名様の場合|${yen(o.depositPerPerson)}|${yen(local)}|${yen(total)}`;
+            const groupTotal = total * o.people;
+            const deposit = getReservationDeposit(groupTotal);
+            return `${o.people}名様の場合|${yen(deposit)}|${yen(groupTotal - deposit)}|${yen(total)}`;
         })
         .join('\n');
 }

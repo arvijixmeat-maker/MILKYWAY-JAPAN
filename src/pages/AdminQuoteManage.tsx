@@ -5,6 +5,7 @@ import { keysToCamel, keysToSnake } from '../utils/mapKeys';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { sendNotificationEmail } from '../lib/email';
+import { getReservationDeposit } from '../lib/tourPricing';
 import type { QuoteRequest } from '../components/admin/QuoteModals';
 import { QuoteDetailModal, ConvertSelectionModal } from '../components/admin/QuoteModals';
 
@@ -103,6 +104,9 @@ export const AdminQuoteManage: React.FC = () => {
         if (!selectedRequest) return;
 
         try {
+            const deposit = getReservationDeposit(data.totalAmount);
+            const people = (String(selectedRequest.headcount || '').match(/\d+/g) || ['1'])
+                .reduce((sum: number, value: string) => sum + Number(value), 0);
             // 박수 계산
             const start = new Date(data.startDate);
             const end = new Date(data.endDate);
@@ -119,23 +123,33 @@ export const AdminQuoteManage: React.FC = () => {
                 if (parsed && typeof parsed === 'object') bankAccount = parsed;
             } catch { /* 설정 없으면 빈 값 */ }
 
+            // 서버가 견적 확정금액을 기준으로 재검증할 수 있도록 먼저 확정값을 저장한다.
+            await api.quotes.update(selectedRequest.id, {
+                confirmed_price: data.totalAmount,
+                deposit,
+                confirmed_start_date: data.startDate,
+                confirmed_end_date: data.endDate,
+                updated_at: new Date().toISOString()
+            });
+
             // 2. 예약 생성
             const newReservation = await api.reservations.create({
                 user_id: selectedRequest.userId || null,
                 type: 'quote',
-                product_name: `${selectedRequest.destination} 맞춤견적`,
+                quote_id: selectedRequest.id,
+                product_name: `${selectedRequest.destination} オーダーメイド旅行`,
                 customer_name: selectedRequest.name,
                 customer_phone: selectedRequest.phone,
                 customer_email: selectedRequest.email,
-                total_people: selectedRequest.headcount,
+                total_people: people,
                 start_date: data.startDate,
                 end_date: data.endDate,
                 duration: durationText,
                 status: 'pending_payment',
                 price_breakdown: {
                     total: data.totalAmount,
-                    deposit: data.deposit,
-                    local: data.totalAmount - data.deposit
+                    deposit,
+                    local: data.totalAmount - deposit
                 },
                 bank_account: bankAccount,
                 itinerary_template_id: selectedRequest.itineraryTemplateId || selectedRequest.itinerary_template_id || null,
@@ -151,7 +165,7 @@ export const AdminQuoteManage: React.FC = () => {
             await api.quotes.update(requestId, {
                 status: 'converted',
                 confirmed_price: data.totalAmount,
-                deposit: data.deposit,
+                deposit,
                 confirmed_start_date: data.startDate,
                 confirmed_end_date: data.endDate,
                 updated_at: new Date().toISOString()
@@ -164,9 +178,9 @@ export const AdminQuoteManage: React.FC = () => {
                     'RESERVATION_REQUESTED',
                     {
                         customerName: selectedRequest.name,
-                        productName: `${selectedRequest.destination} 맞춤견적 (${durationText})`,
+                        productName: `${selectedRequest.destination} オーダーメイド旅行（${durationText}）`,
                         reservationId: reservationNumber,
-                        depositAmount: `¥${data.deposit.toLocaleString()}`,
+                        depositAmount: `¥${deposit.toLocaleString('ja-JP')}`,
                         customerPhone: selectedRequest.phone,
                         customerEmail: selectedRequest.email,
                     }
@@ -194,6 +208,7 @@ export const AdminQuoteManage: React.FC = () => {
     const handleSendEstimate = async (url: string, note: string, priceDetail: any, confirmedStartDate: string, confirmedEndDate: string, itineraryTemplateId?: string) => {
         if (!selectedRequest) return;
         const requestId = selectedRequest.id;
+        const deposit = getReservationDeposit(priceDetail.totalAmount || 0);
 
         try {
             // Update via API with confirmed values
@@ -202,7 +217,7 @@ export const AdminQuoteManage: React.FC = () => {
                 admin_note: note,
                 estimate_url: url,
                 confirmed_price: priceDetail.totalAmount || null,
-                deposit: priceDetail.deposit || null,
+                deposit: deposit || null,
                 confirmed_start_date: confirmedStartDate || null,
                 confirmed_end_date: confirmedEndDate || null,
                 itinerary_template_id: itineraryTemplateId || null,
@@ -239,7 +254,7 @@ export const AdminQuoteManage: React.FC = () => {
                     adminNote: note,
                     estimateUrl: url,
                     confirmed_price: priceDetail.totalAmount || undefined,
-                    deposit: priceDetail.deposit || undefined,
+                    deposit: deposit || undefined,
                     confirmed_start_date: confirmedStartDate || undefined,
                     confirmed_end_date: confirmedEndDate || undefined
                 } : req

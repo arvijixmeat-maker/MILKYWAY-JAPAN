@@ -5,7 +5,7 @@ export type StepIdx = 0 | 1 | 2;
 
 const ITEMS = [
     { n: 1, label: '予約日・オプション' },
-    { n: 2, label: 'ご予約者情報・決済' },
+    { n: 2, label: 'ご予約者情報・予約申込' },
     { n: 3, label: '申し込み完了' },
 ];
 

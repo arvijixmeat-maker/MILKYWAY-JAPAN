@@ -9,6 +9,7 @@ import {
     type ActivityType,
 } from '../../pages/AdminTemplateManage';
 import { api } from '../../lib/api';
+import { getReservationDeposit } from '../../lib/tourPricing';
 import { uploadImage } from '../../utils/upload';
 import type { DayInfoContent, DetailContentBlock, TimelineContent, TourProduct } from '../../types/product';
 import { TouristSpotPickerModal } from './TouristSpotPickerModal';
@@ -291,7 +292,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({ open, onClose, titl
             guide: {
                 ...current.guide,
                 paymentInfo: defaultPricing
-                    ? `예약금: 1인 ${defaultPricing.depositPerPerson.toLocaleString()}원\n현지 잔금: 1인 ${defaultPricing.localPaymentPerPerson.toLocaleString()}원`
+                    ? (() => {
+                        const groupTotal = defaultPricing.pricePerPerson * Math.max(1, customer?.peopleCount || 1);
+                        const deposit = getReservationDeposit(groupTotal);
+                        return `予約金（1予約）: ¥${deposit.toLocaleString('ja-JP')}\n現地支払い残金: ¥${(groupTotal - deposit).toLocaleString('ja-JP')}`;
+                    })()
                     : current.guide.paymentInfo,
             },
         }));

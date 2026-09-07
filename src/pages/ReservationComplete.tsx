@@ -101,7 +101,7 @@ export const ReservationComplete: React.FC = () => {
 
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-3xl p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
                         <div className="mb-6">
-                            <p className="text-[13px] font-bold text-gray-400 mb-1 uppercase tracking-wider">決済する予約金額</p>
+                            <p className="text-[13px] font-bold text-gray-400 mb-1 uppercase tracking-wider">メールでお支払いいただく予約金</p>
                             <p className="text-3xl font-bold text-[#0e1a18] dark:text-white">{formatPrice(priceBreakdown.deposit)}円</p>
                             <p className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                                 現地払い残金: {formatPrice(priceBreakdown.local)}円（モンゴル到着後にお支払い）
@@ -119,7 +119,7 @@ export const ReservationComplete: React.FC = () => {
                             </div>
                             <div className="flex items-start gap-2">
                                 <span className="material-symbols-outlined text-orange-500 text-lg shrink-0 mt-0.5">warning</span>
-                                <p>お支払いが確認できない場合、自動的にキャンセルとなることがございます。</p>
+                                <p>請求書メールが届かない場合は、マイ予約から同じ請求書を開けます。</p>
                             </div>
                         </div>
                     </div>

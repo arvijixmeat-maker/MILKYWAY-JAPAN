@@ -12,6 +12,15 @@ export interface PricingValidationIssue {
     message: string;
 }
 
+/**
+ * PayPal로 먼저 결제하는 예약금은 인원별 단가가 아니라 예약 1건당 고정 금액이다.
+ * 상품별 총액이 이보다 작을 때만 총액을 상한으로 사용한다.
+ */
+export const RESERVATION_DEPOSIT_JPY = 20_000;
+
+export const getReservationDeposit = (total: number) =>
+    Math.min(Math.max(0, Math.round(Number(total) || 0)), RESERVATION_DEPOSIT_JPY);
+
 const money = (value: unknown) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
@@ -23,13 +32,13 @@ const money = (value: unknown) => {
  */
 export const normalizePricingOption = (option: TourPricingOption): TourPricingOption => {
     const pricePerPerson = money(option.pricePerPerson);
-    const depositPerPerson = Math.min(money(option.depositPerPerson), pricePerPerson);
 
     return {
         people: Math.max(1, Math.round(Number(option.people) || 1)),
         pricePerPerson,
-        depositPerPerson,
-        localPaymentPerPerson: Math.max(0, pricePerPerson - depositPerPerson),
+        // 기존 상품 JSON과의 호환을 위해 필드는 유지하되 실제 예약금은 예약 단위로 계산한다.
+        depositPerPerson: 0,
+        localPaymentPerPerson: pricePerPerson,
     };
 };
 
@@ -110,7 +119,7 @@ export const resolvePricingOption = (
     return sorted.filter((option) => option.people <= people).pop() ?? sorted[0];
 };
 
-/** 추가 옵션 금액은 현지 결제액에 포함한다. */
+/** 추가 옵션 금액은 현지 결제액에 포함하고, 예약금은 예약 1건당 ¥20,000으로 고정한다. */
 export const calculateTourPrice = (
     option: TourPricingOption | null,
     people: number,
@@ -122,7 +131,7 @@ export const calculateTourPrice = (
     const parsedModifier = Number(optionModifiers);
     const modifier = Number.isFinite(parsedModifier) ? Math.round(parsedModifier) : 0;
     const total = Math.max(0, normalized.pricePerPerson * people + modifier);
-    const deposit = Math.min(total, normalized.depositPerPerson * people);
+    const deposit = getReservationDeposit(total);
 
     return {
         total,

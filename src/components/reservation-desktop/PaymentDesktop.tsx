@@ -193,7 +193,7 @@ export function PaymentDesktop({
 
                     {/* Payment amount */}
                     <Card>
-                        <CardHeader title="決済金額" eyebrow="Payment" />
+                        <CardHeader title="お支払い内訳" eyebrow="Payment" />
                         <div style={{ padding: '0 28px 24px' }}>
                             <div
                                 style={{
@@ -239,7 +239,7 @@ export function PaymentDesktop({
                                         color: 'var(--primary-dark, #115e59)',
                                     }}
                                 >
-                                    今すぐ決済する予約金
+                                    申込後に届く請求書の予約金
                                 </span>
                                 <span
                                     style={{
@@ -330,6 +330,10 @@ export function PaymentDesktop({
                                         PayPal の請求書をお送りいたします。
                                         <br />
                                         メール内のリンクから、クレジットカード等で安全にお支払いいただけます。
+                                        <br />
+                                        <strong style={{ color: 'var(--primary-dark, #115e59)' }}>
+                                            この画面ではまだ決済されません。
+                                        </strong>
                                     </div>
                                     <div
                                         style={{
@@ -401,7 +405,7 @@ export function PaymentDesktop({
                                     }}
                                 >
                                     <li>請求書メールにお支払い期限が記載されています。期限内に決済をお願いします。</li>
-                                    <li>24時間以内に入金がない場合、予約は自動的にキャンセルされます。</li>
+                                    <li>予約金は人数にかかわらず、1予約につき ¥20,000 です。</li>
                                     <li>
                                         お支払いに関するご質問は{' '}
                                         <strong style={{ color: 'var(--fg-2)' }}>
@@ -535,7 +539,7 @@ export function PaymentDesktop({
                                 }}
                             >
                                 <strong style={{ color: 'var(--fg-1)', fontWeight: 700 }}>
-                                    注文内容を確認し、決済に同意します。
+                                    注文内容を確認し、予約申込とPayPal請求書の受領に同意します。
                                 </strong>
                                 <span style={{ color: 'var(--fg-5)', marginLeft: 8 }}>
                                     <a
@@ -584,7 +588,7 @@ export function PaymentDesktop({
                     ctaLabel={
                         isProcessing
                             ? '処理中...'
-                            : `¥${formatPrice(priceBreakdown.deposit)} 決済する`
+                            : '予約を申し込む'
                     }
                     ctaIcon="receipt_long"
                     onCta={handleSubmit}

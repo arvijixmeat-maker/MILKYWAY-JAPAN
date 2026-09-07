@@ -11,7 +11,12 @@ import { PCard, type PCardData } from '../desktop-primitives/PCard';
 import { DestinationsMap } from '../desktop-primitives/DestinationsMap';
 import { extractPlacesFromItinerary } from '../../constants/mongoliaPlaces';
 import { useGuideIntro } from '../../hooks/useGuideIntro';
-import { calculateTourPrice, normalizePricingOptions, resolvePricingOption } from '../../lib/tourPricing';
+import {
+    calculateTourPrice,
+    normalizePricingOptions,
+    RESERVATION_DEPOSIT_JPY,
+    resolvePricingOption,
+} from '../../lib/tourPricing';
 import { PriceTableModal } from '../reservation-desktop/PriceTableModal';
 
 interface ReviewLike {
@@ -1315,6 +1320,9 @@ function OptionsBlock({ product }: { product: TourProduct }) {
                     <h3 style={subSectionHeading}>
                         <MatIcon name="payments" size={20} color="#0f766e" /> 人数別料金
                     </h3>
+                    <div style={{ margin: '-4px 0 14px', fontSize: 12, color: 'var(--fg-4)' }}>
+                        予約金は人数にかかわらず、1予約につき ¥{RESERVATION_DEPOSIT_JPY.toLocaleString('ja-JP')} です。
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(pricing.length, 4)}, 1fr)`, gap: 12 }}>
                         {pricing.map((p, i) => (
                             <div key={i} style={pricingCardStyle}>
@@ -1323,16 +1331,9 @@ function OptionsBlock({ product }: { product: TourProduct }) {
                                     ¥{p.pricePerPerson.toLocaleString()}
                                     <span style={{ fontSize: 12, color: 'var(--fg-5)', fontWeight: 500, marginLeft: 4 }}>/ 名</span>
                                 </div>
-                                {p.depositPerPerson > 0 && (
-                                    <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--border-subtle)' }}>
-                                        予約金 ¥{p.depositPerPerson.toLocaleString()}
-                                    </div>
-                                )}
-                                {p.localPaymentPerPerson > 0 && (
-                                    <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 2 }}>
-                                        現地払 ¥{p.localPaymentPerPerson.toLocaleString()}
-                                    </div>
-                                )}
+                                <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--border-subtle)' }}>
+                                    グループ合計 ¥{(p.pricePerPerson * p.people).toLocaleString('ja-JP')}
+                                </div>
                             </div>
                         ))}
                     </div>

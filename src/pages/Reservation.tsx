@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { ReservationDesktop } from '../components/reservation-desktop/ReservationDesktop';
-import { calculateTourPrice, resolvePricingOption } from '../lib/tourPricing';
+import { calculateTourPrice, getReservationDeposit, resolvePricingOption } from '../lib/tourPricing';
 
 export const Reservation: React.FC = () => {
     const { t } = useTranslation();
@@ -535,9 +535,7 @@ export const Reservation: React.FC = () => {
                     const currentOpt = sortedOpts.find(p => p.people === totalPeople);
                     const currency = t('reservation.price_info.currency');
                     const currentTotal = currentOpt ? currentOpt.pricePerPerson * currentOpt.people : 0;
-                    const currentDeposit = currentOpt
-                        ? Math.min(currentTotal, (currentOpt.depositPerPerson || 0) * currentOpt.people)
-                        : 0;
+                    const currentDeposit = currentOpt ? getReservationDeposit(currentTotal) : 0;
                     const currentLocal = Math.max(0, currentTotal - currentDeposit);
 
                     return (

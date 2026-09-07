@@ -60,7 +60,7 @@ export interface ProductFAQ {
 export interface TourPricingOption {
     people: number;         // 인원 수 (예: 2, 3, 4...)
     pricePerPerson: number; // 1인당 가격 (총 금액)
-    depositPerPerson: number; // 1인당 예약금
+    depositPerPerson: number; // 레거시 호환 필드: 실제 예약금은 예약 1건당 고정 금액
     localPaymentPerPerson: number; // 1인당 현지 지불 잔금
 }
 

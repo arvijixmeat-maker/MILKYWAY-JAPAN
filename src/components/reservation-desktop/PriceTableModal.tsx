@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { TourPricingOption } from '../../types/product';
+import { getReservationDeposit } from '../../lib/tourPricing';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { formatPrice } from './primitives';
 
@@ -27,7 +28,7 @@ export function PriceTableModal({ options, current, onChange, onClose, onConfirm
     const baselineOption = options[0];
     const currentOpt = options.find((o) => o.people === current) ?? options[0];
     const currentTotal = currentOpt.pricePerPerson * currentOpt.people;
-    const currentDeposit = Math.min(currentTotal, (currentOpt.depositPerPerson || 0) * currentOpt.people);
+    const currentDeposit = getReservationDeposit(currentTotal);
     const currentLocal = Math.max(0, currentTotal - currentDeposit);
 
     return (

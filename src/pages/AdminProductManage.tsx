@@ -7,7 +7,7 @@ import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
-import { getPricingValidationIssues, normalizePricingOptions } from '../lib/tourPricing';
+import { getPricingValidationIssues, normalizePricingOptions, RESERVATION_DEPOSIT_JPY } from '../lib/tourPricing';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent, DesignBlockContent } from '../types/product';
 import type { Category } from '../types/category';
 import type { Hotel } from '../types/hotel';
@@ -748,22 +748,22 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
         const currentOptions = formData.pricingOptions || [];
         const previous = [...currentOptions].sort((a, b) => a.people - b.people).at(-1);
         const pricePerPerson = previous?.pricePerPerson || 0;
-        const depositPerPerson = previous?.depositPerPerson || 0;
         setFormData({
             ...formData,
             pricingOptions: [...currentOptions, {
                 people: previous ? previous.people + 1 : 2,
                 pricePerPerson,
-                depositPerPerson,
-                localPaymentPerPerson: Math.max(0, pricePerPerson - depositPerPerson),
+                depositPerPerson: 0,
+                localPaymentPerPerson: pricePerPerson,
             }]
         });
     };
     const updatePricingOption = (index: number, field: keyof TourPricingOption, value: number) => {
         const updated = [...(formData.pricingOptions || [])];
         const next = { ...updated[index], [field]: value };
-        if (field === 'pricePerPerson' || field === 'depositPerPerson') {
-            next.localPaymentPerPerson = Math.max(0, next.pricePerPerson - next.depositPerPerson);
+        if (field === 'pricePerPerson') {
+            next.depositPerPerson = 0;
+            next.localPaymentPerPerson = next.pricePerPerson;
         }
         updated[index] = next;
         setFormData({ ...formData, pricingOptions: updated });
@@ -774,20 +774,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
             pricingOptions: formData.pricingOptions?.filter((_, i) => i !== index)
         });
     };
-    const applyFirstDepositToAll = () => {
-        const options = formData.pricingOptions || [];
-        if (options.length < 2) return;
-        const depositPerPerson = options[0].depositPerPerson || 0;
-        setFormData({
-            ...formData,
-            pricingOptions: options.map((option) => ({
-                ...option,
-                depositPerPerson,
-                localPaymentPerPerson: Math.max(0, option.pricePerPerson - depositPerPerson),
-            })),
-        });
-    };
-
     // Accommodation Option Handlers
     const addAccommodationOption = () => {
         setFormData({
@@ -2484,12 +2470,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                     <div className="edit-sec-head pricing-sec-head">
                                         <Icon name="groups" />
                                         <h4>인원별 가격 옵션</h4>
-                                        <span className="muted">총가격과 예약금만 입력하면 현지 결제액이 자동 계산됩니다.</span>
-                                        {(formData.pricingOptions?.length || 0) > 1 && (
-                                            <button type="button" className="pricing-bulk-btn" onClick={applyFirstDepositToAll}>
-                                                <Icon name="content_copy" />첫 예약금 전체 적용
-                                            </button>
-                                        )}
+                                        <span className="muted">1인 총가격만 관리합니다. 예약금은 인원과 관계없이 예약 1건당 ¥{formatPriceInput(RESERVATION_DEPOSIT_JPY)}입니다.</span>
                                     </div>
                                     {pricingIssues.length > 0 && (
                                         <div className="pricing-validation" role="status">
@@ -2501,7 +2482,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                             ))}
                                         </div>
                                     )}
-                                    <div className="opt-grid-head pricing-grid-head"><span>인원</span><span>1인 총가격</span><span>1인 예약금</span><span>1인 현지 결제</span><span></span></div>
+                                    <div className="opt-grid-head pricing-grid-head"><span>인원</span><span>1인 총가격</span><span>그룹 총액</span><span></span></div>
                                     <div className="stack" style={{ gap: 10 }}>
                                         {formData.pricingOptions?.map((option, index) => (
                                             <div className={`edit-row pricing-row${pricingIssues.some((issue) => issue.index === index && issue.level === 'error') ? ' has-error' : pricingIssues.some((issue) => issue.index === index) ? ' has-warning' : ''}`} key={index}>
@@ -2509,8 +2490,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                     <div className="opt-grid">
                                                         <div className="inp-mini"><input aria-label="인원" type="number" min={1} step={1} value={option.people} onChange={(e) => updatePricingOption(index, 'people', Number(e.target.value))} /><span>명</span></div>
                                                         <div className="inp-mini"><span className="pre">¥</span><input aria-label="1인 총가격" type="text" inputMode="numeric" value={formatPriceInput(option.pricePerPerson)} onChange={(e) => updatePricingOption(index, 'pricePerPerson', parsePriceInput(e.target.value))} /></div>
-                                                        <div className="inp-mini"><span className="pre">¥</span><input aria-label="1인 예약금" type="text" inputMode="numeric" value={formatPriceInput(option.depositPerPerson)} onChange={(e) => updatePricingOption(index, 'depositPerPerson', parsePriceInput(e.target.value))} /></div>
-                                                        <div className="inp-mini calculated" title="총가격에서 예약금을 제외해 자동 계산됩니다"><span className="pre">¥</span><input aria-label="1인 현지 결제" type="text" value={formatPriceInput(Math.max(0, option.pricePerPerson - option.depositPerPerson))} readOnly /><Icon name="lock" /></div>
+                                                        <div className="inp-mini calculated" title="인원 × 1인 총가격"><span className="pre">¥</span><input aria-label="그룹 총액" type="text" value={formatPriceInput(option.pricePerPerson * option.people)} readOnly /><Icon name="lock" /></div>
                                                     </div>
                                                 </div>
                                                 <button type="button" className="act-btn danger" onClick={() => removePricingOption(index)} title="삭제"><Icon name="delete" /></button>

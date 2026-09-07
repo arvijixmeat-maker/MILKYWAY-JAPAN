@@ -10,6 +10,7 @@ import type { TouristSpot } from '../types/touristSpot';
 import type { Hotel } from '../types/hotel';
 import mongoliaHero from '../assets/login_bg_3.jpg';
 import { DOC_BLUE, DOC_NAVY } from '../components/document/TripDocParts';
+import { getReservationDeposit } from '../lib/tourPricing';
 
 // ─── Types ───────────────────────────────────────────────
 export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
@@ -285,7 +286,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
     const peopleCount = customer?.peopleCount || 2;
     const samplePrice = (customer?.totalAmount && peopleCount) ? Math.round(customer.totalAmount / peopleCount) : (Number(settings.overview.pricePerPerson || 0) || 128000);
     const sampleTotal = customer?.totalAmount ?? samplePrice * peopleCount;
-    const sampleDeposit = customer?.deposit ?? Math.floor(sampleTotal * 0.1);
+    const sampleDeposit = customer?.deposit ?? getReservationDeposit(sampleTotal);
     const sampleLocal = customer?.localAmount ?? (sampleTotal - sampleDeposit);
     const tripLength = customer?.tripLength || `${nights}泊${totalDays || 0}日`;
     const guideText = assignedGuide?.name

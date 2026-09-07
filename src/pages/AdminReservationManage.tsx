@@ -9,6 +9,7 @@ import { sendNotification } from '../utils/notification';
 import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplateManage';
 import { toTourDateKey } from '../utils/formatDate';
+import { getReservationDeposit, RESERVATION_DEPOSIT_JPY } from '../lib/tourPricing';
 
 // Reservation Interface
 interface Reservation {
@@ -112,7 +113,7 @@ const sourceColor = (s?: string): { bg: string; fg: string } => ({
     visit: { bg: '#EEEDFE', fg: '#534AB7' },
     other: { bg: '#F1F2F4', fg: '#8A8F99' },
 }[s || ''] || { bg: '#F1F2F4', fg: '#8A8F99' });
-const BLANK_ADD = { customerName: '', phone: '', email: '', source: 'line', productName: '', startDate: '', endDate: '', people: '1', totalAmount: '', deposit: '', status: 'pending_payment', notes: '' };
+const BLANK_ADD = { customerName: '', phone: '', email: '', source: 'line', productName: '', startDate: '', endDate: '', people: '1', totalAmount: '', status: 'pending_payment', notes: '' };
 
 interface ProductSummary {
     id?: string;
@@ -2628,10 +2629,10 @@ export const AdminReservationManage: React.FC = () => {
         setCreating(true);
         try {
             const total = Number(addForm.totalAmount) || 0;
-            const deposit = Number(addForm.deposit) || 0;
+            const deposit = getReservationDeposit(total);
             await api.reservations.create({
                 type: 'tour',
-                product_name: addForm.productName.trim() || '맞춤 예약',
+                product_name: addForm.productName.trim() || 'オーダーメイド旅行',
                 customer_info: { name: addForm.customerName.trim(), email: addForm.email.trim(), phone: addForm.phone.trim() },
                 total_people: Number(addForm.people) || 1,
                 start_date: addForm.startDate || null,
@@ -3268,8 +3269,8 @@ export const AdminReservationManage: React.FC = () => {
                                 { k: 'endDate', label: '여행 종료일', el: <input type="date" className="inp" style={{ width: '100%' }} value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} /> },
                                 { k: 'people', label: '인원', el: <input type="number" min={1} className="inp" style={{ width: '100%' }} value={addForm.people} onChange={e => setAddForm(f => ({ ...f, people: e.target.value }))} /> },
                                 { k: 'status', label: '상태', el: <select className="select" style={{ width: '100%' }} value={addForm.status} onChange={e => setAddForm(f => ({ ...f, status: e.target.value }))}><option value="pending_payment">입금 대기</option><option value="confirmed">예약 확정</option><option value="paid">결제 완료</option></select> },
-                                { k: 'totalAmount', label: '총금액 (₩)', el: <input type="number" min={0} className="inp" style={{ width: '100%' }} value={addForm.totalAmount} onChange={e => setAddForm(f => ({ ...f, totalAmount: e.target.value }))} placeholder="0" /> },
-                                { k: 'deposit', label: '예약금 (₩)', el: <input type="number" min={0} className="inp" style={{ width: '100%' }} value={addForm.deposit} onChange={e => setAddForm(f => ({ ...f, deposit: e.target.value }))} placeholder="0" /> },
+                                { k: 'totalAmount', label: '총금액 (엔)', el: <input type="number" min={0} className="inp" style={{ width: '100%' }} value={addForm.totalAmount} onChange={e => setAddForm(f => ({ ...f, totalAmount: e.target.value }))} placeholder="0" /> },
+                                { k: 'deposit', label: '예약금 (엔 · 예약 1건 고정)', el: <input type="text" className="inp" style={{ width: '100%', background: 'var(--mrt-gray-50)' }} value={RESERVATION_DEPOSIT_JPY.toLocaleString('ja-JP')} readOnly /> },
                                 { k: 'notes', label: '메모', full: true, el: <textarea className="inp" style={{ width: '100%', minHeight: 60, resize: 'vertical' }} value={addForm.notes} onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))} placeholder="주문 메모 (LINE ID 등)" /> },
                             ].map(field => (
                                 <div key={field.k} style={field.full ? { gridColumn: '1 / -1' } : undefined}>
@@ -3363,7 +3364,7 @@ export const AdminReservationManage: React.FC = () => {
                                     console.error('Email Send Error:', emailResult.error);
                                     alert('견적 정보는 저장되었으나, 이메일 발송에 실패했습니다.');
                                 } else {
-                                    alert(`견적서가 발송되었습니다. (이메일 알림 포함)\n확정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '원' : '미입력'}`);
+                                    alert(`견적서가 발송되었습니다. (이메일 알림 포함)\n확정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '엔' : '미입력'}`);
                                 }
                             } catch (emailError) {
                                 console.error('Email Unexpected Error:', emailError);
@@ -3391,26 +3392,35 @@ export const AdminReservationManage: React.FC = () => {
                     onClose={() => setConvertTarget(null)}
                     onConvert={async (data) => {
                         try {
+                            const deposit = getReservationDeposit(data.totalAmount);
+                            const people = (String(convertTarget.headcount || '').match(/\d+/g) || ['1'])
+                                .reduce((sum, value) => sum + Number(value), 0);
+
+                            // 예약 서버가 고객 화면과 같은 확정 금액을 검증하도록 먼저 견적에 저장한다.
+                            await api.quotes.update(convertTarget.id, {
+                                confirmed_price: data.totalAmount,
+                                deposit,
+                                confirmed_start_date: data.startDate,
+                                confirmed_end_date: data.endDate,
+                                updated_at: new Date().toISOString()
+                            });
+
                             // 1. Create Reservation
                             const reservationPayload = {
                                 type: 'quote',
-                                product_name: `${convertTarget.destination} 맞춤 견적`,
+                                quote_id: convertTarget.id,
+                                product_name: `${convertTarget.destination} オーダーメイド旅行`,
                                 customer_name: convertTarget.name,
                                 customer_phone: convertTarget.phone,
                                 customer_email: convertTarget.email,
-                                total_people: parseInt(convertTarget.headcount.replace(/[^0-9]/g, '')) || 0,
+                                total_people: people,
                                 start_date: data.startDate,
                                 end_date: data.endDate,
                                 status: 'pending_payment',
                                 price_breakdown: {
                                     total: data.totalAmount,
-                                    deposit: data.deposit,
-                                    local: data.totalAmount - data.deposit
-                                },
-                                bank_account: {
-                                    bankName: '국민은행',
-                                    accountNumber: '123-456-789012',
-                                    accountHolder: '밀키웨이투어'
+                                    deposit,
+                                    local: data.totalAmount - deposit
                                 },
                                 user_id: convertTarget.userId
                             };
@@ -3420,6 +3430,10 @@ export const AdminReservationManage: React.FC = () => {
                             // 2. Update Quote Status
                             await api.quotes.update(convertTarget.id, {
                                 status: 'converted',
+                                confirmed_price: data.totalAmount,
+                                deposit,
+                                confirmed_start_date: data.startDate,
+                                confirmed_end_date: data.endDate,
                                 updated_at: new Date().toISOString()
                             });
 
