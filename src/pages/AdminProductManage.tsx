@@ -14,7 +14,7 @@ import type { TouristSpot } from '../types/touristSpot';
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 import { ItineraryImportModal } from '../components/admin/ItineraryImportModal';
-import { cloneItineraryBlocks, type ItinerarySource } from '../components/admin/itineraryImport';
+import { cloneItineraryBlocks, renumberDayLabels, type ItinerarySource } from '../components/admin/itineraryImport';
 
 
 
@@ -974,7 +974,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
     // ─── Tourist spot picker — only opens from TIMELINE blocks ─────────
     const [spotPickerForIndex, setSpotPickerForIndex] = useState<number | null>(null);
 
-    // 「일정표 불러오기」 — 다른 상품의 일정표를 복제해 현재 상품에 넣는다
+    // 「일정표 불러오기」 — 다른 상품의 일차들을 복제해 현재 상품에 넣는다 (일차 번호는 다시 매김)
     const [itineraryImportOpen, setItineraryImportOpen] = useState(false);
     const importItineraryFrom = (src: ItinerarySource) => {
         const current = formData.itineraryBlocks || [];
@@ -986,7 +986,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
         const cloned = cloneItineraryBlocks(src.blocks);
         setFormData({
             ...formData,
-            itineraryBlocks: replace ? cloned : [...current, ...cloned],
+            itineraryBlocks: renumberDayLabels(replace ? cloned : [...current, ...cloned]),
             itineraryImages: replace ? [...src.images] : [...currentImages, ...src.images],
         });
         setItineraryImportOpen(false);
