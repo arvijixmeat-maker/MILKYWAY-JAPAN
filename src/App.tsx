@@ -99,7 +99,7 @@ function App() {
     if (isGuidePrintRoute) {
       document.body.style.backgroundColor = '#ffffff';
     } else if (isAdminRoute) {
-      document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#0f172a' : '#f8fafc';
+      document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#0f172a' : '#f6f7f9';
     } else {
       document.body.style.backgroundColor = document.documentElement.classList.contains('dark') ? '#111827' : '#f3f4f6';
     }

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -2165,16 +2166,18 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
 };
 
 export const AdminReservationManage: React.FC = () => {
+    const location = useLocation();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
     // Filter States
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
     const [filterStatus, setFilterStatus] = useState('전체 상태');
     const [filterPayment, setFilterPayment] = useState('전체 결제');
     const [filterType, setFilterType] = useState('전체 유형');
     const [filterDeparture, setFilterDeparture] = useState('');
     const [filterSource, setFilterSource] = useState('전체 경로');
+
     const [convertTarget, setConvertTarget] = useState<QuoteRequest | null>(null);
     // 수동 예약 추가(LINE·메일 등 사이트 외 주문)
     const [showAddModal, setShowAddModal] = useState(false);
@@ -2184,6 +2187,14 @@ export const AdminReservationManage: React.FC = () => {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
+
+    useEffect(() => {
+        const query = new URLSearchParams(location.search).get('q');
+        if (query !== null) {
+            setSearchTerm(query);
+            setCurrentPage(1);
+        }
+    }, [location.search]);
 
     // Reservations State
     const [reservations, setReservations] = useState<Reservation[]>([]);
