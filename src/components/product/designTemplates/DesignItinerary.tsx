@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { stripDayLabelReading } from '../../../utils/dayLabel';
 import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide } from '../../../types/product';
 import { ImageLightbox } from '../../common/ImageLightbox';
 import { getOptimizedImageUrl } from '../../../utils/cloudflareImage';
@@ -144,7 +145,8 @@ function DaySection({ day, index, all, S, onOpen }: {
     onOpen: (images: string[], startIndex: number) => void;
 }) {
     const d = day.dayInfo;
-    const dayLabel = d.dayLabel || `${index + 1}日目`;
+    // 「1日目（いちにちめ）」처럼 저장된 후리가나는 표시하지 않는다
+    const dayLabel = stripDayLabelReading(d.dayLabel) || `${index + 1}日目`;
     const timeline = day.events.filter(b => b.type === 'timeline').map(b => b.content as TimelineContent);
     // 카드 상단 그리드: 일차 정보에 직접 올린 사진(최대 5장) 우선, 없으면 이미지 블록 사진
     const gallery = (d.galleryImages ?? []).filter(Boolean).slice(0, 5);
@@ -200,7 +202,7 @@ function DaySection({ day, index, all, S, onOpen }: {
                                         <div style={{ width: S.dot, height: S.dot, borderRadius: '50%', background: active ? MINT : '#fff', animation: active ? 'ditPulse 2.2s ease-in-out infinite' : undefined }} />
                                         <div style={{ fontSize: S.dayLabel, fontWeight: active ? 800 : 700, color: '#fff', letterSpacing: '0.02em' }}>{j + 1}DAY</div>
                                         <div style={{ marginTop: S.daySubTop, fontSize: S.daySub, fontWeight: active ? 800 : 600, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.3 }}>
-                                            {other.dayInfo.title || other.dayInfo.dayLabel || ''}
+                                            {other.dayInfo.title || stripDayLabelReading(other.dayInfo.dayLabel) || ''}
                                         </div>
                                     </div>
                                 );

@@ -15,6 +15,7 @@ import { HotelPickerModal } from '../components/admin/HotelPickerModal';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 import { ItineraryImportModal } from '../components/admin/ItineraryImportModal';
 import { cloneItineraryBlocks, renumberDayLabels, type ItinerarySource } from '../components/admin/itineraryImport';
+import { stripDayLabelReading } from '../utils/dayLabel';
 
 
 
@@ -610,9 +611,20 @@ interface ProductModalProps {
     onSave: (product: TourProduct) => void;
 }
 
+/** 예전 골격이 저장한 「1日目（いちにちめ）」 라벨을 「1日目」로 — 폼에 올릴 때 한 번 정리 */
+const cleanDayLabels = (p: TourProduct): TourProduct => ({
+    ...p,
+    itineraryBlocks: (p.itineraryBlocks || []).map(b => {
+        if (b.type !== 'dayInfo') return b;
+        const c = b.content as DayInfoContent;
+        const label = stripDayLabelReading(c.dayLabel);
+        return label === c.dayLabel ? b : { ...b, content: { ...c, dayLabel: label } };
+    }),
+});
+
 export const ProductModal: React.FC<ProductModalProps> = ({ product, categories, onClose, onSave }) => {
     const [formData, setFormData] = useState<Partial<TourProduct>>(
-        product || {
+        product ? cleanDayLabels(product) : {
             name: '',
             category: categories.length > 0 ? categories[0].name : '',
             duration: '',
@@ -1062,10 +1074,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
     // One click → creates N dayInfo blocks (1日目 … N日目) with dividers
     // between them. Admin then just fills in titles / descriptions per day.
     const DAY_LABELS_JP = [
-        '1日目（いちにちめ）', '2日目（ふつかめ）', '3日目（みっかめ）',
-        '4日目（よっかめ）', '5日目（いつかめ）', '6日目（むいかめ）',
-        '7日目（なのかめ）', '8日目（ようかめ）', '9日目（ここのかめ）',
-        '10日目（とおかめ）',
+        '1日目', '2日目', '3日目',
+        '4日目', '5日目', '6日目',
+        '7日目', '8日目', '9日目',
+        '10日目',
     ];
     const addDaysSkeleton = (days: number) => {
         if (!Number.isFinite(days) || days < 1) return;
@@ -1971,16 +1983,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                 style={{ height: 36, fontSize: 13 }}
                                             >
                                                 <option value="" disabled>📅 일차 추가</option>
-                                                <option value="1日目（いちにちめ）">1日目（いちにちめ）</option>
-                                                <option value="2日目（ふつかめ）">2日目（ふつかめ）</option>
-                                                <option value="3日目（みっかめ）">3日目（みっかめ）</option>
-                                                <option value="4日目（よっかめ）">4日目（よっかめ）</option>
-                                                <option value="5日目（いつかめ）">5日目（いつかめ）</option>
-                                                <option value="6日目（むいかめ）">6日目（むいかめ）</option>
-                                                <option value="7日目（なのかめ）">7日目（なのかめ）</option>
-                                                <option value="8日目（ようかめ）">8日目（ようかめ）</option>
-                                                <option value="9日目（ここのかめ）">9日目（ここのかめ）</option>
-                                                <option value="10日目（とおかめ）">10日目（とおかめ）</option>
+                                                <option value="1日目">1日目</option>
+                                                <option value="2日目">2日目</option>
+                                                <option value="3日目">3日目</option>
+                                                <option value="4日目">4日目</option>
+                                                <option value="5日目">5日目</option>
+                                                <option value="6日目">6日目</option>
+                                                <option value="7日目">7日目</option>
+                                                <option value="8日目">8日目</option>
+                                                <option value="9日目">9日目</option>
+                                                <option value="10日目">10日目</option>
                                             </select>
                                             <button type="button" className="chip" onClick={() => addDetailBlock('divider')}>
                                                 <Icon name="horizontal_rule" style={{ fontSize: 16 }} />구분선/여백
@@ -2127,7 +2139,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                 <div className="field-row">
                                                                     <div>
                                                                         <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>일차</label>
-                                                                        <div className="badge b-amber" style={{ height: 44, borderRadius: 'var(--r-md)', width: '100%', justifyContent: 'flex-start', padding: '0 14px', fontSize: 14 }}>{(block.content as DayInfoContent).dayLabel || '미지정'}</div>
+                                                                        <div className="badge b-amber" style={{ height: 44, borderRadius: 'var(--r-md)', width: '100%', justifyContent: 'flex-start', padding: '0 14px', fontSize: 14 }}>{stripDayLabelReading((block.content as DayInfoContent).dayLabel) || '미지정'}</div>
                                                                     </div>
                                                                     <div>
                                                                         <label className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>날짜 (예: 05/26(화))</label>
