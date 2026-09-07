@@ -1,4 +1,5 @@
 import type { DetailContentBlock, DayInfoContent } from '../../types/product';
+import { isAutoDayLabel, stripDayLabelReading } from '../../utils/dayLabel';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 
 /** 불러올 수 있는 상품 한 줄 — 일정표 블록과 (레거시) 일정 사진만 추린 것 */
@@ -113,7 +114,7 @@ export function splitItineraryDays(src: ItinerarySource): DaySource[] {
             productId: src.id,
             productName: src.name,
             index,
-            dayLabel: cur.info.dayLabel || '',
+            dayLabel: stripDayLabelReading(cur.info.dayLabel),
             title: cur.info.title || '',
             description: cur.info.description || '',
             blocks,
@@ -181,7 +182,7 @@ export function renumberDayLabels(blocks: DetailContentBlock[]): DetailContentBl
         if (b.type !== 'dayInfo') return b;
         n++;
         const c = b.content as DayInfoContent;
-        const auto = !c.dayLabel || /^\s*(DAY\s*)?\d+\s*(日目|일차|일째|日)?\s*$/i.test(c.dayLabel);
-        return auto ? { ...b, content: { ...c, dayLabel: `${n}日目` } } : b;
+        // 「1日目（いちにちめ）」처럼 후리가나가 붙은 옛 라벨도 자동 라벨로 보고 깨끗하게 다시 매긴다
+        return isAutoDayLabel(c.dayLabel) ? { ...b, content: { ...c, dayLabel: `${n}日目` } } : b;
     });
 }
