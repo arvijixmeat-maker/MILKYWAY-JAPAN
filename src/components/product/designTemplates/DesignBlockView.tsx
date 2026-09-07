@@ -8,7 +8,7 @@ import { useDesignGlobalDefaults } from './globalDefaults';
  * 고정폭 캔버스 디자인을 컨테이너 폭에 맞춰 축소해 보여주는 래퍼.
  * (이미지로 올리던 상세페이지와 동일하게, 폭이 좁아지면 전체가 비율 축소된다)
  */
-function ScaledDesign({ canvasWidth, children }: { canvasWidth: number; children: React.ReactNode }) {
+export function ScaledDesign({ canvasWidth, children }: { canvasWidth: number; children: React.ReactNode }) {
     const outerRef = useRef<HTMLDivElement>(null);
     const innerRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);

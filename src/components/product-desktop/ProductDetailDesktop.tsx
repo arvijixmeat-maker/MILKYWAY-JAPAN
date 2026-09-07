@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide, DividerContent, DesignBlockContent, ProductFAQ, TourPricingOption } from '../../types/product';
 import DesignBlockView from '../product/designTemplates/DesignBlockView';
+import { DesignItinerary } from '../product/designTemplates/DesignItinerary';
 import { priceRowsFromOptions } from '../product/designTemplates/pricing';
 import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
@@ -1031,11 +1032,7 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                                 key={b.id || i}
                                 content={b.content as DesignBlockContent}
                                 // 일정탭의 일정표를 디자인 중간(공항 도착 뒤)에 끼워 넣는다
-                                itinerarySlot={hasItinerary ? (
-                                    <div style={{ padding: '48px 0' }}>
-                                        <Timeline product={product} />
-                                    </div>
-                                ) : undefined}
+                                itinerarySlot={hasItinerary ? <DesignItinerary product={product} variant="desktop" /> : undefined}
                                 // 가격/옵션 탭의 인원별 가격 → 디자인 가격표에 자동 반영
                                 valueOverrides={(() => {
                                     const rows = priceRowsFromOptions(product.pricingOptions);
