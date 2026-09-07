@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
@@ -30,6 +30,7 @@ export const Payment: React.FC = () => {
 
     // Processing state
     const [isProcessing, setIsProcessing] = useState(false);
+    const reservationRequestId = useRef(crypto.randomUUID());
 
     // Auto-fill user info
     useEffect(() => {
@@ -188,6 +189,7 @@ export const Payment: React.FC = () => {
                 : customerInfo;
 
             const newReservation: any = {
+                id: reservationRequestId.current,
                 user_id: me.id,
                 type: isQuote ? 'quote' : 'tour',
                 status: 'pending_payment',
@@ -196,6 +198,9 @@ export const Payment: React.FC = () => {
                 total_people: totalPeople,
                 customer_info: customerInfoForSave,
                 price_breakdown: priceBreakdown,
+                quote_id: quoteId,
+                selected_accom_id: reservationData.selectedAccomId,
+                selected_vehicle_id: reservationData.selectedVehicleId,
                 created_at: now
             };
 
@@ -213,6 +218,7 @@ export const Payment: React.FC = () => {
 
             const data = await api.reservations.create(newReservation);
             const reservationId = data.id;
+            if (data.priceBreakdown) newReservation.price_breakdown = data.priceBreakdown;
             const reservationNumber = data.reservationNumber
                 ? String(data.reservationNumber)
                 : `MN-${data.id.slice(0, 8).toUpperCase()}`;

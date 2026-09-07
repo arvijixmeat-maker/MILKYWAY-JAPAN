@@ -131,7 +131,7 @@ function tplReservationRequested(data: any) {
 </div>
 <div class="body">
   <p class="lead">${escapeHtml(data.customerName || 'お客様')} 様</p>
-  <p>この度はMilkyway Japanへお申し込みいただき、誠にありがとうございます。担当者が内容を確認し、予約金のお支払い方法と今後の流れをご案内いたします。</p>
+  <p>この度はMilkyway Japanへお申し込みいただき、誠にありがとうございます。予約内容を受け付けました。予約金のお支払い用PayPal請求書は別メールで自動送信されます。</p>
   <div class="panel">
     <p class="panel-title">予約内容</p>
     <table>${fieldRows([
@@ -144,7 +144,7 @@ function tplReservationRequested(data: any) {
   <div class="notice">
     <strong>今後の流れ</strong>
     <ol class="steps">
-      <li>PayPalインボイスを別途メールでお送りします。</li>
+      <li>PayPalから日本語の請求書を別途メールでお送りします。</li>
       <li>予約金のご入金確認後、手配を開始します。</li>
       <li>確定日程表、契約書、ガイド情報を順番にご案内します。</li>
     </ol>

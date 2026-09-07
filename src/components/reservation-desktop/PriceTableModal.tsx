@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { TourPricingOption } from '../../types/product';
+import { getReservationDeposit } from '../../lib/tourPricing';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { formatPrice } from './primitives';
 
@@ -8,13 +9,14 @@ interface PriceTableModalProps {
     current: number;                 // currently-selected people count
     onChange: (people: number) => void;
     onClose: () => void;
+    onConfirm?: () => void;
 }
 
 /**
  * Bottom-up "人数別の単価" modal. Re-uses the admin-managed pricingOptions
  * exactly — no hardcoded ladder — so what the admin sets is what users see.
  */
-export function PriceTableModal({ options, current, onChange, onClose }: PriceTableModalProps) {
+export function PriceTableModal({ options, current, onChange, onClose, onConfirm }: PriceTableModalProps) {
     const [whyOpen, setWhyOpen] = useState(false);
 
     if (options.length === 0) {
@@ -23,8 +25,11 @@ export function PriceTableModal({ options, current, onChange, onClose }: PriceTa
     }
 
     const minPerPax = Math.min(...options.map((o) => o.pricePerPerson));
-    const maxPerPax = Math.max(...options.map((o) => o.pricePerPerson));
+    const baselineOption = options[0];
     const currentOpt = options.find((o) => o.people === current) ?? options[0];
+    const currentTotal = currentOpt.pricePerPerson * currentOpt.people;
+    const currentDeposit = getReservationDeposit(currentTotal);
+    const currentLocal = Math.max(0, currentTotal - currentDeposit);
 
     return (
         <div
@@ -120,6 +125,11 @@ export function PriceTableModal({ options, current, onChange, onClose }: PriceTa
                                 / 名
                             </span>
                         </div>
+                        {currentDeposit > 0 && (
+                            <div style={{ marginTop: 5, fontSize: 11, color: 'var(--fg-4)' }}>
+                                予約時 ¥{formatPrice(currentDeposit)} ・ 現地 ¥{formatPrice(currentLocal)}
+                            </div>
+                        )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 11, color: 'var(--fg-5)', fontWeight: 600 }}>
@@ -134,7 +144,7 @@ export function PriceTableModal({ options, current, onChange, onClose }: PriceTa
                                 letterSpacing: '-0.02em',
                             }}
                         >
-                            ¥{formatPrice(currentOpt.pricePerPerson * currentOpt.people)}
+                            ¥{formatPrice(currentTotal)}
                         </div>
                     </div>
                 </div>
@@ -167,7 +177,7 @@ export function PriceTableModal({ options, current, onChange, onClose }: PriceTa
                     {options.map((r) => {
                         const on = r.people === current;
                         const isBest = r.pricePerPerson === minPerPax && options.length > 1;
-                        const savings = maxPerPax - r.pricePerPerson;
+                        const savings = Math.max(0, baselineOption.pricePerPerson - r.pricePerPerson);
                         const totalForGroup = r.pricePerPerson * r.people;
                         return (
                             <button
@@ -259,7 +269,7 @@ export function PriceTableModal({ options, current, onChange, onClose }: PriceTa
                                                 fontWeight: 600,
                                             }}
                                         >
-                                            お1人様 ¥{formatPrice(savings)} OFF
+                                            {baselineOption.people}名利用時より ¥{formatPrice(savings)} お得
                                         </div>
                                     )}
                                 </div>
@@ -344,7 +354,7 @@ export function PriceTableModal({ options, current, onChange, onClose }: PriceTa
 
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={onConfirm ?? onClose}
                     style={{
                         width: '100%',
                         padding: '16px',

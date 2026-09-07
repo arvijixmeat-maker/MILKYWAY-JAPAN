@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { api } from '../../lib/api';
+import { getReservationDeposit, RESERVATION_DEPOSIT_JPY } from '../../lib/tourPricing';
 import { ReservationDocumentEditor, type ReservationDocContent } from './ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from '../../pages/AdminTemplateManage';
 
@@ -93,7 +94,7 @@ export const ConvertSelectionModal: React.FC<{
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [totalAmount, setTotalAmount] = useState(0);
-    const [deposit, setDeposit] = useState(0);
+    const deposit = getReservationDeposit(totalAmount);
 
     useEffect(() => {
         if (!request) return;
@@ -103,7 +104,6 @@ export const ConvertSelectionModal: React.FC<{
         if (request.confirmed_end_date) setEndDate(request.confirmed_end_date.substring(0, 10));
         if (request.confirmed_price) {
             setTotalAmount(request.confirmed_price);
-            setDeposit(request.deposit || Math.floor(request.confirmed_price * 0.1));
             return;
         }
 
@@ -130,7 +130,6 @@ export const ConvertSelectionModal: React.FC<{
             if (budgetMatch) {
                 const budgetNum = parseInt(budgetMatch[1]) * 10000;
                 setTotalAmount(budgetNum);
-                setDeposit(Math.floor(budgetNum * 0.1));
             }
         }
     }, [request]);
@@ -179,7 +178,7 @@ export const ConvertSelectionModal: React.FC<{
 
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">총 확정 금액 (원)</label>
+                            <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">총 확정 금액 (엔)</label>
                             <div className="relative">
                                 <input
                                     type="text"
@@ -188,49 +187,45 @@ export const ConvertSelectionModal: React.FC<{
                                     onChange={e => {
                                         const val = unformatNumber(e.target.value);
                                         setTotalAmount(val);
-                                        if (deposit === 0) setDeposit(Math.floor(val * 0.1));
                                     }}
                                     className="w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-primary font-bold text-right pr-8"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">원</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">엔</span>
                             </div>
                             {totalAmount > 0 && (
                                 <p className="text-[10px] font-bold text-primary/70 ml-1">
-                                    ≈ {typeof totalAmount === 'number' && !isNaN(totalAmount) ? (totalAmount / 10000).toLocaleString() : 0}만원
+                                    ≈ {typeof totalAmount === 'number' && !isNaN(totalAmount) ? (totalAmount / 10000).toLocaleString() : 0}만 엔
                                 </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">예약금 (원)</label>
+                            <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">예약금 (엔 · 예약 1건 고정)</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     placeholder="0"
                                     value={formatNumber(deposit)}
-                                    onChange={e => setDeposit(unformatNumber(e.target.value))}
-                                    className="w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-primary font-bold text-right text-primary pr-8"
+                                    readOnly
+                                    className="w-full px-3 py-2.5 border rounded-lg bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 font-bold text-right text-primary pr-8"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">원</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">엔</span>
                             </div>
                             {deposit > 0 && (
                                 <p className="text-[10px] font-bold text-primary/70 ml-1">
-                                    ≈ {typeof deposit === 'number' && !isNaN(deposit) ? (deposit / 10000).toLocaleString() : 0}만원
+                                    예약 인원과 관계없이 ¥{RESERVATION_DEPOSIT_JPY.toLocaleString('ja-JP')}
                                 </p>
                             )}
                         </div>
                     </div>
 
                     {/* Balance Preview */}
-                    <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${totalAmount - deposit < 0 ? 'bg-red-50 border-red-100' : 'bg-primary/5 border-primary/10'}`}>
+                    <div className="p-4 rounded-xl border flex items-center justify-between transition-all bg-primary/5 border-primary/10">
                         <div className="flex flex-col">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${totalAmount - deposit < 0 ? 'text-red-600' : 'text-primary'}`}>예상 현지 지불 잔금</span>
-                            {totalAmount - deposit < 0 && (
-                                <span className="text-[9px] text-red-500 font-bold mt-0.5 animate-pulse">! 예약금이 총액을 초과했습니다</span>
-                            )}
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-primary">예상 현지 지불 잔금</span>
                         </div>
-                        <span className={`text-base font-extrabold ${totalAmount - deposit < 0 ? 'text-red-600' : 'text-primary'}`}>
-                            {typeof totalAmount === 'number' && typeof deposit === 'number' && !isNaN(totalAmount) && !isNaN(deposit) ? (totalAmount - deposit).toLocaleString() : 0}원
+                        <span className="text-base font-extrabold text-primary">
+                            {typeof totalAmount === 'number' && !isNaN(totalAmount) ? (totalAmount - deposit).toLocaleString() : 0}엔
                         </span>
                     </div>
                 </div>
@@ -293,7 +288,7 @@ export const QuoteDetailModal: React.FC<{
     // --- Added for Centralized UI Integration ---
     const [priceDetail, setPriceDetail] = useState({
         totalAmount: request?.confirmed_price || ((parseDocumentPricePerPerson(normalizeDocumentContent(request?.documentContent || request?.document_content)) || 0) * parsePeopleCount(request?.headcount)),
-        deposit: request?.deposit || 0,
+        deposit: getReservationDeposit(request?.confirmed_price || 0),
         depositStatus: request?.deposit_status || 'unpaid',
         balanceStatus: request?.balance_status || 'unpaid',
         pricePerPerson: parseDocumentPricePerPerson(normalizeDocumentContent(request?.documentContent || request?.document_content)) || 0,
@@ -332,7 +327,7 @@ export const QuoteDetailModal: React.FC<{
                 accommodations: request.accommodations,
                 vehicle: request.vehicle,
                 confirmedPrice: request.confirmed_price || 0,
-                deposit: request.deposit || 0
+                deposit: getReservationDeposit(request.confirmed_price || 0)
             });
             const content = normalizeDocumentContent(request.documentContent || request.document_content);
             const peopleCount = parsePeopleCount(request.headcount);
@@ -341,7 +336,7 @@ export const QuoteDetailModal: React.FC<{
             // Reset priceDetail when request changes
             setPriceDetail({
                 totalAmount: request.confirmed_price || calculatedTotal,
-                deposit: request.deposit || 0,
+                deposit: getReservationDeposit(request.confirmed_price || calculatedTotal),
                 depositStatus: request.deposit_status || 'unpaid',
                 balanceStatus: request.balance_status || 'unpaid',
                 pricePerPerson,
@@ -371,7 +366,8 @@ export const QuoteDetailModal: React.FC<{
     const quoteHeadcount = quotePeople === parsePeopleCount(request.headcount)
         ? request.headcount
         : `${quotePeople}名`;
-    const quoteBalance = Math.max(0, (priceDetail.totalAmount || 0) - (priceDetail.deposit || 0));
+    const quoteDeposit = getReservationDeposit(priceDetail.totalAmount || 0);
+    const quoteBalance = Math.max(0, (priceDetail.totalAmount || 0) - quoteDeposit);
     const updatePricePerPerson = (nextPricePerPerson: number) => {
         setPriceDetail(prev => {
             const peopleCount = prev.peopleCount || 1;
@@ -380,7 +376,7 @@ export const QuoteDetailModal: React.FC<{
                 ...prev,
                 pricePerPerson: nextPricePerPerson,
                 totalAmount: prev.manualTotal ? prev.totalAmount : nextTotal,
-                deposit: prev.deposit ? prev.deposit : Math.floor(nextTotal * 0.1),
+                deposit: getReservationDeposit(prev.manualTotal ? prev.totalAmount : nextTotal),
             };
         });
     };
@@ -392,16 +388,15 @@ export const QuoteDetailModal: React.FC<{
                 ...prev,
                 peopleCount,
                 totalAmount: prev.manualTotal ? prev.totalAmount : nextTotal,
-                deposit: prev.deposit ? prev.deposit : Math.floor(nextTotal * 0.1),
+                deposit: getReservationDeposit(prev.manualTotal ? prev.totalAmount : nextTotal),
             };
         });
     };
     const updateManualTotal = (manualTotal: boolean) => {
-        setPriceDetail(prev => ({
-            ...prev,
-            manualTotal,
-            totalAmount: manualTotal ? prev.totalAmount : (prev.pricePerPerson || 0) * (prev.peopleCount || 1),
-        }));
+        setPriceDetail(prev => {
+            const totalAmount = manualTotal ? prev.totalAmount : (prev.pricePerPerson || 0) * (prev.peopleCount || 1);
+            return { ...prev, manualTotal, totalAmount, deposit: getReservationDeposit(totalAmount) };
+        });
     };
     const docTripLength = (() => {
         if (!confirmedStartDate || !confirmedEndDate) return '';
@@ -419,7 +414,7 @@ export const QuoteDetailModal: React.FC<{
         name: request.name,
         tripType: request.destination,
         totalAmount: priceDetail.totalAmount || undefined,
-        deposit: priceDetail.deposit || undefined,
+        deposit: quoteDeposit || undefined,
         localAmount: priceDetail.totalAmount ? quoteBalance : undefined,
         peopleCount: quotePeople || undefined,
     };
@@ -451,7 +446,7 @@ export const QuoteDetailModal: React.FC<{
         const nextTotal = incomingPricePerPerson > 0 && !priceDetail.manualTotal
             ? incomingPricePerPerson * peopleCount
             : priceDetail.totalAmount;
-        const nextDeposit = priceDetail.deposit || Math.floor(nextTotal * 0.1);
+        const nextDeposit = getReservationDeposit(nextTotal);
         if (incomingPricePerPerson > 0 && incomingPricePerPerson !== priceDetail.pricePerPerson) {
             setPriceDetail(prev => ({
                 ...prev,
@@ -485,7 +480,7 @@ export const QuoteDetailModal: React.FC<{
         const saved = await onUpdateQuote(request.id, {
             headcount: quoteHeadcount,
             confirmed_price: priceDetail.totalAmount,
-            deposit: priceDetail.deposit,
+            deposit: getReservationDeposit(priceDetail.totalAmount),
             confirmed_start_date: confirmedStartDate,
             confirmed_end_date: confirmedEndDate,
             itineraryTemplateId,
@@ -504,7 +499,7 @@ export const QuoteDetailModal: React.FC<{
                 ...prev,
                 pricePerPerson: incomingPricePerPerson,
                 totalAmount: prev.manualTotal ? prev.totalAmount : nextTotal,
-                deposit: prev.deposit ? prev.deposit : Math.floor(nextTotal * 0.1),
+                deposit: getReservationDeposit(prev.manualTotal ? prev.totalAmount : nextTotal),
             }));
         }
         setQuoteDocumentContent(syncedContent);
@@ -538,7 +533,7 @@ export const QuoteDetailModal: React.FC<{
     const hasQuoteSchedule = hasQuoteItinerary || Boolean(confirmedStartDate && confirmedEndDate);
     const effectivePricePerPerson = priceDetail.pricePerPerson || parseDocumentPricePerPerson(docInitialContent);
     const effectiveTotalAmount = priceDetail.totalAmount || (effectivePricePerPerson * (priceDetail.peopleCount || quotePeople || 1));
-    const effectiveDeposit = priceDetail.deposit || (effectiveTotalAmount > 0 ? Math.floor(effectiveTotalAmount * 0.1) : 0);
+    const effectiveDeposit = getReservationDeposit(effectiveTotalAmount);
     const missingSendItems = [
         !request.destination || !request.headcount || !request.period ? '여행 조건' : '',
         !hasQuoteSchedule ? '제안 일정 또는 시작/종료일' : '',
@@ -793,15 +788,17 @@ export const QuoteDetailModal: React.FC<{
                                         <div className="row" style={{ gap: 4 }}>
                                             <input type="text" className="inp" style={{ textAlign: 'right', fontWeight: 800 }} value={formatNumber(priceDetail.totalAmount)} placeholder="0"
                                                 disabled={!priceDetail.manualTotal}
-                                                onChange={(e) => setPriceDetail(prev => ({ ...prev, totalAmount: unformatNumber(e.target.value) }))} />
+                                                onChange={(e) => setPriceDetail(prev => {
+                                                    const totalAmount = unformatNumber(e.target.value);
+                                                    return { ...prev, totalAmount, deposit: getReservationDeposit(totalAmount) };
+                                                })} />
                                             <span className="cell-muted" style={{ fontSize: 12, flex: 'none' }}>엔</span>
                                         </div>
                                     </div>
                                     <div className="pay-cell paid">
                                         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)' }}>예약금</span></div>
                                         <div className="row" style={{ gap: 4 }}>
-                                            <input type="text" className="inp" style={{ textAlign: 'right', fontWeight: 800 }} value={formatNumber(priceDetail.deposit)} placeholder="0"
-                                                onChange={(e) => setPriceDetail({ ...priceDetail, deposit: unformatNumber(e.target.value) })} />
+                                            <input type="text" className="inp" style={{ textAlign: 'right', fontWeight: 800, background: 'var(--mrt-gray-50)' }} value={formatNumber(quoteDeposit)} readOnly />
                                             <span className="cell-muted" style={{ fontSize: 12, flex: 'none' }}>엔</span>
                                         </div>
                                     </div>

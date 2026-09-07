@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/Toast';
 import { SEO } from '../components/seo/SEO';
+import { getReservationDeposit } from '../lib/tourPricing';
 import {
     INK, SUB, MUTE, FAINT, BLUE, BLUE_DK, BLUE_BG, GREEN, GREEN_BG, BORDER, HAIRLINE, SECTION, PAGE_BG,
     type DayData, type HeroBadge,
@@ -40,10 +41,7 @@ export const EstimateDetail: React.FC = () => {
         const pricePerPerson = parseMoney(settings?.overview?.pricePerPerson);
         const productTotal = pricePerPerson > 0 ? pricePerPerson * peopleCount : 0;
         const total = confirmedTotal > 0 ? confirmedTotal : productTotal;
-        const paymentInfo = String(settings?.guide?.paymentInfo || '');
-        const guideAmounts = paymentInfo.match(/\d[\d,]{3,}/g)?.map(parseMoney).filter(Boolean) || [];
-        const explicitDeposit = parseMoney(source?.deposit);
-        const deposit = explicitDeposit > 0 ? explicitDeposit : (guideAmounts[0] || (total > 0 ? Math.floor(total * 0.1) : 0));
+        const deposit = getReservationDeposit(total);
         return {
             total,
             deposit,

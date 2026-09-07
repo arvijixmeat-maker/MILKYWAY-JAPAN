@@ -84,8 +84,13 @@ app.post('/', async (c) => {
         return c.json({ error: 'Invalid JSON' }, 400);
     }
 
-    // Verify webhook signature if PAYPAL_WEBHOOK_ID is configured
-    if (c.env.PAYPAL_WEBHOOK_ID) {
+    // 결제 상태를 바꾸는 엔드포인트이므로 설정 누락 시 검증 없이 처리하지 않는다.
+    if (!c.env.PAYPAL_WEBHOOK_ID || !c.env.PAYPAL_CLIENT_ID || !c.env.PAYPAL_SECRET_KEY) {
+        console.error('[PayPal Webhook] Verification environment is not configured');
+        return c.json({ error: 'Webhook verification is not configured' }, 503);
+    }
+
+    {
         const headers: Record<string, string> = {
             'paypal-auth-algo': c.req.header('paypal-auth-algo') || '',
             'paypal-cert-url': c.req.header('paypal-cert-url') || '',
@@ -111,9 +116,11 @@ app.post('/', async (c) => {
 
     const eventType: string = event.event_type || '';
 
-    // Invoice payment completed → confirm reservation
-    if (eventType === 'INVOICES.PAYMENT.COMPLETED') {
-        const invoiceNumber: string = event.resource?.detail?.invoice_number || '';
+    // PayPal Invoicing v2 공식 결제 이벤트 → 예약금 전액 결제 확인
+    if (eventType === 'INVOICING.INVOICE.PAID' || eventType === 'INVOICES.PAYMENT.COMPLETED') {
+        const invoiceNumber: string = event.resource?.invoice_number
+            || event.resource?.detail?.invoice_number
+            || '';
         if (!invoiceNumber) {
             return c.json({ received: true, note: 'no invoice_number' });
         }
@@ -150,6 +157,37 @@ app.post('/', async (c) => {
                 return c.json({ received: true, note: 'duplicate event' });
             }
 
+            const rawPaymentAmount =
+                event.resource?.payments?.paid_amount?.value
+                ?? event.resource?.amount?.value
+                ?? event.resource?.payment_amount?.value
+                ?? event.resource?.detail?.payment_amount?.value;
+            const parsedPaymentAmount = Number(rawPaymentAmount);
+            const paymentAmount = Number.isFinite(parsedPaymentAmount)
+                ? parsedPaymentAmount
+                : 0;
+            const currency = String(
+                event.resource?.payments?.paid_amount?.currency_code
+                ?? event.resource?.amount?.currency_code
+                ?? event.resource?.payment_amount?.currency_code
+                ?? ''
+            ).toUpperCase();
+            const invoiceStatus = String(event.resource?.status || '').toUpperCase();
+            const explicitlyPartial = invoiceStatus === 'PARTIALLY_PAID' || invoiceStatus === 'PAYMENT_PENDING';
+            const expectedDeposit = Number(reservation.depositAmount || 0);
+            const fullyPaid = !explicitlyPartial
+                && currency === 'JPY'
+                && expectedDeposit > 0
+                && paymentAmount >= expectedDeposit;
+
+            if (!fullyPaid) {
+                console.warn(
+                    `[PayPal Webhook] Payment not confirmed for ${invoiceNumber}: `
+                    + `status=${invoiceStatus || 'unknown'}, amount=${paymentAmount} ${currency}, expected=${expectedDeposit} JPY`
+                );
+                return c.json({ received: true, note: 'payment is not fully settled' });
+            }
+
             const confirmedAt = new Date().toISOString();
             const paymentAlreadyRecorded = event.id
                 ? history.some((item) => item.type === 'payment_confirmed' && item.eventId === event.id)
@@ -157,7 +195,9 @@ app.post('/', async (c) => {
             if (!paymentAlreadyRecorded) {
                 history.push({
                     type: 'payment_confirmed',
+                    timestamp: confirmedAt,
                     date: confirmedAt,
+                    description: 'PayPalで予約金の入金を確認しました。',
                     source: 'paypal_webhook',
                     eventId: event.id,
                 });
@@ -174,15 +214,6 @@ app.post('/', async (c) => {
                 .run();
 
             console.log(`[PayPal Webhook] Confirmed reservation ${invoiceNumber}`);
-
-            const rawPaymentAmount =
-                event.resource?.amount?.value
-                ?? event.resource?.payment_amount?.value
-                ?? event.resource?.detail?.payment_amount?.value;
-            const parsedPaymentAmount = Number(rawPaymentAmount);
-            const paymentAmount = Number.isFinite(parsedPaymentAmount)
-                ? parsedPaymentAmount
-                : (reservation.depositAmount || 0);
 
             try {
                 if (!c.env.RESEND_API_KEY) {
@@ -209,7 +240,9 @@ app.post('/', async (c) => {
 
                 history.push({
                     type: 'payment_confirmation_email_sent',
+                    timestamp: new Date().toISOString(),
                     date: new Date().toISOString(),
+                    description: 'ご入金確認メールを送信しました。',
                     recipient: reservation.customerEmail,
                     eventId: event.id,
                 });
@@ -217,7 +250,9 @@ app.post('/', async (c) => {
                 console.error(`[PayPal Webhook] Payment confirmation email failed for ${invoiceNumber}:`, emailError);
                 history.push({
                     type: 'payment_confirmation_email_failed',
+                    timestamp: new Date().toISOString(),
                     date: new Date().toISOString(),
+                    description: 'ご入金確認メールの送信に失敗しました。',
                     reason: emailError?.message || String(emailError),
                     eventId: event.id,
                 });

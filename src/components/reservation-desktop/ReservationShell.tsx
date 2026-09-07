@@ -22,8 +22,8 @@ const STEP_TITLES: Record<StepIdx, { title: string; subtitle: string }> = {
         subtitle: '旅行開始日と人数、オプションを選択してください',
     },
     1: {
-        title: '予約情報および決済確認',
-        subtitle: 'ご予約者情報と決済方法をご確認ください',
+        title: '予約情報およびお支払い案内',
+        subtitle: 'ご予約者情報とPayPal請求書の送付先をご確認ください',
     },
     2: {
         title: '予約申し込み完了',

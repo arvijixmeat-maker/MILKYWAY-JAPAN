@@ -5,6 +5,7 @@ import { eq, desc, or } from 'drizzle-orm';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { sendPayPalInvoice } from '../lib/paypal';
+import { getReservationDeposit } from '../../src/lib/tourPricing';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -20,6 +21,106 @@ interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+const parseArray = (value: unknown): any[] => {
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string' || !value) return [];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const amount = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+};
+
+async function resolveReservationPrice(db: any, body: any, user: { id: string; role?: string }) {
+    const people = Number(body.total_people || body.totalPeople);
+    if (!Number.isInteger(people) || people < 1) {
+        return { error: '予約人数が正しくありません。' } as const;
+    }
+
+    if (body.type === 'quote') {
+        const quoteId = String(body.quote_id || body.quoteId || '');
+        if (!quoteId) return { error: 'お見積りIDが必要です。' } as const;
+
+        const quote: any = await db.prepare(
+            'SELECT id, user_id, confirmed_price FROM quotes WHERE id = ?'
+        ).bind(quoteId).first();
+        if (!quote) return { error: 'お見積りが見つかりません。' } as const;
+        if (user.role !== 'admin' && quote.user_id && quote.user_id !== user.id) {
+            return { error: 'このお見積りを予約する権限がありません。' } as const;
+        }
+
+        const total = amount(quote.confirmed_price);
+        if (total <= 0) return { error: '確定済みのお見積り金額が必要です。' } as const;
+        const deposit = getReservationDeposit(total);
+        return {
+            people,
+            productName: String(body.product_name || body.productName || 'オーダーメイド旅行'),
+            productId: null,
+            priceBreakdown: { total, deposit, local: total - deposit },
+        } as const;
+    }
+
+    const productId = String(body.product_id || body.productId || '');
+    if (!productId && user.role === 'admin') {
+        const total = amount(body.price_breakdown?.total ?? body.total_price ?? body.totalPrice);
+        if (total <= 0) return { error: '合計金額を入力してください。' } as const;
+        const deposit = getReservationDeposit(total);
+        return {
+            people,
+            productName: String(body.product_name || body.productName || 'オーダーメイド旅行'),
+            productId: null,
+            priceBreakdown: { total, deposit, local: total - deposit },
+        } as const;
+    }
+    if (!productId) return { error: '商品IDが必要です。' } as const;
+
+    const product: any = await db.prepare(
+        'SELECT id, name, pricing_options, accommodation_options, vehicle_options FROM products WHERE id = ?'
+    ).bind(productId).first();
+    if (!product) return { error: '商品が見つかりません。' } as const;
+
+    const pricing = parseArray(product.pricing_options);
+    const tier = pricing.find((option) => Number(option?.people) === people);
+    const pricePerPerson = amount(tier?.pricePerPerson);
+    if (!tier || pricePerPerson <= 0) return { error: `${people}名様の料金を確認できません。` } as const;
+
+    const resolveModifier = (rawOptions: unknown, selectedId: unknown, label: string) => {
+        const id = String(selectedId || '');
+        if (!id) return { value: 0 };
+        const option = parseArray(rawOptions).find((item) => String(item?.id) === id);
+        if (!option) return { error: `選択した${label}オプションを確認できません。` };
+        return { value: amount(option.priceModifier) };
+    };
+
+    const accommodation = resolveModifier(
+        product.accommodation_options,
+        body.selected_accom_id || body.selectedAccomId,
+        '宿泊',
+    );
+    if ('error' in accommodation) return { error: accommodation.error } as const;
+    const vehicle = resolveModifier(
+        product.vehicle_options,
+        body.selected_vehicle_id || body.selectedVehicleId,
+        '車両',
+    );
+    if ('error' in vehicle) return { error: vehicle.error } as const;
+
+    const total = Math.max(0, pricePerPerson * people + accommodation.value + vehicle.value);
+    const deposit = getReservationDeposit(total);
+    return {
+        people,
+        productName: String(product.name),
+        productId: String(product.id),
+        priceBreakdown: { total, deposit, local: total - deposit },
+    } as const;
+}
 
 // GET /api/reservations
 app.get('/', async (c) => {
@@ -250,18 +351,50 @@ app.post('/', async (c) => {
     const body = await c.req.json();
     const db = drizzle(c.env.DB);
 
-    // Basic validation (can be improved with Zod)
-    const productName = body.product_name || body.productName;
-    const customerInfo = body.customer_info || {};
-    const customerName = customerInfo.name || body.customerName;
-    const customerEmail = customerInfo.email || body.email;
-    const customerPhone = customerInfo.phone || body.phone;
+    const lucia = initializeLucia(c.env.DB);
+    const sessionId = getCookie(c, lucia.sessionCookieName);
+    if (!sessionId) return c.json({ error: 'Unauthorized' }, 401);
+    const { session, user } = await lucia.validateSession(sessionId);
+    if (!session || !user) return c.json({ error: 'Unauthorized' }, 401);
 
-    if (!productName || !customerName) {
-        return c.json({ error: 'Missing required fields' }, 400);
+    const customerInfo = body.customer_info || {};
+    const customerName = customerInfo.name || body.customer_name || body.customerName;
+    const customerEmail = customerInfo.email || body.customer_email || body.email;
+    const customerPhone = customerInfo.phone || body.customer_phone || body.phone;
+
+    if (!customerName || (user.role !== 'admin' && (!customerEmail || !customerPhone))) {
+        return c.json({ error: 'お名前、メールアドレス、携帯電話番号を入力してください。' }, 400);
     }
 
-    const id = body.id || crypto.randomUUID();
+    const serverPricing = await resolveReservationPrice(c.env.DB, body, user);
+    if ('error' in serverPricing) {
+        return c.json({ error: serverPricing.error }, 400);
+    }
+    const { productName, productId, people, priceBreakdown } = serverPricing;
+    const reservationUserId = user.role === 'admin'
+        ? ((body.user_id || body.userId) ? String(body.user_id || body.userId) : null)
+        : user.id;
+
+    const requestedId = String(body.id || '');
+    const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedId)
+        ? requestedId
+        : crypto.randomUUID();
+
+    // 같은 결제 화면에서 재시도한 요청은 기존 예약을 반환해 인보이스 중복 생성을 막는다.
+    const existing = await db.select().from(reservations).where(eq(reservations.id, id)).get();
+    if (existing) {
+        if (user.role !== 'admin' && existing.userId !== user.id) return c.json({ error: 'Conflict' }, 409);
+        return c.json({
+            message: 'Reservation already created',
+            id: existing.id,
+            reservationNumber: existing.reservationNumber,
+            priceBreakdown: {
+                total: existing.totalPrice,
+                deposit: existing.depositAmount,
+                local: existing.balanceAmount,
+            },
+        }, 200);
+    }
 
     // Generate the next number from the historical maximum so deleted rows
     // never cause a PayPal invoice number to be reused.
@@ -281,23 +414,24 @@ app.post('/', async (c) => {
     try {
         await db.insert(reservations).values({
             id,
-            type: body.type ? String(body.type) : 'tour',
+            type: body.type === 'quote' ? 'quote' : 'tour',
             productName: String(productName),
-            productId: (body.product_id || body.productId) ? String(body.product_id || body.productId) : null,
-            userId: (body.user_id || body.userId) ? String(body.user_id || body.userId) : null,
+            productId,
+            userId: reservationUserId,
             customerName: String(customerName),
-            customerEmail: String(customerEmail),
-            customerPhone: String(customerPhone),
-            travelers: Number(body.total_people || body.totalPeople || 1),
+            customerEmail: customerEmail ? String(customerEmail) : null,
+            customerPhone: customerPhone ? String(customerPhone) : null,
+            travelers: people,
             startDate: (body.start_date || body.date) ? String(body.start_date || body.date) : null,
             endDate: body.end_date ? String(body.end_date) : null,
             duration: body.duration ? String(body.duration) : null,
-            status: body.status ? String(body.status) : 'pending_payment',
-            source: body.source ? String(body.source) : null,
-            totalPrice: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
-            depositAmount: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
-            balanceAmount: Number(body.price_breakdown?.local ?? body.balance ?? 0),
-            paymentMethod: body.paymentMethod ? String(body.paymentMethod) : null,
+            status: user.role === 'admin' && body.status ? String(body.status) : 'pending_payment',
+            source: user.role === 'admin' && body.source ? String(body.source) : 'website',
+            totalPrice: priceBreakdown.total,
+            depositAmount: priceBreakdown.deposit,
+            balanceAmount: priceBreakdown.local,
+            priceBreakdown: JSON.stringify(priceBreakdown),
+            paymentMethod: 'paypal_invoice',
             notes: body.notes ? String(body.notes) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,
             history: body.history ? JSON.stringify(body.history) : null,
@@ -317,10 +451,12 @@ app.post('/', async (c) => {
             !c.env.PAYPAL_SECRET_KEY && 'PAYPAL_SECRET_KEY',
             !c.env.PAYPAL_BUSINESS_EMAIL && 'PAYPAL_BUSINESS_EMAIL',
         ].filter(Boolean);
-        const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
+        const depositAmt = priceBreakdown.deposit;
 
         if (missingPayPalEnv.length > 0) {
             console.warn(`[PayPal Invoice] skipped: missing ${missingPayPalEnv.join(', ')}`);
+        } else if (user.role === 'admin' && body.status && body.status !== 'pending_payment') {
+            console.info(`[PayPal Invoice] skipped for admin-created ${body.status} reservation (${reservationNumber})`);
         } else if (!customerEmail) {
             console.warn(`[PayPal Invoice] skipped: customer email is missing (${reservationNumber})`);
         } else if (!Number.isFinite(depositAmt) || depositAmt <= 0) {
@@ -336,10 +472,55 @@ app.post('/', async (c) => {
                 productName: String(productName),
                 depositAmount: depositAmt,
                 environment: c.env.PAYPAL_ENVIRONMENT,
-            }).then(({ invoiceId, invoiceNumber }) => {
+            }).then(async ({ invoiceId, invoiceNumber, recipientViewUrl }) => {
                 console.log(`[PayPal Invoice] sent: ${invoiceNumber} (${invoiceId})`);
-            }).catch((paypalErr: any) => {
+                const saved = await db.select().from(reservations).where(eq(reservations.id, id)).get();
+                let history: any[] = [];
+                try {
+                    history = saved?.history ? JSON.parse(saved.history) : [];
+                } catch {
+                    history = [];
+                }
+                if (!history.some((item) => item.type === 'paypal_invoice_sent')) {
+                    const timestamp = new Date().toISOString();
+                    history.push({
+                        type: 'paypal_invoice_sent',
+                        timestamp,
+                        date: timestamp,
+                        description: 'PayPal請求書をメールで送信しました。',
+                        detail: recipientViewUrl || '',
+                        invoiceId,
+                        invoiceNumber,
+                    });
+                    await db.update(reservations)
+                        .set({ history: JSON.stringify(history) })
+                        .where(eq(reservations.id, id))
+                        .run();
+                }
+            }).catch(async (paypalErr: any) => {
                 console.error(`[PayPal Invoice] failed: ${reservationNumber}`, paypalErr);
+                try {
+                    const saved = await db.select().from(reservations).where(eq(reservations.id, id)).get();
+                    let history: any[] = [];
+                    try {
+                        history = saved?.history ? JSON.parse(saved.history) : [];
+                    } catch {
+                        history = [];
+                    }
+                    const timestamp = new Date().toISOString();
+                    history.push({
+                        type: 'paypal_invoice_failed',
+                        timestamp,
+                        date: timestamp,
+                        description: 'PayPal請求書を送信できませんでした。担当者が確認します。',
+                    });
+                    await db.update(reservations)
+                        .set({ history: JSON.stringify(history) })
+                        .where(eq(reservations.id, id))
+                        .run();
+                } catch (historyError) {
+                    console.error(`[PayPal Invoice] failed to record error: ${reservationNumber}`, historyError);
+                }
             });
 
             try {
@@ -354,7 +535,7 @@ app.post('/', async (c) => {
             }
         }
 
-        return c.json({ message: 'Reservation created', id, reservationNumber }, 201);
+        return c.json({ message: 'Reservation created', id, reservationNumber, priceBreakdown }, 201);
     } catch (error: any) {
         return c.json({ error: error.message }, 500);
     }

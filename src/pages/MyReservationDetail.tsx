@@ -31,6 +31,8 @@ interface HistoryEntry {
     type: string;
     description: string;
     detail?: string;
+    invoiceId?: string;
+    invoiceNumber?: string;
 }
 
 interface Reservation {
@@ -70,6 +72,19 @@ const parseImage = (v: any): string => {
     if (arr.length > 0) return arr[0];
     if (typeof v === 'string' && v.startsWith('http')) return v;
     return '';
+};
+
+const asPayPalInvoiceUrl = (value?: string) => {
+    if (!value) return '';
+    try {
+        const url = new URL(value);
+        const host = url.hostname.toLowerCase();
+        return url.protocol === 'https:' && (host === 'paypal.com' || host.endsWith('.paypal.com'))
+            ? url.toString()
+            : '';
+    } catch {
+        return '';
+    }
 };
 
 const formatDateShort = (iso?: string) => {
@@ -217,6 +232,9 @@ export const MyReservationDetail: React.FC = () => {
 
     const history = reservation.history || [];
     const visibleHistory = showAllHistory ? [...history].reverse() : [...history].reverse().slice(0, 3);
+    const paypalInvoiceEntry = [...history].reverse().find((entry) => entry.type === 'paypal_invoice_sent');
+    const paypalInvoiceUrl = asPayPalInvoiceUrl(paypalInvoiceEntry?.detail);
+    const paypalInvoiceFailed = !paypalInvoiceEntry && history.some((entry) => entry.type === 'paypal_invoice_failed');
 
     const duration = computeDays(reservation.startDate, reservation.endDate);
     const tone = TONE_STYLES[statusMeta.tone];
@@ -226,10 +244,14 @@ export const MyReservationDetail: React.FC = () => {
     const DONUT_C = 2 * Math.PI * DONUT_R;
     const donutDash = (paidPercent / 100) * DONUT_C;
 
-    const payCtaDisabled = depositPaid;
+    const payCtaDisabled = depositPaid || !paypalInvoiceUrl;
     const payCtaLabel = depositPaid
         ? (balancePaid ? 'お支払い完了' : '現地支払いは現地でお支払い')
-        : 'PayPalで予約金を支払う';
+        : paypalInvoiceUrl
+            ? 'PayPal請求書を開く'
+            : paypalInvoiceFailed
+                ? '請求書を確認しています'
+                : '請求書をメールでご確認ください';
 
     const handleChat = () => {
         const w = window as any;
@@ -388,7 +410,7 @@ export const MyReservationDetail: React.FC = () => {
                                     </button>
                                 ) : (
                                     <a
-                                        href={priceBreakdown.deposit > 0 ? `https://paypal.me/MilkywayMongolia/${priceBreakdown.deposit}` : '#'}
+                                        href={paypalInvoiceUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="mt-4 w-full h-[52px] rounded-[14px] text-white text-sm font-bold inline-flex items-center justify-center gap-2 shadow-[0_6px_18px_-6px_rgba(26,47,90,0.55)] active:scale-[0.98] transition-transform"
@@ -399,10 +421,14 @@ export const MyReservationDetail: React.FC = () => {
                                     </a>
                                 )}
 
-                                {!payCtaDisabled && (
+                                {!depositPaid && (
                                     <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
-                                        <span className="material-symbols-outlined text-[12px]">lock</span>
-                                        PayPal SSL で安全にお支払い
+                                        <span className="material-symbols-outlined text-[12px]">mail</span>
+                                        {paypalInvoiceUrl
+                                            ? 'メールに届いたものと同じ請求書です。新しい請求書は作成されません。'
+                                            : paypalInvoiceFailed
+                                                ? '担当者が確認します。お急ぎの場合はチャットからお問い合わせください。'
+                                                : 'PayPalから届く日本語の請求書メールをご確認ください。'}
                                     </div>
                                 )}
                             </Card>

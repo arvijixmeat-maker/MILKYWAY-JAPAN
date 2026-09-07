@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { sendPayPalInvoice } from '../lib/paypal';
+import { requireAdmin } from '../lib/adminAuth';
+import { RESERVATION_DEPOSIT_JPY } from '../../src/lib/tourPricing';
 
 interface Env {
     PAYPAL_CLIENT_ID: string;
@@ -10,8 +12,8 @@ interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /api/test-paypal?email=customer@example.com
-app.get('/', async (c) => {
+// POST /api/test-paypal?email=customer@example.com (Admin only)
+app.post('/', requireAdmin, async (c) => {
     const customerEmail = c.req.query('email');
 
     if (!customerEmail) {
@@ -22,10 +24,6 @@ app.get('/', async (c) => {
     if (!c.env.PAYPAL_SECRET_KEY) return c.json({ error: 'PAYPAL_SECRET_KEY not set' }, 500);
     if (!c.env.PAYPAL_BUSINESS_EMAIL) return c.json({ error: 'PAYPAL_BUSINESS_EMAIL not set' }, 500);
 
-    // Show partial credentials for debugging
-    const clientIdPreview = c.env.PAYPAL_CLIENT_ID.slice(0, 6) + '...' + c.env.PAYPAL_CLIENT_ID.slice(-4);
-    const secretPreview = c.env.PAYPAL_SECRET_KEY.slice(0, 4) + '...' + c.env.PAYPAL_SECRET_KEY.slice(-4);
-
     try {
         const result = await sendPayPalInvoice({
             clientId: c.env.PAYPAL_CLIENT_ID,
@@ -35,7 +33,7 @@ app.get('/', async (c) => {
             customerName: 'テスト 顧客',
             reservationNumber: `MN-TEST-${Date.now()}`,
             productName: 'テストツアー',
-            depositAmount: 1000,
+            depositAmount: RESERVATION_DEPOSIT_JPY,
             environment: c.env.PAYPAL_ENVIRONMENT,
         });
         return c.json({
@@ -43,11 +41,9 @@ app.get('/', async (c) => {
             invoiceId: result.invoiceId,
             invoiceNumber: result.invoiceNumber,
             environment: c.env.PAYPAL_ENVIRONMENT || 'live',
-            clientIdPreview,
-            secretPreview,
         });
     } catch (e: any) {
-        return c.json({ success: false, error: e.message, clientIdPreview, secretPreview }, 500);
+        return c.json({ success: false, error: e.message }, 500);
     }
 });
 

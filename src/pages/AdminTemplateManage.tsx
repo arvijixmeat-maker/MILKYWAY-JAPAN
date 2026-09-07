@@ -10,6 +10,7 @@ import type { TouristSpot } from '../types/touristSpot';
 import type { Hotel } from '../types/hotel';
 import mongoliaHero from '../assets/login_bg_3.jpg';
 import { DOC_BLUE, DOC_NAVY } from '../components/document/TripDocParts';
+import { getReservationDeposit } from '../lib/tourPricing';
 
 // ─── Types ───────────────────────────────────────────────
 export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
@@ -168,7 +169,7 @@ export const parseDayActivitiesText = (text: string): Activity[] =>
     (text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
         const m = line.match(/^(\d{1,2}:\d{2})\s+(.*)$/);
         const title = m ? m[2] : line;
-        return { time: '', type: inferTypeForText(title), title, description: '' };
+        return { time: m ? m[1] : '', type: inferTypeForText(title), title, description: '' };
     });
 
 const encodeTemplateDescription = (description: string, documentSettings: DocumentSettings) =>
@@ -285,7 +286,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
     const peopleCount = customer?.peopleCount || 2;
     const samplePrice = (customer?.totalAmount && peopleCount) ? Math.round(customer.totalAmount / peopleCount) : (Number(settings.overview.pricePerPerson || 0) || 128000);
     const sampleTotal = customer?.totalAmount ?? samplePrice * peopleCount;
-    const sampleDeposit = customer?.deposit ?? Math.floor(sampleTotal * 0.1);
+    const sampleDeposit = customer?.deposit ?? getReservationDeposit(sampleTotal);
     const sampleLocal = customer?.localAmount ?? (sampleTotal - sampleDeposit);
     const tripLength = customer?.tripLength || `${nights}泊${totalDays || 0}日`;
     const guideText = assignedGuide?.name

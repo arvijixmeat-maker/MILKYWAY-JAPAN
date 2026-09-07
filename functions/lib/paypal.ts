@@ -38,9 +38,10 @@ function buildInvoiceBody(opts: {
         detail: {
             invoice_number: invoiceNumber,
             currency_code: 'JPY',
-            locale: 'ja_JP',
-            note: `予約番号: ${opts.reservationNumber}\n残金は現地にて円現金でお支払いください。`,
-            payment_term: { term_type: 'NET_10' },
+            reference: `予約番号 ${opts.reservationNumber}`,
+            note: `モンゴル旅行のご予約金です。\n予約番号: ${opts.reservationNumber}\n残金は旅行当日に日本円でお支払いください。`,
+            terms_and_conditions: '予約金のお支払い確認後に予約が確定します。キャンセル規定はMilkyway Japanの利用規約をご確認ください。',
+            payment_term: { term_type: 'DUE_ON_RECEIPT' },
             memo: opts.productName,
         },
         invoicer: {
@@ -50,6 +51,8 @@ function buildInvoiceBody(opts: {
             billing_info: {
                 email_address: opts.customerEmail,
                 name: { given_name: opts.customerName },
+                language: 'ja-JP',
+                additional_info: '日本語で対応いたします',
             },
         }],
         items: [{
@@ -63,6 +66,12 @@ function buildInvoiceBody(opts: {
             breakdown: {
                 item_total: { currency_code: 'JPY', value: String(Math.round(opts.depositAmount)) },
             },
+        },
+        configuration: {
+            allow_tip: false,
+            partial_payment: { allow_partial_payment: false },
+            tax_calculated_after_discount: false,
+            tax_inclusive: false,
         },
     };
 }
@@ -81,7 +90,7 @@ export async function sendPayPalInvoice(opts: {
     productName: string;
     depositAmount: number;
     environment?: string;
-}): Promise<{ invoiceId: string; invoiceNumber: string }> {
+}): Promise<{ invoiceId: string; invoiceNumber: string; recipientViewUrl?: string }> {
     const apiBase = getPayPalApi(opts.environment);
     const token = await getAccessToken(apiBase, opts.clientId, opts.secret);
 
@@ -133,12 +142,30 @@ export async function sendPayPalInvoice(opts: {
     const sendRes = await fetch(`${apiBase}/v2/invoicing/invoices/${invoiceId}/send`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ send_to_recipient: true, send_to_invoicer: true }),
+        body: JSON.stringify({ send_to_recipient: true, send_to_invoicer: false }),
     });
 
     if (!sendRes.ok) {
         throw new Error(`[PayPal Invoice][send] ${sendRes.status}: ${await sendRes.text()}`);
     }
 
-    return { invoiceId, invoiceNumber };
+    let recipientViewUrl: string | undefined;
+    try {
+        const sendData: any = await sendRes.json();
+        recipientViewUrl = sendData?.href
+            || sendData?.links?.find((link: any) => link.rel === 'payer-view')?.href;
+    } catch { /* PayPal may return an empty 202 response */ }
+
+    if (!recipientViewUrl) {
+        try {
+            const detailsRes = await fetch(`${apiBase}/v2/invoicing/invoices/${invoiceId}`, { headers });
+            if (detailsRes.ok) {
+                const details: any = await detailsRes.json();
+                recipientViewUrl = details?.detail?.metadata?.recipient_view_url
+                    || details?.links?.find((link: any) => link.rel === 'payer-view')?.href;
+            }
+        } catch { /* The email invoice is still valid even if the link lookup fails. */ }
+    }
+
+    return { invoiceId, invoiceNumber, recipientViewUrl };
 }

@@ -449,9 +449,12 @@ export const ProductDetail: React.FC = () => {
 
     if (!product) {
         return (
-            <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen flex items-center justify-center">
-                <p>{t('product_detail.error_not_found')}</p>
-            </div>
+            <>
+                <SEO title="ツアーが見つかりません" description="指定されたツアー商品は見つかりませんでした。" robots="noindex, nofollow" />
+                <div className="bg-background-light dark:bg-background-dark text-[#0e1a18] dark:text-white min-h-screen flex items-center justify-center">
+                    <p>{t('product_detail.error_not_found')}</p>
+                </div>
+            </>
         );
     }
 
@@ -517,32 +520,10 @@ export const ProductDetail: React.FC = () => {
 
     // ── Offer: AggregateOffer when multiple pricing options exist ──
     const pricingOptionPrices = Array.isArray(product.pricingOptions)
-        ? product.pricingOptions.map((p: any) => Number(p.price)).filter((n: number) => Number.isFinite(n) && n > 0)
+        ? product.pricingOptions.map((p: any) => Number(p.pricePerPerson)).filter((n: number) => Number.isFinite(n) && n > 0)
         : [];
     const availability = product.status === 'active' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
-    const priceValidUntil = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
-
-    // Tour bookings are digital: no shipping, so declare free/instant. Satisfies Google's
-    // Merchant Listing "shippingDetails missing" warning.
-    const shippingDetails = {
-        "@type": "OfferShippingDetails",
-        "shippingRate": { "@type": "MonetaryAmount", "value": 0, "currency": "JPY" },
-        "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "JP" },
-        "deliveryTime": {
-            "@type": "ShippingDeliveryTime",
-            "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" },
-            "transitTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" },
-        },
-    };
-    // 14-day cancellation window — baseline tour policy. Satisfies "hasMerchantReturnPolicy missing".
-    const merchantReturnPolicy = {
-        "@type": "MerchantReturnPolicy",
-        "applicableCountry": "JP",
-        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-        "merchantReturnDays": 14,
-        "returnMethod": "https://schema.org/ReturnByMail",
-        "returnFees": "https://schema.org/FreeReturn",
-    };
+    const productCanonicalUrl = `https://mongolryokou.com/products/${id}`;
 
     const offersLd = pricingOptionPrices.length > 1 ? {
         "@type": "AggregateOffer",
@@ -551,27 +532,23 @@ export const ProductDetail: React.FC = () => {
         "highPrice": Math.max(...pricingOptionPrices),
         "offerCount": pricingOptionPrices.length,
         "availability": availability,
-        "url": window.location.href,
+        "url": productCanonicalUrl,
         "seller": { "@type": "Organization", "name": "Milkyway Japan" },
-        "shippingDetails": shippingDetails,
-        "hasMerchantReturnPolicy": merchantReturnPolicy,
     } : {
         "@type": "Offer",
-        "url": window.location.href,
+        "url": productCanonicalUrl,
         "priceCurrency": "JPY",
         "price": product.price,
-        "priceValidUntil": priceValidUntil,
         "itemCondition": "https://schema.org/NewCondition",
         "availability": availability,
         "seller": { "@type": "Organization", "name": "Milkyway Japan" },
-        "shippingDetails": shippingDetails,
-        "hasMerchantReturnPolicy": merchantReturnPolicy,
     };
 
     // Create JSON-LD Product Schema (enhanced) — dual-typed for travel rich results.
     const productStructuredData: any = {
         "@context": "https://schema.org/",
         "@type": ["Product", "TouristTrip"],
+        "@id": `${productCanonicalUrl}#tour`,
         "name": product.name,
         "image": validImages.length > 0 ? validImages : undefined,
         "description": (product.included && product.included.length > 0)
@@ -595,7 +572,7 @@ export const ProductDetail: React.FC = () => {
         "itemListElement": [
             { "@type": "ListItem", "position": 1, "name": "ホーム", "item": "https://mongolryokou.com/" },
             { "@type": "ListItem", "position": 2, "name": "モンゴルツアー商品", "item": "https://mongolryokou.com/products" },
-            { "@type": "ListItem", "position": 3, "name": product.name, "item": `https://mongolryokou.com/products/${id}` }
+            { "@type": "ListItem", "position": 3, "name": product.name, "item": productCanonicalUrl }
         ]
     };
 
@@ -615,7 +592,7 @@ export const ProductDetail: React.FC = () => {
                     <ProductDetailDesktop
                         product={product}
                         reviews={productReviews}
-                        onBook={() => navigate(`/reservation/${product.id}`)}
+                        onBook={(people) => navigate(`/reservation/${product.id}?people=${people}`)}
                     />
                 </DesktopLayout>
             </>

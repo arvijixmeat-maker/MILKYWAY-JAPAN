@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
+import { getPricingValidationIssues, normalizePricingOptions, RESERVATION_DEPOSIT_JPY } from '../lib/tourPricing';
 import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent, DesignBlockContent } from '../types/product';
 import type { Category } from '../types/category';
 import type { Hotel } from '../types/hotel';
@@ -14,6 +15,8 @@ import type { TouristSpot } from '../types/touristSpot';
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 
+const formatPriceInput = (value: number | undefined) => Number(value || 0).toLocaleString('ja-JP');
+const parsePriceInput = (value: string) => Number(value.replace(/[^\d]/g, '')) || 0;
 
 
 export const AdminProductManage: React.FC = () => {
@@ -458,9 +461,9 @@ export const AdminProductManage: React.FC = () => {
                                         <td className="cell-muted">{product.category}</td>
                                         <td className="cell-muted">{product.duration}</td>
                                         <td className="r">
-                                            <div className="cell-price">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</div>
+                                            <div className="cell-price">¥{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</div>
                                             {product.originalPrice ? (
-                                                <div className="cell-muted" style={{ fontSize: 11.5, textDecoration: 'line-through' }}>₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</div>
+                                                <div className="cell-muted" style={{ fontSize: 11.5, textDecoration: 'line-through' }}>¥{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</div>
                                             ) : null}
                                         </td>
                                         <td>
@@ -637,6 +640,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
     );
 
     const [currentTab, setCurrentTab] = useState<'basic' | 'details' | 'itinerary' | 'options' | 'includes'>('basic');
+    const pricingIssues = useMemo(
+        () => getPricingValidationIssues(formData.pricingOptions || []),
+        [formData.pricingOptions],
+    );
+    const derivedStartingPrice = useMemo(() => {
+        const prices = (formData.pricingOptions || [])
+            .map((option) => Number(option.pricePerPerson))
+            .filter((price) => Number.isFinite(price) && price > 0);
+        return prices.length > 0 ? Math.min(...prices) : 0;
+    }, [formData.pricingOptions]);
 
     // 페이지형 편집 화면 — 목록에서 진입할 때 스크롤을 맨 위로
     useEffect(() => {
@@ -660,13 +673,33 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
             alert('기간을 입력해주세요.');
             return;
         }
-        if (!formData.price || formData.price <= 0) {
-            alert('판매가를 입력해주세요.');
+        const pricingErrors = pricingIssues.filter((issue) => issue.level === 'error');
+        if (pricingErrors.length > 0) {
+            setCurrentTab('options');
+            alert(`인원별 가격을 확인해 주세요.\n${pricingErrors.map((issue) => `• ${issue.message}`).join('\n')}`);
+            return;
+        }
+
+        const normalizedPricingOptions = normalizePricingOptions(formData.pricingOptions || []);
+        const startingPrice = normalizedPricingOptions.length > 0
+            ? Math.min(...normalizedPricingOptions.map((option) => option.pricePerPerson))
+            : Number(formData.price || 0);
+        if (startingPrice <= 0) {
+            alert('판매가 또는 인원별 가격을 입력해 주세요.');
+            return;
+        }
+        if (formData.originalPrice && formData.originalPrice <= startingPrice) {
+            setCurrentTab('basic');
+            alert('정가는 상품 시작가보다 높아야 합니다. 취소선 가격을 확인해 주세요.');
             return;
         }
 
         console.log('Calling onSave');
-        onSave(formData as TourProduct);
+        onSave({
+            ...formData,
+            price: startingPrice,
+            pricingOptions: normalizedPricingOptions,
+        } as TourProduct);
         console.log('onSave called');
     };
 
@@ -712,14 +745,27 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
 
     // Pricing Option Handlers
     const addPricingOption = () => {
+        const currentOptions = formData.pricingOptions || [];
+        const previous = [...currentOptions].sort((a, b) => a.people - b.people).at(-1);
+        const pricePerPerson = previous?.pricePerPerson || 0;
         setFormData({
             ...formData,
-            pricingOptions: [...(formData.pricingOptions || []), { people: 2, pricePerPerson: 0, depositPerPerson: 0, localPaymentPerPerson: 0 }]
+            pricingOptions: [...currentOptions, {
+                people: previous ? previous.people + 1 : 2,
+                pricePerPerson,
+                depositPerPerson: 0,
+                localPaymentPerPerson: pricePerPerson,
+            }]
         });
     };
     const updatePricingOption = (index: number, field: keyof TourPricingOption, value: number) => {
         const updated = [...(formData.pricingOptions || [])];
-        updated[index] = { ...updated[index], [field]: value };
+        const next = { ...updated[index], [field]: value };
+        if (field === 'pricePerPerson') {
+            next.depositPerPerson = 0;
+            next.localPaymentPerPerson = next.pricePerPerson;
+        }
+        updated[index] = next;
         setFormData({ ...formData, pricingOptions: updated });
     };
     const removePricingOption = (index: number) => {
@@ -728,7 +774,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
             pricingOptions: formData.pricingOptions?.filter((_, i) => i !== index)
         });
     };
-
     // Accommodation Option Handlers
     const addAccommodationOption = () => {
         setFormData({
@@ -1685,23 +1730,31 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
 
                                 <div className="field-row">
                                     <div className="field">
-                                        <label>판매가 *</label>
+                                        <label>상품 시작가 *</label>
                                         <input
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
                                             className="inp"
-                                            value={formData.price}
-                                            onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                            value={formatPriceInput(derivedStartingPrice || formData.price)}
+                                            onChange={(e) => setFormData({ ...formData, price: parsePriceInput(e.target.value) })}
+                                            readOnly={derivedStartingPrice > 0}
                                             required
                                         />
+                                        <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                                            {derivedStartingPrice > 0
+                                                ? '인원별 가격 중 최저가가 자동으로 반영됩니다.'
+                                                : '인원별 가격을 사용하지 않을 때 표시할 1인 기준 가격입니다.'}
+                                        </p>
                                     </div>
 
                                     <div className="field">
                                         <label>정가 (선택)</label>
                                         <input
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
                                             className="inp"
-                                            value={formData.originalPrice || ''}
-                                            onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) || undefined })}
+                                            value={formData.originalPrice ? formatPriceInput(formData.originalPrice) : ''}
+                                            onChange={(e) => setFormData({ ...formData, originalPrice: parsePriceInput(e.target.value) || undefined })}
                                         />
                                     </div>
                                 </div>
@@ -2414,21 +2467,30 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                             <div className="stack" style={{ maxWidth: 860 }}>
                                 {/* Pricing Options */}
                                 <section className="edit-sec">
-                                    <div className="edit-sec-head">
+                                    <div className="edit-sec-head pricing-sec-head">
                                         <Icon name="groups" />
                                         <h4>인원별 가격 옵션</h4>
-                                        <span className="muted">1인 가격 · 예약금 · 현지결제</span>
+                                        <span className="muted">1인 총가격만 관리합니다. 예약금은 인원과 관계없이 예약 1건당 ¥{formatPriceInput(RESERVATION_DEPOSIT_JPY)}입니다.</span>
                                     </div>
-                                    <div className="opt-grid-head"><span>인원</span><span>1인 총가격</span><span>예약금</span><span>현지 결제</span><span></span></div>
+                                    {pricingIssues.length > 0 && (
+                                        <div className="pricing-validation" role="status">
+                                            {pricingIssues.map((issue, issueIndex) => (
+                                                <div key={`${issue.index}-${issue.message}-${issueIndex}`} className={`pricing-validation-item ${issue.level}`}>
+                                                    <Icon name={issue.level === 'error' ? 'error' : 'warning'} />
+                                                    <span>{issue.index + 1}번째 가격: {issue.message}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="opt-grid-head pricing-grid-head"><span>인원</span><span>1인 총가격</span><span>그룹 총액</span><span></span></div>
                                     <div className="stack" style={{ gap: 10 }}>
                                         {formData.pricingOptions?.map((option, index) => (
-                                            <div className="edit-row" key={index}>
+                                            <div className={`edit-row pricing-row${pricingIssues.some((issue) => issue.index === index && issue.level === 'error') ? ' has-error' : pricingIssues.some((issue) => issue.index === index) ? ' has-warning' : ''}`} key={index}>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div className="opt-grid">
-                                                        <div className="inp-mini"><input type="number" value={option.people} onChange={(e) => updatePricingOption(index, 'people', Number(e.target.value))} /><span>명</span></div>
-                                                        <div className="inp-mini"><span className="pre">₩</span><input type="number" value={option.pricePerPerson} onChange={(e) => updatePricingOption(index, 'pricePerPerson', Number(e.target.value))} /></div>
-                                                        <div className="inp-mini"><span className="pre">₩</span><input type="number" value={option.depositPerPerson || 0} onChange={(e) => updatePricingOption(index, 'depositPerPerson', Number(e.target.value))} /></div>
-                                                        <div className="inp-mini"><span className="pre">₩</span><input type="number" value={option.localPaymentPerPerson || 0} onChange={(e) => updatePricingOption(index, 'localPaymentPerPerson', Number(e.target.value))} /></div>
+                                                        <div className="inp-mini"><input aria-label="인원" type="number" min={1} step={1} value={option.people} onChange={(e) => updatePricingOption(index, 'people', Number(e.target.value))} /><span>명</span></div>
+                                                        <div className="inp-mini"><span className="pre">¥</span><input aria-label="1인 총가격" type="text" inputMode="numeric" value={formatPriceInput(option.pricePerPerson)} onChange={(e) => updatePricingOption(index, 'pricePerPerson', parsePriceInput(e.target.value))} /></div>
+                                                        <div className="inp-mini calculated" title="인원 × 1인 총가격"><span className="pre">¥</span><input aria-label="그룹 총액" type="text" value={formatPriceInput(option.pricePerPerson * option.people)} readOnly /><Icon name="lock" /></div>
                                                     </div>
                                                 </div>
                                                 <button type="button" className="act-btn danger" onClick={() => removePricingOption(index)} title="삭제"><Icon name="delete" /></button>
@@ -2467,7 +2529,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                             onChange={(e) => updateAccommodationOption(index, 'name', e.target.value)}
                                                             placeholder="옵션명 (예: 게르)"
                                                         />
-                                                        <div className="inp-mini" style={{ width: 130 }}><span className="pre">+₩</span><input type="number" value={option.priceModifier} onChange={(e) => updateAccommodationOption(index, 'priceModifier', Number(e.target.value))} placeholder="0" /></div>
+                                                        <div className="inp-mini" style={{ width: 130 }}><span className="pre">+¥</span><input type="number" value={option.priceModifier} onChange={(e) => updateAccommodationOption(index, 'priceModifier', Number(e.target.value))} placeholder="0" /></div>
                                                     </div>
                                                     <input
                                                         type="text"
@@ -2511,7 +2573,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                             onChange={(e) => updateVehicleOption(index, 'name', e.target.value)}
                                                             placeholder="옵션명 (예: 스타렉스)"
                                                         />
-                                                        <div className="inp-mini" style={{ width: 130 }}><span className="pre">+₩</span><input type="number" value={option.priceModifier} onChange={(e) => updateVehicleOption(index, 'priceModifier', Number(e.target.value))} placeholder="0" /></div>
+                                                        <div className="inp-mini" style={{ width: 130 }}><span className="pre">+¥</span><input type="number" value={option.priceModifier} onChange={(e) => updateVehicleOption(index, 'priceModifier', Number(e.target.value))} placeholder="0" /></div>
                                                     </div>
                                                     <input
                                                         type="text"

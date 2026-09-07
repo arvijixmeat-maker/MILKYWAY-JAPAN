@@ -125,6 +125,11 @@ export const AdminCategoryManage: React.FC = () => {
 
     const handleSaveCategory = async (category: Category) => {
         try {
+            const requestedId = (category.id || '').trim();
+            if (category.id !== 'all' && (!requestedId || !/^[a-z0-9][a-z0-9-]*$/.test(requestedId))) {
+                alert('검색 URL은 영문 소문자/숫자/하이픈으로 입력하고, 문자나 숫자로 시작해야 합니다.');
+                return;
+            }
             const heroImages = Array.isArray(category.landing_hero_images)
                 ? category.landing_hero_images.filter(Boolean)
                 : [];
@@ -145,12 +150,8 @@ export const AdminCategoryManage: React.FC = () => {
                 // subsequent update hits the new row.
                 let effectiveId = category.id;
                 if (selectedCategory.id !== category.id) {
-                    const newId = (category.id || '').trim();
-                    if (!newId || !/^[a-z0-9][a-z0-9-]*$/.test(newId)) {
-                        alert('URL 슬러그는 영문 소문자/숫자/하이픈으로, 문자나 숫자로 시작해야 합니다.');
-                        return;
-                    }
-                    if (!confirm(`URL 슬러그를 "${selectedCategory.id}" → "${newId}" 로 변경하시겠습니까?\n기존 /category/${selectedCategory.id} 링크는 더이상 열리지 않습니다.`)) {
+                    const newId = requestedId;
+                    if (!confirm(`검색 URL을 "${selectedCategory.id}" → "${newId}" 로 변경하시겠습니까?\n기존 주소는 새 주소로 자동 연결됩니다.`)) {
                         return;
                     }
                     await api.categories.rename(selectedCategory.id, newId);
@@ -168,7 +169,7 @@ export const AdminCategoryManage: React.FC = () => {
             } else {
                 // Add New
                 const newCategory = {
-                    id: `cat-${Date.now()}`,
+                    id: requestedId,
                     icon: category.icon,
                     name: category.name,
                     description: category.description,
@@ -355,6 +356,7 @@ interface CategoryModalProps {
 const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, onSave }) => {
     const [formData, setFormData] = useState<Partial<Category>>(
         category || {
+            id: '',
             name: '',
             icon: 'category',
             description: '',
@@ -366,7 +368,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.icon) {
+        if (!formData.name || !formData.icon || !formData.id) {
             alert('필수 항목을 입력해주세요.');
             return;
         }
@@ -416,10 +418,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                             />
                         </div>
 
-                        {/* URL Slug (editable only in edit mode, and not for the "all" category) */}
-                        {category && category.id !== 'all' && (
+                        {/* Search URL slug — required at creation; previous slugs redirect after edits. */}
+                        {category?.id !== 'all' && (
                             <div className="field">
-                                <label>URL 슬러그 (ID)</label>
+                                <label>검색 URL 슬러그 *</label>
                                 <div className="row" style={{ gap: 8 }}>
                                     <span className="cell-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>/category/</span>
                                     <input
@@ -428,11 +430,12 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                                         style={{ flex: 1, fontFamily: 'var(--font-mono)' }}
                                         value={formData.id || ''}
                                         onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                                        placeholder="예: gobi"
+                                        placeholder="예: mongolia-trekking"
+                                        required
                                     />
                                 </div>
                                 <p className="cell-muted" style={{ fontSize: 12, marginTop: 6 }}>
-                                    영문 소문자/숫자/하이픈만 허용. 변경 시 기존 URL이 더이상 열리지 않으니 주의하세요.
+                                    고객과 Google이 이해하기 쉬운 영문 단어를 사용하세요. 변경해도 기존 주소는 새 주소로 자동 연결됩니다.
                                 </p>
                             </div>
                         )}
@@ -440,14 +443,36 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, type, onClose, 
                         {/* Description */}
                         <div className="field">
                             <label>설명</label>
-                            <input
-                                type="text"
+                            <textarea
                                 className="inp"
                                 value={formData.description || ''}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder={type === 'product' ? "예: 알타이 산맥 트레킹" : "예: 환전, 유심, 날씨 등"}
+                                placeholder={type === 'product' ? "例: モンゴルの大草原とアルタイ山脈を歩く日本語ガイド同行のトレッキングツアー。" : "例: 両替、SIM、天気など旅行前に必要な情報をご案内します。"}
+                                rows={3}
+                                maxLength={160}
                             />
+                            <p className="cell-muted" style={{ fontSize: 12, marginTop: 6, textAlign: 'right' }}>
+                                {(formData.description || '').length}/160자 · 일본어 80~120자 권장
+                            </p>
                         </div>
+
+                        {type === 'product' && (
+                            <div className="edit-sec" style={{ padding: 16, marginBottom: 18, background: '#fff' }}>
+                                <div className="row" style={{ marginBottom: 12 }}>
+                                    <Icon name="search" />
+                                    <strong style={{ fontSize: 13.5 }}>Google 검색 미리보기</strong>
+                                </div>
+                                <p style={{ color: '#1a0dab', fontSize: 18, lineHeight: 1.35, margin: 0 }}>
+                                    {formData.name ? `${formData.name}のモンゴルツアー | Milkyway Japan` : 'カテゴリ名のモンゴルツアー | Milkyway Japan'}
+                                </p>
+                                <p style={{ color: '#188038', fontSize: 12, margin: '5px 0' }}>
+                                    https://mongolryokou.com/category/{formData.id || 'search-url'}
+                                </p>
+                                <p style={{ color: '#4d5156', fontSize: 13, lineHeight: 1.55, margin: 0 }}>
+                                    {formData.description || '일본 고객이 검색 결과에서 여행 특징을 바로 이해할 수 있도록 설명을 입력하세요.'}
+                                </p>
+                            </div>
+                        )}
 
                         {/* Icon */}
                         <div className="field">

@@ -128,7 +128,7 @@ export function ReservationCompleteDesktop({
                                     fontWeight: 600,
                                 }}
                             >
-                                決済する予約金額
+                                メールでお支払いいただく予約金
                             </div>
                             <div
                                 style={{
@@ -178,8 +178,8 @@ export function ReservationCompleteDesktop({
                                 t: 'メール内のリンクから、クレジットカード等で安全・簡単にお支払いいただけます。',
                             },
                             {
-                                i: 'report',
-                                t: 'お支払いが確認できない場合、自動的にキャンセルとなることがございます。',
+                                i: 'receipt_long',
+                                t: '請求書メールが届かない場合は、マイ予約から同じ請求書を開けます。',
                             },
                         ].map((s) => (
                             <div

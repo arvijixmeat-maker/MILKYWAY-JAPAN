@@ -179,7 +179,7 @@ export const AdminAccommodationManage: React.FC = () => {
 
     return (
         <AdminLayout
-            activePage="hotels"
+            activePage="accommodations"
             title="숙소 관리"
             actions={
                 <button

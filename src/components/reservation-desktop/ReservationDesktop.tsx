@@ -381,7 +381,7 @@ export function ReservationDesktop({
                                 >
                                     <MatIcon name="info" size={18} color="var(--fg-4)" />
                                     <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>
-                                        現在の人数の基準 お1人様{' '}
+                                        選択中の人数では、お1人様{' '}
                                         <strong
                                             style={{ color: '#0f766e', fontWeight: 700 }}
                                         >

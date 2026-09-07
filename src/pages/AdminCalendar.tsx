@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { toTourDateKey } from '../utils/formatDate';
 
 type CalendarItemType = 'reservation' | 'quote';
+type CalendarFilter = 'all' | 'reservation' | 'quote' | 'action';
 
 interface CalendarItem {
     id: string;
@@ -125,6 +126,11 @@ const getNextAction = (item: CalendarItem): { label: string; tone: string; icon:
     return { label: '운영 체크', tone: 'b-green', icon: 'task_alt' };
 };
 
+const requiresAction = (item: CalendarItem) => {
+    if (item.itemType === 'quote') return ['new', 'processing', 'reservation_requested'].includes(item.status);
+    return item.status === 'pending_payment' || item.depositStatus !== 'paid' || !item.assignedGuide;
+};
+
 const formatRange = (item: CalendarItem) => {
     if (!item.startDate) return '일정 미정';
     return item.endDate && item.endDate !== item.startDate ? `${item.startDate} ~ ${item.endDate}` : item.startDate;
@@ -230,6 +236,8 @@ export const AdminCalendar: React.FC = () => {
     const [items, setItems] = useState<CalendarItem[]>([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isLoading, setIsLoading] = useState(false);
+    const [filter, setFilter] = useState<CalendarFilter>('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const fetchCalendarItems = async () => {
         setIsLoading(true);
@@ -247,8 +255,8 @@ export const AdminCalendar: React.FC = () => {
                 : [];
 
             const mappedReservations: CalendarItem[] = reservationData
-                .filter((reservation: any) => reservation.status !== 'cancelled')
-                .map((reservation: any) => {
+                .filter((reservation) => reservation.status !== 'cancelled')
+                .map((reservation) => {
                     const totalAmount = reservation.totalAmount || reservation.total_amount || reservation.totalPrice || reservation.price_breakdown?.total || 0;
                     const deposit = reservation.deposit || reservation.depositAmount || reservation.deposit_amount || reservation.price_breakdown?.deposit || 0;
                     const assignedGuide = parseMaybeJson(reservation.assignedGuide || reservation.assigned_guide, undefined);
@@ -276,8 +284,8 @@ export const AdminCalendar: React.FC = () => {
                 });
 
             const mappedQuotes: CalendarItem[] = quoteData
-                .filter((quote: any) => quote.status !== 'converted' && quote.status !== 'cancelled')
-                .map((quote: any) => {
+                .filter((quote) => quote.status !== 'converted' && quote.status !== 'cancelled')
+                .map((quote) => {
                     const requestedRange = parseDateRange(quote.period);
                     const confirmedStart = normalizeDate(quote.confirmed_start_date || quote.confirmedStartDate);
                     const confirmedEnd = normalizeDate(quote.confirmed_end_date || quote.confirmedEndDate);
@@ -320,29 +328,38 @@ export const AdminCalendar: React.FC = () => {
 
     const monthItems = useMemo(() => items.filter(item => isInMonth(item, currentMonth)), [items, currentMonth]);
 
+    const filteredItems = useMemo(() => {
+        const query = searchQuery.trim().toLocaleLowerCase();
+        return items.filter(item => {
+            if (filter === 'reservation' && item.itemType !== 'reservation') return false;
+            if (filter === 'quote' && item.itemType !== 'quote') return false;
+            if (filter === 'action' && !requiresAction(item)) return false;
+            if (!query) return true;
+            return [item.customerName, item.productName, item.reservationNumber, item.assignedGuide?.name]
+                .filter(Boolean)
+                .some(value => String(value).toLocaleLowerCase().includes(query));
+        });
+    }, [items, filter, searchQuery]);
+
     const monthStats = useMemo(() => ({
         total: monthItems.length,
+        reservations: monthItems.filter(item => item.itemType === 'reservation').length,
         quotes: monthItems.filter(item => item.itemType === 'quote').length,
         confirmed: monthItems.filter(item => item.itemType === 'reservation' && ['confirmed', 'paid'].includes(item.status)).length,
-        needsAction: monthItems.filter(item => {
-            if (item.itemType === 'quote') return ['new', 'processing', 'reservation_requested'].includes(item.status);
-            return item.status === 'pending_payment' || !item.assignedGuide;
-        }).length,
-        people: monthItems.reduce((sum, item) => sum + parsePeople(item.headcount), 0),
+        needsAction: monthItems.filter(requiresAction).length,
+        people: monthItems.filter(item => item.itemType === 'reservation').reduce((sum, item) => sum + parsePeople(item.headcount), 0),
     }), [monthItems]);
 
     const selectedDateItems = useMemo(
-        () => items.filter(item => isOnDate(item, selectedDate)).sort((a, b) => a.itemType.localeCompare(b.itemType)),
-        [items, selectedDate],
+        () => filteredItems.filter(item => isOnDate(item, selectedDate)).sort((a, b) => Number(requiresAction(b)) - Number(requiresAction(a)) || a.itemType.localeCompare(b.itemType)),
+        [filteredItems, selectedDate],
     );
 
     const actionItems = useMemo(
         () => monthItems
-            .filter(item => {
-                if (item.itemType === 'quote') return ['new', 'processing', 'reservation_requested'].includes(item.status);
-                return item.status === 'pending_payment' || !item.assignedGuide;
-            })
-            .slice(0, 5),
+            .filter(requiresAction)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate))
+            .slice(0, 8),
         [monthItems],
     );
 
@@ -360,17 +377,19 @@ export const AdminCalendar: React.FC = () => {
             const dayNum = i - startOffset + 1;
             const valid = dayNum >= 1 && dayNum <= daysInMonth;
             const dateKey = valid ? `${year}-${`${month + 1}`.padStart(2, '0')}-${`${dayNum}`.padStart(2, '0')}` : '';
-            const events = valid ? items.filter(item => isOnDate(item, dateKey)) : [];
+            const events = valid ? filteredItems.filter(item => isOnDate(item, dateKey)) : [];
             cells.push({ valid, dayNum, dateKey, events });
         }
         return cells;
-    }, [currentMonth, items]);
+    }, [currentMonth, filteredItems]);
 
     const dow = ['일', '월', '화', '수', '목', '금', '토'];
     const monthTitle = `${currentMonth.getFullYear()}년 ${currentMonth.getMonth() + 1}월`;
 
     const goToMonth = (delta: number) => {
-        setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+        const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1);
+        setCurrentMonth(nextMonth);
+        setSelectedDate(toDateKey(nextMonth));
     };
     const goToToday = () => {
         const now = new Date();
@@ -389,8 +408,8 @@ export const AdminCalendar: React.FC = () => {
                 </button>
             )}
         >
-            <div className="toolbar">
-                <div className="row" style={{ gap: 8 }}>
+            <div className="toolbar calendar-toolbar">
+                <div className="row calendar-month-nav" style={{ gap: 8 }}>
                     <button className="icon-btn" onClick={() => goToMonth(-1)} title="이전 달" type="button">
                         <Icon name="chevron_left" />
                     </button>
@@ -401,28 +420,53 @@ export const AdminCalendar: React.FC = () => {
                     <button className="btn btn-ghost btn-sm" style={{ marginLeft: 6 }} onClick={goToToday} type="button">오늘</button>
                 </div>
                 <div className="spacer" />
-                <div className="row" style={{ gap: 14, marginRight: 8 }}>
-                    <span className="row" style={{ gap: 6 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--mrt-blue)' }} />
-                        <span className="cell-muted" style={{ fontSize: 12.5 }}>배정 완료</span>
-                    </span>
-                    <span className="row" style={{ gap: 6 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 3, background: '#F5B544' }} />
-                        <span className="cell-muted" style={{ fontSize: 12.5 }}>처리 필요</span>
-                    </span>
+                <div className="search-pill calendar-search">
+                    <Icon name="search" />
+                    <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="고객·상품·가이드 검색" aria-label="캘린더 검색" />
+                    {searchQuery && <button type="button" onClick={() => setSearchQuery('')} title="검색어 지우기"><Icon name="close" /></button>}
                 </div>
-                <a className="btn btn-ink" href="/admin/reservations">
+                <a className="btn btn-blue" href="/admin/reservations">
                     <Icon name="add" />투어 일정 추가
                 </a>
             </div>
 
-            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 18 }}>
+            <div className="calendar-filterbar">
+                <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                    {([
+                        ['all', `전체 ${monthStats.total}`],
+                        ['reservation', `예약 ${monthStats.reservations}`],
+                        ['quote', `맞춤 견적 ${monthStats.quotes}`],
+                        ['action', `처리 필요 ${monthStats.needsAction}`],
+                    ] as Array<[CalendarFilter, string]>).map(([value, label]) => (
+                        <button key={value} type="button" className={`chip${filter === value ? ' active' : ''}`} onClick={() => setFilter(value)}>{label}</button>
+                    ))}
+                </div>
+                <div className="spacer" />
+                <div className="calendar-legend">
+                    <span><i className="legend-dot blue" />예약 확정·배정</span>
+                    <span><i className="legend-dot green" />운영 확인</span>
+                    <span><i className="legend-dot amber" />처리 필요·견적</span>
+                </div>
+            </div>
+
+            <div className="metric-grid calendar-metrics" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 18 }}>
                 <div className="metric" style={{ padding: '16px 18px' }}>
                     <div className="row" style={{ gap: 12 }}>
                         <span className="metric-ico tint-blue" style={{ width: 40, height: 40 }}><Icon name="event" fill /></span>
                         <div>
-                            <div className="metric-label">이번 달 투어</div>
-                            <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.total}건</div>
+                            <div className="metric-label">이번 달 예약</div>
+                            <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.reservations}건</div>
+                            <div className="metric-sub">확정·결제 {monthStats.confirmed}건</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="metric" style={{ padding: '16px 18px' }}>
+                    <div className="row" style={{ gap: 12 }}>
+                        <span className="metric-ico tint-purple" style={{ width: 40, height: 40 }}><Icon name="request_quote" fill /></span>
+                        <div>
+                            <div className="metric-label">맞춤 견적</div>
+                            <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.quotes}건</div>
+                            <div className="metric-sub">예약 전환 전 요청</div>
                         </div>
                     </div>
                 </div>
@@ -439,132 +483,138 @@ export const AdminCalendar: React.FC = () => {
                     <div className="row" style={{ gap: 12 }}>
                         <span className="metric-ico tint-green" style={{ width: 40, height: 40 }}><Icon name="groups" fill /></span>
                         <div>
-                            <div className="metric-label">예약 인원</div>
+                            <div className="metric-label">여행 인원</div>
                             <div className="metric-value" style={{ fontSize: 22 }}>{monthStats.people}명</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="cal">
-                {dow.map((d, i) => (
-                    <div
-                        className="cal-dow"
-                        key={d}
-                        style={i === 0 ? { color: 'var(--mrt-red)' } : i === 6 ? { color: 'var(--mrt-blue)' } : undefined}
-                    >
-                        {d}
-                    </div>
-                ))}
-                {calendarCells.map((cell, i) => {
-                    const isToday = cell.valid && cell.dateKey === todayKey;
-                    const isSelected = cell.valid && cell.dateKey === selectedDate;
-                    return (
-                        <div
-                            className={`cal-cell${!cell.valid ? ' out' : ''}${isToday ? ' today' : ''}`}
-                            key={i}
-                            onClick={() => cell.valid && setSelectedDate(cell.dateKey)}
-                            style={isSelected && !isToday ? { boxShadow: 'inset 0 0 0 2px var(--mrt-blue)' } : undefined}
-                        >
-                            {cell.valid && <div className="cal-date">{cell.dayNum}</div>}
-                            {cell.events.map((e) => (
+            <div className="calendar-workspace">
+                <div className="calendar-panel">
+                    <div className="cal">
+                        {dow.map((d, i) => (
+                            <div
+                                className="cal-dow"
+                                key={d}
+                                style={i === 0 ? { color: 'var(--mrt-red)' } : i === 6 ? { color: 'var(--mrt-blue)' } : undefined}
+                            >
+                                {d}
+                            </div>
+                        ))}
+                        {calendarCells.map((cell, i) => {
+                            const isToday = cell.valid && cell.dateKey === todayKey;
+                            const isSelected = cell.valid && cell.dateKey === selectedDate;
+                            const visibleEvents = cell.events.slice(0, 3);
+                            const hiddenEventCount = Math.max(0, cell.events.length - visibleEvents.length);
+                            return (
                                 <div
-                                    key={`${e.itemType}-${e.id}`}
-                                    className={`cal-ev ev-${getEventTone(e)}`}
-                                    title={`${e.customerName} | ${e.productName} | ${STATUS_LABEL[e.status] || e.status} | ${getNextAction(e).label}`}
-                                    onClick={(ev) => {
-                                        ev.stopPropagation();
-                                        setSelectedEvent(e);
-                                    }}
+                                    className={`cal-cell${!cell.valid ? ' out' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${cell.events.length ? ' has-events' : ''}`}
+                                    key={i}
+                                    onClick={() => cell.valid && setSelectedDate(cell.dateKey)}
                                 >
-                                    <b>{e.itemType === 'quote' ? '견적' : '예약'} · {e.customerName}</b>
-                                    <div style={{ opacity: 0.85, fontWeight: 600 }}>
-                                        {e.headcount} · {e.assignedGuide?.name || '미배정'}
-                                    </div>
+                                    {cell.valid && (
+                                        <div className="cal-cell-head">
+                                            <div className="cal-date">{cell.dayNum}</div>
+                                            {cell.events.length > 0 && <span className="cal-count">{cell.events.length}건</span>}
+                                        </div>
+                                    )}
+                                    {visibleEvents.map((event) => {
+                                        const action = getNextAction(event);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={`${event.itemType}-${event.id}`}
+                                                className={`cal-ev ev-${getEventTone(event)}`}
+                                                title={`${event.customerName} | ${event.productName} | ${STATUS_LABEL[event.status] || event.status} | ${action.label}`}
+                                                onClick={(clickEvent) => {
+                                                    clickEvent.stopPropagation();
+                                                    setSelectedDate(cell.dateKey);
+                                                    setSelectedEvent(event);
+                                                }}
+                                            >
+                                                <span className="cal-ev-title"><b>{event.customerName}</b><em>{event.itemType === 'quote' ? '견적' : '예약'}</em></span>
+                                                <span className="cal-ev-meta">{event.headcount} · {requiresAction(event) ? action.label : (event.assignedGuide?.name || action.label)}</span>
+                                            </button>
+                                        );
+                                    })}
+                                    {hiddenEventCount > 0 && (
+                                        <button type="button" className="cal-more" onClick={(event) => { event.stopPropagation(); setSelectedDate(cell.dateKey); }}>
+                                            +{hiddenEventCount}개 더 보기
+                                        </button>
+                                    )}
                                 </div>
-                            ))}
-                        </div>
-                    );
-                })}
-            </div>
+                            );
+                        })}
+                    </div>
+                </div>
 
-            <div className="grid-2" style={{ marginTop: 22 }}>
-                <div className="card">
+                <aside className="card calendar-day-panel">
                     <div className="card-head">
-                        <Icon name="calendar_month" style={{ color: 'var(--mrt-blue-strong)' }} />
+                        <span className="calendar-selected-icon"><Icon name="calendar_month" /></span>
                         <div>
-                            <h2>선택한 날짜</h2>
-                            <div className="sub">{selectedDate}</div>
+                            <h2>{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${selectedDate}T00:00:00`))}</h2>
+                            <div className="sub">선택한 날짜 · {selectedDateItems.length}건</div>
                         </div>
                     </div>
-                    <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="calendar-day-list">
                         {selectedDateItems.length > 0 ? (
                             selectedDateItems.map(item => {
                                 const action = getNextAction(item);
                                 return (
-                                    <button
-                                        key={`sel-${item.itemType}-${item.id}`}
-                                        className="qlink"
-                                        onClick={() => setSelectedEvent(item)}
-                                        type="button"
-                                    >
-                                        <span className={`qi tint-${getEventTone(item) === 'blue' ? 'blue' : getEventTone(item) === 'green' ? 'green' : 'amber'}`}>
-                                            <Icon name={item.itemType === 'quote' ? 'request_quote' : 'confirmation_number'} />
-                                        </span>
+                                    <button key={`sel-${item.itemType}-${item.id}`} className="calendar-day-item" onClick={() => setSelectedEvent(item)} type="button">
+                                        <span className={`calendar-day-dot ${getEventTone(item)}`} />
                                         <div className="qtext">
-                                            <div className="qt">{item.productName}</div>
-                                            <div className="qs">{item.customerName} · {item.headcount} · {action.label}</div>
+                                            <div className="row" style={{ gap: 6 }}>
+                                                <span className={`tag-type ${item.itemType === 'quote' ? 'quote' : 'reservation'}`}>{item.itemType === 'quote' ? '견적' : '예약'}</span>
+                                                <span className="qt">{item.customerName}</span>
+                                            </div>
+                                            <div className="qs">{item.productName}</div>
+                                            <div className="calendar-day-meta"><span>{item.headcount}</span><span>{action.label}</span></div>
                                         </div>
                                         <Icon name="chevron_right" className="arr" />
                                     </button>
                                 );
                             })
                         ) : (
-                            <div className="empty">
+                            <div className="empty calendar-empty">
                                 <Icon name="event_busy" />
-                                <p>이 날짜에는 일정이 없습니다.</p>
+                                <p>{filter !== 'all' || searchQuery ? '현재 필터에 해당하는 일정이 없습니다.' : '이 날짜에는 일정이 없습니다.'}</p>
+                                {(filter !== 'all' || searchQuery) && <button type="button" className="link-action" onClick={() => { setFilter('all'); setSearchQuery(''); }}>필터 초기화</button>}
                             </div>
                         )}
                     </div>
-                </div>
+                </aside>
+            </div>
 
-                <div className="card">
-                    <div className="card-head">
-                        <Icon name="notification_important" style={{ color: '#B7791F' }} />
-                        <div>
-                            <h2>이번 달 처리 목록</h2>
-                            <div className="sub">우선 확인이 필요한 일정</div>
-                        </div>
+            <div className="card calendar-action-panel">
+                <div className="card-head">
+                    <span className="calendar-action-icon"><Icon name="notification_important" /></span>
+                    <div>
+                        <h2>이번 달 처리 목록</h2>
+                        <div className="sub">입금 확인·가이드 배정·견적 응답이 필요한 업무</div>
                     </div>
-                    <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {actionItems.length > 0 ? (
-                            actionItems.map(item => {
-                                const action = getNextAction(item);
-                                return (
-                                    <button
-                                        key={`action-${item.itemType}-${item.id}`}
-                                        className="qlink"
-                                        onClick={() => setSelectedEvent(item)}
-                                        type="button"
-                                    >
-                                        <span className={`qi badge ${action.tone}`} style={{ borderRadius: 12 }}>
-                                            <Icon name={action.icon} />
-                                        </span>
-                                        <div className="qtext">
-                                            <div className="qt">{item.productName}</div>
-                                            <div className="qs">{item.customerName} · {item.headcount} · {action.label}</div>
-                                        </div>
-                                        <Icon name="chevron_right" className="arr" />
-                                    </button>
-                                );
-                            })
-                        ) : (
-                            <div className="empty">
-                                <Icon name="task_alt" />
-                                <p>현재 처리할 항목이 없습니다.</p>
-                            </div>
-                        )}
-                    </div>
+                    <div className="spacer" />
+                    <a className="link-action" href="/admin/reservations">통합 관리 <Icon name="chevron_right" /></a>
+                </div>
+                <div className="calendar-action-list">
+                    {actionItems.length > 0 ? (
+                        actionItems.map(item => {
+                            const action = getNextAction(item);
+                            return (
+                                <button key={`action-${item.itemType}-${item.id}`} className="qlink" onClick={() => setSelectedEvent(item)} type="button">
+                                    <span className={`qi badge ${action.tone}`} style={{ borderRadius: 12 }}><Icon name={action.icon} /></span>
+                                    <div className="qtext">
+                                        <div className="qt">{item.customerName} · {action.label}</div>
+                                        <div className="qs">{item.startDate} · {item.productName}</div>
+                                    </div>
+                                    <Icon name="chevron_right" className="arr" />
+                                </button>
+                            );
+                        })
+                    ) : (
+                        <div className="empty calendar-empty"><Icon name="task_alt" /><p>현재 처리할 항목이 없습니다.</p></div>
+                    )}
                 </div>
             </div>
 
