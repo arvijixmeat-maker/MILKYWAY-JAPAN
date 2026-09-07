@@ -13,6 +13,8 @@ import type { Hotel } from '../types/hotel';
 import type { TouristSpot } from '../types/touristSpot';
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
+import { ItineraryImportModal } from '../components/admin/ItineraryImportModal';
+import { cloneItineraryBlocks, type ItinerarySource } from '../components/admin/itineraryImport';
 
 
 
@@ -971,6 +973,24 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
 
     // ─── Tourist spot picker — only opens from TIMELINE blocks ─────────
     const [spotPickerForIndex, setSpotPickerForIndex] = useState<number | null>(null);
+
+    // 「일정표 불러오기」 — 다른 상품의 일정표를 복제해 현재 상품에 넣는다
+    const [itineraryImportOpen, setItineraryImportOpen] = useState(false);
+    const importItineraryFrom = (src: ItinerarySource) => {
+        const current = formData.itineraryBlocks || [];
+        const currentImages = formData.itineraryImages || [];
+        let replace = true;
+        if (current.length > 0 || currentImages.length > 0) {
+            replace = window.confirm(`「${src.name}」의 일정표를 불러옵니다.\n\n확인: 지금 일정표를 지우고 교체\n취소: 지금 일정표 뒤에 이어 붙이기`);
+        }
+        const cloned = cloneItineraryBlocks(src.blocks);
+        setFormData({
+            ...formData,
+            itineraryBlocks: replace ? cloned : [...current, ...cloned],
+            itineraryImages: replace ? [...src.images] : [...currentImages, ...src.images],
+        });
+        setItineraryImportOpen(false);
+    };
     const handleSpotPick = (spot: TouristSpot) => {
         if (spotPickerForIndex == null) return;
         const block = formData.itineraryBlocks?.[spotPickerForIndex];
@@ -2197,6 +2217,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                 <ItineraryQuickActions
                                     onBulkImages={bulkAddItineraryImages}
                                     onSkeleton={addDaysSkeleton}
+                                    onImport={() => setItineraryImportOpen(true)}
                                     uploading={itineraryBulkUploading}
                                     progress={itineraryBulkProgress}
                                 />
@@ -2669,6 +2690,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                     onPick={handleHotelPick}
                     onClose={() => setHotelPickerTarget(null)}
                 />
+                <ItineraryImportModal
+                    open={itineraryImportOpen}
+                    currentProductId={product?.id}
+                    onPick={importItineraryFrom}
+                    onClose={() => setItineraryImportOpen(false)}
+                />
                 <TouristSpotPickerModal
                     open={spotPickerForIndex != null}
                     onPick={handleSpotPick}
@@ -2686,6 +2713,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
 interface ItineraryQuickActionsProps {
     onBulkImages: (files: File[]) => void | Promise<void>;
     onSkeleton: (days: number) => void;
+    onImport: () => void;
     uploading: boolean;
     progress: { done: number; total: number } | null;
 }
@@ -2693,6 +2721,7 @@ interface ItineraryQuickActionsProps {
 const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
     onBulkImages,
     onSkeleton,
+    onImport,
     uploading,
     progress,
 }) => {
@@ -2776,6 +2805,22 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
                         <Icon name="add_photo_alternate" style={{ color: 'var(--mrt-gray-400)', fontSize: 22 }} />
                     )}
                 </div>
+            </div>
+
+            {/* ─── 일정표 불러오기 ─── */}
+            <div className="row" style={{ gap: 12, flexWrap: 'wrap', padding: 16, borderRadius: 'var(--r-lg)', background: '#E6FAF4', border: '1px solid #B5E9D9' }}>
+                <span className="metric-ico tint-green" style={{ width: 40, height: 40, flex: 'none' }}>
+                    <Icon name="content_copy" />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="cell-strong" style={{ color: '#0f6b58' }}>일정표 불러오기</div>
+                    <div style={{ fontSize: 12, color: '#2a7d6a', marginTop: 2 }}>
+                        기존 상품의 일정표를 사진·내용 그대로 가져옵니다. 가져온 뒤 이 상품에 맞게 편집만 하면 됩니다.
+                    </div>
+                </div>
+                <button type="button" onClick={onImport} className="btn btn-ink btn-sm" style={{ flex: 'none' }}>
+                    <Icon name="download" />불러오기
+                </button>
             </div>
 
             {/* ─── N-day skeleton macro ─── */}
