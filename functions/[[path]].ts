@@ -97,6 +97,23 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     let decodedPath = path;
     try { decodedPath = decodeURIComponent(path); } catch { /* malformed paths become a 404 below */ }
 
+    // Category slugs are editable in admin. Keep every previous public URL alive with
+    // a direct 301 so backlinks and already-indexed URLs retain their accumulated value.
+    const renamedCategoryMatch = decodedPath.match(/^\/category\/([a-z0-9-]+)$/);
+    if (renamedCategoryMatch) {
+        try {
+            const redirect = await context.env.DB.prepare(
+                'SELECT new_slug FROM category_redirects WHERE old_slug = ? LIMIT 1'
+            ).bind(renamedCategoryMatch[1]).first<{ new_slug?: string }>();
+            if (redirect?.new_slug && redirect.new_slug !== renamedCategoryMatch[1]) {
+                return Response.redirect(
+                    `${SEO_CONSTANTS.SITE_URL}/category/${encodeURIComponent(redirect.new_slug)}`,
+                    301
+                );
+            }
+        } catch { /* table is created on the first rename; no redirect exists yet */ }
+    }
+
     // Legacy Redirects
     if (decodedPath.startsWith('/shop_view')) {
         return Response.redirect(`${SEO_CONSTANTS.SITE_URL}/products`, 301);

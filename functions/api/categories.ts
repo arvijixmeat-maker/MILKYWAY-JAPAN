@@ -159,14 +159,23 @@ app.post('/:id/rename', async (c) => {
         const current: any = await db.prepare('SELECT id, name FROM categories WHERE id = ? LIMIT 1').bind(oldId).first();
         if (!current) return c.json({ error: 'category not found' }, 404);
 
-        // SQLite allows updating a PK value in place as long as no FK references block it.
-        await db.prepare('UPDATE categories SET id = ? WHERE id = ?').bind(newId, oldId).run();
+        // Preserve accumulated search equity whenever a category URL is renamed.
+        await db.prepare(`CREATE TABLE IF NOT EXISTS category_redirects (
+            old_slug TEXT PRIMARY KEY,
+            new_slug TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )`).run();
 
-        // Products store the category by NAME (not id), so product rows are unaffected.
-        // Still, update any product rows that happen to store the id literally (defensive).
-        try {
-            await db.prepare('UPDATE products SET category = ? WHERE category = ?').bind(newId, oldId).run();
-        } catch { /* products.category may not exist in legacy schemas; ignore */ }
+        // D1 batch executes atomically. Existing chains are collapsed so A→B followed by
+        // B→C becomes A→C, avoiding redirect chains for search engines and customers.
+        await db.batch([
+            db.prepare('UPDATE categories SET id = ? WHERE id = ?').bind(newId, oldId),
+            db.prepare('UPDATE products SET category = ? WHERE category = ?').bind(newId, oldId),
+            db.prepare('UPDATE category_redirects SET new_slug = ? WHERE new_slug = ?').bind(newId, oldId),
+            db.prepare(`INSERT INTO category_redirects (old_slug, new_slug) VALUES (?, ?)
+                ON CONFLICT(old_slug) DO UPDATE SET new_slug = excluded.new_slug`).bind(oldId, newId),
+            db.prepare('DELETE FROM category_redirects WHERE old_slug = new_slug'),
+        ]);
 
         return c.json({ success: true, old_id: oldId, new_id: newId });
     } catch (e: any) {
