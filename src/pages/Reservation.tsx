@@ -1,16 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TourProduct } from '../types/product';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { ReservationDesktop } from '../components/reservation-desktop/ReservationDesktop';
+import { calculateTourPrice, resolvePricingOption } from '../lib/tourPricing';
 
 export const Reservation: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
+    const requestedPeople = Number(searchParams.get('people'));
     const isDesktop = useIsDesktop();
     const [product, setProduct] = useState<TourProduct | null>(null);
     const [loading, setLoading] = useState(true);
@@ -122,7 +125,10 @@ export const Reservation: React.FC = () => {
                     // Set initial people count to first pricing tier
                     if (found.pricingOptions && found.pricingOptions.length > 0) {
                         const sorted = [...found.pricingOptions].sort((a, b) => a.people - b.people);
-                        setTotalPeople(sorted[0].people);
+                        const requestedOption = Number.isInteger(requestedPeople)
+                            ? sorted.find((option) => option.people === requestedPeople)
+                            : undefined;
+                        setTotalPeople(requestedOption?.people ?? sorted[0].people);
                     }
                 }
             } catch (error) {
@@ -132,34 +138,16 @@ export const Reservation: React.FC = () => {
             }
         };
         loadProduct();
-    }, [id]);
+    }, [id, requestedPeople]);
 
-    // Calculation Logic
-    // Calculation Logic
-    const baseOption = useMemo(() => {
-        if (!product || !product.pricingOptions || product.pricingOptions.length === 0) return null;
-
-        // Find exact match or closest
-        const exactMatch = product.pricingOptions.find(p => p.people === totalPeople);
-        if (exactMatch) return exactMatch;
-
-        // If no exact match, find closest smaller or max
-        const sorted = [...product.pricingOptions].sort((a, b) => a.people - b.people);
-
-        if (totalPeople < sorted[0].people) return sorted[0];
-        if (totalPeople > sorted[sorted.length - 1].people) return sorted[sorted.length - 1];
-
-        // Logic: find largest count <= totalPeople
-        const tier = sorted.filter(p => p.people <= totalPeople).pop();
-        return tier || sorted[0];
-    }, [product, totalPeople]);
+    // 관리자에서 저장한 인원별 가격 규칙을 상품·예약·결제에서 동일하게 사용한다.
+    const baseOption = useMemo(
+        () => resolvePricingOption(product?.pricingOptions, totalPeople),
+        [product?.pricingOptions, totalPeople],
+    );
 
     const priceBreakdown = useMemo(() => {
         if (!product || !baseOption) return { total: 0, deposit: 0, local: 0 };
-
-        const baseTotal = baseOption.pricePerPerson * totalPeople;
-        const baseDeposit = (baseOption.depositPerPerson || 0) * totalPeople;
-        const baseLocal = (baseOption.localPaymentPerPerson || 0) * totalPeople;
 
         let vehicleTotal = 0;
         if (selectedVehicleId && product.vehicleOptions) {
@@ -173,14 +161,8 @@ export const Reservation: React.FC = () => {
             if (a) accomTotal = a.priceModifier;
         }
 
-        return {
-            total: baseTotal + vehicleTotal + accomTotal,
-            deposit: baseDeposit, // 예약금 (기본)
-            local: baseLocal,     // 현지 지불 (기본)
-            // Add-ons are usually added to total. 
-            // If add-ons need to be in deposit or local, logic needs to adjust.
-            // For now, assume add-ons are just adding to the Total Price.
-        };
+        // 숙소·차량 추가금은 현지 결제액에 포함해 세 금액의 합계가 항상 맞도록 한다.
+        return calculateTourPrice(baseOption, totalPeople, vehicleTotal + accomTotal);
     }, [baseOption, totalPeople, selectedVehicleId, selectedAccomId, product]);
 
     const formatPrice = (price: number) => price.toLocaleString();
@@ -548,10 +530,15 @@ export const Reservation: React.FC = () => {
                 {/* Price Detail Modal */}
                 {isPriceModalOpen && (() => {
                     const sortedOpts = [...(product.pricingOptions || [])].sort((a, b) => a.people - b.people);
-                    const maxPerPerson = sortedOpts.length > 0 ? Math.max(...sortedOpts.map(p => p.pricePerPerson)) : 0;
                     const minPerPerson = sortedOpts.length > 0 ? Math.min(...sortedOpts.map(p => p.pricePerPerson)) : 0;
+                    const baselineOption = sortedOpts[0];
                     const currentOpt = sortedOpts.find(p => p.people === totalPeople);
                     const currency = t('reservation.price_info.currency');
+                    const currentTotal = currentOpt ? currentOpt.pricePerPerson * currentOpt.people : 0;
+                    const currentDeposit = currentOpt
+                        ? Math.min(currentTotal, (currentOpt.depositPerPerson || 0) * currentOpt.people)
+                        : 0;
+                    const currentLocal = Math.max(0, currentTotal - currentDeposit);
 
                     return (
                         <>
@@ -586,13 +573,21 @@ export const Reservation: React.FC = () => {
                                                     {currentOpt.people}{t('reservation.guest_selection.unit')} · {formatPrice(currentOpt.pricePerPerson)}{currency}
                                                     <span className="text-[12px] font-medium text-gray-400 ml-1">/ {t('reservation.guest_selection.unit')}</span>
                                                 </div>
+                                                {currentDeposit > 0 && (
+                                                    <div className="mt-1 text-[10.5px] font-medium text-gray-500 tabular-nums">
+                                                        {t('reservation.price_info.modal_deposit_local', {
+                                                            deposit: `${formatPrice(currentDeposit)}${currency}`,
+                                                            local: `${formatPrice(currentLocal)}${currency}`,
+                                                        })}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="text-right shrink-0">
                                                 <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
                                                     {t('reservation.price_info.modal_total')}
                                                 </div>
                                                 <div className="text-[16px] font-extrabold text-primary tabular-nums">
-                                                    {formatPrice(currentOpt.pricePerPerson * currentOpt.people)}{currency}
+                                                    {formatPrice(currentTotal)}{currency}
                                                 </div>
                                             </div>
                                         </div>
@@ -612,7 +607,9 @@ export const Reservation: React.FC = () => {
                                             sortedOpts.map((opt, idx) => {
                                                 const isCurrent = totalPeople === opt.people;
                                                 const isBest = opt.pricePerPerson === minPerPerson && sortedOpts.length > 1;
-                                                const savings = maxPerPerson - opt.pricePerPerson;
+                                                const savings = baselineOption
+                                                    ? Math.max(0, baselineOption.pricePerPerson - opt.pricePerPerson)
+                                                    : 0;
                                                 const totalForGroup = opt.pricePerPerson * opt.people;
                                                 return (
                                                     <button
@@ -660,6 +657,7 @@ export const Reservation: React.FC = () => {
                                                                     {t('reservation.price_info.savings_per_person', {
                                                                         amount: formatPrice(savings),
                                                                         currency,
+                                                                        basePeople: baselineOption?.people,
                                                                     })}
                                                                 </div>
                                                             ) : sortedOpts.length > 1 ? (

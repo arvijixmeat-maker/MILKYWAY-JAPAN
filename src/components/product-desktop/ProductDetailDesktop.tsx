@@ -11,6 +11,8 @@ import { PCard, type PCardData } from '../desktop-primitives/PCard';
 import { DestinationsMap } from '../desktop-primitives/DestinationsMap';
 import { extractPlacesFromItinerary } from '../../constants/mongoliaPlaces';
 import { useGuideIntro } from '../../hooks/useGuideIntro';
+import { calculateTourPrice, normalizePricingOptions, resolvePricingOption } from '../../lib/tourPricing';
+import { PriceTableModal } from '../reservation-desktop/PriceTableModal';
 
 interface ReviewLike {
     id?: string | number;
@@ -26,7 +28,7 @@ interface ReviewLike {
 interface ProductDetailDesktopProps {
     product: TourProduct;
     reviews?: ReviewLike[];
-    onBook?: () => void;
+    onBook?: (people: number) => void;
     onConsult?: () => void;
     contentWidth?: number;
 }
@@ -81,7 +83,7 @@ export function ProductDetailDesktop({
 }: ProductDetailDesktopProps) {
     const navigate = useNavigate();
     const sortedPricingOptions = useMemo<TourPricingOption[]>(
-        () => (product.pricingOptions ?? []).slice().sort((a, b) => a.people - b.people),
+        () => normalizePricingOptions(product.pricingOptions ?? []),
         [product.pricingOptions]
     );
     const initialPeople = sortedPricingOptions[0]?.people ?? 2;
@@ -93,6 +95,7 @@ export function ProductDetailDesktop({
     const [fav, setFav] = useState(false);
     const [activeSec, setActiveSec] = useState<SectionId>('overview');
     const [showStickyBar, setShowStickyBar] = useState(false);
+    const [showPriceTable, setShowPriceTable] = useState(false);
     const [galleryOpen, setGalleryOpen] = useState(false);
     // Timeline images share the same GalleryLightbox UI as the hero gallery, but
     // need their own image set so clicking a spot card opens just that card's
@@ -156,20 +159,22 @@ export function ProductDetailDesktop({
     // Match the people count to the closest pricing tier (mirrors mobile
     // Reservation page logic). Falls back to flat product.price when admin
     // hasn't configured any pricing tiers.
-    const baseOption = useMemo<TourPricingOption | null>(() => {
-        if (sortedPricingOptions.length === 0) return null;
-        const exact = sortedPricingOptions.find((p) => p.people === people);
-        if (exact) return exact;
-        if (people < sortedPricingOptions[0].people) return sortedPricingOptions[0];
-        if (people > sortedPricingOptions[sortedPricingOptions.length - 1].people) {
-            return sortedPricingOptions[sortedPricingOptions.length - 1];
-        }
-        return sortedPricingOptions.filter((p) => p.people <= people).pop() ?? sortedPricingOptions[0];
-    }, [sortedPricingOptions, people]);
+    const baseOption = useMemo<TourPricingOption | null>(
+        () => resolvePricingOption(sortedPricingOptions, people),
+        [sortedPricingOptions, people],
+    );
     const pricePerPerson = baseOption?.pricePerPerson ?? product.price ?? 0;
-    const total = pricePerPerson * people;
+    const baseBreakdown = baseOption
+        ? calculateTourPrice(baseOption, people)
+        : { total: pricePerPerson * people, deposit: 0, local: pricePerPerson * people };
+    const total = baseBreakdown.total;
+    const selectedPricingIndex = sortedPricingOptions.findIndex((option) => option.people === people);
+    const nextPricingOption = sortedPricingOptions.find((option) => option.people > people);
+    const nextTierSaving = nextPricingOption
+        ? Math.max(0, pricePerPerson - nextPricingOption.pricePerPerson)
+        : 0;
     const firstTag = product.tags?.[0];
-    const hasOriginal = !!product.originalPrice && product.originalPrice > product.price;
+    const hasOriginal = !!product.originalPrice && product.originalPrice > pricePerPerson;
     // Average rating, derived from the actual reviews array. Mobile + this
     // page now agree: no reviews = "—" instead of a hardcoded 4.9.
     const ratingValue = reviews.length > 0
@@ -190,9 +195,9 @@ export function ProductDetailDesktop({
         if (typeof window.openChannelTalk === 'function') window.openChannelTalk();
         else navigate('/custom-estimate');
     };
-    const defaultBook = () => navigate(`/reservation/${product.id}`);
+    const defaultBook = () => navigate(`/reservation/${product.id}?people=${people}`);
     const handleConsult = onConsult ?? defaultConsult;
-    const handleBook = onBook ?? defaultBook;
+    const handleBook = () => onBook ? onBook(people) : defaultBook();
 
     return (
         <div style={{ background: '#fff' }}>
@@ -481,31 +486,22 @@ export function ProductDetailDesktop({
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-                                <span style={{ fontSize: 12, color: 'var(--fg-5)' }}>お一人様</span>
+                                <span style={{ fontSize: 12, color: 'var(--fg-5)' }}>{people}名利用時・お一人様</span>
                                 {hasOriginal && (
                                     <span style={{ fontSize: 12, color: 'var(--fg-5)', textDecoration: 'line-through' }}>
                                         ¥{product.originalPrice!.toLocaleString()}
                                     </span>
                                 )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 18 }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 14 }}>
                                 <span style={{ fontSize: 32, fontWeight: 700, color: '#0f766e', letterSpacing: '-0.02em' }}>
                                     ¥{pricePerPerson.toLocaleString()}
                                 </span>
-                                <span style={{ fontSize: 16, color: '#0f766e', fontWeight: 700 }}>〜</span>
                             </div>
 
-                            {sortedPricingOptions.length > 0 ? (
-                                <PricingTierSelector
-                                    options={sortedPricingOptions}
-                                    selectedPeople={people}
-                                    onSelect={setPeople}
-                                />
-                            ) : null}
-
-                            <div style={{ marginTop: 14 }}>
+                            <div>
                                 <label style={{ fontSize: 12, color: 'var(--fg-5)', marginBottom: 8, display: 'block', fontWeight: 600 }}>
-                                    人数
+                                    ご利用人数
                                 </label>
                                 <div
                                     style={{
@@ -521,30 +517,53 @@ export function ProductDetailDesktop({
                                     <div style={{ display: 'flex', gap: 4 }}>
                                         <button
                                             type="button"
-                                            onClick={() => setPeople(Math.max(sortedPricingOptions[0]?.people ?? 1, people - 1))}
-                                            disabled={people <= (sortedPricingOptions[0]?.people ?? 1)}
+                                            onClick={() => {
+                                                if (sortedPricingOptions.length === 0) {
+                                                    setPeople(Math.max(1, people - 1));
+                                                    return;
+                                                }
+                                                if (selectedPricingIndex > 0) setPeople(sortedPricingOptions[selectedPricingIndex - 1].people);
+                                            }}
+                                            disabled={sortedPricingOptions.length > 0 ? selectedPricingIndex <= 0 : people <= 1}
                                             style={stepBtn}
-                                            aria-label="decrease"
+                                            aria-label="人数を減らす"
                                         >
                                             <MatIcon name="remove" size={16} color="var(--fg-2)" />
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                const max = sortedPricingOptions[sortedPricingOptions.length - 1]?.people;
-                                                setPeople(max ? Math.min(max, people + 1) : people + 1);
+                                                if (sortedPricingOptions.length === 0) {
+                                                    setPeople(people + 1);
+                                                    return;
+                                                }
+                                                if (selectedPricingIndex < sortedPricingOptions.length - 1) {
+                                                    setPeople(sortedPricingOptions[selectedPricingIndex + 1].people);
+                                                }
                                             }}
-                                            disabled={
-                                                sortedPricingOptions.length > 0 &&
-                                                people >= sortedPricingOptions[sortedPricingOptions.length - 1].people
-                                            }
+                                            disabled={sortedPricingOptions.length > 0 && selectedPricingIndex >= sortedPricingOptions.length - 1}
                                             style={stepBtn}
-                                            aria-label="increase"
+                                            aria-label="人数を増やす"
                                         >
                                             <MatIcon name="add" size={16} color="var(--fg-2)" />
                                         </button>
                                     </div>
                                 </div>
+                                {nextPricingOption && nextTierSaving > 0 && (
+                                    <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10, background: '#ECFDF5', color: '#047857', fontSize: 12, fontWeight: 650, lineHeight: 1.45 }}>
+                                        {nextPricingOption.people}名なら、お一人様 ¥{nextTierSaving.toLocaleString()} お得です
+                                    </div>
+                                )}
+                                {sortedPricingOptions.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPriceTable(true)}
+                                        style={{ width: '100%', marginTop: 10, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', color: 'var(--fg-3)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                                    >
+                                        人数別の料金を比較
+                                        <MatIcon name="expand_more" size={16} color="var(--fg-4)" />
+                                    </button>
+                                )}
                             </div>
 
                             <div style={{ marginTop: 18, padding: '14px 0', borderTop: '1px solid var(--border-subtle)' }}>
@@ -552,10 +571,18 @@ export function ProductDetailDesktop({
                                     <span>¥{pricePerPerson.toLocaleString()} × {people}名</span>
                                     <span>¥{total.toLocaleString()}</span>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'var(--fg-4)' }}>
-                                    <span>サービス料</span>
-                                    <span style={{ color: '#16a34a' }}>無料</span>
-                                </div>
+                                {baseBreakdown.deposit > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'var(--fg-4)' }}>
+                                        <span>予約時のお支払い</span>
+                                        <span>¥{baseBreakdown.deposit.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                {baseBreakdown.local > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'var(--fg-4)' }}>
+                                        <span>現地でのお支払い</span>
+                                        <span>¥{baseBreakdown.local.toLocaleString()}</span>
+                                    </div>
+                                )}
                                 <div
                                     style={{
                                         display: 'flex',
@@ -787,6 +814,16 @@ export function ProductDetailDesktop({
                         </button>
                     </div>
                 </div>
+            )}
+
+            {showPriceTable && sortedPricingOptions.length > 0 && (
+                <PriceTableModal
+                    options={sortedPricingOptions}
+                    current={people}
+                    onChange={setPeople}
+                    onClose={() => setShowPriceTable(false)}
+                    onConfirm={handleBook}
+                />
             )}
 
             {galleryOpen && (
@@ -3095,84 +3132,6 @@ function FAQBlock({ product }: { product: TourProduct }) {
                     </div>
                 );
             })}
-        </div>
-    );
-}
-
-function PricingTierSelector({
-    options,
-    selectedPeople,
-    onSelect,
-}: {
-    options: TourPricingOption[];
-    selectedPeople: number;
-    onSelect: (people: number) => void;
-}) {
-    // The cheapest per-person tier is usually the "most popular" choice (larger
-    // group = bigger discount). Flag it so users see the best value at a glance.
-    const cheapest = options.reduce<TourPricingOption | null>(
-        (best, cur) => (!best || cur.pricePerPerson < best.pricePerPerson ? cur : best),
-        null
-    );
-
-    return (
-        <div>
-            <label style={{ fontSize: 12, color: 'var(--fg-5)', marginBottom: 10, display: 'block', fontWeight: 600 }}>
-                人数別プラン
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {options.map((opt) => {
-                    const on = selectedPeople === opt.people;
-                    const isPopular = cheapest && cheapest.people === opt.people && options.length > 1;
-                    return (
-                        <button
-                            key={opt.people}
-                            type="button"
-                            onClick={() => onSelect(opt.people)}
-                            style={{
-                                padding: '10px 12px',
-                                border: on ? '2px solid #0f766e' : '1px solid var(--border)',
-                                background: on ? 'var(--primary-tint)' : '#fff',
-                                borderRadius: 10,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                textAlign: 'left',
-                                position: 'relative',
-                            }}
-                        >
-                            {isPopular && (
-                                <span
-                                    style={{
-                                        position: 'absolute',
-                                        top: -7,
-                                        right: 6,
-                                        fontSize: 9,
-                                        fontWeight: 700,
-                                        padding: '2px 6px',
-                                        background: '#dc2626',
-                                        color: '#fff',
-                                        borderRadius: 4,
-                                        letterSpacing: '0.04em',
-                                    }}
-                                >
-                                    お得
-                                </span>
-                            )}
-                            <div style={{ fontSize: 12, color: 'var(--fg-2)', fontWeight: 600 }}>{opt.people}名</div>
-                            <div
-                                style={{
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    color: on ? 'var(--primary-dark)' : 'var(--fg-1)',
-                                    marginTop: 3,
-                                }}
-                            >
-                                ¥{opt.pricePerPerson.toLocaleString()}〜/人
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
         </div>
     );
 }

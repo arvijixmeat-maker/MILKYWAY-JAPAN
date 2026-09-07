@@ -1090,6 +1090,25 @@
 .admin-app-wrapper .opt-grid-head span:nth-child(2),
 .admin-app-wrapper .opt-grid-head span:nth-child(3),
 .admin-app-wrapper .opt-grid-head span:nth-child(4) { text-align: right; }
+.admin-app-wrapper .pricing-sec-head { flex-wrap: wrap; }
+.admin-app-wrapper .pricing-sec-head .muted { margin-left: 0; }
+.admin-app-wrapper .pricing-bulk-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px; border: 1px solid #BFD6FF; border-radius: 9px; background: #EFF6FF; color: var(--mrt-blue); font-size: 12px; font-weight: 750; cursor: pointer; }
+.admin-app-wrapper .pricing-bulk-btn:hover { background: #E4EFFF; }
+.admin-app-wrapper .pricing-bulk-btn .material-symbols-outlined { color: inherit; font-size: 16px; }
+.admin-app-wrapper .pricing-grid-head { grid-template-columns: 1fr 1.2fr 1.2fr 1.2fr 36px; padding-left: 12px; }
+.admin-app-wrapper .pricing-grid-head span:first-child { text-align: left; }
+.admin-app-wrapper .pricing-grid-head span:nth-child(n+2):nth-child(-n+4) { text-align: right; }
+.admin-app-wrapper .pricing-validation { display: grid; gap: 6px; margin: 0 0 14px; }
+.admin-app-wrapper .pricing-validation-item { display: flex; align-items: flex-start; gap: 7px; padding: 9px 11px; border-radius: 10px; font-size: 12px; font-weight: 650; line-height: 1.45; }
+.admin-app-wrapper .pricing-validation-item.error { background: #FFF1F2; color: #BE123C; }
+.admin-app-wrapper .pricing-validation-item.warning { background: #FFF7ED; color: #B45309; }
+.admin-app-wrapper .pricing-validation-item .material-symbols-outlined { flex: none; color: inherit; font-size: 17px; }
+.admin-app-wrapper .pricing-row.has-error { border-color: #FDA4AF; background: #FFF8F8; }
+.admin-app-wrapper .pricing-row.has-warning { border-color: #FCD34D; background: #FFFCF5; }
+.admin-app-wrapper .inp-mini.calculated { background: #F7F8FA; border-color: #E5E8EB; }
+.admin-app-wrapper .inp-mini.calculated input { color: #4E5968; cursor: default; }
+.admin-app-wrapper .inp-mini.calculated .material-symbols-outlined { color: #8B95A1; font-size: 15px; }
+.admin-app-wrapper .field > .inp[readonly] { background: #F7F8FA; color: #4E5968; cursor: default; }
 .admin-app-wrapper .opt-card { }
 .admin-app-wrapper .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-strong); background: #fff; cursor: pointer; flex: none; position: relative; }
 .admin-app-wrapper .radio.on { border-color: var(--mrt-blue); } .admin-app-wrapper .radio.on::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--mrt-blue); }
@@ -1459,6 +1478,9 @@
   .admin-app-wrapper .calendar-metrics { grid-template-columns: 1fr !important; }
   .admin-app-wrapper .calendar-day-list,
   .admin-app-wrapper .calendar-action-list { grid-template-columns: 1fr; }
+  .admin-app-wrapper .pricing-grid-head { display: none; }
+  .admin-app-wrapper .pricing-row .opt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-app-wrapper .pricing-bulk-btn { width: 100%; margin-left: 0; justify-content: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -517,7 +517,7 @@ export const ProductDetail: React.FC = () => {
 
     // ── Offer: AggregateOffer when multiple pricing options exist ──
     const pricingOptionPrices = Array.isArray(product.pricingOptions)
-        ? product.pricingOptions.map((p: any) => Number(p.price)).filter((n: number) => Number.isFinite(n) && n > 0)
+        ? product.pricingOptions.map((p: any) => Number(p.pricePerPerson)).filter((n: number) => Number.isFinite(n) && n > 0)
         : [];
     const availability = product.status === 'active' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
     const priceValidUntil = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
@@ -615,7 +615,7 @@ export const ProductDetail: React.FC = () => {
                     <ProductDetailDesktop
                         product={product}
                         reviews={productReviews}
-                        onBook={() => navigate(`/reservation/${product.id}`)}
+                        onBook={(people) => navigate(`/reservation/${product.id}?people=${people}`)}
                     />
                 </DesktopLayout>
             </>

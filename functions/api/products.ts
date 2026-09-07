@@ -27,6 +27,49 @@ const g = (data: any, snakeKey: string, camelKey: string, defaultVal: any = '') 
     return data[snakeKey] ?? data[camelKey] ?? defaultVal;
 };
 
+type PreparedPricing =
+    | { options: Array<{ people: number; pricePerPerson: number; depositPerPerson: number; localPaymentPerPerson: number }>; error?: never }
+    | { options?: never; error: string };
+
+/** API에서도 가격 규칙을 검증해 잘못된 클라이언트 요청이 DB에 저장되지 않게 한다. */
+const preparePricingOptions = (value: any): PreparedPricing => {
+    const raw = safeParse(value, null);
+    if (raw === null || raw === undefined) return { options: [] };
+    if (!Array.isArray(raw)) return { error: '인원별 가격 형식이 올바르지 않습니다.' };
+
+    const peopleSeen = new Set<number>();
+    const options = [];
+
+    for (const item of raw) {
+        const people = Number(item?.people);
+        const pricePerPerson = Number(item?.pricePerPerson);
+        const depositPerPerson = Number(item?.depositPerPerson || 0);
+
+        if (!Number.isInteger(people) || people < 1) {
+            return { error: '인원별 가격의 인원은 1명 이상의 정수여야 합니다.' };
+        }
+        if (peopleSeen.has(people)) {
+            return { error: `${people}명 가격이 중복되어 있습니다.` };
+        }
+        if (!Number.isFinite(pricePerPerson) || pricePerPerson <= 0) {
+            return { error: `${people}명 기준 1인 총가격은 0보다 커야 합니다.` };
+        }
+        if (!Number.isFinite(depositPerPerson) || depositPerPerson < 0 || depositPerPerson > pricePerPerson) {
+            return { error: `${people}명 기준 예약금은 0 이상이며 1인 총가격 이하여야 합니다.` };
+        }
+
+        peopleSeen.add(people);
+        options.push({
+            people,
+            pricePerPerson: Math.round(pricePerPerson),
+            depositPerPerson: Math.round(depositPerPerson),
+            localPaymentPerPerson: Math.max(0, Math.round(pricePerPerson - depositPerPerson)),
+        });
+    }
+
+    return { options: options.sort((a, b) => a.people - b.people) };
+};
+
 // GET /api/products
 app.get('/', async (c) => {
     const db = c.env.DB;
@@ -114,6 +157,18 @@ app.post('/', requireAdmin, async (c) => {
         const mainImages = g(data, 'main_images', 'mainImages', []);
         const isFeatured = data.is_featured ?? data.isFeatured ?? false;
         const isPopular = data.is_popular ?? data.isPopular ?? false;
+        const preparedPricing = preparePricingOptions(g(data, 'pricing_options', 'pricingOptions', []));
+        if (preparedPricing.error) return c.json({ error: preparedPricing.error }, 400);
+        const startingPrice = preparedPricing.options.length > 0
+            ? Math.min(...preparedPricing.options.map((option) => option.pricePerPerson))
+            : Number(data.price || 0);
+        if (!Number.isFinite(startingPrice) || startingPrice <= 0) {
+            return c.json({ error: '판매가 또는 인원별 가격을 입력해 주세요.' }, 400);
+        }
+        const originalPrice = Number(g(data, 'original_price', 'originalPrice', 0));
+        if (originalPrice > 0 && originalPrice <= startingPrice) {
+            return c.json({ error: '정가는 상품 시작가보다 높아야 합니다.' }, 400);
+        }
 
         try {
             await db.prepare(`
@@ -133,8 +188,8 @@ app.post('/', requireAdmin, async (c) => {
                 data.description || '',
                 data.category || '',
                 data.duration || '',
-                data.price || 0,
-                g(data, 'original_price', 'originalPrice', 0),
+                startingPrice,
+                originalPrice,
                 toJson(mainImages),
                 toJson(g(data, 'gallery_images', 'galleryImages', [])),
                 toJson(g(data, 'detail_images', 'detailImages', [])),
@@ -154,7 +209,7 @@ app.post('/', requireAdmin, async (c) => {
                 toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
                 toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
                 toJson(data.highlights || []),
-                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
+                toJson(preparedPricing.options),
                 toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
                 toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
                 data.view_count || data.viewCount || 0,
@@ -180,8 +235,8 @@ app.post('/', requireAdmin, async (c) => {
                 data.description || '',
                 data.category || '',
                 data.duration || '',
-                data.price || 0,
-                g(data, 'original_price', 'originalPrice', 0),
+                startingPrice,
+                originalPrice,
                 toJson(mainImages),
                 toJson(g(data, 'gallery_images', 'galleryImages', [])),
                 toJson(g(data, 'detail_images', 'detailImages', [])),
@@ -201,7 +256,7 @@ app.post('/', requireAdmin, async (c) => {
                 toJson(g(data, 'detail_blocks', 'detailBlocks', [])),
                 toJson(g(data, 'itinerary_blocks', 'itineraryBlocks', [])),
                 toJson(data.highlights || []),
-                toJson(g(data, 'pricing_options', 'pricingOptions', [])),
+                toJson(preparedPricing.options),
                 toJson(g(data, 'accommodation_options', 'accommodationOptions', [])),
                 toJson(g(data, 'vehicle_options', 'vehicleOptions', [])),
                 data.view_count || data.viewCount || 0,
@@ -248,6 +303,28 @@ app.put('/:id', requireAdmin, async (c) => {
         const id = c.req.param('id');
         const data = await c.req.json();
         const db = c.env.DB;
+
+        const pricingKey = data.pricing_options !== undefined
+            ? 'pricing_options'
+            : data.pricingOptions !== undefined
+                ? 'pricingOptions'
+                : null;
+        if (pricingKey) {
+            const preparedPricing = preparePricingOptions(data[pricingKey]);
+            if (preparedPricing.error) return c.json({ error: preparedPricing.error }, 400);
+            data[pricingKey] = preparedPricing.options;
+            if (preparedPricing.options.length > 0) {
+                data.price = Math.min(...preparedPricing.options.map((option) => option.pricePerPerson));
+            }
+        }
+        const requestedStartingPrice = Number(data.price || 0);
+        const requestedOriginalPrice = Number(data.original_price ?? data.originalPrice ?? 0);
+        if (data.price !== undefined && (!Number.isFinite(requestedStartingPrice) || requestedStartingPrice <= 0)) {
+            return c.json({ error: '상품 시작가는 0보다 커야 합니다.' }, 400);
+        }
+        if (requestedOriginalPrice > 0 && requestedStartingPrice > 0 && requestedOriginalPrice <= requestedStartingPrice) {
+            return c.json({ error: '정가는 상품 시작가보다 높아야 합니다.' }, 400);
+        }
 
         const updateFields: string[] = [];
         const updateValues: any[] = [];

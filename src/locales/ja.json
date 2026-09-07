@@ -454,7 +454,7 @@
             "unit": "名"
         },
         "price_info": {
-            "per_person_current": "現在の人数の基準 お1人様",
+            "per_person_current": "選択中の人数では、お1人様",
             "currency": "円",
             "view_price_by_guests": "人数別価格を見る",
             "live_estimate": "リアルタイム予想合計",
@@ -470,7 +470,7 @@
             "current_selection": "現在のご選択",
             "current_pill": "現在",
             "best_deal": "最安",
-            "savings_per_person": "お1人様 {{amount}}{{currency}} OFF",
+            "savings_per_person": "{{basePeople}}名利用時より {{amount}}{{currency}}お得",
             "no_savings": "—",
             "why_title": "なぜ人数によって料金が違うの？",
             "why_explanation": "専用ガイド・運転手・車両費を人数で分担するため、人数が多いほどお1人様あたりの料金がお得になります。",
