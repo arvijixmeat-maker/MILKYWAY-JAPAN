@@ -65,9 +65,9 @@ function SpotCardsField({ value, onChange }: { value: string; onChange: (next: s
                 const { title, img } = parseLine(line);
                 return (
                     <div key={i} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
-                        <label title={img ? '사진 변경' : '사진 업로드'} style={{ flex: 'none', width: 44, height: 44, borderRadius: 8, overflow: 'hidden', border: img ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
+                        <label title={img ? '사진 변경' : '사진 업로드'} style={{ flex: 'none', width: 44, height: 44, borderRadius: 8, overflow: 'hidden', border: img ? '2px solid #3182F6' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
                             {uploadingIdx === i
-                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#06C4A0' }} />
+                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#3182F6' }} />
                                 : img
                                     ? <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     : <Icon name="add_a_photo" style={{ fontSize: 15, color: 'var(--text-muted)' }} />}
@@ -90,7 +90,7 @@ function SpotCardsField({ value, onChange }: { value: string; onChange: (next: s
             <div style={{ border: '1px dashed var(--border-default)', borderRadius: 8, padding: '8px 10px' }}>
                 <div className="cell-muted" style={{ fontSize: 12, marginBottom: 6 }}>
                     등록된 여행지 — 누르면 카드에 추가됩니다
-                    <a href="/admin/design-spots" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#06C4A0', fontWeight: 700 }}>여행지 등록 관리 ↗</a>
+                    <a href="/admin/design-spots" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#3182F6', fontWeight: 700 }}>여행지 등록 관리 ↗</a>
                 </div>
                 {registered.length === 0 ? (
                     <div className="cell-muted" style={{ fontSize: 12 }}>아직 등록된 여행지가 없습니다. 「여행지 사진」 페이지에서 사진+이름을 등록해 주세요.</div>
@@ -179,11 +179,11 @@ function MapStopsField({ value, onChange }: { value: string; onChange: (next: st
                 const { ko, ja, img } = parseLine(line);
                 return (
                     <div key={`${ko}-${i}`} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
-                        <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: '#06C4A0', color: '#fff', fontSize: 11, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
+                        <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: '#3182F6', color: '#fff', fontSize: 11, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
                         {/* 원형 버블에 표시될 사진 — 클릭해서 업로드/변경 */}
-                        <label title={img ? '사진 변경' : '사진 업로드 (지도 원형에 표시)'} style={{ flex: 'none', width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: img ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
+                        <label title={img ? '사진 변경' : '사진 업로드 (지도 원형에 표시)'} style={{ flex: 'none', width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: img ? '2px solid #3182F6' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
                             {uploadingIdx === i
-                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#06C4A0' }} />
+                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#3182F6' }} />
                                 : img
                                     ? <img src={img} alt={ko} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     : <Icon name="add_a_photo" style={{ fontSize: 15, color: 'var(--text-muted)' }} />}
@@ -267,7 +267,7 @@ function PresetChips({ presets, value, onPick }: { presets: DesignPreset[]; valu
                         style={{
                             padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                             border: '1px solid', ...(value === p.value
-                                ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                ? { borderColor: '#3182F6', background: 'rgba(49,130,246,0.10)', color: '#1B64DA' }
                                 : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
                         }}
                     >
@@ -312,7 +312,7 @@ function PresetLineChips({ presetLines, value, onChange, separator = '\n' }: { p
                             style={{
                                 padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                                 border: '1px solid', ...(on
-                                    ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                    ? { borderColor: '#3182F6', background: 'rgba(49,130,246,0.10)', color: '#1B64DA' }
                                     : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
                             }}
                         >
@@ -354,6 +354,8 @@ export function DesignTemplateBlockEditor({
     const [openSection, setOpenSection] = useState<string | null>(null);
     const [selectedField, setSelectedField] = useState<string | null>(null);
     const [savingShared, setSavingShared] = useState(false);
+    const [showPreview, setShowPreview] = useState(true);
+    const [onlyModified, setOnlyModified] = useState(false);
     // 사이트 공통 이미지 — 상품에 따로 올리지 않은 자리에 자동으로 들어간다
     const sharedAssets = useDesignGlobalDefaults(content?.templateId);
     const allDefaults = useAllDesignDefaults();
@@ -395,10 +397,33 @@ export function DesignTemplateBlockEditor({
         });
     }, [def, instances]);
 
+    const filledCount = (fields: { field: DesignTemplateField; key: string }[]) =>
+        fields.filter(({ field, key }) => {
+            const raw = values[key] ?? '';
+            return raw !== '' && raw !== (field.default ?? '');
+        }).length;
+    const modifiedSectionCount = sections.filter(section => filledCount(section.fields) > 0).length;
+    const totalModifiedFieldCount = sections.reduce((sum, section) => sum + filledCount(section.fields), 0);
+    const visibleSections = onlyModified
+        ? sections.filter(section => filledCount(section.fields) > 0)
+        : sections;
+    const activeSection = visibleSections.find(section => section.instId === openSection) || visibleSections[0] || null;
+    const activeSectionIndex = activeSection ? visibleSections.findIndex(section => section.instId === activeSection.instId) : -1;
+
+    const moveSectionSelection = (direction: -1 | 1) => {
+        if (activeSectionIndex === -1) return;
+        const next = visibleSections[activeSectionIndex + direction];
+        if (next) {
+            setOpenSection(next.instId);
+            setSelectedField(null);
+        }
+    };
+
     /** 미리보기에서 필드 클릭 → 해당 섹션 열고 입력칸으로 스크롤 + 포커스 */
     const handlePreviewFieldClick = (key: string) => {
         const owner = sections.find(s => s.fields.some(f => f.key === key));
         if (!owner) return;
+        setOnlyModified(false);
         setSelectedField(key);
         setOpenSection(owner.instId);
         // 섹션이 방금 열렸으면 입력칸이 다음 렌더에 생기므로 한 프레임 기다린다
@@ -460,6 +485,7 @@ export function DesignTemplateBlockEditor({
                     .sort((a, b) => order.indexOf(a.def) - order.indexOf(b.def));
             })();
         onChange({ ...content, sections: next });
+        setOnlyModified(false);
         setOpenSection(hiddenOne ? hiddenOne.id : defId);
     };
 
@@ -522,6 +548,15 @@ export function DesignTemplateBlockEditor({
         onChange({ ...content, values: { ...values, [key]: value } });
     };
 
+    const resetSectionValues = (section: typeof activeSection) => {
+        if (!section || filledCount(section.fields) === 0) return;
+        if (!window.confirm(`「${section.name}」에서 수정한 값을 모두 지우고 기본 내용으로 되돌릴까요?`)) return;
+        const nextValues = { ...values };
+        for (const { key } of section.fields) delete nextValues[key];
+        onChange({ ...content, values: nextValues });
+        setSelectedField(null);
+    };
+
     const handleImageUpload = async (key: string, file: File | undefined) => {
         if (!file) return;
         try {
@@ -536,61 +571,56 @@ export function DesignTemplateBlockEditor({
         }
     };
 
-    const filledCount = (fields: { field: DesignTemplateField; key: string }[]) =>
-        fields.filter(({ field, key }) => {
-            const raw = values[key] ?? '';
-            return raw !== '' && raw !== (field.default ?? '');
-        }).length;
-
     return (
-        <div className="stack" style={{ gap: 10 }}>
-            <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span className="badge b-gray">{def.name}</span>
-                <span className="cell-muted" style={{ fontSize: 12 }}>
-                    미리보기의 문구·사진을 클릭하면 바로 편집할 수 있습니다 — 전부 지우면 원본으로 되돌아갑니다
-                </span>
-                <div className="spacer" />
-                {sharedCount > 0 && (
-                    <span className="cell-muted" style={{ fontSize: 12 }}>
-                        공통 사진 {sharedCount}장 사용 중
-                    </span>
-                )}
-                <button
-                    type="button"
-                    className="chip"
-                    onClick={saveOwnImagesAsShared}
-                    disabled={ownImageKeys.length === 0 || savingShared}
-                    title={
-                        ownImageKeys.length === 0
-                            ? '이 상품에 직접 올린 사진이 없습니다'
-                            : '미리보기에서 올린 사진들을 모든 상품이 함께 쓰는 공통 사진으로 저장합니다'
-                    }
-                    style={ownImageKeys.length > 0 ? { borderColor: '#06C4A0', color: '#029F85' } : undefined}
-                >
-                    <Icon name="photo_library" style={{ fontSize: 16 }} />
-                    {savingShared ? '저장 중…' : `올린 사진 ${ownImageKeys.length}장을 공통으로 저장`}
-                </button>
-                {def.mobile && (
-                    <div className="row" style={{ gap: 6 }}>
-                        {(['desktop', 'mobile'] as const).map(vt => (
-                            <button
-                                key={vt}
-                                type="button"
-                                className="chip"
-                                onClick={() => setPreviewVariant(vt)}
-                                style={previewVariant === vt ? { background: 'var(--mrt-navy, #1a2b4a)', color: '#fff' } : undefined}
-                            >
-                                {vt === 'desktop' ? 'PC' : '모바일'}
-                            </button>
-                        ))}
+        <div className="stack" style={{ gap: 12 }}>
+            <div style={{ padding: '14px 16px', border: '1px solid #D6E8FF', borderRadius: 'var(--r-lg)', background: '#F7FAFF' }}>
+                <div className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 210 }}>
+                        <div className="row" style={{ gap: 7 }}>
+                            <span className="badge b-blue">디자인 상세 편집</span>
+                            <span className="cell-muted" style={{ fontSize: 12 }}>{def.name}</span>
+                        </div>
+                        <div className="cell-muted" style={{ marginTop: 5, fontSize: 12 }}>
+                            구간을 고른 뒤 필요한 내용만 바꾸세요. 미리보기의 문구와 사진을 눌러도 바로 이동합니다.
+                        </div>
                     </div>
-                )}
+                    <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                        <span className="chip" style={{ cursor: 'default', background: '#fff' }}>전체 {sections.length}개 구간</span>
+                        <span className="chip" style={{ cursor: 'default', borderColor: totalModifiedFieldCount > 0 ? '#9CC8FF' : undefined, color: totalModifiedFieldCount > 0 ? '#1B64DA' : undefined, background: '#fff' }}>
+                            수정 {modifiedSectionCount}개 구간 · {totalModifiedFieldCount}개 항목
+                        </span>
+                        {sharedCount > 0 && <span className="chip" style={{ cursor: 'default', background: '#fff' }}>공통 사진 {sharedCount}장</span>}
+                    </div>
+                    <div className="spacer" />
+                    <button type="button" className="chip" onClick={() => setShowPreview(show => !show)} style={showPreview ? { borderColor: '#9CC8FF', color: '#1B64DA', background: '#fff' } : { background: '#3182F6', color: '#fff' }}>
+                        <Icon name={showPreview ? 'edit_note' : 'preview'} style={{ fontSize: 16 }} />{showPreview ? '편집만 크게 보기' : '미리보기 함께 보기'}
+                    </button>
+                    {showPreview && def.mobile && (
+                        <div className="row" style={{ gap: 4 }}>
+                            {(['desktop', 'mobile'] as const).map(vt => (
+                                <button key={vt} type="button" className="chip" onClick={() => setPreviewVariant(vt)} style={previewVariant === vt ? { background: '#3182F6', borderColor: '#3182F6', color: '#fff' } : { background: '#fff' }}>
+                                    {vt === 'desktop' ? 'PC' : '모바일'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        className="chip"
+                        onClick={saveOwnImagesAsShared}
+                        disabled={ownImageKeys.length === 0 || savingShared}
+                        title={ownImageKeys.length === 0 ? '이 상품에 직접 올린 사진이 없습니다' : '이 상품에서 올린 사진을 다른 상품도 함께 쓰도록 저장합니다'}
+                        style={ownImageKeys.length > 0 ? { borderColor: '#9CC8FF', color: '#1B64DA', background: '#fff' } : { background: '#fff' }}
+                    >
+                        <Icon name="photo_library" style={{ fontSize: 16 }} />
+                        {savingShared ? '저장 중…' : `새 사진 ${ownImageKeys.length}장 공통 저장`}
+                    </button>
+                </div>
             </div>
 
-
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: showPreview ? 'minmax(0, 1fr) 440px' : 'minmax(0, 820px)', justifyContent: showPreview ? 'stretch' : 'center', gap: 14, alignItems: 'start' }}>
                 {/* 좌: 클릭 가능한 미리보기 */}
-                <div
+                {showPreview && <div
                     ref={previewRef}
                     style={{ flex: 1, minWidth: 0, maxHeight: '78vh', overflowY: 'auto', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', background: '#fff' }}
                 >
@@ -604,33 +634,52 @@ export function DesignTemplateBlockEditor({
                             valueOverrides={valueOverrides}
                             itinerarySlot={(
                                 <div style={{ padding: '28px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: 12, margin: '8px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
-                                    📋 이 자리에 상품의 <b>일정탭</b>에서 작성한 일정표가 표시됩니다
+                                    <Icon name="calendar_month" style={{ marginRight: 5, fontSize: 17 }} />이 자리에 상품의 <b>일정 탭</b>에서 작성한 일정표가 표시됩니다
                                 </div>
                             )}
                         />
                     </div>
-                </div>
+                </div>}
 
                 {/* 우: 섹션별 폼 */}
-                <div className="stack" style={{ gap: 6, flex: '0 0 420px', maxHeight: '78vh', overflowY: 'auto' }}>
-                {sections.map(sec => {
-                    const open = openSection === sec.instId;
+                <div className="stack" style={{ gap: 10, minWidth: 0, maxHeight: '78vh', overflowY: 'auto', padding: 12, border: '1px solid var(--border-default)', borderRadius: 'var(--r-lg)', background: '#fff' }}>
+                    <div style={{ position: 'sticky', top: -12, zIndex: 4, margin: '-12px -12px 0', padding: 12, borderBottom: '1px solid var(--border-default)', background: '#fff' }}>
+                        <label className="cell-muted" style={{ display: 'block', marginBottom: 6, fontSize: 11, fontWeight: 700 }}>편집할 구간</label>
+                        <div className="row" style={{ gap: 6 }}>
+                            <select className="select" value={activeSection?.instId || ''} onChange={(event) => { setOpenSection(event.target.value); setSelectedField(null); }} style={{ minWidth: 0, flex: 1, height: 40, fontWeight: 700 }}>
+                                {visibleSections.map(section => (
+                                    <option key={section.instId} value={section.instId}>{section.name}{filledCount(section.fields) > 0 ? ` · 수정 ${filledCount(section.fields)}개` : ''}</option>
+                                ))}
+                            </select>
+                            <button type="button" className="act-btn" disabled={activeSectionIndex <= 0} onClick={() => moveSectionSelection(-1)} title="이전 구간"><Icon name="chevron_left" /></button>
+                            <button type="button" className="act-btn" disabled={activeSectionIndex === -1 || activeSectionIndex >= visibleSections.length - 1} onClick={() => moveSectionSelection(1)} title="다음 구간"><Icon name="chevron_right" /></button>
+                        </div>
+                        <div className="row" style={{ gap: 6, marginTop: 8 }}>
+                            <button type="button" className="chip" onClick={() => setOnlyModified(false)} style={!onlyModified ? { background: '#3182F6', borderColor: '#3182F6', color: '#fff' } : undefined}>전체 구간</button>
+                            <button type="button" className="chip" onClick={() => setOnlyModified(true)} style={onlyModified ? { background: '#3182F6', borderColor: '#3182F6', color: '#fff' } : undefined}>수정한 구간만 {modifiedSectionCount}</button>
+                            <span className="spacer" />
+                            {activeSection && filledCount(activeSection.fields) > 0 && <button type="button" className="chip" onClick={() => resetSectionValues(activeSection)}><Icon name="restart_alt" style={{ fontSize: 15 }} />기본 내용으로</button>}
+                        </div>
+                    </div>
+                {visibleSections.length === 0 && (
+                    <div className="card-muted-note"><Icon name="check_circle" /><span>아직 수정한 구간이 없습니다. <button type="button" className="link-action" onClick={() => setOnlyModified(false)}>전체 구간 보기</button></span></div>
+                )}
+                {visibleSections.map(sec => {
+                    const open = activeSection?.instId === sec.instId;
+                    if (!open) return null;
                     const filled = filledCount(sec.fields);
                     const repeatable = def.sectionDefs.find(s => s.id === sec.defId)?.repeatable;
                     return (
                         <div key={sec.instId} style={{ flex: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
-                            <div className="row" style={{ gap: 0, alignItems: 'stretch', background: open ? 'var(--bg-muted, #f6f7f8)' : 'transparent' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setOpenSection(open ? null : sec.instId)}
-                                    style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px 10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                                >
-                                    <Icon name={open ? 'expand_less' : 'expand_more'} style={{ fontSize: 18, flex: 'none' }} />
-                                    <span style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
-                                    <span className="cell-muted" style={{ fontSize: 12, marginLeft: 'auto', flex: 'none' }}>
-                                        {filled > 0 ? `${filled}개 수정됨` : '원본 그대로'}
-                                    </span>
-                                </button>
+                            <div className="row" style={{ gap: 8, minHeight: 50, padding: '8px 10px 8px 12px', alignItems: 'center', borderBottom: '1px solid var(--border-default)', background: '#F7FAFF' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 19, color: '#3182F6' }}>edit_note</span>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</div>
+                                    <div className="cell-muted" style={{ marginTop: 2, fontSize: 11 }}>
+                                        {filled > 0 ? `이 구간에서 ${filled}개 항목을 수정했습니다` : '기본 내용이 그대로 사용됩니다'}
+                                    </div>
+                                </div>
+                                <span className="spacer" />
                                 <div className="row" style={{ gap: 2, alignItems: 'center', padding: '0 8px 0 4px', flex: 'none' }}>
                                     {repeatable && (
                                         <button
@@ -673,7 +722,7 @@ export function DesignTemplateBlockEditor({
                                                 <div
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="row"
-                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === fk ? { outline: '2px solid rgba(6,196,160,0.5)', outlineOffset: 4, borderRadius: 6 } : {}) }}
+                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === fk ? { outline: '2px solid rgba(49,130,246,0.45)', outlineOffset: 4, borderRadius: 6 } : {}) }}
                                                 >
                                                     {values[fk] ? (
                                                         <div style={{ position: 'relative', flex: 'none' }}>
@@ -697,11 +746,11 @@ export function DesignTemplateBlockEditor({
                                                             <img
                                                                 src={sharedAssets[baseKey(fk)]}
                                                                 alt={f.label}
-                                                                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid #06C4A0' }}
+                                                                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid #3182F6' }}
                                                             />
                                                             <span
                                                                 title="공통 이미지를 사용 중입니다. 이 상품만 다르게 하려면 업로드하세요."
-                                                                style={{ position: 'absolute', left: -4, bottom: -6, padding: '1px 6px', borderRadius: 500, background: '#06C4A0', color: '#fff', fontSize: 10, fontWeight: 800 }}
+                                                                style={{ position: 'absolute', left: -4, bottom: -6, padding: '1px 6px', borderRadius: 500, background: '#3182F6', color: '#fff', fontSize: 10, fontWeight: 800 }}
                                                             >
                                                                 공통
                                                             </span>
@@ -757,7 +806,7 @@ export function DesignTemplateBlockEditor({
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(fk, e.target.value)}
                                                     onFocus={() => handleFieldFocus(fk)}
-                                                    style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
+                                                    style={selectedField === fk ? { borderColor: '#3182F6', boxShadow: '0 0 0 3px rgba(49,130,246,0.14)' } : undefined}
                                                 />
                                                 </>
                                             ) : (
@@ -785,7 +834,7 @@ export function DesignTemplateBlockEditor({
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(fk, e.target.value)}
                                                     onFocus={() => handleFieldFocus(fk)}
-                                                    style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
+                                                    style={selectedField === fk ? { borderColor: '#3182F6', boxShadow: '0 0 0 3px rgba(49,130,246,0.14)' } : undefined}
                                                 />
                                                 </>
                                             )}
