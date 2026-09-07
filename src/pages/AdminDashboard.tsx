@@ -6,11 +6,22 @@ import { Icon } from '../components/admin/console/Icon';
 
 type Reservation = {
     id: string;
+    reservationNumber?: string;
     status?: string;
     createdAt?: string;
     customerName?: string;
     productName?: string;
-    confirmedPrice?: number;
+    totalPrice?: number;
+};
+
+type ReservationApiItem = Reservation & {
+    created_at?: string;
+    customer_name?: string;
+    product_name?: string;
+    reservation_number?: string;
+    total_price?: number | string;
+    confirmedPrice?: number | string;
+    confirmed_price?: number | string;
 };
 
 type Quote = {
@@ -50,7 +61,7 @@ const formatDate = (value?: string) => {
     if (Number.isNaN(date.getTime())) return '-';
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
 };
-const formatNumber = (value: number) => new Intl.NumberFormat('ko-KR').format(value);
+const formatNumber = (value: number) => new Intl.NumberFormat('ja-JP').format(value);
 
 export const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -70,12 +81,13 @@ export const AdminDashboard: React.FC = () => {
                     api.quotes.list(),
                     api.guides.list(),
                 ]);
-                setReservations((reservationData || []).map((item: any) => ({
+                setReservations((reservationData || []).map((item: ReservationApiItem) => ({
                     ...item,
                     createdAt: item.createdAt || item.created_at,
                     customerName: item.customerName || item.customer_name || '이름 없음',
                     productName: item.productName || item.product_name || '상품 미정',
-                    confirmedPrice: item.confirmedPrice || item.confirmed_price || 0,
+                    reservationNumber: item.reservationNumber || item.reservation_number,
+                    totalPrice: Number(item.totalPrice || item.total_price || item.confirmedPrice || item.confirmed_price || 0),
                 })));
                 setQuotes(quoteData || []);
                 setGuides(guideData || []);
@@ -97,7 +109,7 @@ export const AdminDashboard: React.FC = () => {
         const ongoingTours = reservations.filter((item) => item.status === 'confirmed').length;
         const confirmedSales = reservations
             .filter((item) => item.status === 'confirmed' || item.status === 'completed' || item.status === 'paid')
-            .reduce((sum, item) => sum + Number(item.confirmedPrice || 0), 0);
+            .reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
         return { todayReservations, unpaidReservations, newQuotes, ongoingTours, confirmedSales };
     }, [reservations, quotes]);
 
@@ -105,15 +117,15 @@ export const AdminDashboard: React.FC = () => {
     const recentQuotes = quotes.slice(0, 3);
 
     const metricCards = [
-        { ico: 'today', tint: 'tint-blue', label: '오늘 신규 예약', value: `${metrics.todayReservations}`, unit: '건' },
-        { ico: 'request_quote', tint: 'tint-purple', label: '새 견적 요청', value: `${metrics.newQuotes}`, unit: '건' },
-        { ico: 'payments', tint: 'tint-amber', label: '입금 대기', value: `${metrics.unpaidReservations}`, unit: '건' },
-        { ico: 'paid', tint: 'tint-green', label: '확정 매출', value: `₩${formatNumber(metrics.confirmedSales)}`, unit: '' },
+        { ico: 'today', tint: 'tint-blue', label: '오늘 신규 예약', value: `${metrics.todayReservations}`, unit: '건', go: '/admin/reservations' },
+        { ico: 'request_quote', tint: 'tint-purple', label: '새 견적 요청', value: `${metrics.newQuotes}`, unit: '건', go: '/admin/quotes' },
+        { ico: 'payments', tint: 'tint-amber', label: '자동 입금 대기', value: `${metrics.unpaidReservations}`, unit: '건', go: '/admin/reservations' },
+        { ico: 'paid', tint: 'tint-green', label: '확정 매출', value: `¥${formatNumber(metrics.confirmedSales)}`, unit: '', go: '/admin/reservations' },
     ];
     const quickLinks = [
         { t: '견적 응답 대기', s: '신규·작성중 견적', v: metrics.newQuotes, ico: 'mark_email_unread', tint: 'tint-purple', go: '/admin/quotes' },
-        { t: '입금 확인 필요', s: '예약금 미입금', v: metrics.unpaidReservations, ico: 'account_balance', tint: 'tint-amber', go: '/admin/reservations' },
-        { t: '투어 캘린더', s: '확정 투어 일정', v: metrics.ongoingTours, ico: 'calendar_today', tint: 'tint-blue', go: '/admin/calendar' },
+        { t: '자동 입금 대기', s: 'PayPal 웹훅 확인 전', v: metrics.unpaidReservations, ico: 'sync', tint: 'tint-amber', go: '/admin/reservations' },
+        { t: '출발 준비', s: '확정 투어 운영', v: metrics.ongoingTours, ico: 'flight_takeoff', tint: 'tint-blue', go: '/admin/calendar' },
     ];
 
     return (
@@ -136,13 +148,14 @@ export const AdminDashboard: React.FC = () => {
 
                 <section className="metric-grid">
                     {metricCards.map((m, i) => (
-                        <div className="metric" key={i}>
+                        <button type="button" className="metric metric-button" key={i} onClick={() => navigate(m.go)}>
                             <div className="metric-top">
                                 <span className={`metric-ico ${m.tint}`}><Icon name={m.ico} fill /></span>
                             </div>
                             <div className="metric-label">{m.label}</div>
                             <div className="metric-value">{isLoading ? '-' : m.value}{m.unit && <small>{m.unit}</small>}</div>
-                        </div>
+                            <span className="metric-open">업무 보기 <Icon name="arrow_forward" /></span>
+                        </button>
                     ))}
                 </section>
 
@@ -170,8 +183,8 @@ export const AdminDashboard: React.FC = () => {
                                     {recentReservations.map((r) => {
                                         const s = STATUS_BADGE[r.status || ''] || { label: r.status || '-', tone: 'b-gray' };
                                         return (
-                                            <tr key={r.id} onClick={() => navigate('/admin/reservations')}>
-                                                <td className="cell-mono">#{r.id.slice(0, 6)}</td>
+                                            <tr key={r.id} onClick={() => navigate(`/admin/reservations?q=${encodeURIComponent(r.reservationNumber || r.customerName || r.id)}`)}>
+                                                <td className="cell-mono">#{r.reservationNumber || r.id.slice(0, 6).toUpperCase()}</td>
                                                 <td>
                                                     <div className="av-cell">
                                                         <span className={`avatar round ${avTone(r.customerName || '?')}`}>{(r.customerName || '?').slice(0, 2)}</span>
@@ -182,7 +195,7 @@ export const AdminDashboard: React.FC = () => {
                                                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.productName}</div>
                                                 </td>
                                                 <td><span className={`badge ${s.tone}`}>{s.label}</span></td>
-                                                <td className="r cell-price">{r.confirmedPrice ? `₩${formatNumber(r.confirmedPrice)}` : '–'}</td>
+                                                <td className="r cell-price">{r.totalPrice ? `¥${formatNumber(r.totalPrice)}` : '–'}</td>
                                             </tr>
                                         );
                                     })}

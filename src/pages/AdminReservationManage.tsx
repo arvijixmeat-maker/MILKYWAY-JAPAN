@@ -80,6 +80,8 @@ interface Reservation {
         type: string;
         description: string;
         detail?: string;
+        source?: string;
+        eventId?: string;
     }>;
 
     userId?: string;
@@ -398,6 +400,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         // If currently paid -> switch to pending (unpaid)
         // If currently not paid -> switch to paid AND mark all sub-payments as paid
         const isCurrentlyPaid = editForm.status === 'paid';
+        const confirmed = window.confirm(isCurrentlyPaid
+            ? '전액 완납 상태를 수동으로 취소할까요? 실제 입금 내역을 먼저 확인해 주세요.'
+            : 'PayPal 외 결제까지 모두 확인했나요? 전액 완납으로 수동 처리합니다.');
+        if (!confirmed) return;
 
         const newStatus: Reservation['status'] = isCurrentlyPaid ? 'pending_payment' : 'paid';
 
@@ -415,6 +421,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
 
     const toggleDepositStatus = () => {
         const newStatus: 'paid' | 'unpaid' = editForm.depositStatus === 'paid' ? 'unpaid' : 'paid';
+        const confirmed = window.confirm(newStatus === 'paid'
+            ? 'PayPal 외 방식으로 받은 예약금을 확인했나요? 이 버튼은 예외적인 수동 입금에만 사용합니다.'
+            : '예약금 확인 상태를 취소할까요? PayPal에서 이미 결제된 건인지 먼저 확인해 주세요.');
+        if (!confirmed) return;
         const updated = { ...editForm, depositStatus: newStatus };
         setEditForm(updated);
         // Check if full payment is complete? Optional feature.
@@ -423,6 +433,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
 
     const toggleBalanceStatus = () => {
         const newStatus: 'paid' | 'unpaid' = editForm.balanceStatus === 'paid' ? 'unpaid' : 'paid';
+        const confirmed = window.confirm(newStatus === 'paid'
+            ? '현지에서 받은 잔금을 확인했나요? 확인 후 수동 입금 처리합니다.'
+            : '현지 잔금 확인 상태를 취소할까요?');
+        if (!confirmed) return;
         const updated = { ...editForm, balanceStatus: newStatus };
         setEditForm(updated);
         if (!isEditing) onUpdate(updated);
@@ -672,7 +686,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         const nights = tripDays > 1 ? `${tripDays - 1}박 ${tripDays}일` : '';
         const total = editForm.totalAmount || 0;
         const deposit = editForm.deposit || 0;
-        const won = (n: number) => `₩${(n || 0).toLocaleString()}`;
+        const yen = (n: number) => `¥${(n || 0).toLocaleString('ja-JP')}`;
         return {
             number: reservationNumber,
             product: reservation.productName || '',
@@ -682,9 +696,9 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             arrival: fmtFlightLine(cd.arrival),
             departure: fmtFlightLine(cd.departure),
             travelers: contractTravelers,
-            total: won(total),
-            deposit: won(deposit),
-            balance: won(total - deposit),
+            total: yen(total),
+            deposit: yen(deposit),
+            balance: yen(total - deposit),
             memos: memos.map((m: any) => String(m.description || '').trim()).filter(Boolean),
             signed: contractAgreement?.agreed
                 ? `${contractAgreement.name || ''}${contractAgreement.agreedAt ? ` (${contractAgreement.agreedAt.split('T')[0]})` : ''}`
@@ -1173,6 +1187,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         }
     };
 
+    const paypalAutoConfirmed = (reservation.history || []).some((entry) =>
+        entry.type === 'payment_confirmed' && entry.source === 'paypal_webhook'
+    );
+
     const operationSteps = [
         {
             title: '예약 접수',
@@ -1184,11 +1202,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         },
         {
             title: '결제 확인',
-            description: editForm.depositStatus === 'paid' ? '예약금 입금 확인 완료' : '예약금 입금 확인 필요',
+            description: editForm.depositStatus === 'paid'
+                ? (paypalAutoConfirmed ? 'PayPal에서 자동 확인됨' : '관리자가 수동 확인함')
+                : `PayPal 예약금 ¥${RESERVATION_DEPOSIT_JPY.toLocaleString('ja-JP')} 자동 확인 대기`,
             icon: 'payments',
             done: editForm.depositStatus === 'paid',
-            actionLabel: editForm.depositStatus === 'paid' ? '완료' : '입금 확인',
-            onAction: editForm.depositStatus === 'paid' ? () => scrollToSec('pay') : () => { scrollToSec('pay'); toggleDepositStatus(); },
+            actionLabel: editForm.depositStatus === 'paid' ? '결제 내역' : '자동 확인 상태',
+            onAction: () => scrollToSec('pay'),
         },
         {
             title: '일정표',
@@ -1248,6 +1268,10 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         payment: 'payments',
         document_added: 'description',
         assignment: 'assignment_ind',
+        payment_confirmed: 'verified',
+        payment_confirmation_email_sent: 'mark_email_read',
+        paypal_invoice_sent: 'receipt_long',
+        paypal_invoice_failed: 'error',
     };
 
     // Trip.com식 섹션 앵커 (탭 대신 원페이지 스크롤)
@@ -1547,7 +1571,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                     <div className="ring">
                                         <svg width="62" height="62" viewBox="0 0 62 62">
                                             <circle cx="31" cy="31" r="26" fill="none" stroke="var(--mrt-gray-100)" strokeWidth="6" />
-                                            <circle cx="31" cy="31" r="26" fill="none" stroke="#0f766e" strokeWidth="6" strokeLinecap="round"
+                                            <circle cx="31" cy="31" r="26" fill="none" stroke="var(--mrt-blue)" strokeWidth="6" strokeLinecap="round"
                                                 strokeDasharray={2 * Math.PI * 26}
                                                 strokeDashoffset={2 * Math.PI * 26 * (1 - paidPercent / 100)}
                                                 transform="rotate(-90 31 31)"
@@ -1558,7 +1582,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div className="cell-muted" style={{ fontSize: 12.5 }}>
-                                            {paidPercent >= 100 ? '완납 완료' : `잔액 ₩${(editForm.totalAmount - paidAmount).toLocaleString()}`}
+                                            {paidPercent >= 100 ? '완납 완료' : `잔액 ¥${(editForm.totalAmount - paidAmount).toLocaleString('ja-JP')}`}
                                         </div>
                                         <div className="row" style={{ gap: 6, marginTop: 2 }}>
                                             {isEditing ? (
@@ -1571,8 +1595,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                                 />
                                             ) : (
                                                 <>
-                                                    <span className="cell-price" style={{ fontSize: 22 }}>₩{paidAmount.toLocaleString()}</span>
-                                                    <span className="cell-muted" style={{ fontSize: 12 }}>/ ₩{(editForm.totalAmount || 0).toLocaleString()}</span>
+                                                    <span className="cell-price" style={{ fontSize: 22 }}>¥{paidAmount.toLocaleString('ja-JP')}</span>
+                                                    <span className="cell-muted" style={{ fontSize: 12 }}>/ ¥{(editForm.totalAmount || 0).toLocaleString('ja-JP')}</span>
                                                 </>
                                             )}
                                         </div>
@@ -1582,8 +1606,22 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                         className={`btn btn-sm ${editForm.status === 'paid' ? 'btn-blue' : 'btn-ghost'}`}
                                     >
                                         <Icon name="done_all" />
-                                        {editForm.status === 'paid' ? '전액완납' : '완납 처리'}
+                                        {editForm.status === 'paid' ? '전액완납' : '수동 완납 처리'}
                                     </button>
+                                </div>
+                                <div className={`payment-auto-banner${editForm.depositStatus === 'paid' ? ' is-complete' : ''}`}>
+                                    <span className="payment-auto-icon"><Icon name={editForm.depositStatus === 'paid' ? 'verified' : 'sync'} /></span>
+                                    <div>
+                                        <b>{editForm.depositStatus === 'paid'
+                                            ? (paypalAutoConfirmed ? 'PayPal 예약금이 자동 확인되었습니다' : '예약금이 수동 확인되었습니다')
+                                            : 'PayPal 결제를 자동으로 확인하고 있습니다'}</b>
+                                        <p>{editForm.depositStatus === 'paid'
+                                            ? (paypalAutoConfirmed ? '관리자가 별도로 입금 확인을 누를 필요가 없습니다.' : 'PayPal 외 결제 또는 예외 처리로 기록된 상태입니다.')
+                                            : `고객이 ¥${RESERVATION_DEPOSIT_JPY.toLocaleString('ja-JP')} 결제를 완료하면 예약 상태와 입금 이력이 자동 반영됩니다.`}</p>
+                                    </div>
+                                    <span className={`badge ${editForm.depositStatus === 'paid' ? 'b-green' : 'b-blue'}`}>
+                                        {editForm.depositStatus === 'paid' ? '확인 완료' : '자동 감시 중'}
+                                    </span>
                                 </div>
                                 {/* Deposit + Balance cells */}
                                 <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1603,16 +1641,16 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                                 style={{ height: 36 }}
                                             />
                                         ) : (
-                                            <div className="cell-price" style={{ fontSize: 16 }}>₩{(editForm.deposit || 0).toLocaleString()}</div>
+                                            <div className="cell-price" style={{ fontSize: 16 }}>¥{(editForm.deposit || 0).toLocaleString('ja-JP')}</div>
                                         )}
                                         {editForm.depositStatus !== 'paid' && (
-                                            <button onClick={toggleDepositStatus} className="btn btn-sm btn-blue" style={{ width: '100%', marginTop: 10 }}>
-                                                <Icon name="check" />입금 확인
+                                            <button onClick={toggleDepositStatus} className="btn btn-sm btn-ghost" style={{ width: '100%', marginTop: 10 }}>
+                                                <Icon name="fact_check" />PayPal 외 수동 입금 확인
                                             </button>
                                         )}
                                         {editForm.depositStatus === 'paid' && (
                                             <button onClick={toggleDepositStatus} className="btn btn-sm btn-ghost" style={{ width: '100%', marginTop: 10 }}>
-                                                입금 취소
+                                                수동 확인 취소
                                             </button>
                                         )}
                                     </div>
@@ -1624,11 +1662,11 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                             </span>
                                         </div>
                                         <div className="cell-price" style={{ fontSize: 16 }}>
-                                            ₩{((editForm.totalAmount || 0) - (editForm.deposit || 0)).toLocaleString()}
+                                            ¥{((editForm.totalAmount || 0) - (editForm.deposit || 0)).toLocaleString('ja-JP')}
                                         </div>
                                         {editForm.balanceStatus !== 'paid' && (
                                             <button onClick={toggleBalanceStatus} className="btn btn-sm btn-blue" style={{ width: '100%', marginTop: 10 }}>
-                                                <Icon name="check" />입금 확인
+                                                <Icon name="check" />현지 잔금 확인
                                             </button>
                                         )}
                                         {editForm.balanceStatus === 'paid' && (
@@ -2212,9 +2250,9 @@ export const AdminReservationManage: React.FC = () => {
         return Number.isNaN(time) ? 0 : time;
     };
 
-    const fetchReservations = async () => {
+    const fetchReservations = async (silent = false) => {
         try {
-            setReservations([]); // Clear first
+            if (!silent) setReservations([]);
 
             // Fetch reservations and quotes independently so one failure doesn't block the other
             const [resSettled, quoteSettled, productSettled] = await Promise.allSettled([
@@ -2384,6 +2422,8 @@ export const AdminReservationManage: React.FC = () => {
                 contractData: fresh.contractData ?? x.contractData,
                 history: fresh.history ?? x.history,
                 status: fresh.status ?? x.status,
+                depositStatus: fresh.depositStatus ?? fresh.deposit_status ?? x.depositStatus,
+                balanceStatus: fresh.balanceStatus ?? fresh.balance_status ?? x.balanceStatus,
             });
             setSelectedReservation(prev => (prev && prev.id === res.id) ? merge(prev) : prev);
             setReservations(prev => prev.map(x => x.id === res.id ? merge(x) : x));
@@ -2622,6 +2662,16 @@ export const AdminReservationManage: React.FC = () => {
     useEffect(() => {
         fetchReservations();
     }, []);
+
+    // PayPal 웹훅이 갱신한 예약금 상태를 별도 조작 없이 운영 화면에 반영한다.
+    // 편집 모달이 열린 동안에는 관리자의 입력을 덮어쓰지 않도록 자동 갱신을 잠시 멈춘다.
+    useEffect(() => {
+        if (selectedReservation) return;
+        const timer = window.setInterval(() => {
+            if (document.visibilityState === 'visible') void fetchReservations(true);
+        }, 30_000);
+        return () => window.clearInterval(timer);
+    }, [selectedReservation]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Filter Logic
     const handleCreateReservation = async () => {
@@ -2988,7 +3038,7 @@ export const AdminReservationManage: React.FC = () => {
                         </button>
                         <button
                             type="button"
-                            onClick={fetchReservations}
+                            onClick={() => fetchReservations()}
                             className="btn btn-ghost"
                         >
                             <Icon name="refresh" />
@@ -3194,7 +3244,7 @@ export const AdminReservationManage: React.FC = () => {
                                                         {workflow.label}
                                                     </span>
                                                 </td>
-                                                <td className="r cell-price">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) && res.totalAmount > 0 ? `₩${res.totalAmount.toLocaleString()}` : '–'}</td>
+                                                <td className="r cell-price">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) && res.totalAmount > 0 ? `¥${res.totalAmount.toLocaleString('ja-JP')}` : '–'}</td>
                                                 <td className="r" onClick={(e) => e.stopPropagation()}>
                                                     <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
                                                         <button

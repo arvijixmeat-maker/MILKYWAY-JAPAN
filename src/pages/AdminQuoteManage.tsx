@@ -405,7 +405,7 @@ export const AdminQuoteManage: React.FC = () => {
     );
 
     return (
-        <AdminLayout activePage="reservations" title="맞춤견적 관리" actions={headerActions}>
+        <AdminLayout activePage="quotes" title="맞춤견적 관리" actions={headerActions}>
             {/* Summary metrics */}
             <section className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 18 }}>
                 <div className="metric">

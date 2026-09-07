@@ -360,8 +360,9 @@ export const AdminAccommodationOps: React.FC = () => {
     return (
         <AdminLayout
             activePage="accommodation-ops"
-            title="Байр захиалгын удирдлага"
-            actions={<button type="button" onClick={load} className="btn"><Icon name="refresh" />Шинэчлэх</button>}
+            title="숙소·차량 배정"
+            description="확정 예약의 숙소·객실·차량을 일자별로 배정합니다. 현지 운영 항목은 몽골어로 표시됩니다."
+            actions={<button type="button" onClick={load} className="btn btn-ghost"><Icon name="refresh" />새로고침</button>}
         >
             <div className="route-anim">
                 <div className="toolbar" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -402,7 +403,7 @@ export const AdminAccommodationOps: React.FC = () => {
                         style={{
                             flex: 'none', border: 0, cursor: 'pointer', borderRadius: 999, padding: '6px 14px',
                             fontSize: 12.5, fontWeight: 800, whiteSpace: 'nowrap',
-                            background: month === 'all' ? '#06C4A0' : 'var(--bg-muted, #f1f3f5)',
+                            background: month === 'all' ? 'var(--mrt-blue)' : 'var(--bg-muted, #f1f3f5)',
                             color: month === 'all' ? '#fff' : 'var(--text-muted)',
                         }}
                     >
@@ -432,13 +433,13 @@ export const AdminAccommodationOps: React.FC = () => {
                                     style={{
                                         flex: '1 1 0', minWidth: 62, cursor: n === 0 ? 'default' : 'pointer',
                                         borderRadius: 10, padding: '7px 4px', textAlign: 'center', lineHeight: 1.25,
-                                        border: active ? '2px solid #06C4A0' : '1px solid var(--border-default)',
+                                        border: active ? '2px solid var(--mrt-blue)' : '1px solid var(--border-default)',
                                         background: active ? 'rgba(6,196,160,0.08)' : '#fff',
                                         opacity: n === 0 ? 0.45 : 1,
                                     }}
                                 >
                                     <div style={{ fontSize: 12.5, fontWeight: 800, color: n === 0 ? 'var(--text-muted)' : 'var(--text-strong)' }}>{i + 1}-р сар</div>
-                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: n === 0 ? 'var(--text-muted)' : '#06C4A0' }}>{n === 0 ? '-' : `${n}`}</div>
+                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: n === 0 ? 'var(--text-muted)' : 'var(--mrt-blue)' }}>{n === 0 ? '-' : `${n}`}</div>
                                 </button>
                             );
                         })}

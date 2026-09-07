@@ -1,7 +1,8 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { Icon } from './console/Icon';
+import { ADMIN_NAV_GROUPS, type AdminNavItem } from './adminNavigation';
 
 interface AdminSidebarProps {
     activePage: string;
@@ -10,41 +11,6 @@ interface AdminSidebarProps {
     isDarkMode?: boolean;
     toggleTheme?: () => void;
 }
-
-interface NavItem {
-    id: string;
-    icon: string;
-    label: string;
-    href: string;
-    count?: number;
-}
-
-const overviewItems: NavItem[] = [
-    { id: 'dashboard', icon: 'dashboard', label: '대시보드', href: '/admin' },
-];
-
-const operationItems: NavItem[] = [
-    { id: 'reservations', icon: 'assignment', label: '통합 예약 관리', href: '/admin/reservations' },
-    { id: 'accommodation-ops', icon: 'night_shelter', label: '숙소 배정 관리', href: '/admin/accommodation-ops' },
-    { id: 'calendar', icon: 'calendar_today', label: '투어 캘린더', href: '/admin/calendar' },
-    { id: 'products', icon: 'inventory_2', label: '상품 관리', href: '/admin/products' },
-];
-
-const contentItems: NavItem[] = [
-    { id: 'magazines', icon: 'menu_book', label: '매거진 관리', href: '/admin/magazines' },
-    { id: 'templates', icon: 'folder_special', label: '템플릿 관리', href: '/admin/templates' },
-    { id: 'reviews', icon: 'reviews', label: '후기 관리', href: '/admin/reviews' },
-    { id: 'faq', icon: 'help', label: 'FAQ 관리', href: '/admin/faq' },
-];
-
-const settingItems: NavItem[] = [
-    { id: 'banners', icon: 'ad_units', label: '홈 화면 관리', href: '/admin/banners' },
-    { id: 'categories', icon: 'category', label: '카테고리 관리', href: '/admin/categories' },
-    { id: 'hotels', icon: 'hotel', label: '호텔 마스터', href: '/admin/hotels' },
-    { id: 'tourist-spots', icon: 'location_on', label: '관광지 마스터', href: '/admin/tourist-spots' },
-    { id: 'design-spots', icon: 'photo_library', label: '여행지 사진', href: '/admin/design-spots' },
-    { id: 'guide-intro', icon: 'translate', label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
-];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNavigate }) => {
     const navigate = useNavigate();
@@ -55,43 +21,44 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
         navigate('/admin/login');
     };
 
-    const renderItem = (item: NavItem) => {
+    const renderItem = (item: AdminNavItem) => {
         const isActive = activePage === item.id;
         return (
-            <a key={item.id} href={item.href} className={`nav-item${isActive ? ' active' : ''}`} aria-current={isActive ? 'page' : undefined} onClick={onNavigate}>
+            <Link key={item.id} to={item.href} className={`nav-item${isActive ? ' active' : ''}`} aria-current={isActive ? 'page' : undefined} onClick={onNavigate} title={item.description}>
                 <Icon name={item.icon} fill={isActive} />
                 <span>{item.label}</span>
-                {item.count ? <span className="nav-count">{item.count}</span> : null}
-            </a>
+            </Link>
         );
     };
 
     return (
         <aside className="side">
             <div className="side-brand-row">
-                <a href="/admin" className="side-brand" aria-label="MILKYWAY 관리자 홈" onClick={onNavigate}>
+                <Link to="/admin" className="side-brand" aria-label="MILKYWAY 관리자 홈" onClick={onNavigate}>
                     <span className="brand-mark"><Icon name="flight_takeoff" /></span>
                     <div>
                         <div className="brand-name">MILKYWAY</div>
                         <div className="brand-sub">Admin Console</div>
                     </div>
-                </a>
+                </Link>
                 <button className="side-close" type="button" aria-label="메뉴 닫기" onClick={(event) => { event.preventDefault(); onNavigate?.(); }}>
                     <Icon name="close" />
                 </button>
             </div>
 
             <nav className="side-nav">
-                {overviewItems.map(renderItem)}
-                <div className="nav-group-label">운영 관리</div>
-                {operationItems.map(renderItem)}
-                <div className="nav-group-label">콘텐츠 관리</div>
-                {contentItems.map(renderItem)}
-                <div className="nav-group-label">사이트 설정</div>
-                {settingItems.map(renderItem)}
+                {ADMIN_NAV_GROUPS.map((group) => (
+                    <div className="nav-group" key={group.label}>
+                        <div className="nav-group-label">{group.label}</div>
+                        {group.items.map(renderItem)}
+                    </div>
+                ))}
             </nav>
 
             <div className="side-foot">
+                <a className="side-site-link" href="/" target="_blank" rel="noreferrer">
+                    <Icon name="open_in_new" /><span>고객 사이트 보기</span>
+                </a>
                 <div className="side-account">
                     <span className="av">관</span>
                     <div className="who">
