@@ -4,6 +4,13 @@ import { quotes } from '../../src/db/schema';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { eq, desc } from 'drizzle-orm';
+import { requireAdmin } from '../lib/adminAuth';
+import { writeAuditLogSafely } from '../lib/audit';
+import {
+    assertQuoteTransition,
+    normalizeQuoteStatus,
+    OperationsValidationError,
+} from '../lib/operations';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -14,7 +21,7 @@ interface Env {
     ENVIRONMENT: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: any } }>();
 
 // Fields stored as JSON strings — parse for client convenience.
 const JSON_ARRAY_FIELDS = ['travelTypes', 'travel_types', 'accommodations'] as const;
@@ -32,6 +39,7 @@ const parseNestedJson = (value: any, maxDepth = 2) => {
 
 const parseQuoteRow = (q: any) => {
     const out: any = { ...q };
+    out.status = normalizeQuoteStatus(out.status);
     for (const f of JSON_ARRAY_FIELDS) {
         const v = out[f];
         if (typeof v === 'string' && v.trim().startsWith('[')) {
@@ -148,11 +156,17 @@ app.post('/', async (c) => {
                 : (body.accommodations || null),
             vehicle: body.vehicle || null,
             additionalRequest: body.additional_request || null,
-            status: body.status || 'new',
+            // Public submissions always enter the same workflow start state.
+            status: 'new',
             createdAt: body.created_at || new Date().toISOString(),
         }).run();
 
-        return c.json({ id, success: true });
+        await writeAuditLogSafely(c.env.DB, {
+            entityType: 'quote', entityId: id, action: 'create',
+            after: { id, type: body.type, status: 'new' },
+            metadata: { source: 'public_form' },
+        });
+        return c.json({ id, success: true, status: 'new' });
     } catch (e: any) {
         console.error('[Quotes POST Error]', e);
         const cause = e?.cause?.message || e?.cause || '';
@@ -162,17 +176,12 @@ app.post('/', async (c) => {
 });
 
 // PUT /api/quotes/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
-    // Auth check
-    const lucia = initializeLucia(c.env.DB);
-    const sessionId = getCookie(c, lucia.sessionCookieName);
-    if (!sessionId) return c.json({ error: "Unauthorized" }, 401);
-    const { session, user } = await lucia.validateSession(sessionId);
-    if (!session || user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
-
     const db = drizzle(c.env.DB);
     const body = await c.req.json();
+    const existing = await db.select().from(quotes).where(eq(quotes.id, id)).get();
+    if (!existing) return c.json({ error: 'Quote not found' }, 404);
 
     const updates: Record<string, any> = {};
     const assign = (property: string, ...keys: string[]) => {
@@ -206,6 +215,15 @@ app.put('/:id', async (c) => {
     assign('itineraryTemplateId', 'itinerary_template_id', 'itineraryTemplateId');
     assign('documentContent', 'document_content', 'documentContent');
 
+    try {
+        if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+            updates.status = assertQuoteTransition(existing.status, updates.status);
+        }
+    } catch (error) {
+        if (error instanceof OperationsValidationError) return c.json({ error: error.message }, 400);
+        throw error;
+    }
+
     if (Array.isArray(updates.travelTypes)) updates.travelTypes = JSON.stringify(updates.travelTypes);
     if (Array.isArray(updates.accommodations)) updates.accommodations = JSON.stringify(updates.accommodations);
     if (updates.documentContent !== undefined && updates.documentContent !== null && typeof updates.documentContent !== 'string') {
@@ -217,21 +235,31 @@ app.put('/:id', async (c) => {
         updatedAt: new Date().toISOString(),
     }).where(eq(quotes.id, id)).run();
 
+    const updated = await db.select().from(quotes).where(eq(quotes.id, id)).get();
+    const actor = c.get('user');
+    await writeAuditLogSafely(c.env.DB, {
+        entityType: 'quote', entityId: id, action: 'update',
+        actorId: actor?.id, actorRole: actor?.role,
+        before: existing, after: updated,
+        metadata: { changedFields: Object.keys(updates) },
+    });
+
     return c.json({ success: true });
 });
 
 // DELETE /api/quotes/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
-    // Auth check
-    const lucia = initializeLucia(c.env.DB);
-    const sessionId = getCookie(c, lucia.sessionCookieName);
-    if (!sessionId) return c.json({ error: "Unauthorized" }, 401);
-    const { session, user } = await lucia.validateSession(sessionId);
-    if (!session || user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
-
     const db = drizzle(c.env.DB);
+    const existing = await db.select().from(quotes).where(eq(quotes.id, id)).get();
+    if (!existing) return c.json({ error: 'Quote not found' }, 404);
     await db.delete(quotes).where(eq(quotes.id, id)).run();
+
+    const actor = c.get('user');
+    await writeAuditLogSafely(c.env.DB, {
+        entityType: 'quote', entityId: id, action: 'delete',
+        actorId: actor?.id, actorRole: actor?.role, before: existing,
+    });
 
     return c.json({ success: true });
 });

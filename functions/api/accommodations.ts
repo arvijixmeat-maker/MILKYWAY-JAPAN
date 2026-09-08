@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
+import { writeAuditLogSafely } from '../lib/audit';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: any } }>();
 
 // GET /api/accommodations
 app.get('/', async (c) => {
@@ -27,7 +29,7 @@ app.get('/:id', async (c) => {
 });
 
 // POST /api/accommodations/bulk
-app.post('/bulk', async (c) => {
+app.post('/bulk', requireAdmin, async (c) => {
     const body = await c.req.json();
     const db = c.env.DB;
     const items: any[] = body.accommodations || [];
@@ -67,14 +69,20 @@ app.post('/bulk', async (c) => {
                 ).run();
             }
         }
-        return c.json({ success: true });
+        const actor = c.get('user');
+        await writeAuditLogSafely(db, {
+            entityType: 'accommodation', entityId: 'bulk', action: 'update',
+            actorId: actor?.id, actorRole: actor?.role,
+            metadata: { count: items.length },
+        });
+        return c.json({ success: true, count: items.length });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
 });
 
 // POST /api/accommodations
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
@@ -83,6 +91,12 @@ app.post('/', async (c) => {
             "INSERT INTO accommodations (id, name, description, location, price_per_night, images, thumbnail, amenities, rating, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ).bind(id, data.name, data.description || '', data.location || '', data.price_per_night || 0,
             JSON.stringify(data.images || []), data.thumbnail || '', JSON.stringify(data.amenities || []), data.rating || 0, data.is_active ?? 1).run();
+        const actor = c.get('user');
+        await writeAuditLogSafely(db, {
+            entityType: 'accommodation', entityId: id, action: 'create',
+            actorId: actor?.id, actorRole: actor?.role,
+            after: { id, type: data.type, status: data.is_active === 0 ? 'inactive' : 'active' },
+        });
         return c.json({ id, ...data });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -90,15 +104,23 @@ app.post('/', async (c) => {
 });
 
 // PUT /api/accommodations/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
     try {
+        const before = await db.prepare('SELECT * FROM accommodations WHERE id=?').bind(id).first();
+        if (!before) return c.json({ error: 'Not found' }, 404);
         await db.prepare(
             "UPDATE accommodations SET name=?, description=?, location=?, price_per_night=?, images=?, thumbnail=?, amenities=?, rating=?, is_active=? WHERE id=?"
         ).bind(data.name, data.description || '', data.location || '', data.price_per_night || 0,
             JSON.stringify(data.images || []), data.thumbnail || '', JSON.stringify(data.amenities || []), data.rating || 0, data.is_active ?? 1, id).run();
+        const actor = c.get('user');
+        await writeAuditLogSafely(db, {
+            entityType: 'accommodation', entityId: id, action: 'update',
+            actorId: actor?.id, actorRole: actor?.role, before,
+            after: { id, type: data.type, status: data.is_active === 0 ? 'inactive' : 'active' },
+        });
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -106,11 +128,18 @@ app.put('/:id', async (c) => {
 });
 
 // DELETE /api/accommodations/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {
+        const before = await db.prepare('SELECT * FROM accommodations WHERE id=?').bind(id).first();
+        if (!before) return c.json({ error: 'Not found' }, 404);
         await db.prepare('DELETE FROM accommodations WHERE id=?').bind(id).run();
+        const actor = c.get('user');
+        await writeAuditLogSafely(db, {
+            entityType: 'accommodation', entityId: id, action: 'delete',
+            actorId: actor?.id, actorRole: actor?.role, before,
+        });
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);

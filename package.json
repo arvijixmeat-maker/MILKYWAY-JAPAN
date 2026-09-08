@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "node scripts/check-icon-subset.mjs && vite build",
     "check:icons": "node scripts/check-icon-subset.mjs",
+    "test": "node --test --experimental-strip-types tests/**/*.test.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

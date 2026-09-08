@@ -5,6 +5,17 @@ import { eq, desc, or } from 'drizzle-orm';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { sendPayPalInvoice } from '../lib/paypal';
+import { requireAdmin } from '../lib/adminAuth';
+import { requireAuth } from '../lib/userAuth';
+import { writeAuditLogSafely } from '../lib/audit';
+import {
+    assertReservationTransition,
+    calculateAuthoritativeProductPrice,
+    normalizeIdempotencyKey,
+    normalizeReservationStatus,
+    OperationsValidationError,
+    validateManualPrice,
+} from '../lib/operations';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -19,7 +30,7 @@ interface Env {
     PAYPAL_ENVIRONMENT?: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: any } }>();
 
 // GET /api/reservations
 app.get('/', async (c) => {
@@ -85,32 +96,19 @@ app.get('/', async (c) => {
 });
 
 // GET /api/reservations/:id
-app.get('/:id', async (c) => {
+app.get('/:id', requireAuth, async (c) => {
     const id = c.req.param('id');
     const db = drizzle(c.env.DB);
     const result = await db.select().from(reservations).where(eq(reservations.id, id)).get();
 
     if (!result) return c.json({ error: 'Reservation not found' }, 404);
 
-    // If the reservation belongs to a specific user, enforce auth
-    if (result.userId !== null) {
-        const lucia = initializeLucia(c.env.DB);
-        const sessionId = getCookie(c, lucia.sessionCookieName);
-        
-        if (!sessionId) {
-            return c.json({ error: "Unauthorized" }, 401);
-        }
-
-        const { session, user } = await lucia.validateSession(sessionId);
-        if (!session) {
-            return c.json({ error: "Unauthorized" }, 401);
-        }
-
-        if (user.role !== 'admin' && result.userId !== user.id) {
-            return c.json({ error: "Forbidden" }, 403);
-        }
+    const user = c.get('user');
+    const ownsReservation = result.userId === user.id
+        || (!!user.email && result.customerEmail === user.email);
+    if (user.role !== 'admin' && !ownsReservation) {
+        return c.json({ error: 'Forbidden' }, 403);
     }
-    // If userId is null (guest reservation), allow public access since the UUID is practically unguessable.
 
     const parsed = {
         ...result,
@@ -136,28 +134,12 @@ app.get('/:id', async (c) => {
 });
 
 // PUT /api/reservations/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
-    const lucia = initializeLucia(c.env.DB);
-    const sessionId = getCookie(c, lucia.sessionCookieName);
-
-    if (!sessionId) {
-        return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const { session, user } = await lucia.validateSession(sessionId);
-    if (!session) {
-        return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    // Only Admin can update reservations for now (or maybe user can cancel?)
-    // For Admin Reservation Manage, it is admin only.
-    if (user.role !== 'admin') {
-        return c.json({ error: "Forbidden" }, 403);
-    }
-
     const db = drizzle(c.env.DB);
     const body = await c.req.json();
+    const existing = await db.select().from(reservations).where(eq(reservations.id, id)).get();
+    if (!existing) return c.json({ error: 'Reservation not found' }, 404);
 
     // Validate body?
     // We expect partial updates or full updates.
@@ -182,10 +164,39 @@ app.put('/:id', async (c) => {
         start_date: 'startDate',
         end_date: 'endDate',
         updated_at: 'updatedAt',
+        quote_id: 'quoteId',
+        price_source: 'priceSource',
+        price_verified_at: 'priceVerifiedAt',
     };
     const normalized: any = {};
     for (const [k, v] of Object.entries(body)) {
         normalized[snakeToCamel[k] || k] = v;
+    }
+
+    try {
+        if (Object.prototype.hasOwnProperty.call(normalized, 'status')) {
+            normalized.status = assertReservationTransition(existing.status, normalized.status);
+        }
+        const priceFields = ['totalPrice', 'depositAmount', 'balanceAmount', 'priceBreakdown'];
+        if (priceFields.some((field) => Object.prototype.hasOwnProperty.call(normalized, field))) {
+            let submittedBreakdown = normalized.priceBreakdown;
+            if (typeof submittedBreakdown === 'string') {
+                try { submittedBreakdown = JSON.parse(submittedBreakdown); } catch { submittedBreakdown = {}; }
+            }
+            const checked = validateManualPrice({
+                total: normalized.totalPrice ?? submittedBreakdown?.total ?? existing.totalPrice,
+                deposit: normalized.depositAmount ?? submittedBreakdown?.deposit ?? existing.depositAmount,
+            });
+            normalized.totalPrice = checked.total;
+            normalized.depositAmount = checked.deposit;
+            normalized.balanceAmount = checked.local;
+            normalized.priceBreakdown = checked;
+            normalized.priceSource = 'admin_manual';
+            normalized.priceVerifiedAt = new Date().toISOString();
+        }
+    } catch (error) {
+        if (error instanceof OperationsValidationError) return c.json({ error: error.message }, 400);
+        throw error;
     }
 
     // Serialize nested objects/arrays to JSON strings for TEXT columns
@@ -206,7 +217,7 @@ app.put('/:id', async (c) => {
         'userId', 'reservationNumber', 'itineraryTemplateId', 'contractData',
         'assignedGuide', 'contractUrl', 'itineraryUrl',
         'depositStatus', 'balanceStatus', 'areAssignmentsVisibleToUser', 'priceBreakdown',
-        'documentContent', 'source', 'productId',
+        'documentContent', 'source', 'productId', 'quoteId', 'priceSource', 'priceVerifiedAt',
         'createdAt', 'updatedAt',
     ]);
     const filtered: any = {};
@@ -215,11 +226,20 @@ app.put('/:id', async (c) => {
     }
 
     if (Object.keys(filtered).length > 0) {
+        filtered.updatedAt = new Date().toISOString();
         await db.update(reservations).set(filtered).where(eq(reservations.id, id)).run();
     }
 
     // Fetch updated
     const updated = await db.select().from(reservations).where(eq(reservations.id, id)).get();
+
+    const actor = c.get('user');
+    await writeAuditLogSafely(c.env.DB, {
+        entityType: 'reservation', entityId: id, action: 'update',
+        actorId: actor?.id, actorRole: actor?.role,
+        before: existing, after: updated,
+        metadata: { changedFields: Object.keys(filtered) },
+    });
 
     const parsed = {
         ...updated!,
@@ -236,8 +256,8 @@ app.put('/:id', async (c) => {
             deposit: updated?.depositAmount,
             local: updated?.balanceAmount
         },
-        depositStatus: updated?.status === 'confirmed' ? 'paid' : 'unpaid',
-        balanceStatus: updated?.status === 'completed' ? 'paid' : 'unpaid',
+        depositStatus: updated?.depositStatus || (updated?.status === 'confirmed' ? 'paid' : 'unpaid'),
+        balanceStatus: updated?.balanceStatus || (updated?.status === 'completed' ? 'paid' : 'unpaid'),
         dailyAccommodations: updated?.dailyAccommodations ? JSON.parse(updated.dailyAccommodations) : undefined,
         history: updated?.history ? JSON.parse(updated.history) : undefined,
     };
@@ -246,7 +266,7 @@ app.put('/:id', async (c) => {
 });
 
 // POST /api/reservations
-app.post('/', async (c) => {
+app.post('/', requireAuth, async (c) => {
     const body = await c.req.json();
     const db = drizzle(c.env.DB);
 
@@ -259,6 +279,105 @@ app.post('/', async (c) => {
 
     if (!productName || !customerName) {
         return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const actor = c.get('user');
+    const cleanCustomerEmail = customerEmail ? String(customerEmail).trim() : null;
+    const cleanCustomerPhone = customerPhone ? String(customerPhone).trim() : null;
+    if (actor.role !== 'admin' && (!cleanCustomerEmail || !cleanCustomerPhone)) {
+        return c.json({ error: 'Customer email and phone are required' }, 400);
+    }
+    const reservationType = body.type ? String(body.type) : 'tour';
+    const productId = (body.product_id || body.productId) ? String(body.product_id || body.productId) : null;
+    const quoteId = (body.quote_id || body.quoteId) ? String(body.quote_id || body.quoteId) : null;
+    const travelers = Number(body.total_people || body.totalPeople || 1);
+    let resolvedProductName = String(productName);
+    let idempotencyKey: string | null;
+    let authoritativePrice: { total: number; deposit: number; local: number };
+    let priceSource: 'product_catalog' | 'quote' | 'admin_manual';
+    let sourceQuoteBefore: Record<string, unknown> | null = null;
+
+    try {
+        idempotencyKey = normalizeIdempotencyKey(
+            c.req.header('Idempotency-Key') || body.idempotency_key || body.idempotencyKey,
+        );
+
+        if (idempotencyKey) {
+            const duplicate: any = await c.env.DB.prepare(
+                'SELECT id, quote_id, reservation_number, total_price, deposit_amount, balance_amount FROM reservations WHERE idempotency_key = ?',
+            ).bind(idempotencyKey).first();
+            if (duplicate) {
+                if (duplicate.quote_id) {
+                    await c.env.DB.prepare(
+                        "UPDATE quotes SET status = 'converted', updated_at = ? WHERE id = ? AND status <> 'converted'",
+                    ).bind(new Date().toISOString(), duplicate.quote_id).run();
+                }
+                return c.json({
+                    message: 'Reservation already created',
+                    id: duplicate.id,
+                    reservationNumber: duplicate.reservation_number,
+                    priceBreakdown: {
+                        total: Number(duplicate.total_price || 0),
+                        deposit: Number(duplicate.deposit_amount || 0),
+                        local: Number(duplicate.balance_amount || 0),
+                    },
+                    idempotentReplay: true,
+                }, 200);
+            }
+        }
+
+        if (reservationType === 'tour' && productId) {
+            const product: any = await c.env.DB.prepare(`
+                SELECT id, name, status, price, pricing_options, accommodation_options, vehicle_options
+                FROM products WHERE id = ?
+            `).bind(productId).first();
+            if (!product || product.status !== 'active') {
+                return c.json({ error: 'Product is unavailable' }, 409);
+            }
+            resolvedProductName = String(product.name);
+            authoritativePrice = calculateAuthoritativeProductPrice(product, {
+                people: travelers,
+                accommodationId: body.selected_accommodation_id || body.selectedAccommodationId,
+                vehicleId: body.selected_vehicle_id || body.selectedVehicleId,
+            });
+            priceSource = 'product_catalog';
+        } else if (reservationType === 'quote' && quoteId) {
+            const quote: any = await c.env.DB.prepare(`
+                SELECT id, user_id, confirmed_price, deposit, status FROM quotes WHERE id = ?
+            `).bind(quoteId).first();
+            if (!quote) return c.json({ error: 'Quote not found' }, 404);
+            sourceQuoteBefore = quote;
+            if (actor.role !== 'admin' && quote.user_id !== actor.id) {
+                return c.json({ error: 'Forbidden' }, 403);
+            }
+            if (Number(quote.confirmed_price) > 0) {
+                authoritativePrice = validateManualPrice({
+                    total: quote.confirmed_price,
+                    deposit: quote.deposit || 0,
+                });
+            } else if (actor.role === 'admin') {
+                authoritativePrice = validateManualPrice(body.price_breakdown || {
+                    total: body.totalAmount,
+                    deposit: body.deposit,
+                });
+            } else {
+                return c.json({ error: 'Quote price is not confirmed' }, 409);
+            }
+            priceSource = 'quote';
+        } else if (actor.role === 'admin') {
+            // Phone/LINE/manual bookings and first-time quote conversions are
+            // intentionally admin-priced, but are clearly marked in the record.
+            authoritativePrice = validateManualPrice(body.price_breakdown || {
+                total: body.totalAmount,
+                deposit: body.deposit,
+            });
+            priceSource = 'admin_manual';
+        } else {
+            return c.json({ error: 'A valid product or quote is required' }, 400);
+        }
+    } catch (error) {
+        if (error instanceof OperationsValidationError) return c.json({ error: error.message }, 400);
+        throw error;
     }
 
     const id = body.id || crypto.randomUUID();
@@ -281,26 +400,34 @@ app.post('/', async (c) => {
     try {
         await db.insert(reservations).values({
             id,
-            type: body.type ? String(body.type) : 'tour',
-            productName: String(productName),
-            productId: (body.product_id || body.productId) ? String(body.product_id || body.productId) : null,
-            userId: (body.user_id || body.userId) ? String(body.user_id || body.userId) : null,
+            type: reservationType,
+            productName: resolvedProductName,
+            productId,
+            quoteId,
+            userId: actor.role === 'admin'
+                ? ((body.user_id || body.userId) ? String(body.user_id || body.userId) : null)
+                : actor.id,
             customerName: String(customerName),
-            customerEmail: String(customerEmail),
-            customerPhone: String(customerPhone),
-            travelers: Number(body.total_people || body.totalPeople || 1),
+            customerEmail: cleanCustomerEmail,
+            customerPhone: cleanCustomerPhone,
+            travelers,
             startDate: (body.start_date || body.date) ? String(body.start_date || body.date) : null,
             endDate: body.end_date ? String(body.end_date) : null,
             duration: body.duration ? String(body.duration) : null,
-            status: body.status ? String(body.status) : 'pending_payment',
+            status: actor.role === 'admin'
+                ? normalizeReservationStatus(body.status || 'pending_payment')
+                : 'pending_payment',
             source: body.source ? String(body.source) : null,
-            totalPrice: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
-            depositAmount: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
-            balanceAmount: Number(body.price_breakdown?.local ?? body.balance ?? 0),
+            totalPrice: authoritativePrice.total,
+            depositAmount: authoritativePrice.deposit,
+            balanceAmount: authoritativePrice.local,
             paymentMethod: body.paymentMethod ? String(body.paymentMethod) : null,
             notes: body.notes ? String(body.notes) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,
-            history: body.history ? JSON.stringify(body.history) : null,
+            history: JSON.stringify([
+                ...(Array.isArray(body.history) ? body.history : []),
+                { type: 'reservation_created', timestamp: new Date().toISOString(), actor: actor.role },
+            ]),
             itineraryTemplateId: (body.itinerary_template_id || body.itineraryTemplateId)
                 ? String(body.itinerary_template_id || body.itineraryTemplateId)
                 : null,
@@ -310,18 +437,51 @@ app.post('/', async (c) => {
                     ? (typeof body.documentContent === 'string' ? body.documentContent : JSON.stringify(body.documentContent))
                     : null,
             reservationNumber,
+            idempotencyKey,
+            priceSource,
+            priceVerifiedAt: new Date().toISOString(),
         }).run();
+
+        await writeAuditLogSafely(c.env.DB, {
+            entityType: 'reservation', entityId: id, action: 'create',
+            actorId: actor.id, actorRole: actor.role,
+            after: {
+                id, type: reservationType, status: body.status || 'pending_payment',
+                productId, quoteId, travelers,
+                totalPrice: authoritativePrice.total,
+                depositAmount: authoritativePrice.deposit,
+                balanceAmount: authoritativePrice.local,
+                priceSource,
+            },
+            metadata: { idempotencyKey: idempotencyKey || undefined },
+        });
+
+        // Quote checkout and reservation creation are finalized on the server;
+        // the customer must not need admin-only quote update permissions.
+        if (quoteId) {
+            const convertedAt = new Date().toISOString();
+            await c.env.DB.prepare(
+                "UPDATE quotes SET status = 'converted', updated_at = ? WHERE id = ?",
+            ).bind(convertedAt, quoteId).run();
+            await writeAuditLogSafely(c.env.DB, {
+                entityType: 'quote', entityId: quoteId, action: 'update',
+                actorId: actor.id, actorRole: actor.role,
+                before: sourceQuoteBefore,
+                after: { id: quoteId, status: 'converted', updated_at: convertedAt },
+                metadata: { reason: 'reservation_created', reservationId: id },
+            });
+        }
 
         const missingPayPalEnv = [
             !c.env.PAYPAL_CLIENT_ID && 'PAYPAL_CLIENT_ID',
             !c.env.PAYPAL_SECRET_KEY && 'PAYPAL_SECRET_KEY',
             !c.env.PAYPAL_BUSINESS_EMAIL && 'PAYPAL_BUSINESS_EMAIL',
         ].filter(Boolean);
-        const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
+        const depositAmt = authoritativePrice.deposit;
 
         if (missingPayPalEnv.length > 0) {
             console.warn(`[PayPal Invoice] skipped: missing ${missingPayPalEnv.join(', ')}`);
-        } else if (!customerEmail) {
+        } else if (!cleanCustomerEmail) {
             console.warn(`[PayPal Invoice] skipped: customer email is missing (${reservationNumber})`);
         } else if (!Number.isFinite(depositAmt) || depositAmt <= 0) {
             console.warn(`[PayPal Invoice] skipped: deposit amount is ${depositAmt || 0} (${reservationNumber})`);
@@ -330,10 +490,10 @@ app.post('/', async (c) => {
                 clientId: c.env.PAYPAL_CLIENT_ID,
                 secret: c.env.PAYPAL_SECRET_KEY,
                 businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
-                customerEmail: String(customerEmail),
+                customerEmail: cleanCustomerEmail,
                 customerName: String(customerName),
                 reservationNumber,
-                productName: String(productName),
+                productName: resolvedProductName,
                 depositAmount: depositAmt,
                 environment: c.env.PAYPAL_ENVIRONMENT,
             }).then(({ invoiceId, invoiceNumber }) => {
@@ -354,27 +514,43 @@ app.post('/', async (c) => {
             }
         }
 
-        return c.json({ message: 'Reservation created', id, reservationNumber }, 201);
+        return c.json({
+            message: 'Reservation created', id, reservationNumber,
+            priceBreakdown: authoritativePrice,
+            priceSource,
+        }, 201);
     } catch (error: any) {
+        if (idempotencyKey) {
+            try {
+                const duplicate: any = await c.env.DB.prepare(
+                    'SELECT id, quote_id, reservation_number, total_price, deposit_amount, balance_amount FROM reservations WHERE idempotency_key = ?',
+                ).bind(idempotencyKey).first();
+                if (duplicate) {
+                    if (duplicate.quote_id) {
+                        await c.env.DB.prepare(
+                            "UPDATE quotes SET status = 'converted', updated_at = ? WHERE id = ? AND status <> 'converted'",
+                        ).bind(new Date().toISOString(), duplicate.quote_id).run();
+                    }
+                    return c.json({
+                        message: 'Reservation already created', id: duplicate.id,
+                        reservationNumber: duplicate.reservation_number,
+                        priceBreakdown: {
+                            total: Number(duplicate.total_price || 0),
+                            deposit: Number(duplicate.deposit_amount || 0),
+                            local: Number(duplicate.balance_amount || 0),
+                        },
+                        idempotentReplay: true,
+                    }, 200);
+                }
+            } catch { /* surface original insert failure */ }
+        }
         return c.json({ error: error.message }, 500);
     }
 });
 
 // DELETE /api/reservations/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
-    const lucia = initializeLucia(c.env.DB);
-    const sessionId = getCookie(c, lucia.sessionCookieName);
-
-    if (!sessionId) {
-        return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const { session, user } = await lucia.validateSession(sessionId);
-    if (!session || user.role !== 'admin') {
-        return c.json({ error: "Forbidden" }, 403);
-    }
-
     const db = drizzle(c.env.DB);
 
     // Check if exists
@@ -384,6 +560,12 @@ app.delete('/:id', async (c) => {
     }
 
     await db.delete(reservations).where(eq(reservations.id, id)).run();
+
+    const actor = c.get('user');
+    await writeAuditLogSafely(c.env.DB, {
+        entityType: 'reservation', entityId: id, action: 'delete',
+        actorId: actor?.id, actorRole: actor?.role, before: existing,
+    });
 
     return c.json({ success: true, id });
 });

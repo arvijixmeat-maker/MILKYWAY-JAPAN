@@ -12,7 +12,7 @@ export interface QuoteRequest {
     headcount: string;
     period: string;
     date: string;
-    status: 'new' | 'processing' | 'completed' | 'converted' | 'reservation_requested' | 'answered';
+    status: 'new' | 'processing' | 'answered' | 'reservation_requested' | 'converted' | 'cancelled';
     adminNote?: string;
     estimateUrl?: string;
     userId?: string;
@@ -653,9 +653,9 @@ export const QuoteDetailModal: React.FC<{
         setCopiedEstimateUrl(true);
         setTimeout(() => setCopiedEstimateUrl(false), 1500);
     };
-    const statusTone: Record<string, string> = { new: 'b-red', processing: 'b-amber', answered: 'b-blue', reservation_requested: 'b-purple', converted: 'b-gray', completed: 'b-green' };
+    const statusTone: Record<string, string> = { new: 'b-red', processing: 'b-amber', answered: 'b-blue', reservation_requested: 'b-purple', converted: 'b-gray', cancelled: 'b-gray' };
     const nextAction = (() => {
-        if (request.status === 'converted' || request.status === 'completed') return null;
+        if (request.status === 'converted' || request.status === 'cancelled') return null;
         if (request.status === 'reservation_requested') return { label: '예약으로 전환', desc: '고객이 예약을 요청했습니다 — 확정 내용으로 전환하세요.', icon: 'sync_alt', onClick: onOpenConvert };
         if (!canSendEstimate) return { label: '견적 작성 · 누락 항목 확인', desc: `${missingSendItems[0] || '필수 항목'} 확인이 필요합니다.`, icon: 'edit_note', onClick: () => scrollToSec('quote') };
         if (request.status !== 'answered') return { label: '견적서 발송 처리', desc: '입력 완료 — 고객에게 견적을 발송하세요.', icon: 'send', onClick: handleSend };

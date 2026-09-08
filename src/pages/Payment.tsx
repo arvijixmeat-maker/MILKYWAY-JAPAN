@@ -30,6 +30,7 @@ export const Payment: React.FC = () => {
 
     // Processing state
     const [isProcessing, setIsProcessing] = useState(false);
+    const submissionKeyRef = React.useRef(`checkout:${crypto.randomUUID()}`);
 
     // Auto-fill user info
     useEffect(() => {
@@ -193,9 +194,13 @@ export const Payment: React.FC = () => {
                 status: 'pending_payment',
                 product_name: product.name,
                 product_id: isQuote ? null : product.id,
+                quote_id: isQuote ? quoteId : null,
                 total_people: totalPeople,
                 customer_info: customerInfoForSave,
                 price_breakdown: priceBreakdown,
+                selected_accommodation_id: reservationData.selectedAccomId || null,
+                selected_vehicle_id: reservationData.selectedVehicleId || null,
+                idempotency_key: submissionKeyRef.current,
                 created_at: now
             };
 
@@ -213,19 +218,12 @@ export const Payment: React.FC = () => {
 
             const data = await api.reservations.create(newReservation);
             const reservationId = data.id;
+            const savedPrice = data.priceBreakdown || priceBreakdown;
             const reservationNumber = data.reservationNumber
                 ? String(data.reservationNumber)
                 : `MN-${data.id.slice(0, 8).toUpperCase()}`;
 
-            // Update quote status if this is a quote reservation
-            if (isQuote && quoteId) {
-                try {
-                    await (api.quotes as any).update(quoteId, { status: 'converted' });
-                } catch (quoteUpdateError) {
-                    console.error('Failed to update quote status:', quoteUpdateError);
-                    // We don't block the reservation flow, but log it
-                }
-            }
+            // Quote conversion is finalized by the reservation API.
 
             // The reservation is already persisted at this point. Notification
             // failures must not turn a successful booking into a customer-facing error.
@@ -239,11 +237,11 @@ export const Payment: React.FC = () => {
                         reservationId: reservationNumber,
                         reservationDbId: reservationId,
                         userId: me.id,
-                        depositAmount: formatPrice(newReservation.price_breakdown.deposit),
+                        depositAmount: formatPrice(savedPrice.deposit),
                         customerPhone: newReservation.customer_info.phone,
                         customerEmail: newReservation.customer_info.email,
-                        totalAmount: formatPrice(newReservation.price_breakdown.total),
-                        localAmount: formatPrice(newReservation.price_breakdown.local),
+                        totalAmount: formatPrice(savedPrice.total),
+                        localAmount: formatPrice(savedPrice.local),
                     }
                 );
             } catch (notificationError) {

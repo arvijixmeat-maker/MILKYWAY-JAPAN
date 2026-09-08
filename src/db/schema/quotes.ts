@@ -17,7 +17,7 @@ export const quotes = sqliteTable('quotes', {
     vehicle: text('vehicle'),
     additionalRequest: text('additional_request'),
     attachmentUrl: text('attachment_url'),
-    status: text('status').default('pending'),
+    status: text('status').default('new'),
     adminNote: text('admin_note'),
     estimateUrl: text('estimate_url'),
 

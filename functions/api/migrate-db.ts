@@ -1,12 +1,14 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
+import { writeAuditLogSafely } from '../lib/audit';
 
 type Env = {
     DB: any;
 };
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: any } }>();
 
-app.get('/', async (c) => {
+app.get('/', requireAdmin, async (c) => {
     let migrationResults: string[] = [];
 
     // Add reservation_number column to reservations table
@@ -46,6 +48,10 @@ app.get('/', async (c) => {
         "duration TEXT",
         "source TEXT",                                   // 주문 경로: line | email | phone | website | visit | other (수동 추가 시 입력)
         "product_id TEXT",                               // 예약한 상품 ID — 상품 이미지·정보 정확 연결용 (동명 상품 혼동 방지)
+        "quote_id TEXT",                                 // 맞춤 견적에서 전환된 예약의 원본 견적
+        "idempotency_key TEXT",                          // 중복 예약 생성 방지 키
+        "price_source TEXT",                             // product_catalog | quote | admin_manual
+        "price_verified_at TEXT",                        // 서버 가격 검증 시각
     ];
     for (const colDef of reservationColumns) {
         try {
@@ -54,6 +60,41 @@ app.get('/', async (c) => {
         } catch (e: any) {
             migrationResults.push(`Skipped reservations.${colDef}: ${e.message}`);
         }
+    }
+
+    try {
+        await c.env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_idempotency ON reservations(idempotency_key)').run();
+        migrationResults.push('Created idx_reservations_idempotency');
+    } catch (e: any) {
+        migrationResults.push(`Skipped idx_reservations_idempotency: ${e.message}`);
+    }
+
+    // Immutable operational audit trail. Snapshots intentionally exclude
+    // customer contact details and focus on state/payment/assignment changes.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id TEXT PRIMARY KEY NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                actor_id TEXT,
+                actor_role TEXT,
+                previous_data TEXT,
+                next_data TEXT,
+                metadata TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+        migrationResults.push('Created audit_logs table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped audit_logs table: ${e.message}`);
+    }
+    try {
+        await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id, created_at)').run();
+        migrationResults.push('Created idx_audit_logs_entity');
+    } catch (e: any) {
+        migrationResults.push(`Skipped idx_audit_logs_entity: ${e.message}`);
     }
 
     // In-app notifications table
@@ -129,7 +170,7 @@ app.get('/', async (c) => {
                 vehicle TEXT,
                 additional_request TEXT,
                 attachment_url TEXT,
-                status TEXT DEFAULT 'pending',
+                status TEXT DEFAULT 'new',
                 admin_note TEXT,
                 estimate_url TEXT,
                 confirmed_start_date TEXT,
@@ -218,7 +259,7 @@ app.get('/', async (c) => {
         "vehicle TEXT",
         "additional_request TEXT",
         "attachment_url TEXT",
-        "status TEXT DEFAULT 'pending'",
+        "status TEXT DEFAULT 'new'",
         "admin_note TEXT",
         "estimate_url TEXT",
         "confirmed_start_date TEXT",
@@ -239,6 +280,23 @@ app.get('/', async (c) => {
         } catch (e: any) {
             migrationResults.push(`Skipped quotes.${colDef}: ${e.message}`);
         }
+    }
+
+    try {
+        await c.env.DB.prepare(`
+            UPDATE quotes
+            SET status = CASE
+                WHEN status IS NULL OR status = 'pending' THEN 'new'
+                WHEN status = 'completed' THEN 'answered'
+                WHEN status = 'pending_payment' THEN 'reservation_requested'
+                WHEN status IN ('paid', 'confirmed') THEN 'converted'
+                ELSE status
+            END
+            WHERE status IS NULL OR status IN ('pending', 'completed', 'pending_payment', 'paid', 'confirmed')
+        `).run();
+        migrationResults.push('Normalized legacy quote statuses');
+    } catch (e: any) {
+        migrationResults.push(`Skipped quote status normalization: ${e.message}`);
     }
 
     // Create accommodations table
@@ -483,6 +541,16 @@ app.get('/', async (c) => {
     } catch (e: any) {
         migrationResults.push(`Skipped settings cleanup: ${e.message}`);
     }
+
+    const actor = c.get('user');
+    await writeAuditLogSafely(c.env.DB, {
+        entityType: 'migration',
+        entityId: 'admin-ops-foundation',
+        action: 'migrate',
+        actorId: actor?.id,
+        actorRole: actor?.role,
+        metadata: { resultCount: migrationResults.length },
+    });
 
     return c.json({
         success: true,

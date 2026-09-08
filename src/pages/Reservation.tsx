@@ -159,7 +159,6 @@ export const Reservation: React.FC = () => {
 
         const baseTotal = baseOption.pricePerPerson * totalPeople;
         const baseDeposit = (baseOption.depositPerPerson || 0) * totalPeople;
-        const baseLocal = (baseOption.localPaymentPerPerson || 0) * totalPeople;
 
         let vehicleTotal = 0;
         if (selectedVehicleId && product.vehicleOptions) {
@@ -176,10 +175,8 @@ export const Reservation: React.FC = () => {
         return {
             total: baseTotal + vehicleTotal + accomTotal,
             deposit: baseDeposit, // 예약금 (기본)
-            local: baseLocal,     // 현지 지불 (기본)
-            // Add-ons are usually added to total. 
-            // If add-ons need to be in deposit or local, logic needs to adjust.
-            // For now, assume add-ons are just adding to the Total Price.
+            // 옵션 비용은 현지 잔금에 포함한다. 서버도 같은 규칙으로 재계산한다.
+            local: Math.max(0, baseTotal + vehicleTotal + accomTotal - baseDeposit),
         };
     }, [baseOption, totalPeople, selectedVehicleId, selectedAccomId, product]);
 

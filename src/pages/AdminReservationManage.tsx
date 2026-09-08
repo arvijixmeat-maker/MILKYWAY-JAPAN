@@ -23,7 +23,7 @@ interface Reservation {
     date: string;
     bookedAt: string;
     bookedAtMs?: number;
-    status: 'pending_payment' | 'paid' | 'confirmed' | 'cancelled' | 'new' | 'processing' | 'answered' | 'reservation_requested' | 'converted';
+    status: 'pending_payment' | 'paid' | 'confirmed' | 'completed' | 'cancelled' | 'new' | 'processing' | 'answered' | 'reservation_requested' | 'converted';
 
     // Payment Fields
     totalAmount: number;
@@ -263,6 +263,7 @@ const STATUS_LABELS: Record<string, string> = {
     answered: '견적 발송됨',
     reservation_requested: '예약 요청됨',
     converted: '예약 전환됨',
+    completed: '여행 완료',
 };
 
 // 숙소 배정 보드(Байр захиалга)의 수배 상태(몽골어 저장값) → 한국어 라벨·색.
@@ -274,7 +275,7 @@ const BOOKING_STATUS_KO: Record<string, { label: string; bg: string; fg: string 
     'Баталгаажсан': { label: '수배 확정', bg: '#E4F7EC', fg: '#0F7A43' },
 };
 
-const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Reservation['status']) => void }) => {
+const StatusDropdown = ({ status, kind, onChange }: { status: string, kind: Reservation['type'], onChange: (s: Reservation['status']) => void }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -289,6 +290,9 @@ const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Re
     }, []);
 
     const labels = STATUS_LABELS;
+    const allowedKeys: Reservation['status'][] = kind === 'quote'
+        ? ['new', 'processing', 'answered', 'reservation_requested', 'converted', 'cancelled']
+        : ['pending_payment', 'paid', 'confirmed', 'completed', 'cancelled'];
 
     const statusKey = status as keyof typeof labels;
     const tone = STATUS_TONE[status] || 'b-gray';
@@ -312,7 +316,7 @@ const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Re
 
             {isOpen && (
                 <div className="statusdd-menu">
-                    {(Object.keys(labels) as Array<keyof typeof labels>).map((key) => (
+                    {allowedKeys.map((key) => (
                         <button
                             key={key}
                             type="button"
@@ -1395,6 +1399,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                     </div>
                     <StatusDropdown
                         status={editForm.status}
+                        kind={reservation.type}
                         onChange={(s) => { setEditForm({ ...editForm, status: s }); if (!isEditing) onUpdate({ ...editForm, status: s }); }}
                     />
                     <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={onClose}><Icon name="close" /></button>
@@ -2475,11 +2480,9 @@ export const AdminReservationManage: React.FC = () => {
                     deposit: updated.deposit,
                     local: updated.totalAmount - updated.deposit
                 };
+                updatePayload.total_amount = updated.totalAmount;
+                updatePayload.deposit_amount = updated.deposit;
             }
-
-            // Also update flat amount fields if DB has them
-            updatePayload.total_amount = updated.totalAmount;
-            updatePayload.deposit_amount = updated.deposit;
 
 
             // Call API
@@ -2620,6 +2623,7 @@ export const AdminReservationManage: React.FC = () => {
             const deposit = Number(addForm.deposit) || 0;
             await api.reservations.create({
                 type: 'tour',
+                idempotency_key: `admin-manual:${crypto.randomUUID()}`,
                 product_name: addForm.productName.trim() || '맞춤 예약',
                 customer_info: { name: addForm.customerName.trim(), email: addForm.email.trim(), phone: addForm.phone.trim() },
                 total_people: Number(addForm.people) || 1,
@@ -3383,6 +3387,8 @@ export const AdminReservationManage: React.FC = () => {
                             // 1. Create Reservation
                             const reservationPayload = {
                                 type: 'quote',
+                                quote_id: convertTarget.id,
+                                idempotency_key: `quote-conversion:${convertTarget.id}`,
                                 product_name: `${convertTarget.destination} 맞춤 견적`,
                                 customer_name: convertTarget.name,
                                 customer_phone: convertTarget.phone,
