@@ -50,7 +50,8 @@ export const TourProducts: React.FC = () => {
     }
 
     const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
-    const [searchQuery, setSearchQuery] = useState('');
+    // Seeded from the header search (/products?q=…).
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
     const [sortBy, setSortBy] = useState<'recommended' | 'price_low' | 'price_high'>('recommended');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 

@@ -5,30 +5,8 @@ import logoSquare from '../../assets/new_logo_2026.png';
 import { api } from '../../lib/api';
 import { useWishlist } from '../../hooks/useWishlist';
 import { useProductCategories } from '../../hooks/useProductCategories';
+import { HOT_WORDS, POPULAR_WORDS, SITE_NAV, productMatches, pushRecent, readRecent, searchTokens, useSearchProducts, writeRecent } from '../../hooks/useTourSearch';
 import { MW, MW_FONT_EN, isUsableImage, yen } from '../desktop-primitives/mwTokens';
-
-const NAV_ITEMS: { id: string; label: string; path: string; match: (p: string) => boolean }[] = [
-    { id: 'home', label: 'ホーム', path: '/', match: (p) => p === '/' },
-    { id: 'tours', label: 'ツアー商品', path: '/products', match: (p) => p === '/products' || p.startsWith('/category/') || p.startsWith('/products/') },
-    { id: 'mates', label: '同行者募集', path: '/travel-mates', match: (p) => p.startsWith('/travel-mates') },
-    { id: 'reviews', label: 'レビュー', path: '/reviews', match: (p) => p.startsWith('/reviews') },
-    { id: 'magazine', label: '旅マガジン', path: '/travel-guide', match: (p) => p.startsWith('/travel-guide') },
-    { id: 'quote', label: 'お見積もり', path: '/custom-estimate', match: (p) => p.startsWith('/custom-estimate') || p.startsWith('/estimate') },
-];
-
-const HOT_WORDS = ['ゴビ砂漠', '乗馬', '星空', '温泉'];
-const POPULAR_WORDS = [...HOT_WORDS, 'ラクダ', 'ゲル'];
-const RECENT_KEY = 'mw_recent_searches';
-
-interface SearchProduct {
-    id: string;
-    name: string;
-    category: string;
-    duration: string;
-    price: number;
-    tags: string[];
-    image: string;
-}
 
 interface SearchMagazine {
     id: string;
@@ -36,25 +14,6 @@ interface SearchMagazine {
     description: string;
     category: string;
 }
-
-const readRecent = (): string[] => {
-    try {
-        const v = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-        return Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, 6) : [];
-    } catch {
-        return [];
-    }
-};
-
-const writeRecent = (list: string[]) => {
-    try {
-        localStorage.setItem(RECENT_KEY, JSON.stringify(list));
-    } catch {
-        /* storage unavailable — recent searches are a convenience only */
-    }
-};
-
-const tokens = (q: string) => q.split(/[\s\u3000]+/).filter(Boolean);
 
 export function DesktopHeader() {
     const navigate = useNavigate();
@@ -80,26 +39,7 @@ export function DesktopHeader() {
     }, [location.pathname]);
 
     // Search suggestions only load once the user opens the search box.
-    const { data: products = [] } = useQuery<SearchProduct[]>({
-        queryKey: ['headerSearch', 'products'],
-        enabled: focused,
-        staleTime: 1000 * 60 * 5,
-        queryFn: async () => {
-            const data = await api.products.list();
-            if (!Array.isArray(data)) return [];
-            return data
-                .filter((p: { status?: string }) => p.status === 'active' || !p.status)
-                .map((p: { id: string; name: string; category?: string; duration?: string; price?: number; tags?: string[]; mainImages?: string[] }) => ({
-                    id: p.id,
-                    name: (p.name || '').trim(),
-                    category: p.category || '',
-                    duration: p.duration || '',
-                    price: p.price || 0,
-                    tags: Array.isArray(p.tags) ? p.tags : [],
-                    image: p.mainImages?.[0] || '',
-                }));
-        },
-    });
+    const products = useSearchProducts(focused);
 
     const { data: magazines = [] } = useQuery<SearchMagazine[]>({
         queryKey: ['headerSearch', 'magazines'],
@@ -122,9 +62,9 @@ export function DesktopHeader() {
     const categories = useProductCategories(menuOpen);
 
     const q = text.trim();
-    const toks = tokens(q);
+    const toks = searchTokens(q);
     const hitTours = useMemo(
-        () => (toks.length ? products.filter((p) => toks.every((k) => `${p.name} ${p.category} ${p.duration} ${p.tags.join(' ')}`.includes(k))).slice(0, 5) : []),
+        () => (toks.length ? products.filter((p) => productMatches(p, toks)).slice(0, 5) : []),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [products, q],
     );
@@ -142,9 +82,7 @@ export function DesktopHeader() {
     const search = (raw: string) => {
         const word = raw.trim();
         if (!word) return;
-        const next = [word, ...recent.filter((x) => x !== word)].slice(0, 6);
-        setRecent(next);
-        writeRecent(next);
+        setRecent(pushRecent(recent, word));
         setText(word);
         closeSearch();
         navigate(`/products?q=${encodeURIComponent(word)}`);
@@ -473,7 +411,7 @@ export function DesktopHeader() {
                         全体メニュー
                     </button>
                     <nav style={{ display: 'flex', alignItems: 'stretch', gap: 'clamp(16px,2.2vw,28px)', fontSize: 15, flex: 1, minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-                        {NAV_ITEMS.map((it) => {
+                        {SITE_NAV.map((it) => {
                             const on = it.match(location.pathname);
                             return (
                                 <a
