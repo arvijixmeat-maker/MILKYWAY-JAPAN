@@ -1,9 +1,9 @@
+import { ResponsiveProductImage } from '../components/common/ResponsiveProductImage';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { optimizeImage } from '../utils/imageOptimizer';
-import { getOptimizedImageUrl, getResponsiveImageProps } from '../utils/cloudflareImage';
 import { ProductDetailSkeleton } from '../components/skeletons/ProductDetailSkeleton';
 import { ProductCard } from '../components/product/ProductCard';
 import { useToast } from '../components/ui/Toast';
@@ -691,8 +691,8 @@ export const ProductDetail: React.FC = () => {
                                 key={index}
                                 className="flex-shrink-0 w-full snap-center relative aspect-[4/3]"
                             >
-                                <img
-                                    {...getResponsiveImageProps(img, 'banner')}
+                                <ResponsiveProductImage
+                                    src={img}
                                     alt={`${product.name} ${index + 1}｜モンゴル旅行・モンゴルツアー`}
                                     className="w-full h-full object-cover"
                                     loading={index === 0 ? 'eager' : 'lazy'}
@@ -839,9 +839,9 @@ export const ProductDetail: React.FC = () => {
                         {product.detailBlocks.map(block => {
                             if (block.type === 'image') {
                                 return (
-                                    <img
+                                    <ResponsiveProductImage
                                         key={block.id}
-                                        src={getOptimizedImageUrl(block.content as string, 'productDetail')}
+                                        src={block.content as string}
                                         alt={`${product.name} 詳細情報｜モンゴル旅行・モンゴルツアー`}
                                         className="w-full h-auto"
                                         loading="lazy"
@@ -862,8 +862,8 @@ export const ProductDetail: React.FC = () => {
                                                     key={imgIdx}
                                                     className="relative shrink-0 w-[85%] snap-center"
                                                 >
-                                                    <img
-                                                        src={getOptimizedImageUrl(img, 'productThumbnail')}
+                                                    <ResponsiveProductImage
+                                                        src={img}
                                                         alt={`${slide.title || product.name} ${imgIdx + 1}｜モンゴル旅行・モンゴルツアー`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
@@ -924,9 +924,9 @@ export const ProductDetail: React.FC = () => {
                         {product.detailImages && product.detailImages.length > 0 && (
                             <div className="space-y-0 mb-8">
                                 {product.detailImages.map((img, index) => (
-                                    <img
+                                    <ResponsiveProductImage
                                         key={index}
-                                        src={getOptimizedImageUrl(img, 'productItinerary')}
+                                        src={img}
                                         alt={`${product.name} 詳細${index + 1}｜モンゴル旅行・モンゴルツアー`}
                                         className="w-full h-auto"
                                         loading="lazy"
@@ -951,8 +951,8 @@ export const ProductDetail: React.FC = () => {
                                                     key={imgIdx}
                                                     className="relative shrink-0 w-[85%] snap-center"
                                                 >
-                                                    <img
-                                                        src={getOptimizedImageUrl(img, 'productThumbnail')}
+                                                    <ResponsiveProductImage
+                                                        src={img}
                                                         alt={`${slide.title || product.name} ${imgIdx + 1}｜モンゴル旅行・モンゴルツアー`}
                                                         className="w-full h-auto rounded-xl shadow-sm"
                                                         loading="lazy"
@@ -1036,9 +1036,9 @@ export const ProductDetail: React.FC = () => {
                                     {reviewImages.length > 0 && (
                                         <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide">
                                             {reviewImages.slice(0, 4).map((img: string, i: number) => (
-                                                <img
+                                                <ResponsiveProductImage
                                                     key={i}
-                                                    src={getOptimizedImageUrl(img, 'thumbnailSmall')}
+                                                    src={img}
                                                     alt={`${displayName}様のレビュー写真 ${i + 1}`}
                                                     className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                                                     loading="lazy"
@@ -1136,8 +1136,8 @@ export const ProductDetail: React.FC = () => {
                             >
                                 <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2">
                                     {item.image ? (
-                                        <img
-                                            src={getOptimizedImageUrl(item.image, 'thumbnailSmall')}
+                                        <ResponsiveProductImage
+                                            src={item.image}
                                             alt={`${item.title}｜モンゴル旅行・モンゴルツアー`}
                                             loading="lazy"
                                             decoding="async"

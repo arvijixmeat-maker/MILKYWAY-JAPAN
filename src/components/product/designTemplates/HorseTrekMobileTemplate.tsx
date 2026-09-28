@@ -1,3 +1,4 @@
+import { ResponsiveProductImage } from '../../common/ResponsiveProductImage';
 import React from 'react';
 import { toJaDestinationName } from './mapDestinations';
 import type { DesignTemplateProps } from './types';
@@ -21,7 +22,7 @@ const TEAL = '#029F85';
 
 function Slot({ k, src, label, editing, alt, contain }: { k?: string; src: string; label: string; editing?: boolean; alt: string; contain?: boolean }) {
     if (src) {
-        return <img data-df={k} src={src} alt={alt} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: contain ? 'contain' : 'cover' }} loading="lazy" decoding="async" />;
+        return <ResponsiveProductImage data-df={k} src={src} alt={alt} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: contain ? 'contain' : 'cover' }} loading="lazy" decoding="async" />;
     }
     if (editing) {
         return (
@@ -124,7 +125,7 @@ export default function HorseTrekMobileTemplate({ v, editing, instances }: Desig
                 return (
                 <section style={{ position: 'relative', height: 540, overflow: 'hidden', background: DEEP }}>
                     {opBgs.length > 0 ? opBgs.map((o, i) => (
-                        <img key={o.n} data-df={`op_bg${o.n}`} src={o.src} alt="" style={{
+                        <ResponsiveProductImage key={o.n} data-df={`op_bg${o.n}`} src={o.src} alt="" style={{
                             position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
                             filter: 'brightness(0.42) saturate(0.85) hue-rotate(-6deg)',
                             opacity: i === 0 ? 1 : 0,

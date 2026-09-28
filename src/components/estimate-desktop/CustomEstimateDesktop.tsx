@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { QuoteHero } from './QuoteHero';
 import { api } from '../../lib/api';
 import { sendNotificationEmail } from '../../lib/email';
 import { useSpotImages } from '../../hooks/useSpotImages';
@@ -22,17 +23,6 @@ const VEHICLES = [
     { v: 'プルゴン (4名)', sub: 'モンゴル伝統車' },
     { v: 'ハイエース (8-12名)', sub: '大人数対応' },
     { v: '大型バス (15名以上)', sub: 'グループ向け' },
-];
-
-/** Hero scenes; a scene is shown only when its tourist-spot photo exists. */
-const SCENES = [
-    { key: 'mongolia', pre: '私だけの', accent: 'モンゴル旅行', post: '', sub: '草原と砂漠、そして星空へ', spot: ['大草原'], idx: 0 },
-    { key: 'takeoff', pre: 'モンゴルへ', accent: '出発', post: '', sub: '東京からウランバートルまで、いちばんワクワクするフライト', spot: ['大草原'], idx: 1 },
-    { key: 'horse', pre: 'テレルジ', accent: '草原乗馬', post: '', sub: '緑の大草原を、ゆったり駆ける時間', spot: ['乗馬体験'], idx: 0 },
-    { key: 'desert', pre: 'ミニ砂漠の', accent: '一日', post: '', sub: 'エルスンタサルハイで、ラクダと砂漠に出会う', spot: ['ラクダ'], idx: 0 },
-    { key: 'nomad', pre: '遊牧民の', accent: '文化体験', post: '', sub: 'ゲルで出会う、あたたかなモンゴルの日常', spot: ['遊牧民'], idx: 0 },
-    { key: 'stars', pre: '砂漠の夜、', accent: '天の川', post: '', sub: 'モンゴルで出会う、いちばん特別な星空', spot: ['星空'], idx: 0 },
-    { key: 'ready', pre: 'さあ、', accent: 'モンゴル', post: 'へ旅立つ準備', sub: 'ご希望の日程で、あなただけのプライベート旅行を', spot: ['テレルジ'], idx: 0 },
 ];
 
 const WEEK = '日月火水木金土';
@@ -147,12 +137,9 @@ export function CustomEstimateDesktop() {
             setSubmitting(false);
         }
     };
-
-    const scenes = SCENES.map((s) => ({ ...s, img: pick(s.spot, s.idx) })).filter((s) => isUsableImage(s.img));
-
     return (
         <div style={{ background: '#fff' }}>
-            <QuoteHero scenes={scenes.length > 0 ? scenes : [{ ...SCENES[0], img: '' }]} onHome={() => navigate('/')} />
+            <QuoteHero onHome={() => navigate('/')} />
 
             <section style={{ background: '#FFFFFF' }}>
                 <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 24px 104px', display: 'flex', gap: 56, alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -351,75 +338,6 @@ export function CustomEstimateDesktop() {
                 />
             )}
         </div>
-    );
-}
-
-function QuoteHero({ scenes, onHome }: { scenes: ((typeof SCENES)[number] & { img: string })[]; onHome: () => void }) {
-    const [idx, setIdx] = useState(0);
-    const paused = useRef(false);
-    const n = scenes.length;
-
-    useEffect(() => {
-        if (n <= 1) return;
-        const t = window.setInterval(() => {
-            if (!paused.current && document.visibilityState === 'visible') setIdx((i) => (i + 1) % n);
-        }, 5000);
-        return () => window.clearInterval(t);
-    }, [n]);
-
-    const active = idx % n;
-    const cur = scenes[active];
-
-    return (
-        <section
-            onMouseEnter={() => { paused.current = true; }}
-            onMouseLeave={() => { paused.current = false; }}
-            style={{ position: 'relative', background: MW.navySoft, color: '#fff', overflow: 'hidden' }}
-        >
-            {scenes.map((s, k) => (
-                <div key={s.key} style={{ position: 'absolute', inset: 0, opacity: k === active ? 1 : 0, transition: 'opacity .9s ease' }}>
-                    {isUsableImage(s.img) && (
-                        <img src={s.img} alt="" loading={k === 0 ? 'eager' : 'lazy'} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    )}
-                </div>
-            ))}
-            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(90deg,rgba(10,31,46,0.82) 0%,rgba(10,31,46,0.5) 45%,rgba(10,31,46,0.1) 100%)' }} />
-            <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '28px 24px 36px', minHeight: 'clamp(380px,38vw,460px)', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 40 }}>
-                <nav aria-label="パンくずリスト" style={{ display: 'flex', gap: 8, fontSize: 13, color: '#C4D0D8' }}>
-                    <a href="/" onClick={(e) => { e.preventDefault(); onHome(); }} style={{ color: '#C4D0D8', textDecoration: 'none' }}>ホーム</a>
-                    <span>›</span>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>お見積もり</span>
-                </nav>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
-                    <h1 style={{ margin: 0, fontSize: 'clamp(34px,4.6vw,52px)', fontWeight: 900, lineHeight: 1.2 }}>オーダーメイド見積もり</h1>
-                    <p style={{ margin: 0, fontSize: 16, lineHeight: 1.8, color: '#D8E1E7' }}>
-                        人数・期間・予算・行きたい場所をお伝えください。日本語スタッフが24時間以内に最適なプランをお見積もりします。
-                    </p>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
-                    <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 14, borderLeft: '3px solid #3FC2A4' }}>
-                        <span style={{ fontSize: 18, fontWeight: 900 }}>
-                            {cur.pre}<span style={{ color: MW.mintLight }}>{cur.accent}</span>{cur.post}
-                        </span>
-                        <span style={{ fontSize: 13, color: '#C4D0D8' }}>{cur.sub}</span>
-                    </div>
-                    {n > 1 && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                            {scenes.map((s, k) => (
-                                <button
-                                    key={s.key}
-                                    type="button"
-                                    aria-label={`シーン ${k + 1}`}
-                                    aria-current={k === active || undefined}
-                                    onClick={() => setIdx(k)}
-                                    style={{ width: k === active ? 22 : 6, height: 6, borderRadius: 3, border: 0, padding: 0, background: k === active ? '#FFFFFF' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'width .3s' }}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </section>
     );
 }
 
