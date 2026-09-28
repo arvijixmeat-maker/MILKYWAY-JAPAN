@@ -3,116 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { BottomNav } from '../components/layout/BottomNav';
 import { GuideDetailModal, AccommodationDetailModal } from '../components/common/DetailModals';
+import { STATUS_MAP, computeDays, formatDateShort, formatDateTime, parseArr, parseImage, type ReservationDetail, type StatusTone } from '../utils/reservationDetail';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { BookingDetailDesktop } from '../components/mypage-desktop/BookingDetailDesktop';
 
-interface Guide {
-    id?: string;
-    name?: string;
-    image?: string;
-    introduction?: string;
-    bio?: string;
-    phone?: string;
-    kakaoId?: string;
-    languages?: any;
-    specialties?: any;
-}
-
-interface Accommodation {
-    id?: string;
-    name?: string;
-    type?: string;
-    location?: string;
-    images?: any;
-    description?: string;
-    facilities?: any;
-}
-
-interface HistoryEntry {
-    timestamp: string;
-    type: string;
-    description: string;
-    detail?: string;
-}
-
-interface Reservation {
-    id: string;
-    reservationNumber?: string | null;
-    productName: string;
-    status: string;
-    startDate?: string;
-    endDate?: string;
-    totalPeople?: number;
-    travelers?: number;
-    priceBreakdown?: { total: number; deposit: number; local: number };
-    price_breakdown?: { total: number; deposit: number; local: number };
-    contractUrl?: string;
-    itineraryUrl?: string;
-    itineraryTemplateId?: string;
-    history?: HistoryEntry[];
-    assignedGuide?: Guide;
-    dailyAccommodations?: Array<{ day: number; accommodation: Accommodation }>;
-    areAssignmentsVisibleToUser?: boolean;
-    depositStatus?: string;
-    balanceStatus?: string;
-    createdAt?: string;
-}
-
-const parseArr = (v: any): any[] => {
-    if (!v) return [];
-    if (Array.isArray(v)) return v;
-    if (typeof v === 'string') {
-        try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
-    }
-    return [];
-};
-
-const parseImage = (v: any): string => {
-    const arr = parseArr(v);
-    if (arr.length > 0) return arr[0];
-    if (typeof v === 'string' && v.startsWith('http')) return v;
-    return '';
-};
-
-const formatDateShort = (iso?: string) => {
-    if (!iso) return '';
-    try {
-        const d = new Date(iso);
-        const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-        const y = d.getFullYear();
-        const m = d.getMonth() + 1;
-        const day = d.getDate();
-        const wd = weekdays[d.getDay()];
-        return `${y}/${m}/${day} (${wd})`;
-    } catch { return iso; }
-};
-
-const formatDateTime = (iso?: string) => {
-    if (!iso) return '';
-    try {
-        const d = new Date(iso);
-        return d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch { return iso; }
-};
-
-const computeDays = (start?: string, end?: string) => {
-    if (!start || !end) return null;
-    try {
-        const s = new Date(start);
-        const e = new Date(end);
-        const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
-        return diff >= 0 ? { nights: diff, days: diff + 1 } : null;
-    } catch { return null; }
-};
-
-type StatusTone = 'pending' | 'partial' | 'paid' | 'cancelled' | 'neutral';
-
-const STATUS_MAP: Record<string, { label: string; tone: StatusTone }> = {
-    pending_payment: { label: 'お支払い待ち', tone: 'pending' },
-    waiting_deposit: { label: '入金待ち', tone: 'pending' },
-    paid: { label: 'お支払い完了', tone: 'partial' },
-    confirmed: { label: 'ご予約確定', tone: 'paid' },
-    completed: { label: '旅行終了', tone: 'neutral' },
-    cancelled: { label: 'キャンセル', tone: 'cancelled' },
-};
+type Reservation = ReservationDetail;
 
 const TONE_STYLES: Record<StatusTone, { bg: string; fg: string; dot: string }> = {
     pending: { bg: '#FEF3C7', fg: '#92400E', dot: '#D97706' },
@@ -150,6 +46,18 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
 );
 
 export const MyReservationDetail: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <BookingDetailDesktop />
+            </DesktopLayout>
+        );
+    }
+    return <MyReservationDetailMobile />;
+};
+
+const MyReservationDetailMobile: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const [reservation, setReservation] = useState<Reservation | null>(null);

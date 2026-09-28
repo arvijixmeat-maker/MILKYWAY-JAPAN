@@ -6,6 +6,9 @@ import { useUser } from '../contexts/UserContext';
 import phoneIcon from '../assets/phone_icon_custom.png';
 import kakaoIcon from '../assets/kakao_icon_custom.png';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 interface Reservation {
     id: string;
@@ -38,6 +41,19 @@ interface Quote {
 }
 
 export const MyReservations: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    const [searchParams] = useSearchParams();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab={searchParams.get('tab') === 'quotes' ? 'estimates' : 'reservations'} />
+            </DesktopLayout>
+        );
+    }
+    return <MyReservationsMobile />;
+};
+
+const MyReservationsMobile: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user } = useUser();

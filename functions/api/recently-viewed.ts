@@ -1,8 +1,12 @@
 import { Hono } from 'hono';
+import { requireAuth } from '../lib/userAuth';
 
 type Env = { DB: any; };
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: any } }>();
+
+// Viewing history is private: every route acts on the signed-in user's rows only.
+app.use('*', requireAuth);
 
 const ensureTable = async (db: any) => {
     await db.prepare(`
@@ -42,19 +46,14 @@ app.get('/', async (c) => {
     const db = c.env.DB;
     try {
         await ensureTable(db);
-        const userId = c.req.query('user_id');
-        let result;
+        const userId = c.get('user').id;
         const joinQuery = `
             SELECT rv.id, rv.user_id, rv.product_id, rv.viewed_at as created_at,
                    p.name as title, p.thumbnail, p.main_images, p.images, p.price, p.category
             FROM recently_viewed rv
             INNER JOIN products p ON rv.product_id = p.id
         `;
-        if (userId) {
-            result = await db.prepare(joinQuery + ' WHERE rv.user_id = ? ORDER BY rv.viewed_at DESC LIMIT 20').bind(userId).all();
-        } else {
-            result = await db.prepare(joinQuery + ' ORDER BY rv.viewed_at DESC LIMIT 20').all();
-        }
+        const result = await db.prepare(joinQuery + ' WHERE rv.user_id = ? ORDER BY rv.viewed_at DESC LIMIT 20').bind(userId).all();
         const rows = (result.results || []).map((r: any) => ({
             id: r.id,
             user_id: r.user_id,
@@ -82,7 +81,7 @@ app.post('/', async (c) => {
         const db = c.env.DB;
         await ensureTable(db);
         const data = await c.req.json();
-        const userId = data.user_id || data.userId || '';
+        const userId = c.get('user').id;
         const productId = data.product_id || data.productId || '';
 
         // Remove existing entry for same user+product

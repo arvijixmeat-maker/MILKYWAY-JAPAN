@@ -2,9 +2,24 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/layout/BottomNav';
 import { useNotification, type Notification } from '../contexts/NotificationContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 
 export const MyNotifications: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab="notifications" />
+            </DesktopLayout>
+        );
+    }
+    return <MyNotificationsMobile />;
+};
+
+const MyNotificationsMobile: React.FC = () => {
     const navigate = useNavigate();
     const { notifications, loading, markAllAsRead, markAsRead } = useNotification();
 

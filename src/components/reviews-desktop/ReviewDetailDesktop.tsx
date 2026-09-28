@@ -1,417 +1,438 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MatIcon } from '../desktop-primitives/MatIcon';
+import { api } from '../../lib/api';
+import { formatRelativeTime } from '../../utils/formatDate';
 import { ImageLightbox } from '../common/ImageLightbox';
+import { MW, MW_FONT_EN, MW_GRADIENT, MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
+import { AnimalAvatar } from './AnimalAvatar';
+import { mapReview, normalizeComments, parseJsonArray, useDesktopReviews, useReviewTour, type DesktopReview, type RawComment, type RawReview } from './reviewsData';
+import { PenIcon, Stars, ThumbIcon } from './reviewUi';
 
-interface ApiReview {
-    id: string | number;
-    user_name?: string;
-    userName?: string;
-    user_image?: string;
-    userImage?: string;
-    created_at?: string;
-    createdAt?: string;
-    rating?: number;
-    title?: string;
-    product_name?: string;
-    productName?: string;
-    product_id?: string;
-    productId?: string;
-    content?: string;
-    images?: string | string[];
-    comments?: string | CommentItem[];
-    helpful_count?: number;
-    helpfulCount?: number;
+interface Me {
+    id: string;
+    name: string;
+    image?: string;
 }
 
-interface CommentItem {
-    id?: string | number;
-    user_name?: string;
-    userName?: string;
-    content?: string;
-    created_at?: string;
-    createdAt?: string;
+interface ApiUser {
+    id?: string;
+    name?: string;
+    email?: string;
+    avatar_url?: string;
+    user_metadata?: { full_name?: string; avatar_url?: string };
 }
 
-interface ReviewDetailDesktopProps {
-    review: ApiReview;
-    helpful?: boolean;
-    helpfulSubmitting?: boolean;
-    onHelpful?: () => void | Promise<void>;
-    onAddComment?: (content: string) => void;
-    contentWidth?: number;
-}
-
-function parseJsonArray<T = string>(val: unknown): T[] {
-    if (!val) return [];
-    if (Array.isArray(val)) return val as T[];
-    if (typeof val === 'string') {
-        try {
-            const parsed = JSON.parse(val);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
-    }
-    return [];
-}
-
-function formatDate(iso?: string): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function timeAgo(iso?: string): string {
-    if (!iso) return '';
-    const t = new Date(iso).getTime();
-    if (Number.isNaN(t)) return '';
-    const diff = Date.now() - t;
-    const m = Math.floor(diff / 60000);
-    if (m < 60) return `${m} 分前`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h} 時間前`;
-    const d = Math.floor(h / 24);
-    return `${d} 日前`;
-}
-
-export function ReviewDetailDesktop({ review, helpful = false, helpfulSubmitting = false, onHelpful, onAddComment, contentWidth = 1280 }: ReviewDetailDesktopProps) {
+/** PC review detail. Keyed by review id by the page, so all state resets on prev/next navigation. */
+export function ReviewDetailDesktop({ id }: { id: string }) {
     const navigate = useNavigate();
-    const [comment, setComment] = useState('');
+    const { reviews } = useDesktopReviews();
+    const [raw, setRaw] = useState<RawReview | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [me, setMe] = useState<Me | null>(null);
+    const [helpful, setHelpful] = useState(false);
+    const [helpfulSubmitting, setHelpfulSubmitting] = useState(false);
+    const [draft, setDraft] = useState('');
+    const [posting, setPosting] = useState(false);
     const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-    }, [review?.id]);
+        let cancelled = false;
+        (async () => {
+            try {
+                const [r, user] = await Promise.all([api.reviews.get(id), api.auth.me().catch(() => null) as Promise<ApiUser | null>]);
+                if (cancelled) return;
+                if (user?.id) {
+                    setMe({
+                        id: user.id,
+                        name: user.user_metadata?.full_name || user.name || user.email?.split('@')[0] || '旅行者',
+                        image: user.user_metadata?.avatar_url || user.avatar_url,
+                    });
+                }
+                let helpfulCount = r?.helpful_count;
+                if (user?.id && r) {
+                    try {
+                        const state = await api.reviews.getHelpfulStatus(id);
+                        setHelpful(Boolean(state.helpful));
+                        helpfulCount = state.helpful_count ?? helpfulCount;
+                    } catch (error) {
+                        console.error('Helpful status fetch error:', error);
+                    }
+                }
+                if (!cancelled && r && !r.error) setRaw({ ...r, helpful_count: helpfulCount ?? 0 });
+            } catch (e) {
+                console.error('Review detail fetch error:', e);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [id]);
 
-    if (!review) return null;
+    const listIdx = reviews.findIndex((r) => r.id === id);
+    const review = useMemo(() => (raw ? mapReview(raw, Math.max(0, listIdx)) : null), [raw, listIdx]);
+    const tour = useReviewTour(review?.productId ?? '', review?.productName ?? '');
 
-    const author = review.user_name || review.userName || '匿名';
-    const avatar = review.user_image || review.userImage;
-    const rating = review.rating || 5;
-    const date = formatDate(review.created_at || review.createdAt);
-    const productName = review.product_name || review.productName || 'モンゴルツアー';
-    const productId = review.product_id || review.productId;
-    const images = parseJsonArray<string>(review.images);
-    const comments = parseJsonArray<CommentItem>(review.comments);
-    const helpfulCount = review.helpful_count ?? review.helpfulCount ?? 0;
+    if (loading || !review || !raw) {
+        return (
+            <section style={{ maxWidth: 1200, margin: '0 auto', padding: '120px 24px 160px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: loading ? 400 : 700, color: loading ? MW.mute : MW.navy }}>
+                    {loading ? '読み込み中…' : 'レビューが見つかりません'}
+                </p>
+                {!loading && (
+                    <button type="button" onClick={() => navigate('/reviews')} style={outlineBtn}>
+                        レビュー一覧へ戻る
+                    </button>
+                )}
+            </section>
+        );
+    }
 
-    const submitComment = () => {
-        if (!comment.trim() || !onAddComment) return;
-        onAddComment(comment.trim());
-        setComment('');
+    const comments = normalizeComments(raw.comments);
+    const paragraphs = review.content.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+    const prev = listIdx > 0 ? reviews[listIdx - 1] : undefined;
+    const next = listIdx >= 0 ? reviews[listIdx + 1] : undefined;
+    const others = reviews.filter((r) => r.id !== review.id);
+    const more = [...others.filter((r) => r.productName === review.productName), ...others.filter((r) => r.productName !== review.productName)].slice(0, 3);
+    const productPath = tour ? `/products/${tour.id}` : review.productId ? `/products/${review.productId}` : '';
+    const goReview = (r: DesktopReview) => navigate(`/reviews/${r.id}`);
+    const loginPath = { state: { from: `/reviews/${id}` } };
+
+    const toggleHelpful = async () => {
+        if (!me) {
+            alert('「参考になった」を登録するにはログインしてください。');
+            navigate('/login', loginPath);
+            return;
+        }
+        if (helpfulSubmitting) return;
+        setHelpfulSubmitting(true);
+        try {
+            const result = await api.reviews.toggleHelpful(id);
+            setHelpful(Boolean(result.helpful));
+            setRaw((cur) => (cur ? { ...cur, helpful_count: Number(result.helpful_count || 0) } : cur));
+        } catch (error) {
+            console.error('Failed to toggle helpful:', error);
+            alert('操作に失敗しました。時間をおいてもう一度お試しください。');
+        } finally {
+            setHelpfulSubmitting(false);
+        }
     };
 
+    // Same comment shape the mobile page writes; existing entries are kept untouched.
+    const postComment = async () => {
+        const content = draft.trim();
+        if (!me || !content || posting) return;
+        setPosting(true);
+        const nextComments = [
+            ...parseJsonArray<RawComment>(raw.comments),
+            { id: Date.now().toString(), author: me.name, content, date: new Date().toISOString(), userImage: me.image, userId: me.id },
+        ];
+        try {
+            await api.reviews.update(id, { comments: nextComments });
+            setRaw((cur) => (cur ? { ...cur, comments: nextComments } : cur));
+            setDraft('');
+        } catch (error) {
+            console.error('Failed to add comment:', error);
+            alert('コメントの投稿に失敗しました。時間をおいてもう一度お試しください。');
+        } finally {
+            setPosting(false);
+        }
+    };
+
+    const canPost = !!draft.trim() && !posting;
+
     return (
-        <div style={{ background: '#fff' }}>
-            {/* Breadcrumb */}
-            <div style={{ background: 'var(--bg-muted)', padding: '14px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div
-                    style={{
-                        maxWidth: contentWidth,
-                        margin: '0 auto',
-                        padding: '0 32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        fontSize: 12,
-                        color: 'var(--fg-5)',
-                    }}
-                >
-                    <button type="button" onClick={() => navigate('/')} style={crumbBtn}>ホーム</button>
-                    <MatIcon name="chevron_right" size={14} color="var(--fg-6)" />
-                    <button type="button" onClick={() => navigate('/reviews')} style={crumbBtn}>レビュー</button>
-                    <MatIcon name="chevron_right" size={14} color="var(--fg-6)" />
-                    <span style={{ color: 'var(--fg-2)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 480 }}>
-                        {review.title || `${author} 様のレビュー`}
-                    </span>
-                </div>
-            </div>
+        <section style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 104px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+            <nav aria-label="パンくずリスト" style={{ display: 'flex', gap: 8, fontSize: 13, color: MW.mute, minWidth: 0 }}>
+                <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} style={crumbLink}>ホーム</a>
+                <span>›</span>
+                <a href="/reviews" onClick={(e) => { e.preventDefault(); navigate('/reviews'); }} style={crumbLink}>レビュー</a>
+                <span>›</span>
+                <span style={{ color: MW.navy, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{review.heading}</span>
+            </nav>
 
-            <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 32px 0' }}>
-                {/* Author section */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 28 }}>
-                    <div
-                        style={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: 999,
-                            background: avatar ? `url(${avatar}) center/cover` : 'var(--primary-tint)',
-                            color: '#0f766e',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 22,
-                            fontWeight: 700,
-                            flexShrink: 0,
-                        }}
-                    >
-                        {!avatar && author.charAt(0)}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 4, letterSpacing: '-0.01em' }}>{author} 様</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ display: 'flex', gap: 1 }}>
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <MatIcon key={i} name="star" size={16} filled color={i < rating ? '#facc15' : '#e2e8f0'} />
-                                ))}
-                            </div>
-                            {date && <span style={{ fontSize: 12, color: 'var(--fg-5)' }}>{date}</span>}
+            <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <article style={{ flex: '1 1 420px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 28 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <span style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, display: 'flex' }}>
+                                <AnimalAvatar kind={review.animal} size={56} />
+                            </span>
+                            <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                                <span style={{ fontSize: 16, fontWeight: 900 }}>{review.author} 様</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <Stars rating={review.rating} size={15} spacing={2} />
+                                    <span style={{ fontFamily: MW_FONT_EN, fontSize: 11, color: MW.mute2 }}>{review.date}</span>
+                                </span>
+                            </span>
                         </div>
-                    </div>
-                    {productId && (
-                        <button
-                            type="button"
-                            onClick={() => navigate(`/products/${productId}`)}
-                            style={{
-                                background: 'var(--primary-tint)',
-                                color: 'var(--primary-dark)',
-                                border: 'none',
-                                borderRadius: 999,
-                                padding: '8px 16px',
-                                fontSize: 12,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6,
-                            }}
-                        >
-                            <MatIcon name="local_offer" size={14} color="var(--primary-dark)" />
-                            {productName}
-                        </button>
-                    )}
-                </div>
-
-                {/* Title + content */}
-                {review.title && (
-                    <h1 style={{ fontSize: 32, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 18px', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-                        {review.title}
-                    </h1>
-                )}
-                {review.content && (
-                    <div style={{ fontSize: 16, color: 'var(--fg-2)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{review.content}</div>
-                )}
-
-                {/* Image gallery */}
-                {images.length > 0 && (
-                    <div
-                        style={{
-                            marginTop: 28,
-                            display: 'grid',
-                            gridTemplateColumns: images.length === 1 ? '1fr' : images.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)',
-                            gap: 8,
-                            borderRadius: 18,
-                            overflow: 'hidden',
-                        }}
-                    >
-                        {images.slice(0, 3).map((img, i) => (
-                            <button
-                                key={i}
-                                type="button"
-                                onClick={() => setLightboxIdx(i)}
-                                aria-label={`image ${i + 1}`}
-                                style={{
-                                    aspectRatio: images.length === 1 ? '16/9' : '1/1',
-                                    border: 'none',
-                                    padding: 0,
-                                    cursor: 'pointer',
-                                    backgroundImage: `url(${img})`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    borderRadius: 12,
-                                    position: 'relative',
-                                }}
+                        <h1 style={{ margin: 0, fontSize: 'clamp(26px,3.4vw,38px)', fontWeight: 900, lineHeight: 1.35, textWrap: 'pretty' }}>{review.heading}</h1>
+                        {productPath ? (
+                            <a
+                                href={productPath}
+                                onClick={(e) => { e.preventDefault(); navigate(productPath); }}
+                                style={tourChip}
+                                onMouseEnter={(e) => (e.currentTarget.style.borderColor = MW.mint)}
+                                onMouseLeave={(e) => (e.currentTarget.style.borderColor = MW.mintTint)}
                             >
-                                {i === 2 && images.length > 3 && (
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            inset: 0,
-                                            background: 'rgba(0,0,0,0.5)',
-                                            color: '#fff',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 18,
-                                            fontWeight: 700,
-                                            borderRadius: 12,
-                                        }}
-                                    >
-                                        +{images.length - 3}
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* Helpful */}
-                <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'center' }}>
-                    <button
-                        type="button"
-                        onClick={onHelpful}
-                        disabled={helpfulSubmitting}
-                        aria-pressed={helpful}
-                        aria-label={`参考になった ${helpfulCount}件`}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            padding: '12px 24px',
-                            background: helpful ? 'var(--primary-tint)' : '#fff',
-                            color: helpful ? 'var(--primary-dark)' : 'var(--fg-2)',
-                            border: helpful ? '1px solid #0f766e' : '1px solid var(--border)',
-                            borderRadius: 999,
-                            fontSize: 13,
-                            fontWeight: 700,
-                            cursor: helpfulSubmitting ? 'wait' : 'pointer',
-                            opacity: helpfulSubmitting ? 0.65 : 1,
-                            fontFamily: 'inherit',
-                        }}
-                    >
-                        <MatIcon name="thumb_up" size={16} filled={helpful} color={helpful ? '#0f766e' : 'var(--fg-3)'} />
-                        参考になった ({helpfulCount})
-                    </button>
-                </div>
-
-                {/* Comments */}
-                <div style={{ marginTop: 48, paddingTop: 32, borderTop: '1px solid var(--border-subtle)' }}>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 18px', letterSpacing: '-0.01em' }}>
-                        コメント <span style={{ color: 'var(--fg-5)', fontWeight: 500, fontSize: 16 }}>({comments.length})</span>
-                    </h2>
-
-                    <div style={{ display: 'flex', gap: 14, marginBottom: 28 }}>
-                        <div
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 999,
-                                background: '#0f766e',
-                                color: '#fff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 14,
-                                fontWeight: 700,
-                                flexShrink: 0,
-                            }}
-                        >
-                            あ
-                        </div>
-                        <div style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 14, padding: 14, background: '#fff' }}>
-                            <textarea
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                placeholder="コメントを入力してください..."
-                                rows={3}
-                                style={{
-                                    width: '100%',
-                                    border: 'none',
-                                    outline: 'none',
-                                    resize: 'vertical',
-                                    background: 'transparent',
-                                    fontSize: 14,
-                                    color: 'var(--fg-1)',
-                                    fontFamily: 'inherit',
-                                    lineHeight: 1.65,
-                                }}
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                                <button
-                                    type="button"
-                                    onClick={submitComment}
-                                    disabled={!comment.trim()}
-                                    style={{
-                                        padding: '10px 22px',
-                                        background: comment.trim() ? '#0f766e' : 'var(--bg-muted)',
-                                        color: comment.trim() ? '#fff' : 'var(--fg-5)',
-                                        border: 'none',
-                                        borderRadius: 10,
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        cursor: comment.trim() ? 'pointer' : 'default',
-                                        fontFamily: 'inherit',
-                                    }}
-                                >
-                                    投稿
-                                </button>
-                            </div>
-                        </div>
+                                {review.productName} →
+                            </a>
+                        ) : (
+                            <span style={tourChip}>{review.productName}</span>
+                        )}
                     </div>
 
-                    {comments.length === 0 ? (
-                        <div
-                            style={{
-                                padding: '40px 24px',
-                                textAlign: 'center',
-                                background: 'var(--bg-muted)',
-                                borderRadius: 16,
-                                color: 'var(--fg-5)',
-                                fontSize: 13,
-                            }}
-                        >
-                            最初のコメントを残してみましょう
-                        </div>
-                    ) : (
+                    {paragraphs.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                            {comments.map((c, i) => (
-                                <div key={c.id ?? i} style={{ display: 'flex', gap: 14 }}>
-                                    <div
-                                        style={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: 999,
-                                            background: 'var(--primary-tint)',
-                                            color: '#0f766e',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 14,
-                                            fontWeight: 700,
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        {(c.user_name || c.userName || '?').charAt(0)}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-1)' }}>
-                                                {c.user_name || c.userName || '匿名'}
-                                            </span>
-                                            <span style={{ fontSize: 11, color: 'var(--fg-5)' }}>{timeAgo(c.created_at || c.createdAt)}</span>
-                                        </div>
-                                        <div style={{ fontSize: 14, color: 'var(--fg-2)', lineHeight: 1.7 }}>{c.content}</div>
-                                    </div>
-                                </div>
+                            {paragraphs.map((p, i) => (
+                                <p key={i} style={{ margin: 0, fontSize: 16, lineHeight: 2, color: MW.ink2, textWrap: 'pretty' }}>{p}</p>
                             ))}
                         </div>
                     )}
-                </div>
 
-                <div style={{ height: 96 }} />
+                    {review.images.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <span style={{ fontSize: 14, fontWeight: 900 }}>
+                                写真 <span style={{ color: MW.mintDeep }}>{review.images.length}枚</span>
+                            </span>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,160px),1fr))', gap: 10 }}>
+                                {review.images.map((src, i) => (
+                                    <button
+                                        key={src + i}
+                                        type="button"
+                                        onClick={() => setLightboxIdx(i)}
+                                        aria-label={`レビュー写真 ${i + 1}を拡大`}
+                                        style={{ position: 'relative', display: 'block', aspectRatio: '1/1', borderRadius: 18, overflow: 'hidden', background: MW.chip, border: 0, padding: 0, cursor: 'zoom-in' }}
+                                    >
+                                        <img
+                                            src={src}
+                                            alt={`${review.author}様のレビュー写真 ${i + 1}`}
+                                            loading="lazy"
+                                            decoding="async"
+                                            onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .2s' }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.04)')}
+                                            onMouseLeave={(e) => (e.currentTarget.style.transform = '')}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '28px 0', borderTop: `1px solid ${LINE_SOFT}`, borderBottom: `1px solid ${LINE_SOFT}` }}>
+                        <button
+                            type="button"
+                            onClick={toggleHelpful}
+                            disabled={helpfulSubmitting}
+                            aria-pressed={helpful}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 26px', borderRadius: 999, border: `1.5px solid ${helpful ? MW.mint : MW.line}`, background: helpful ? MW.mint : '#FFFFFF', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: MW.navy, cursor: helpfulSubmitting ? 'wait' : 'pointer', opacity: helpfulSubmitting ? 0.65 : 1, transition: 'all .15s' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.borderColor = MW.mint)}
+                            onMouseLeave={(e) => (e.currentTarget.style.borderColor = helpful ? MW.mint : MW.line)}
+                        >
+                            <ThumbIcon />
+                            参考になった
+                            <span style={{ fontFamily: MW_FONT_EN, fontSize: 13, fontWeight: 600 }}>{review.helpful}</span>
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>
+                            コメント <span style={{ fontFamily: MW_FONT_EN, fontSize: 16, fontWeight: 600, color: MW.mintDeep }}>{comments.length}</span>
+                        </h2>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                            <span style={{ width: 40, height: 40, borderRadius: '50%', background: MW_GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MW_FONT_EN, fontSize: 14, fontWeight: 600, color: MW.navy, flexShrink: 0 }}>
+                                {me ? me.name.charAt(0).toUpperCase() : <PenIcon />}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', border: `1.5px solid ${MW.line}`, borderRadius: 18, background: '#fff', overflow: 'hidden' }}>
+                                <textarea
+                                    value={draft}
+                                    onChange={(e) => setDraft(e.target.value)}
+                                    rows={3}
+                                    disabled={!me || posting}
+                                    placeholder={me ? 'レビューへの感想や質問をどうぞ' : 'コメントするにはログインしてください'}
+                                    aria-label="コメント"
+                                    style={{ border: 0, outline: 'none', resize: 'vertical', padding: '16px 18px 8px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.7, color: MW.navy, background: 'transparent' }}
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 10px 10px' }}>
+                                    {me ? (
+                                        <button
+                                            type="button"
+                                            onClick={postComment}
+                                            disabled={!canPost}
+                                            style={{ height: 38, padding: '0 20px', border: 0, borderRadius: 999, background: canPost ? MW.mint : MW.chip, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: canPost ? MW.navy : MW.mute2, cursor: canPost ? 'pointer' : 'default' }}
+                                        >
+                                            {posting ? '投稿中…' : '投稿'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate('/login', loginPath)}
+                                            style={{ height: 38, padding: '0 20px', border: 0, borderRadius: 999, background: MW.mint, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: MW.navy, cursor: 'pointer' }}
+                                        >
+                                            ログインしてコメント
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        {comments.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                {comments.map((c) => (
+                                    <div key={c.id} style={{ display: 'flex', gap: 12, padding: '16px 0', borderTop: `1px solid ${LINE_SOFT}` }}>
+                                        <span style={{ width: 40, height: 40, borderRadius: '50%', background: MW.mintTint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MW_FONT_EN, fontSize: 14, fontWeight: 600, color: MW.mintDeep, flexShrink: 0 }}>
+                                            {c.author.charAt(0).toUpperCase()}
+                                        </span>
+                                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                <strong style={{ fontSize: 14 }}>{c.author}</strong>
+                                                <span style={{ fontSize: 12, color: MW.mute2 }}>{formatRelativeTime(c.date, 'ja')}</span>
+                                            </span>
+                                            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: MW.ink3, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{c.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ padding: '36px 20px', borderRadius: 18, background: SOFT_BG, textAlign: 'center', fontSize: 13, color: MW.mute }}>最初のコメントを残してみましょう</div>
+                        )}
+                    </div>
+
+                    {(prev || next) && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 12 }}>
+                            {prev && <PagerLink label="← 前のレビュー" title={prev.heading} onClick={() => goReview(prev)} href={`/reviews/${prev.id}`} />}
+                            {next && <PagerLink label="次のレビュー →" title={next.heading} onClick={() => goReview(next)} href={`/reviews/${next.id}`} alignRight />}
+                        </div>
+                    )}
+                </article>
+
+                <aside style={{ flex: '0 1 330px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: MW_STICKY_TOP + 24 }}>
+                    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'linear-gradient(160deg,#0F2A3B 0%,#1C8571 100%)', color: '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
+                        {tour?.image && (
+                            <span style={{ position: 'relative', display: 'block', aspectRatio: '16/10', background: 'rgba(255,255,255,0.08)' }}>
+                                <img src={tour.image} alt={tour.name} loading="lazy" decoding="async" onError={(e) => (e.currentTarget.style.visibility = 'hidden')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            </span>
+                        )}
+                        <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            <span style={{ fontFamily: MW_FONT_EN, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: MW.mintLight }}>REVIEWED TOUR</span>
+                            <span style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.4 }}>{tour?.name || review.productName}</span>
+                            {tour && (tour.duration || tour.summary) && (
+                                <span style={{ fontSize: 13, lineHeight: 1.7, color: MW.mintTint, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {[tour.duration, tour.summary].filter(Boolean).join('・')}
+                                </span>
+                            )}
+                            <AsideButton primary onClick={() => navigate(productPath || '/products')}>
+                                {productPath ? 'このツアーを見る' : 'ツアー一覧を見る'}
+                            </AsideButton>
+                            <AsideButton onClick={() => navigate('/custom-estimate')}>同じ旅をお見積もり</AsideButton>
+                        </div>
+                    </div>
+                    <div style={{ border: `1px solid ${MW.line}`, borderRadius: 24, padding: 20, background: '#fff', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontSize: 14, fontWeight: 900, marginBottom: 8 }}>ほかのレビュー</span>
+                        {more.map((m) => (
+                            <a
+                                key={m.id}
+                                href={`/reviews/${m.id}`}
+                                onClick={(e) => { e.preventDefault(); goReview(m); }}
+                                style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 12, margin: '0 -12px', borderRadius: 14, color: MW.navy, textDecoration: 'none' }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = SOFT_BG)}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Stars rating={m.rating} size={11} spacing={1} />
+                                    <span style={{ fontSize: 12, color: MW.mute }}>{m.author} 様</span>
+                                </span>
+                                <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {m.title || m.content.replace(/\s+/g, ' ')}
+                                </span>
+                            </a>
+                        ))}
+                        <a href="/reviews" onClick={(e) => { e.preventDefault(); navigate('/reviews'); }} style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: MW.mintDeep, textDecoration: 'none' }}>
+                            すべてのレビューを見る →
+                        </a>
+                    </div>
+                </aside>
             </div>
 
-            {/* Lightbox — shared component with prev/next, keyboard nav, thumbnails */}
-            {lightboxIdx !== null && images.length > 0 && (
-                <ImageLightbox
-                    images={images}
-                    startIndex={lightboxIdx}
-                    onClose={() => setLightboxIdx(null)}
-                />
+            {lightboxIdx !== null && review.images.length > 0 && (
+                <ImageLightbox images={review.images} startIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
             )}
-        </div>
+        </section>
     );
 }
 
-const crumbBtn: CSSProperties = {
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    cursor: 'pointer',
-    color: 'var(--fg-5)',
-    fontSize: 12,
+function PagerLink({ label, title, href, onClick, alignRight }: { label: string; title: string; href: string; onClick: () => void; alignRight?: boolean }) {
+    return (
+        <a
+            href={href}
+            onClick={(e) => { e.preventDefault(); onClick(); }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 20px', border: `1px solid ${MW.line}`, borderRadius: 18, color: MW.navy, textDecoration: 'none', textAlign: alignRight ? 'right' : 'left', minWidth: 0 }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = MW.mint)}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = MW.line)}
+        >
+            <span style={{ fontSize: 12, color: MW.mute }}>{label}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+        </a>
+    );
+}
+
+function AsideButton({ primary, onClick, children }: { primary?: boolean; onClick: () => void; children: ReactNode }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            style={
+                primary
+                    ? { height: 50, border: 0, borderRadius: 999, background: MW_GRADIENT, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: MW.navy, cursor: 'pointer' }
+                    : { height: 46, border: '1px solid rgba(255,255,255,0.35)', borderRadius: 999, background: 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer' }
+            }
+            onMouseEnter={(e) => {
+                if (primary) e.currentTarget.style.opacity = '0.92';
+                else e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+            }}
+            onMouseLeave={(e) => {
+                if (primary) e.currentTarget.style.opacity = '1';
+                else e.currentTarget.style.background = 'transparent';
+            }}
+        >
+            {children}
+        </button>
+    );
+}
+
+const LINE_SOFT = '#EEF1EF';
+const SOFT_BG = '#F7FAF9';
+
+const crumbLink: CSSProperties = { color: MW.mute, flexShrink: 0, textDecoration: 'none' };
+
+const tourChip: CSSProperties = {
+    alignSelf: 'flex-start',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    height: 36,
+    padding: '0 16px',
+    borderRadius: 999,
+    background: MW.mintBg,
+    border: `1px solid ${MW.mintTint}`,
+    fontSize: 13,
+    fontWeight: 700,
+    color: MW.mintDeep,
+    textDecoration: 'none',
+    maxWidth: '100%',
+};
+
+const outlineBtn: CSSProperties = {
+    height: 44,
+    padding: '0 20px',
+    border: `1px solid ${MW.line}`,
+    borderRadius: 999,
+    background: '#fff',
     fontFamily: 'inherit',
+    fontSize: 14,
+    fontWeight: 700,
+    color: MW.navy,
+    cursor: 'pointer',
 };
