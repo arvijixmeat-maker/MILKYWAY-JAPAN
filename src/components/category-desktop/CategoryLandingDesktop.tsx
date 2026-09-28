@@ -5,6 +5,7 @@ import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { PageHero } from '../desktop-primitives/PageHero';
 import { PCard } from '../desktop-primitives/PCard';
+import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 import type { CategoryLandingContent, HighlightCard, HighlightSection } from '../category/CategoryLanding';
 
 interface ApiProduct {
@@ -120,7 +121,7 @@ export function CategoryLandingDesktop({
             {/* Products grid */}
             <section
                 id="category-products"
-                style={{ maxWidth: contentWidth, margin: '0 auto', padding: '72px 32px 0', scrollMarginTop: 200 }}
+                style={{ maxWidth: contentWidth, margin: '0 auto', padding: '72px 32px 0', scrollMarginTop: MW_STICKY_TOP + 40 }}
             >
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
                     <div>

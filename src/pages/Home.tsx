@@ -11,12 +11,7 @@ import { useHomeData } from '../hooks/useHomeData';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { TravelThemeSkeleton } from '../components/skeletons/TravelThemeSkeleton';
 import { AdventureSkeleton } from '../components/skeletons/AdventureSkeleton';
-import { HeroSectionDesktop } from '../components/home-desktop/HeroSection.desktop';
-import { QuickLinksRowDesktop } from '../components/home-desktop/QuickLinksRow.desktop';
-import { ThemeTabsBarDesktop } from '../components/home-desktop/ThemeTabsBar.desktop';
-import { CategorySectionDesktop } from '../components/home-desktop/CategorySection.desktop';
-import { MagazineSectionDesktop } from '../components/home-desktop/MagazineSection.desktop';
-import { ReviewSectionDesktop } from '../components/home-desktop/ReviewSection.desktop';
+import { HomeDesktop } from '../components/home-desktop/HomeDesktop';
 
 export const Home: React.FC = () => {
     const { data, isLoading } = useHomeData();
@@ -76,37 +71,7 @@ export const Home: React.FC = () => {
         return (
             <>
                 {seo}
-                <HeroSectionDesktop />
-                <QuickLinksRowDesktop />
-                {data.categories.length > 0 && <ThemeTabsBarDesktop categories={data.categories} />}
-
-                {/* SEO H1 — visible to crawlers, visually offscreen */}
-                <section className="sr-only">
-                    <h1>モンゴルツアー・モンゴル旅行専門の現地旅行社</h1>
-                    <p>
-                        Milkyway Japanは日本語ガイド同行で安心のモンゴルツアーをご案内。乗馬旅行、ゴビ砂漠、テレルジ国立公園など多彩なプランをご用意しています。
-                    </p>
-                </section>
-
-                {!isLoading && data.categories.slice(0, 2).map((category) => (
-                    <CategorySectionDesktop
-                        key={category.id}
-                        category={category}
-                        products={data.products}
-                    />
-                ))}
-
-                {!isLoading && data.categories.slice(2).map((category) => (
-                    <CategorySectionDesktop
-                        key={category.id}
-                        category={category}
-                        products={data.products}
-                    />
-                ))}
-
-                <MagazineSectionDesktop magazines={data.magazines} />
-                <ReviewSectionDesktop />
-                <div style={{ height: 96 }} />
+                <HomeDesktop data={data} isLoading={isLoading} />
             </>
         );
     }

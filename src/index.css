@@ -250,3 +250,10 @@ img {
         bottom: calc(168px + env(safe-area-inset-bottom, 0px));
     }
 }
+
+/* PC header: hide the rotating HOT keyword when the logo/search row gets tight. */
+@media (max-width: 1100px) {
+    .mw-hide-narrow {
+        display: none !important;
+    }
+}

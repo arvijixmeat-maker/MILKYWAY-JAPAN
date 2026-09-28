@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { sendNotificationEmail } from '../../lib/email';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { PageHero } from '../desktop-primitives/PageHero';
+import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 
 const DESTINATIONS = [
     { v: '中央モンゴル', emoji: '🏞️' },
@@ -302,7 +303,7 @@ export function CustomEstimateDesktop({ contentWidth = 1280 }: { contentWidth?: 
                     </div>
 
                     {/* Sticky summary */}
-                    <aside style={{ position: 'sticky', top: 156, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <aside style={{ position: 'sticky', top: MW_STICKY_TOP + 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <div
                             style={{
                                 background: '#fff',

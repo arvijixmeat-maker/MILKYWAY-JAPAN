@@ -91,6 +91,8 @@ interface Props {
 export function TourProductsDesktop({ contentWidth = 1280 }: Props) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    // Keyword from the header search box (/products?q=…).
+    const query = (searchParams.get('q') || '').trim();
 
     const [cat, setCat] = useState<string>(searchParams.get('category') || 'all');
     const [sort, setSort] = useState<'popular' | 'reviews' | 'rating' | 'price_asc' | 'price_desc'>('popular');
@@ -170,6 +172,14 @@ export function TourProductsDesktop({ contentWidth = 1280 }: Props) {
             });
         }
 
+        if (query) {
+            const words = query.toLowerCase().split(/[\s\u3000]+/).filter(Boolean);
+            list = list.filter((p) => {
+                const haystack = `${p.name} ${(p.tags || []).join(' ')} ${p.category || ''} ${p.duration || ''}`.toLowerCase();
+                return words.every((w) => haystack.includes(w));
+            });
+        }
+
         list = list.filter((p) => p.price >= filters.price[0] && p.price <= filters.price[1]);
 
         if (filters.duration.length > 0) {
@@ -202,7 +212,7 @@ export function TourProductsDesktop({ contentWidth = 1280 }: Props) {
             return (Number(b.isPopular) - Number(a.isPopular)) || (b.bookingCount - a.bookingCount);
         });
         return list;
-    }, [products, categories, cat, sort, filters]);
+    }, [products, categories, cat, sort, filters, query]);
 
     const popular = useMemo(() => {
         const sorted = products.slice().sort((a, b) => (Number(b.isPopular) - Number(a.isPopular)) || (b.bookingCount - a.bookingCount));
@@ -219,6 +229,11 @@ export function TourProductsDesktop({ contentWidth = 1280 }: Props) {
         setPage(1);
         if (id === 'all') setSearchParams({});
         else setSearchParams({ category: id });
+    };
+
+    const clearQuery = () => {
+        setPage(1);
+        setSearchParams(cat === 'all' ? {} : { category: cat });
     };
 
     const resetAll = () => {
@@ -489,10 +504,21 @@ export function TourProductsDesktop({ contentWidth = 1280 }: Props) {
                         >
                             <div>
                                 <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-1)', margin: 0, letterSpacing: '-0.01em' }}>
-                                    全商品を見る
+                                    {query ? `「${query}」の検索結果` : '全商品を見る'}
                                 </h2>
-                                <div style={{ fontSize: 13, color: 'var(--fg-5)', marginTop: 6 }}>
-                                    <span style={{ color: 'var(--fg-2)', fontWeight: 700 }}>{filtered.length} 件</span> のツアーが見つかりました
+                                <div style={{ fontSize: 13, color: 'var(--fg-5)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span>
+                                        <span style={{ color: 'var(--fg-2)', fontWeight: 700 }}>{filtered.length} 件</span> のツアーが見つかりました
+                                    </span>
+                                    {query && (
+                                        <button
+                                            type="button"
+                                            onClick={clearQuery}
+                                            style={{ border: '1px solid var(--border)', background: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 12, color: 'var(--fg-3)', cursor: 'pointer', fontFamily: 'inherit' }}
+                                        >
+                                            検索をクリア ×
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

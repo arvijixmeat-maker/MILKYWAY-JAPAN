@@ -34,6 +34,9 @@ interface Product {
     name: string;
     category: string;
     price: number;
+    originalPrice?: number;
+    isPopular: boolean;
+    isFeatured: boolean;
     mainImages: string[];
     duration: string;
     tags: string[];
@@ -72,6 +75,9 @@ export const useHomeData = () => {
                 name: p.name,
                 category: p.category,
                 price: p.price,
+                originalPrice: p.originalPrice ?? p.original_price ?? undefined,
+                isPopular: !!(p.isPopular ?? p.is_popular),
+                isFeatured: !!(p.isFeatured ?? p.is_featured),
                 mainImages: ensureStringArray(p.mainImages || p.main_images),
                 duration: p.duration,
                 tags: p.tags || []
@@ -106,7 +112,9 @@ export const useHomeData = () => {
                     description: c.description || '',
                     order: c.order || 0,
                     isActive: c.is_active !== false,
-                    type: c.type || 'product'
+                    type: c.type || 'product',
+                    landing_hero_images: ensureStringArray(c.landing_hero_images),
+                    landing_hero_image: c.landing_hero_image || undefined
                 }));
 
             return { products, tabs, magazines, categories };
