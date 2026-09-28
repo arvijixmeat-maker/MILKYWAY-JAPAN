@@ -22,6 +22,8 @@ interface Props {
     userId: string | null;
     userName: string;
     isOwner: boolean;
+    /** Author or admin: may edit/delete the post and remove any comment on it. */
+    canManage: boolean;
     /** Resolves true when the comment was saved. */
     onPostComment: (content: string) => Promise<boolean>;
     onDeleteComment: (id: string) => void;
@@ -49,7 +51,7 @@ const hoverBorder = (base: string) => ({
     onMouseLeave: (e: MouseEvent<HTMLElement>) => (e.currentTarget.style.borderColor = base),
 });
 
-export function TravelMateDetailDesktop({ post, comments, userId, userName, isOwner, onPostComment, onDeleteComment, onLogin, onEdit, onDelete }: Props) {
+export function TravelMateDetailDesktop({ post, comments, userId, userName, isOwner, canManage, onPostComment, onDeleteComment, onLogin, onEdit, onDelete }: Props) {
     const navigate = useNavigate();
     const { pick } = useSpotImages();
     const { data: all = [] } = useMatePosts();
@@ -141,7 +143,7 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
                             {p.posted && <><span>・</span><span>{p.posted}</span></>}
                             <span>・</span><span>閲覧 {p.views}</span>
                             <span>・</span><span>コメント {comments.length}</span>
-                            {isOwner && (
+                            {canManage && (
                                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                                     <button type="button" onClick={onEdit} {...hoverBorder(MW.line)} style={ownerBtn}>編集</button>
                                     <button type="button" onClick={onDelete} style={{ ...ownerBtn, color: MW.red, borderColor: '#F3C9C4' }}>削除</button>
@@ -256,7 +258,7 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
                                                     <strong style={{ fontSize: 14 }}>{name}</strong>
                                                     {isHost && <span style={{ fontSize: 10, fontWeight: 700, color: MW.navy, background: '#3FC2A4', padding: '2px 8px', borderRadius: 999 }}>HOST</span>}
                                                     <span style={{ fontSize: 12, color: MW.mute2 }}>{timeAgo(c.created_at)}</span>
-                                                    {mine && (
+                                                    {(mine || canManage) && (
                                                         <button
                                                             type="button"
                                                             onClick={() => onDeleteComment(c.id)}
