@@ -10,7 +10,8 @@ type Sort = 'rec' | 'low' | 'high' | 'rating' | 'reviews';
 
 /**
  * Trip-type cards, driven by each tour's 여행 타입 set in the admin (packageType).
- * A type with no tours yet opens the quote form with those stays preselected instead.
+ * They always filter; a type with no tours yet shows the empty state, whose quote
+ * button carries that type's stays (?stay=).
  */
 const TRIP_TYPES = [
     { key: 'full', label: 'フルパッケージ旅行', sub: '4つ星ホテル＋デラックスゲル宿泊', tier: 'PREMIUM', stays: ['4つ星ホテル', 'デラックスゲル'], dark: true },
@@ -37,7 +38,6 @@ export function TourListDesktop() {
         setParams(next, { replace: true });
     };
 
-    const typeCount = (key: string) => products.filter((p) => p.packageType === key).length;
     const currentCat = categories.find((c) => c.id === cat);
 
     const items = useMemo(() => {
@@ -72,10 +72,8 @@ export function TourListDesktop() {
         })),
     ];
 
-    const onType = (t: (typeof TRIP_TYPES)[number]) => {
-        if (typeCount(t.key) > 0) setType(type === t.key ? '' : t.key);
-        else navigate(`/custom-estimate?stay=${encodeURIComponent(t.stays.join(','))}`);
-    };
+    const selectedType = TRIP_TYPES.find((t) => t.key === type);
+    const quotePath = selectedType ? `/custom-estimate?stay=${encodeURIComponent(selectedType.stays.join(','))}` : '/custom-estimate';
 
     const reset = () => {
         setType('');
@@ -101,14 +99,12 @@ export function TourListDesktop() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: 16 }}>
                 {TRIP_TYPES.map((t) => {
                     const on = type === t.key;
-                    const filterable = typeCount(t.key) > 0;
                     return (
                         <button
                             key={t.key}
                             type="button"
-                            onClick={() => onType(t)}
-                            aria-pressed={filterable ? on : undefined}
-                            aria-label={filterable ? undefined : `${t.label}（${t.sub}）でお見積もり`}
+                            onClick={() => setType(on ? '' : t.key)}
+                            aria-pressed={on}
                             style={{
                                 position: 'relative',
                                 display: 'flex',
@@ -139,7 +135,7 @@ export function TourListDesktop() {
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 900, color: t.dark ? '#FFFFFF' : MW.navy }}>
                                     {t.label}
                                     <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: '50%', background: on ? (t.dark ? '#FFFFFF' : MW.mintDeep) : 'transparent', color: t.dark ? MW.mintDeep : '#FFFFFF', fontSize: 11, fontWeight: 900, lineHeight: '20px', textAlign: 'center' }}>
-                                        {filterable ? (on ? '✓' : '') : '→'}
+                                        {on ? '✓' : ''}
                                     </span>
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: t.dark ? MW.mintTint : MW.ink3 }}>{t.sub}</span>
@@ -218,15 +214,19 @@ export function TourListDesktop() {
 
                 {!isLoading && items.length === 0 && (
                     <div style={{ borderRadius: 28, background: `linear-gradient(135deg,${MW.mintBg},#FFFFFF)`, border: `1px solid ${MW.mintTint}`, padding: '64px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-                        <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: MW.navy }}>条件に合うツアーが見つかりませんでした。</p>
+                        <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: MW.navy }}>
+                            {selectedType && products.every((p) => p.packageType !== type)
+                                ? `「${selectedType.label}」のツアーは準備中です。`
+                                : '条件に合うツアーが見つかりませんでした。'}
+                        </p>
                         <p style={{ margin: 0, fontSize: 14, color: MW.mute }}>ご希望に合わせたプランは、お見積もりでご相談ください。</p>
                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 6 }}>
                             <button type="button" onClick={reset} style={{ height: 44, padding: '0 22px', border: `1.5px solid ${MW.mint}`, borderRadius: 999, background: '#fff', fontSize: 14, fontWeight: 700, color: MW.mintDeep, cursor: 'pointer', fontFamily: 'inherit' }}>
                                 条件をリセット
                             </button>
                             <a
-                                href="/custom-estimate"
-                                onClick={(e) => { e.preventDefault(); navigate('/custom-estimate'); }}
+                                href={quotePath}
+                                onClick={(e) => { e.preventDefault(); navigate(quotePath); }}
                                 style={{ display: 'inline-flex', alignItems: 'center', height: 44, padding: '0 22px', borderRadius: 999, background: MW_GRADIENT, fontSize: 14, fontWeight: 700, color: MW.navy, textDecoration: 'none' }}
                             >
                                 お見積もり
