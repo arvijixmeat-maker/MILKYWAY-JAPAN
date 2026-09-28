@@ -1,13 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import type { HomeData } from '../../hooks/useHomeData';
-import { MW, MW_EYEBROW, MW_FONT_EN, MW_SEE_ALL, isUsableImage } from '../desktop-primitives/mwTokens';
+import { MW, MW_EYEBROW, MW_FONT_EN, MW_SEE_ALL, cleanTitle, isUsableImage } from '../desktop-primitives/mwTokens';
 
 interface Props {
     magazines: HomeData['magazines'];
 }
-
-/** Drop leading zero-width spaces / emoji flags that some admin titles start with. */
-const cleanTitle = (t: string) => t.replace(/^[\s\u200B-\u200D\uFEFF]*(?:[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F]+\s*)*/u, '').trim();
 
 export function MagazineCardsDesktop({ magazines }: Props) {
     const navigate = useNavigate();

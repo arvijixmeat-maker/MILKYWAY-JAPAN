@@ -9,6 +9,10 @@ import { LocationCard } from '../components/magazine/LocationCard';
 import type { LocationInfo } from '../components/magazine/LocationCard';
 import { RelatedTours } from '../components/magazine/RelatedTours';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MagazineArticleDesktop } from '../components/magazine-desktop/MagazineArticleDesktop';
+import type { MagazineListItem } from '../components/magazine-desktop/MagazineListDesktop';
 
 interface Magazine {
     id: string;
@@ -54,7 +58,10 @@ export const TravelGuideDetail: React.FC = () => {
     const { t } = useTranslation();
     const [magazine, setMagazine] = useState<Magazine | null>(null);
     const [relatedMagazines, setRelatedMagazines] = useState<Magazine[]>([]);
+    // Every published article in list order — PC page uses it for prev/next and "その他の記事".
+    const [allMagazines, setAllMagazines] = useState<MagazineListItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const isDesktop = useIsDesktop();
 
     useEffect(() => {
         const fetchMagazine = async () => {
@@ -91,6 +98,17 @@ export const TravelGuideDetail: React.FC = () => {
                 // In a production environment with many items, a specific endpoint would be better.
                 const allMagazines = await api.magazines.list();
                 if (Array.isArray(allMagazines)) {
+                    setAllMagazines(allMagazines
+                        .filter((m: any) => m.is_active ?? true)
+                        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+                        .map((m: any) => ({
+                            id: m.id,
+                            title: m.title,
+                            description: m.subtitle || m.description || '',
+                            category: m.category,
+                            image: m.thumbnail || m.image || '',
+                        })));
+
                     const relatedData = allMagazines
                         .filter((m: any) =>
                             m.category === magData.category &&
@@ -226,17 +244,20 @@ export const TravelGuideDetail: React.FC = () => {
         return <>{result}</>;
     };
 
+    // PC keeps the site header/footer around loading and not-found states.
+    const shell = (node: React.ReactElement) => (isDesktop ? <DesktopLayout>{node}</DesktopLayout> : node);
+
     if (loading) {
-        return (
-            <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+        return shell(
+            <div className={`${isDesktop ? 'min-h-[60vh]' : 'min-h-screen'} bg-white dark:bg-slate-900 flex items-center justify-center`}>
                 <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
             </div>
         );
     }
 
     if (!magazine) {
-        return (
-            <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+        return shell(
+            <div className={`${isDesktop ? 'min-h-[60vh]' : 'min-h-screen'} bg-white dark:bg-slate-900 flex items-center justify-center`}>
                 <div className="text-center">
                     <p className="text-slate-500 mb-4">{t('travel_guide.detail.loading_or_not_found')}</p>
                     <button
@@ -309,16 +330,45 @@ export const TravelGuideDetail: React.FC = () => {
             },
         })),
     };
+    const seo = (
+        <SEO
+            title={magazine.title}
+            description={magazine.description}
+            image={magazine.image}
+            keywords={`${magazine.category}, ${magazine.tag || ''}`}
+            canonical={canonicalPath}
+            structuredData={[articleLd, breadcrumbLd, faqLd]}
+        />
+    );
+
+    if (isDesktop) {
+        const pos = allMagazines.findIndex((m) => m.id === magazine.id);
+        const others = allMagazines.filter((m) => m.id !== magazine.id);
+        // Same-category articles first, then the rest, three in total.
+        const more = [
+            ...others.filter((m) => m.category === magazine.category),
+            ...others.filter((m) => m.category !== magazine.category),
+        ].slice(0, 3);
+        return (
+            <>
+                {seo}
+                <DesktopLayout>
+                    <MagazineArticleDesktop
+                        magazine={magazine}
+                        body={renderContent(magazine.content || '')}
+                        faqs={magazineFaqs}
+                        more={more}
+                        prev={pos > 0 ? allMagazines[pos - 1] : undefined}
+                        next={pos >= 0 && pos < allMagazines.length - 1 ? allMagazines[pos + 1] : undefined}
+                    />
+                </DesktopLayout>
+            </>
+        );
+    }
+
     return (
         <div className="bg-white dark:bg-slate-900 min-h-screen pb-24 font-display overflow-x-hidden">
-            <SEO
-                title={magazine.title}
-                description={magazine.description}
-                image={magazine.image}
-                keywords={`${magazine.category}, ${magazine.tag || ''}`}
-                canonical={canonicalPath}
-                structuredData={[articleLd, breadcrumbLd, faqLd]}
-            />
+            {seo}
             {/* Header Image */}
             <div className="relative h-[240px] md:h-[360px]">
                 {magazine.image ? (

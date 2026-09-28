@@ -45,3 +45,6 @@ export const MW_SEE_ALL = { fontSize: 14, fontWeight: 700, color: MW.navy, white
 
 /** Height of the sticky PC nav bar (56px + top/bottom borders); offset for sticky page elements. */
 export const MW_STICKY_TOP = 58;
+
+/** Drop leading zero-width spaces / emoji flags that some admin-entered titles start with. */
+export const cleanTitle = (t: string) => t.replace(/^[\s\u200B-\u200D\uFEFF]*(?:[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F]+\s*)*/u, '').trim();

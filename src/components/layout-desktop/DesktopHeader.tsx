@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import logoSquare from '../../assets/new_logo_2026.png';
 import { api } from '../../lib/api';
 import { useWishlist } from '../../hooks/useWishlist';
+import { useProductCategories } from '../../hooks/useProductCategories';
 import { MW, MW_FONT_EN, isUsableImage, yen } from '../desktop-primitives/mwTokens';
 
 const NAV_ITEMS: { id: string; label: string; path: string; match: (p: string) => boolean }[] = [
@@ -118,19 +119,7 @@ export function DesktopHeader() {
         },
     });
 
-    const { data: categories = [] } = useQuery<{ id: string; name: string }[]>({
-        queryKey: ['headerMenu', 'categories'],
-        enabled: menuOpen,
-        staleTime: 1000 * 60 * 60,
-        queryFn: async () => {
-            const data = await api.categories.list();
-            if (!Array.isArray(data)) return [];
-            return data
-                .filter((c: { id: string; type?: string; is_active?: unknown }) => c.id !== 'all' && c.is_active !== false && c.is_active !== 0 && (!c.type || c.type === 'product'))
-                .sort((a: { order?: number }, b: { order?: number }) => (a.order || 0) - (b.order || 0))
-                .map((c: { id: string; name: string }) => ({ id: c.id, name: c.name }));
-        },
-    });
+    const categories = useProductCategories(menuOpen);
 
     const q = text.trim();
     const toks = tokens(q);

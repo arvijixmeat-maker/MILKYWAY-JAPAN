@@ -5,6 +5,9 @@ import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
 import { BottomNav } from '../components/layout/BottomNav';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MagazineListDesktop } from '../components/magazine-desktop/MagazineListDesktop';
 
 interface Magazine {
     id: string;
@@ -22,6 +25,7 @@ interface Magazine {
 export const TravelGuide: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const isDesktop = useIsDesktop();
     const [selectedCategory, setSelectedCategory] = useState(t('travel_guide.all'));
     const [searchQuery, setSearchQuery] = useState('');
     const [magazineCategories, setMagazineCategories] = useState<string[]>([]);
@@ -115,15 +119,30 @@ export const TravelGuide: React.FC = () => {
         isPartOf: { '@type': 'WebSite', name: 'Milkyway Japan', url: 'https://mongolryokou.com' },
     };
 
+    const seo = (
+        <SEO
+            title={`${t('travel_guide.title')} | Milkyway Japan`}
+            description={guideDescription}
+            keywords="モンゴル旅行ガイド, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備"
+            canonical="/travel-guide"
+            structuredData={[collectionLd, breadcrumbLd, itemListLd]}
+        />
+    );
+
+    if (isDesktop) {
+        return (
+            <>
+                {seo}
+                <DesktopLayout>
+                    <MagazineListDesktop magazines={magazines} categories={magazineCategories} />
+                </DesktopLayout>
+            </>
+        );
+    }
+
     return (
         <div className="bg-[#f8f7f8] dark:bg-background-dark text-text-primary dark:text-white pb-24 min-h-screen font-display">
-            <SEO
-                title={`${t('travel_guide.title')} | Milkyway Japan`}
-                description={guideDescription}
-                keywords="モンゴル旅行ガイド, モンゴル情報, モンゴル文化, モンゴル料理, モンゴル旅行準備"
-                canonical="/travel-guide"
-                structuredData={[collectionLd, breadcrumbLd, itemListLd]}
-            />
+            {seo}
             {/* Sticky Header Container */}
             <div className="sticky top-0 z-50 bg-[#f8f7f8]/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200">
                 <header className="px-4 pt-4 pb-2">
