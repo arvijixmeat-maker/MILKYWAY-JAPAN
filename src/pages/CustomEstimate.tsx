@@ -8,6 +8,7 @@ import { SEO } from '../components/seo/SEO';
 import { useTranslation } from 'react-i18next';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { QuoteHero } from '../components/estimate-desktop/QuoteHero';
 import { CustomEstimateDesktop } from '../components/estimate-desktop/CustomEstimateDesktop';
 
 export const CustomEstimate: React.FC = () => {
@@ -141,6 +142,7 @@ const CustomEstimateMobile: React.FC = () => {
             </div>
 
             <div className="max-w-md mx-auto w-full flex flex-col gap-2">
+                <QuoteHero onHome={() => navigate('/')} />
                 {/* Real-time Status */}
                 <div className="px-4 pt-4">
                     <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden relative">
