@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { BottomNav } from '../components/layout/BottomNav';
 import { useTranslation } from 'react-i18next';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
-import { TravelMateDetailDesktop } from '../components/mates-desktop/TravelMateDetailDesktop';
+import { TravelMateDetailDesktop, type MateComment } from '../components/mates-desktop/TravelMateDetailDesktop';
+import type { ApiMatePost } from '../components/mates-desktop/matesData';
 
 export const TravelMateDetail: React.FC = () => {
     const isDesktop = useIsDesktop();
@@ -14,21 +14,30 @@ export const TravelMateDetail: React.FC = () => {
     return <TravelMateDetailMobile />;
 };
 
+interface MateUser {
+    id: string;
+    name?: string;
+    email?: string;
+    avatarUrl?: string;
+}
+
 const TravelMateDetailDesktopContainer: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams<{ id: string }>();
-    const [post, setPost] = useState<any>(null);
-    const [comments, setComments] = useState<any[]>([]);
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [post, setPost] = useState<ApiMatePost | null>(null);
+    const [comments, setComments] = useState<MateComment[]>([]);
+    const [currentUser, setCurrentUser] = useState<MateUser | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
         if (!id) return;
+        setLoading(true);
         (async () => {
             try {
                 const [postData, me] = await Promise.all([
-                    api.travelMates.get(id),
+                    api.travelMates.get(id).catch(() => null),
                     api.auth.me().catch(() => null),
                 ]);
                 if (cancelled) return;
@@ -41,8 +50,6 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
                         if (!cancelled) setComments(Array.isArray(c) ? c : []);
                     }
                 } catch { /* comments are optional */ }
-            } catch (e) {
-                console.error('Travel mate detail fetch error:', e);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -50,38 +57,53 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
         return () => { cancelled = true; };
     }, [id]);
 
-    if (loading) {
+    if (loading || !post) {
         return (
             <DesktopLayout>
-                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>読み込み中...</div>
-            </DesktopLayout>
-        );
-    }
-    if (!post) {
-        return (
-            <DesktopLayout>
-                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>投稿が見つかりません</div>
+                <div style={{ padding: '120px 24px', textAlign: 'center', fontSize: 15, color: '#5C6B75' }}>
+                    {loading ? '読み込み中…' : '投稿が見つかりません'}
+                </div>
             </DesktopLayout>
         );
     }
 
-    const isOwner = !!(currentUser && (currentUser.id === post.userId || currentUser.id === post.user_id));
+    const isOwner = !!(currentUser && post.user_id && currentUser.id === post.user_id);
+    const goLogin = () => navigate('/login', { state: { from: location.pathname } });
 
     const postComment = async (content: string) => {
-        if (!id) return;
+        if (!id) return false;
+        if (!currentUser) {
+            goLogin();
+            return false;
+        }
         try {
-            await fetch(`/api/travel-mates/${id}/comments`, {
+            const res = await fetch(`/api/travel-mates/${id}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content }),
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    user_name: currentUser.name || currentUser.email?.split('@')[0] || '匿名',
+                    user_image: currentUser.avatarUrl || '',
+                    content,
+                }),
             });
-            const res = await fetch(`/api/travel-mates/${id}/comments`);
-            if (res.ok) {
-                const c = await res.json();
-                setComments(Array.isArray(c) ? c : []);
-            }
+            if (!res.ok) return false;
+            const created: MateComment = await res.json();
+            setComments((prev) => [...prev, created]);
+            return true;
         } catch (e) {
-            console.error(e);
+            console.error('Error posting comment:', e);
+            return false;
+        }
+    };
+
+    const deleteComment = async (commentId: string) => {
+        if (!id || !confirm('このコメントを削除しますか？')) return;
+        try {
+            const res = await fetch(`/api/travel-mates/${id}/comments/${commentId}`, { method: 'DELETE' });
+            if (res.ok) setComments((prev) => prev.filter((c) => c.id !== commentId));
+        } catch (e) {
+            console.error('Error deleting comment:', e);
         }
     };
 
@@ -98,8 +120,12 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
             <TravelMateDetailDesktop
                 post={post}
                 comments={comments}
+                userId={currentUser?.id ?? null}
+                userName={currentUser?.name || currentUser?.email || ''}
                 isOwner={isOwner}
                 onPostComment={postComment}
+                onDeleteComment={deleteComment}
+                onLogin={goLogin}
                 onEdit={onEdit}
                 onDelete={onDelete}
             />

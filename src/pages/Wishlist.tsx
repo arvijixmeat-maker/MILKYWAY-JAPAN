@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api'; 
 import { optimizeImage } from '../utils/imageOptimizer';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 interface WishlistItem {
     id: string;
@@ -15,6 +18,18 @@ interface WishlistItem {
 }
 
 export const Wishlist: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab="wishlist" />
+            </DesktopLayout>
+        );
+    }
+    return <WishlistMobile />;
+};
+
+const WishlistMobile: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [wishlist, setWishlist] = useState<WishlistItem[]>([]);

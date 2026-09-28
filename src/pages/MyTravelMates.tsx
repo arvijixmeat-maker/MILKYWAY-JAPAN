@@ -2,8 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api'; 
 import { BottomNav } from '../components/layout/BottomNav';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 export const MyTravelMates: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab="travel-mates" />
+            </DesktopLayout>
+        );
+    }
+    return <MyTravelMatesMobile />;
+};
+
+const MyTravelMatesMobile: React.FC = () => {
     const navigate = useNavigate();
     const [myPosts, setMyPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);

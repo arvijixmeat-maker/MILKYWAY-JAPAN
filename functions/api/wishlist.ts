@@ -1,8 +1,12 @@
 import { Hono } from 'hono';
+import { requireAuth } from '../lib/userAuth';
 
 type Env = { DB: any; };
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: any } }>();
+
+// Wishlists are private: every route acts on the signed-in user's rows only.
+app.use('*', requireAuth);
 
 const ensureTable = async (db: any) => {
     await db.prepare(`
@@ -20,19 +24,14 @@ app.get('/', async (c) => {
     const db = c.env.DB;
     try {
         await ensureTable(db);
-        const userId = c.req.query('user_id');
-        let result;
-        const joinQuery = `
+        const userId = c.get('user').id;
+        const result = await db.prepare(`
             SELECT w.id, w.user_id, w.product_id, w.created_at,
                    p.name as title, p.thumbnail as image, p.price, p.category
             FROM wishlist w
             LEFT JOIN products p ON w.product_id = p.id
-        `;
-        if (userId) {
-            result = await db.prepare(joinQuery + ' WHERE w.user_id = ? ORDER BY w.created_at DESC').bind(userId).all();
-        } else {
-            result = await db.prepare(joinQuery + ' ORDER BY w.created_at DESC').all();
-        }
+            WHERE w.user_id = ? ORDER BY w.created_at DESC
+        `).bind(userId).all();
         return c.json(result.results || []);
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -46,7 +45,7 @@ app.post('/', async (c) => {
         await ensureTable(db);
         const data = await c.req.json();
         const id = data.id || `wl-${Date.now()}`;
-        const userId = data.user_id || data.userId || '';
+        const userId = c.get('user').id;
         const productId = data.product_id || data.productId || '';
 
         // Check if already exists
@@ -68,7 +67,8 @@ app.delete('/:id', async (c) => {
         const id = c.req.param('id');
         const db = c.env.DB;
         await ensureTable(db);
-        await db.prepare('DELETE FROM wishlist WHERE id = ? OR product_id = ?').bind(id, id).run();
+        // Accepts either the wishlist row id or the product id.
+        await db.prepare('DELETE FROM wishlist WHERE user_id = ? AND (id = ? OR product_id = ?)').bind(c.get('user').id, id, id).run();
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);

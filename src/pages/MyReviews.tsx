@@ -4,8 +4,23 @@ import { api } from '../lib/api';
 import { useUser } from '../contexts/UserContext';
 import { useTranslation } from 'react-i18next';
 import { formatDateWithWeekday } from '../utils/formatDate';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 export const MyReviews: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab="my-reviews" />
+            </DesktopLayout>
+        );
+    }
+    return <MyReviewsMobile />;
+};
+
+const MyReviewsMobile: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useUser();
     const { t, i18n } = useTranslation();
