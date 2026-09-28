@@ -9,15 +9,13 @@ import { categoryImage, discountPct, inCategory, isPublished, useHomeReviews, ty
 type Sort = 'rec' | 'low' | 'high' | 'rating' | 'reviews';
 
 /**
- * Trip-type cards. Products opt in via an admin tag containing `tag`; until any
- * product carries one, the card opens the quote form with those stays preselected.
+ * Trip-type cards, driven by each tour's 여행 타입 set in the admin (packageType).
+ * A type with no tours yet opens the quote form with those stays preselected instead.
  */
 const TRIP_TYPES = [
-    { key: 'full', tag: 'フルパッケージ', label: 'フルパッケージ旅行', sub: '4つ星ホテル＋デラックスゲル宿泊', tier: 'PREMIUM', stays: ['4つ星ホテル', 'デラックスゲル'], dark: true },
-    { key: 'value', tag: 'コスパ', label: 'コスパ重視の旅行', sub: '3つ星ホテル＋スタンダードゲル宿泊', tier: 'STANDARD', stays: ['3つ星ホテル', 'スタンダードゲル'], dark: false },
+    { key: 'full', label: 'フルパッケージ旅行', sub: '4つ星ホテル＋デラックスゲル宿泊', tier: 'PREMIUM', stays: ['4つ星ホテル', 'デラックスゲル'], dark: true },
+    { key: 'value', label: 'コスパ重視の旅行', sub: '3つ星ホテル＋スタンダードゲル宿泊', tier: 'STANDARD', stays: ['3つ星ホテル', 'スタンダードゲル'], dark: false },
 ];
-
-const hasTag = (p: HomeProduct, tag: string) => p.tags.some((t) => t.includes(tag));
 
 export function TourListDesktop() {
     const navigate = useNavigate();
@@ -39,7 +37,7 @@ export function TourListDesktop() {
         setParams(next, { replace: true });
     };
 
-    const typeFilterReady = TRIP_TYPES.some((t) => products.some((p) => hasTag(p, t.tag)));
+    const typeCount = (key: string) => products.filter((p) => p.packageType === key).length;
     const currentCat = categories.find((c) => c.id === cat);
 
     const items = useMemo(() => {
@@ -47,7 +45,7 @@ export function TourListDesktop() {
         const tripType = TRIP_TYPES.find((t) => t.key === type);
         const list = products.filter((p) => {
             if (currentCat && !inCategory(p, currentCat)) return false;
-            if (tripType && !hasTag(p, tripType.tag)) return false;
+            if (tripType && p.packageType !== tripType.key) return false;
             if (words.length) {
                 const hay = `${p.name} ${p.tags.join(' ')} ${p.category} ${p.duration}`.toLowerCase();
                 if (!words.every((w) => hay.includes(w))) return false;
@@ -75,7 +73,7 @@ export function TourListDesktop() {
     ];
 
     const onType = (t: (typeof TRIP_TYPES)[number]) => {
-        if (typeFilterReady) setType(type === t.key ? '' : t.key);
+        if (typeCount(t.key) > 0) setType(type === t.key ? '' : t.key);
         else navigate(`/custom-estimate?stay=${encodeURIComponent(t.stays.join(','))}`);
     };
 
@@ -103,13 +101,14 @@ export function TourListDesktop() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: 16 }}>
                 {TRIP_TYPES.map((t) => {
                     const on = type === t.key;
+                    const filterable = typeCount(t.key) > 0;
                     return (
                         <button
                             key={t.key}
                             type="button"
                             onClick={() => onType(t)}
-                            aria-pressed={typeFilterReady ? on : undefined}
-                            aria-label={typeFilterReady ? undefined : `${t.label}（${t.sub}）でお見積もり`}
+                            aria-pressed={filterable ? on : undefined}
+                            aria-label={filterable ? undefined : `${t.label}（${t.sub}）でお見積もり`}
                             style={{
                                 position: 'relative',
                                 display: 'flex',
@@ -140,7 +139,7 @@ export function TourListDesktop() {
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 900, color: t.dark ? '#FFFFFF' : MW.navy }}>
                                     {t.label}
                                     <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: '50%', background: on ? (t.dark ? '#FFFFFF' : MW.mintDeep) : 'transparent', color: t.dark ? MW.mintDeep : '#FFFFFF', fontSize: 11, fontWeight: 900, lineHeight: '20px', textAlign: 'center' }}>
-                                        {typeFilterReady ? (on ? '✓' : '') : '→'}
+                                        {filterable ? (on ? '✓' : '') : '→'}
                                     </span>
                                 </span>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: t.dark ? MW.mintTint : MW.ink3 }}>{t.sub}</span>

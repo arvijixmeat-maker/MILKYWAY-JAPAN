@@ -38,6 +38,7 @@ interface Product {
     isPopular: boolean;
     isFeatured: boolean;
     status?: string;
+    packageType: 'full' | 'value' | null;
     mainImages: string[];
     duration: string;
     tags: string[];
@@ -80,6 +81,7 @@ export const useHomeData = () => {
                 isPopular: !!(p.isPopular ?? p.is_popular),
                 isFeatured: !!(p.isFeatured ?? p.is_featured),
                 status: p.status,
+                packageType: p.packageType === 'full' || p.packageType === 'value' ? p.packageType : null,
                 mainImages: ensureStringArray(p.mainImages || p.main_images),
                 duration: p.duration,
                 tags: p.tags || []

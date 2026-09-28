@@ -7,7 +7,7 @@ import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { optimizeImage } from '../utils/imageOptimizer';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
-import type { TourProduct, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent, DesignBlockContent } from '../types/product';
+import type { TourProduct, PackageType, TourPricingOption, AccommodationOption, VehicleOption, DetailSlide, DetailContentBlock, DividerContent, TimelineContent, DayInfoContent, DesignBlockContent } from '../types/product';
 import type { Category } from '../types/category';
 import type { Hotel } from '../types/hotel';
 import type { TouristSpot } from '../types/touristSpot';
@@ -64,6 +64,7 @@ export const AdminProductManage: React.FC = () => {
                     itineraryBlocks: parse(item.itinerary_blocks || item.itineraryBlocks),
                     status: item.status,
                     isFeatured: item.is_featured || item.isFeatured,
+                    packageType: item.packageType ?? item.package_type ?? null,
                     highlights: parse(item.highlights),
                     included: parse(item.included),
                     excluded: parse(item.excluded),
@@ -131,6 +132,7 @@ export const AdminProductManage: React.FC = () => {
                 itinerary_blocks: productToSave.itineraryBlocks,
                 status: productToSave.status,
                 is_featured: productToSave.isFeatured,
+                package_type: productToSave.packageType ?? null,
                 highlights: productToSave.highlights,
                 included: productToSave.included,
                 excluded: productToSave.excluded,
@@ -1871,6 +1873,23 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                     <span className="knob" />
                                                 </button>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="field">
+                                        <label>여행 타입</label>
+                                        <select
+                                            className="inp"
+                                            style={{ appearance: 'none' }}
+                                            value={formData.packageType ?? ''}
+                                            onChange={(e) => setFormData({ ...formData, packageType: (e.target.value || null) as PackageType | null })}
+                                        >
+                                            <option value="">미지정</option>
+                                            <option value="full">풀패키지 (4성급 호텔 + 디럭스 게르)</option>
+                                            <option value="value">실속형 (3성급 호텔 + 스탠다드 게르)</option>
+                                        </select>
+                                        <div className="cell-muted" style={{ fontSize: 12, marginTop: 6 }}>
+                                            PC 투어 상품 목록의 「フルパッケージ旅行 / コスパ重視の旅行」 필터에 사용됩니다.
                                         </div>
                                     </div>
                                 </div>

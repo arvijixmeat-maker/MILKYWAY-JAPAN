@@ -27,6 +27,22 @@ const g = (data: any, snakeKey: string, camelKey: string, defaultVal: any = '') 
     return data[snakeKey] ?? data[camelKey] ?? defaultVal;
 };
 
+// Trip type: 'full' (풀패키지) | 'value' (실속형) | null (미지정)
+const toPackageType = (v: any): 'full' | 'value' | null => (v === 'full' || v === 'value' ? v : null);
+
+// package_type is written separately and best-effort so product saves keep working
+// on databases where /api/migrate-db hasn't added the column yet.
+const savePackageType = async (db: any, id: string, data: any) => {
+    if (data.package_type === undefined && data.packageType === undefined) return;
+    try {
+        await db.prepare('UPDATE products SET package_type = ? WHERE id = ?')
+            .bind(toPackageType(data.package_type ?? data.packageType), id)
+            .run();
+    } catch (e) {
+        console.warn('products.package_type not saved (run /api/migrate-db):', e);
+    }
+};
+
 // GET /api/products
 app.get('/', async (c) => {
     const db = c.env.DB;
@@ -60,6 +76,7 @@ app.get('/', async (c) => {
             isFeatured: p.is_featured === 1 || p.featured === 1,
             isPopular: p.is_popular === 1 || p.popular === 1,
             sortOrder: p.sort_order || 0,
+            packageType: toPackageType(p.package_type),
         }));
         return c.json(parsed);
     } catch (e: any) {
@@ -97,6 +114,7 @@ app.get('/:id', async (c) => {
             isFeatured: result.is_featured === 1 || result.featured === 1,
             isPopular: result.is_popular === 1 || result.popular === 1,
             sortOrder: result.sort_order || 0,
+            packageType: toPackageType(result.package_type),
         };
         return c.json(parsed);
     } catch (e: any) {
@@ -208,6 +226,8 @@ app.post('/', requireAdmin, async (c) => {
                 data.booking_count || data.bookingCount || 0
             ).run();
         }
+
+        await savePackageType(db, id, data);
 
         return c.json({ success: true, id });
     } catch (e: any) {
@@ -373,6 +393,8 @@ app.put('/:id', requireAdmin, async (c) => {
                 }
             }
         }
+
+        await savePackageType(db, id, data);
 
         return c.json({ success: true });
     } catch (e: any) {
