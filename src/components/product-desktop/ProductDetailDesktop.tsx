@@ -12,6 +12,7 @@ import { PCard, type PCardData } from '../desktop-primitives/PCard';
 import { DestinationsMap } from '../desktop-primitives/DestinationsMap';
 import { extractPlacesFromItinerary } from '../../constants/mongoliaPlaces';
 import { useGuideIntro } from '../../hooks/useGuideIntro';
+import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 
 interface ReviewLike {
     id?: string | number;
@@ -136,7 +137,7 @@ export function ProductDetailDesktop({
             for (const s of visibleSections) {
                 const el = document.getElementById('sec-' + s.id);
                 if (!el) continue;
-                if (el.getBoundingClientRect().top - 220 < 0) cur = s.id;
+                if (el.getBoundingClientRect().top - (MW_STICKY_TOP + 50) < 0) cur = s.id;
             }
             setActiveSec(cur);
         };
@@ -183,7 +184,7 @@ export function ProductDetailDesktop({
     const scrollToSection = (id: SectionId) => {
         const el = document.getElementById('sec-' + id);
         if (!el) return;
-        const top = el.getBoundingClientRect().top + window.scrollY - 200;
+        const top = el.getBoundingClientRect().top + window.scrollY - (MW_STICKY_TOP + 30);
         window.scrollTo({ top, behavior: 'smooth' });
     };
 
@@ -357,7 +358,7 @@ export function ProductDetailDesktop({
                 <div
                     style={{
                         position: 'sticky',
-                        top: 170,
+                        top: MW_STICKY_TOP,
                         zIndex: 30,
                         background: '#fff',
                         margin: '0 -32px 0',
@@ -471,7 +472,7 @@ export function ProductDetailDesktop({
                     </div>
 
                     {/* Sticky booking card */}
-                    <aside ref={bookingRef} style={{ position: 'sticky', top: 220 }}>
+                    <aside ref={bookingRef} style={{ position: 'sticky', top: MW_STICKY_TOP + 50 }}>
                         <div
                             style={{
                                 background: '#fff',
@@ -819,7 +820,7 @@ function Section({ id, title, eyebrow, children }: { id: string; title: string; 
                 padding: '16px 0 48px',
                 borderBottom: '1px solid var(--border-subtle)',
                 marginBottom: 12,
-                scrollMarginTop: 220,
+                scrollMarginTop: MW_STICKY_TOP + 50,
             }}
         >
             {eyebrow && (
@@ -1564,7 +1565,7 @@ function DayTabs({ days }: { days: DayGroup[] }) {
     const jump = (idx: number) => {
         const el = document.getElementById(`itin-day-${idx + 1}`);
         if (!el) return;
-        const top = el.getBoundingClientRect().top + window.scrollY - 220;
+        const top = el.getBoundingClientRect().top + window.scrollY - (MW_STICKY_TOP + 50);
         window.scrollTo({ top, behavior: 'smooth' });
     };
     return (
@@ -1682,7 +1683,7 @@ function DaySection({
     return (
         <section
             id={`itin-day-${dayIndex + 1}`}
-            style={{ marginBottom: 56, scrollMarginTop: 260 }}
+            style={{ marginBottom: 56, scrollMarginTop: MW_STICKY_TOP + 90 }}
         >
             {/* ─── Slim day header bar ───────────────────────────────── */}
             <div

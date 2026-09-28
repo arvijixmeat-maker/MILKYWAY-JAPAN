@@ -1,10 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import logoSquare from '../../assets/new_logo_2026.png';
-import { MatIcon } from '../desktop-primitives/MatIcon';
-
-interface DesktopFooterProps {
-    contentWidth?: number;
-}
+import { useLocation, useNavigate } from 'react-router-dom';
+import { MW, MW_FONT_EN, MW_GRADIENT } from '../desktop-primitives/mwTokens';
 
 interface FooterLink {
     label: string;
@@ -12,8 +7,10 @@ interface FooterLink {
     onClick?: () => void;
 }
 
-export function DesktopFooter({ contentWidth = 1280 }: DesktopFooterProps) {
+export function DesktopFooter() {
     const navigate = useNavigate();
+    // The quote page is itself the CTA target, so it skips the band.
+    const showCta = !useLocation().pathname.startsWith('/custom-estimate');
 
     const onConsult = () => {
         if (typeof window.openChannelTalk === 'function') {
@@ -58,232 +55,149 @@ export function DesktopFooter({ contentWidth = 1280 }: DesktopFooterProps) {
     ];
 
     return (
-        <footer style={{ background: 'var(--bg-muted)', borderTop: '1px solid var(--border-subtle)', color: 'var(--fg-4)' }}>
-            {/* CTA strip */}
-            <div style={{ background: 'var(--fg-1)', color: '#cbd5e1' }}>
-                <div
+        <>
+            {/* Custom tour CTA */}
+            {showCta && (
+                <section
                     style={{
-                        maxWidth: contentWidth,
-                        margin: '0 auto',
-                        padding: '36px 32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 24,
-                        flexWrap: 'wrap',
+                        background:
+                            'radial-gradient(600px 320px at 88% 0%,rgba(39,171,143,0.14),rgba(39,171,143,0) 70%),radial-gradient(420px 260px at 0% 100%,rgba(109,219,190,0.10),rgba(109,219,190,0) 70%),#FFFFFF',
+                        color: MW.navy,
+                        borderTop: `1px solid ${MW.line}`,
                     }}
                 >
-                    <div>
-                        <div
-                            style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                letterSpacing: '0.1em',
-                                color: '#5eead4',
-                                textTransform: 'uppercase',
-                                marginBottom: 6,
-                            }}
-                        >
-                            Custom Tour
+                    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <span style={{ fontFamily: MW_FONT_EN, fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep }}>CUSTOM TOUR</span>
+                            <h2 style={{ margin: 0, fontSize: 30, fontWeight: 900, lineHeight: 1.35 }}>あなただけの特別なプランを、1分でリクエスト</h2>
+                            <p style={{ margin: 0, fontSize: 14, color: MW.mute }}>日本語スタッフが24時間以内にご返信。お見積もりは無料です。</p>
                         </div>
-                        <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>
-                            あなただけの特別なプランを、1分でリクエスト
-                        </div>
-                        <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 8 }}>
-                            日本語スタッフが24時間以内にご返信。お見積もりは無料です。
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/custom-estimate')}
+                                style={{ background: MW_GRADIENT, color: MW.navy, fontWeight: 700, fontSize: 15, padding: '15px 30px', borderRadius: 999, border: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 20px rgba(39,171,143,0.3)' }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'linear-gradient(135deg,#1C8571 0%,#3FC2A4 100%)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = MW_GRADIENT)}
+                            >
+                                お見積もり
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onConsult}
+                                style={{ border: `1.5px solid ${MW.navy}`, background: 'transparent', color: MW.navy, fontWeight: 700, fontSize: 15, padding: '14px 30px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(10,31,46,0.08)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            >
+                                相談
+                            </button>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                        <button
-                            type="button"
-                            onClick={() => navigate('/custom-estimate')}
-                            style={{
-                                padding: '14px 22px',
-                                background: '#0f766e',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 999,
-                                fontSize: 14,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 8,
-                            }}
-                        >
-                            <MatIcon name="edit_note" size={18} color="#fff" /> お見積もり
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onConsult}
-                            style={{
-                                padding: '14px 22px',
-                                background: 'transparent',
-                                color: '#fff',
-                                border: '1px solid rgba(255,255,255,0.25)',
-                                borderRadius: 999,
-                                fontSize: 14,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 8,
-                            }}
-                        >
-                            <MatIcon name="chat" size={18} color="#fff" /> 相談
-                        </button>
-                    </div>
-                </div>
-            </div>
+                </section>
+            )}
 
-            <div
-                style={{
-                    maxWidth: contentWidth,
-                    margin: '0 auto',
-                    padding: '56px 32px 32px',
-                    display: 'grid',
-                    gridTemplateColumns: '1.4fr 1fr 1fr 1fr',
-                    gap: 56,
-                }}
-            >
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                        <img src={logoSquare} alt="" style={{ height: 44, width: 44, objectFit: 'contain' }} />
-                        <div>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)' }}>Milkyway Japan</div>
-                            <div style={{ fontSize: 11, color: 'var(--fg-5)', marginTop: 2 }}>Mongolia Milky Way (SUUN ZAM)</div>
+            <footer style={{ background: '#FFFFFF', color: MW.ink3, borderTop: `1px solid ${MW.line}` }}>
+                <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 24px 32px', display: 'flex', flexDirection: 'column', gap: 40 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 40 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            <span style={{ fontFamily: MW_FONT_EN, fontWeight: 700, fontSize: 19, color: MW.navy }}>
+                                Milkyway<span style={{ color: MW.mint }}> Japan</span>
+                            </span>
+                            <span style={{ fontSize: 12, color: MW.mute }}>Mongolia Milky Way (SUUN ZAM)</span>
+                            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.8 }}>
+                                モンゴル旅行・モンゴルツアー専門の現地旅行社です。日本語堪能な専門ガイドが同行し、安心・安全なご旅行をご提案します。
+                            </p>
                         </div>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--fg-4)', lineHeight: 1.75 }}>
-                        モンゴル旅行・モンゴルツアー専門の現地旅行社です。日本語堪能な専門ガイドが同行し、安心・安全なご旅行をご提案します。
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-                        {[
-                            { icon: 'photo_camera', label: 'Instagram', href: 'https://instagram.com' },
-                            { icon: 'chat', label: 'LINE', onClick: onConsult },
-                            { icon: 'mail', label: 'Email', href: 'mailto:bolor1@hanmail.net' },
-                            { icon: 'phone', label: 'Phone', href: 'tel:+97695945838' },
-                        ].map((s) =>
-                            s.href ? (
-                                <a
-                                    key={s.label}
-                                    href={s.href}
-                                    target={s.href.startsWith('http') ? '_blank' : undefined}
-                                    rel={s.href.startsWith('http') ? 'noreferrer' : undefined}
-                                    style={socialBtn}
-                                    aria-label={s.label}
-                                >
-                                    <MatIcon name={s.icon} size={18} color="var(--fg-3)" />
-                                </a>
-                            ) : (
-                                <button key={s.label} type="button" onClick={s.onClick} style={socialBtn} aria-label={s.label}>
-                                    <MatIcon name={s.icon} size={18} color="var(--fg-3)" />
-                                </button>
-                            )
-                        )}
-                    </div>
-                </div>
-                {cols.map((c) => (
-                    <div key={c.h}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 14, letterSpacing: '0.02em' }}>{c.h}</div>
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {c.items.map((item) => (
-                                <li key={item.label}>
+                        {cols.map((c) => (
+                            <div key={c.h} style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: MW.navy, marginBottom: 4 }}>{c.h}</span>
+                                {c.items.map((item) => (
                                     <button
+                                        key={item.label}
                                         type="button"
                                         onClick={item.onClick ? item.onClick : () => item.path && navigate(item.path)}
-                                        style={footerLinkBtn}
-                                        onMouseEnter={(e) => (e.currentTarget.style.color = '#0f766e')}
-                                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--fg-4)')}
+                                        style={linkBtn}
+                                        onMouseEnter={(e) => (e.currentTarget.style.color = MW.mintDeep)}
+                                        onMouseLeave={(e) => (e.currentTarget.style.color = MW.ink3)}
                                     >
                                         {item.label}
                                     </button>
-                                </li>
-                            ))}
-                        </ul>
+                                ))}
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
 
-            <div style={{ maxWidth: contentWidth, margin: '0 auto', padding: '0 32px 32px' }}>
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24, fontSize: 11, color: 'var(--fg-5)', lineHeight: 1.8 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 16 }}>
-                        <div>
-                            <div style={{ fontWeight: 700, color: 'var(--fg-3)', marginBottom: 6 }}>[モンゴル本社]</div>
-                            <div>商号: Mongolia Milky Way (SUUN ZAM) | 代表者: Davaasuren Bilguun</div>
-                            <div>事業者登録番号: 9011640064 | 観光事業登録番号: 6124313</div>
-                            <div>電話: +976 9594 5838 | Tel: +976-8010-7766</div>
-                            <div>所在地: ウランバートル バヤンズルフ区 13棟 DACOセンター 3階 306</div>
-                        </div>
-                        <div>
-                            <div style={{ fontWeight: 700, color: 'var(--fg-3)', marginBottom: 6 }}>[韓国代理店]</div>
-                            <div>商号: Hello Bolor | 代表者: Davaasuren Bolor</div>
-                            <div>事業者登録番号: 730-54-00614 | 通信販売業番号: 第2022-ソウル中浪-1776号</div>
-                            <div>メール: bolor1@hanmail.net</div>
-                            <div>お問い合わせ: 公式LINE またはチャットでお問い合わせください。</div>
-                        </div>
-                    </div>
                     <div
                         style={{
-                            borderTop: '1px solid var(--border)',
-                            paddingTop: 16,
-                            display: 'flex',
-                            justifyContent: 'space-between',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))',
+                            gap: 32,
+                            paddingTop: 32,
+                            borderTop: `1px solid ${MW.line}`,
+                            fontSize: 12,
+                            lineHeight: 1.9,
+                            color: MW.mute,
                         }}
                     >
-                        <div>© 2026 Mongolia Milky Way. All rights reserved.</div>
-                        <div style={{ display: 'flex', gap: 18 }}>
-                            <button type="button" onClick={() => navigate('/about')} style={legalLinkBtn}>
-                                会社案内
-                            </button>
-                            <button type="button" onClick={() => navigate('/terms-of-service')} style={legalLinkBtn}>
-                                利用規約
-                            </button>
-                            <button type="button" onClick={() => navigate('/privacy-policy')} style={legalLinkBtn}>
-                                個人情報処理方針
-                            </button>
+                        <div>
+                            <strong style={{ color: MW.navy }}>[モンゴル本社]</strong>
+                            <br />商号: Mongolia Milky Way (SUUN ZAM) | 代表者: Davaasuren Bilguun
+                            <br />事業者登録番号: 9011640064 | 観光事業登録番号: 6124313
+                            <br />電話: +976 9594 5838 | Tel: +976-8010-7766
+                            <br />所在地: ウランバートル バヤンズルフ区 13棟 DACOセンター 3階 306
+                        </div>
+                        <div>
+                            <strong style={{ color: MW.navy }}>[韓国代理店]</strong>
+                            <br />商号: Hello Bolor | 代表者: Davaasuren Bolor
+                            <br />事業者登録番号: 730-54-00614 | 通信販売業番号: 第2022-ソウル中浪-1776号
+                            <br />メール: bolor1@hanmail.net
+                            <br />お問い合わせ: 公式LINE またはチャットでお問い合わせください。
+                        </div>
+                    </div>
+
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 16,
+                            flexWrap: 'wrap',
+                            paddingTop: 24,
+                            borderTop: `1px solid ${MW.line}`,
+                            fontSize: 12,
+                            color: MW.mute,
+                        }}
+                    >
+                        <span>© 2026 Mongolia Milky Way. All rights reserved.</span>
+                        <div style={{ display: 'flex', gap: 20 }}>
+                            <button type="button" onClick={() => navigate('/about')} style={legalBtn}>会社案内</button>
+                            <button type="button" onClick={() => navigate('/terms-of-service')} style={legalBtn}>利用規約</button>
+                            <button type="button" onClick={() => navigate('/privacy-policy')} style={legalBtn}>個人情報処理方針</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </footer>
+            </footer>
+        </>
     );
 }
 
-const socialBtn = {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
-    border: '1px solid var(--border)',
-    background: '#fff',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textDecoration: 'none',
-    padding: 0,
-} as const;
-
-const footerLinkBtn = {
+const linkBtn = {
     background: 'none',
     border: 'none',
     padding: 0,
     fontSize: 13,
-    color: 'var(--fg-4)',
+    color: MW.ink3,
     cursor: 'pointer',
     fontFamily: 'inherit',
     textAlign: 'left',
     transition: 'color 150ms',
 } as const;
 
-const legalLinkBtn = {
+const legalBtn = {
     background: 'none',
     border: 'none',
     padding: 0,
-    fontSize: 11,
-    color: 'var(--fg-5)',
+    fontSize: 12,
+    color: MW.mute,
     cursor: 'pointer',
     fontFamily: 'inherit',
 } as const;

@@ -343,6 +343,15 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped products.faqs: ${e.message}`);
     }
 
+    // Products: trip type shown as a filter on the PC tour list.
+    // 'full' = 풀패키지 (4つ星ホテル＋デラックスゲル), 'value' = 실속형 (3つ星ホテル＋スタンダードゲル), NULL = 미지정.
+    try {
+        await c.env.DB.prepare('ALTER TABLE products ADD COLUMN package_type TEXT').run();
+        migrationResults.push('Added products.package_type');
+    } catch (e: any) {
+        migrationResults.push(`Skipped products.package_type: ${e.message}`);
+    }
+
     // Hotels — reusable hotel master library.
     // Picked from dayInfo.accommodation in the product itinerary editor
     // so admin doesn't have to type "마리나베이샌즈호텔" repeatedly.

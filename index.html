@@ -96,6 +96,11 @@
     as="style" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 
+  <!-- PC redesign typography (Zen Kaku Gothic New + Unbounded). Loaded without blocking render;
+       font files are only fetched on the desktop layout, which is the only place they are used. -->
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Unbounded:wght@500;600;700&display=swap"
+    rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'">
+
   <link rel="preload" href="/fonts/FlightSans-Regular.woff2" as="font" type="font/woff2" crossorigin />
 
   <!-- Material Symbols — SUBSET via icon_names: only the icons actually used in src/

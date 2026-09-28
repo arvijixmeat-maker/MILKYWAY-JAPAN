@@ -1,3 +1,6 @@
+/** 여행 타입: full = 풀패키지(4성급 호텔 + 디럭스 게르), value = 실속형(3성급 호텔 + 스탠다드 게르) */
+export type PackageType = 'full' | 'value';
+
 export interface TourProduct {
     id: string;
 
@@ -24,6 +27,8 @@ export interface TourProduct {
     status: 'active' | 'inactive' | 'soldout';
     isFeatured: boolean;
     isPopular?: boolean;
+    packageType?: PackageType | null; // 여행 타입 — PC 투어 목록의 필터 카드
+
 
     // 상세 정보
     tags: string[];

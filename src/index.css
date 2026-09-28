@@ -250,3 +250,168 @@ img {
         bottom: calc(168px + env(safe-area-inset-bottom, 0px));
     }
 }
+
+/* PC header: hide the rotating HOT keyword when the logo/search row gets tight. */
+@media (max-width: 1100px) {
+    .mw-hide-narrow {
+        display: none !important;
+    }
+}
+
+/* PC magazine article body (admin-authored HTML) — Claude Design typography. */
+.mw-article {
+    counter-reset: mwsec;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    font-size: 16px;
+    line-height: 2.05;
+    color: #23323D;
+    overflow-wrap: anywhere;
+}
+.mw-article > div {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+.mw-article p {
+    margin: 0;
+}
+.mw-article h2 {
+    counter-increment: mwsec;
+    margin: 28px 0 0;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1.4;
+    color: #0A1F2E;
+    scroll-margin-top: 90px;
+}
+.mw-article h2::before {
+    content: counter(mwsec, decimal-leading-zero);
+    font-family: 'Unbounded', 'Zen Kaku Gothic New', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1C8571;
+    flex-shrink: 0;
+}
+.mw-article h3 {
+    margin: 4px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #0A1F2E;
+    scroll-margin-top: 90px;
+}
+.mw-article h3::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #27AB8F;
+    flex-shrink: 0;
+}
+.mw-article h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0A1F2E;
+}
+.mw-article strong,
+.mw-article b {
+    color: #0A1F2E;
+}
+.mw-article a {
+    color: #1C8571;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.mw-article img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 20px;
+}
+.mw-article ul,
+.mw-article ol {
+    margin: 0;
+    padding-left: 1.4em;
+}
+.mw-article ul {
+    list-style: disc;
+}
+.mw-article ol {
+    list-style: decimal;
+}
+.mw-article li::marker {
+    color: #27AB8F;
+}
+.mw-article blockquote {
+    margin: 0;
+    padding: 18px 22px;
+    border-radius: 20px;
+    background: #F1FCF8;
+    border: 1px solid #D1F6EA;
+    color: #0A1F2E;
+}
+.mw-article table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    line-height: 1.7;
+}
+.mw-article th,
+.mw-article td {
+    padding: 12px 16px;
+    border-top: 1px solid #D1F6EA;
+    text-align: left;
+    vertical-align: top;
+}
+.mw-article th {
+    color: #1C8571;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.mw-article hr {
+    border: 0;
+    border-top: 1px solid #E3E6E2;
+    margin: 12px 0;
+}
+
+.mw-faq summary::-webkit-details-marker {
+    display: none;
+}
+.mw-faq[open] .mw-faq-mark {
+    transform: rotate(45deg);
+}
+.mw-faq-mark {
+    transition: transform 0.2s;
+}
+
+/* Quote page boarding pass: plane flying NRT → UBN. */
+@keyframes mwPlane {
+    0% { left: 0; opacity: 0; }
+    8% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+}
+@keyframes mwTrail {
+    0% { width: 0; }
+    85% { width: 100%; opacity: 1; }
+    100% { width: 100%; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mw-plane,
+    .mw-trail {
+        animation: none !important;
+    }
+    .mw-plane {
+        left: 50% !important;
+        opacity: 1 !important;
+    }
+}

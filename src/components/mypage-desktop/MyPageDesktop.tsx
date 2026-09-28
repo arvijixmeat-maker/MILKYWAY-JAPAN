@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { PageHero } from '../desktop-primitives/PageHero';
+import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 import { toTourDateKey } from '../../utils/formatDate';
 
 interface MeUser {
@@ -193,7 +194,7 @@ export function MyPageDesktop({ contentWidth = 1280 }: { contentWidth?: number }
             <section style={{ maxWidth: contentWidth, margin: '0 auto', padding: '40px 32px 0' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 32, alignItems: 'start' }}>
                     {/* Left sidebar */}
-                    <aside style={{ position: 'sticky', top: 156, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <aside style={{ position: 'sticky', top: MW_STICKY_TOP + 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                         {/* Profile card */}
                         <div
                             style={{

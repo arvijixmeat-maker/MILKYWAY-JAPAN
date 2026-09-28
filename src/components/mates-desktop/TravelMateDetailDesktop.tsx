@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MatIcon } from '../desktop-primitives/MatIcon';
+import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 
 interface ApiPost {
     id: string;
@@ -492,7 +493,7 @@ export function TravelMateDetailDesktop({
                     </div>
 
                     {/* Sticky right panel */}
-                    <aside style={{ position: 'sticky', top: 156, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <aside style={{ position: 'sticky', top: MW_STICKY_TOP + 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                         {/* Apply card */}
                         <div
                             style={{

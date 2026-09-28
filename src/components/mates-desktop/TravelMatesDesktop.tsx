@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { MatIcon } from '../desktop-primitives/MatIcon';
 import { PageHero } from '../desktop-primitives/PageHero';
+import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 
 interface ApiMatePost {
     id: string;
@@ -329,7 +330,7 @@ export function TravelMatesDesktop({ contentWidth = 1280 }: { contentWidth?: num
             {/* Body — sidebar + grid */}
             <section style={{ maxWidth: contentWidth, margin: '0 auto', padding: '32px 32px 0' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 32, alignItems: 'start' }}>
-                    <aside style={{ position: 'sticky', top: 168 }}>
+                    <aside style={{ position: 'sticky', top: MW_STICKY_TOP + 16 }}>
                         <FilterSidebar filters={filters} onChange={setFilters} onReset={resetFilters} />
                     </aside>
 
