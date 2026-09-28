@@ -44,11 +44,11 @@ export const uploadImage = async (file: File, folder: string = 'common'): Promis
     try {
         const isDetailImage = folder.includes('detail') || folder.includes('product-details') || folder.includes('magazine');
         
-        const options: any = {
-            maxSizeMB: isDetailImage ? 5 : 1, // Allow larger size for detail images
+        const options: Parameters<typeof imageCompression>[1] = {
+            maxSizeMB: isDetailImage ? 2 : 1,
             useWebWorker: true,
             fileType: 'image/webp', // Force WebP output format
-            initialQuality: isDetailImage ? 0.9 : 0.85, // Higher quality for detail images
+            initialQuality: isDetailImage ? 0.86 : 0.85,
             alwaysKeepResolution: isDetailImage // Vital: prevent shrinking long images
         };
 
@@ -61,6 +61,14 @@ export const uploadImage = async (file: File, folder: string = 'common'): Promis
         // Only compress if the file is an image
         if (file.type.startsWith('image/')) {
             try {
+                if (isDetailImage) {
+                    const bitmap = await createImageBitmap(file);
+                    // Bound WIDTH, not the longest edge: long artwork must keep
+                    // its text readable instead of being shrunk to 1720px tall.
+                    options.maxWidthOrHeight = Math.ceil(Math.max(bitmap.width, bitmap.height) * Math.min(1, 1720 / bitmap.width));
+                    if (bitmap.height > bitmap.width * 3) options.maxSizeMB = 5;
+                    bitmap.close();
+                }
                 const compressedBlob = await imageCompression(file, options);
                 // Create a new File from the compressed Blob with .webp extension
                 const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";

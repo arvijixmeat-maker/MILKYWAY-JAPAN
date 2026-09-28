@@ -1,3 +1,5 @@
+import { ResponsiveProductImage } from '../common/ResponsiveProductImage';
+import { productImageUrl } from '../../utils/productImage';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -720,7 +722,7 @@ export function ProductDetailDesktop({
                                 width: 56,
                                 height: 56,
                                 borderRadius: 12,
-                                backgroundImage: `url(${gallery[0]})`,
+                                backgroundImage: `url(${productImageUrl(gallery[0], 1280)})`,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                             }}
@@ -858,7 +860,7 @@ function GallerySection({ gallery, onOpen }: { gallery: string[]; onOpen: () => 
     // we never render a broken-image black box.
     const fallbackGradient = 'linear-gradient(135deg, #134e4a 0%, #115e59 50%, #0f766e 100%)';
     const tile = (img: string | undefined, extra: CSSProperties = {}): CSSProperties => ({
-        backgroundImage: img ? `url(${img})` : fallbackGradient,
+        backgroundImage: img ? `url(${productImageUrl(img, 1280)})` : fallbackGradient,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         border: 'none',
@@ -1001,7 +1003,7 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
                         const url = typeof b.content === 'string' ? b.content : '';
                         if (!url) return null;
                         return (
-                            <img
+                            <ResponsiveProductImage
                                 key={b.id || i}
                                 src={url}
                                 alt={`${product.name} 詳細${i + 1}｜モンゴル旅行・モンゴルツアー`}
@@ -1051,7 +1053,7 @@ function DetailBlocksRenderer({ product }: { product: TourProduct }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
             {detailImages.map((img, i) => (
-                <img
+                <ResponsiveProductImage
                     key={i}
                     src={img}
                     alt={`${product.name} 詳細${i + 1}｜モンゴル旅行・モンゴルツアー`}
@@ -1175,7 +1177,7 @@ function PremiumImageCard({
                 boxShadow: '0 6px 18px -8px rgba(0,0,0,0.18)',
             }}
         >
-            <img
+            <ResponsiveProductImage
                 src={src}
                 alt={alt}
                 loading="lazy"
@@ -1314,7 +1316,7 @@ function OptionsBlock({ product }: { product: TourProduct }) {
                                             width: 80,
                                             height: 80,
                                             borderRadius: 12,
-                                            backgroundImage: `url(${a.imageUrl})`,
+                                            backgroundImage: `url(${productImageUrl(a.imageUrl, 640)})`,
                                             backgroundSize: 'cover',
                                             backgroundPosition: 'center',
                                             flexShrink: 0,
@@ -1480,7 +1482,7 @@ function Timeline({ product }: { product: TourProduct }) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {legacyImages.map((src, i) => (
-                    <img
+                    <ResponsiveProductImage
                         key={i}
                         src={src}
                         alt={`${product.name} 行程${i + 1}｜モンゴル旅行・モンゴルツアー`}
@@ -1896,7 +1898,7 @@ function DaySection({
                                                     }}
                                                     aria-label={`${c.accommodation || 'hotel'} ${i + 1}枚目を拡大`}
                                                 >
-                                                    <img
+                                                    <ResponsiveProductImage
                                                         src={src}
                                                         alt={`${c.accommodation || 'hotel'} ${i + 1}｜モンゴル旅行・宿泊`}
                                                         loading="lazy"
@@ -2177,7 +2179,7 @@ function SpineEventRow({
         if (!url) return null;
         return (
             <SpineRow icon="image">
-                <img
+                <ResponsiveProductImage
                     src={url}
                     alt={`${productName} 行程${index + 1}｜モンゴル旅行・モンゴルツアー`}
                     loading="lazy"
@@ -2326,7 +2328,7 @@ function SpineEventRow({
                                             }}
                                             aria-label={`${c.title || '画像'} ${i + 1}枚目を拡大`}
                                         >
-                                            <img
+                                            <ResponsiveProductImage
                                                 src={src}
                                                 alt={`${c.title || productName} ${i + 1}｜モンゴル旅行・モンゴルツアー`}
                                                 loading="lazy"
@@ -2427,7 +2429,7 @@ function FlatBlockRenderer({
         const url = typeof block.content === 'string' ? block.content : '';
         if (!url) return null;
         return (
-            <img
+            <ResponsiveProductImage
                 src={url}
                 alt={`${productName} ${index + 1}｜モンゴル旅行・モンゴルツアー`}
                 loading="lazy"
@@ -2461,7 +2463,7 @@ function FlatBlockRenderer({
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {imgs.map((src, i) => (
-                    <img
+                    <ResponsiveProductImage
                         key={i}
                         src={src}
                         alt={`${productName} ${index + 1}-${i + 1}｜モンゴル旅行・モンゴルツアー`}
@@ -3341,7 +3343,7 @@ function GalleryLightbox({
                 <button type="button" onClick={() => setI((i - 1 + images.length) % images.length)} aria-label="prev" style={lbNav('left')}>
                     <MatIcon name="chevron_left" size={28} color="#fff" />
                 </button>
-                <img
+                <ResponsiveProductImage
                     src={images[i]}
                     alt={`${altPrefix} 写真${i + 1}｜モンゴル旅行・モンゴルツアー`}
                     style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }}
@@ -3365,7 +3367,7 @@ function GalleryLightbox({
                             cursor: 'pointer',
                             width: 80,
                             height: 56,
-                            backgroundImage: `url(${g})`,
+                            backgroundImage: `url(${productImageUrl(g, 320)})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             opacity: j === i ? 1 : 0.55,

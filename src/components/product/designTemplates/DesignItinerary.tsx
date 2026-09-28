@@ -1,8 +1,8 @@
+import { ResponsiveProductImage } from '../../common/ResponsiveProductImage';
 import React, { useMemo, useState } from 'react';
 import { stripDayLabelReading } from '../../../utils/dayLabel';
 import type { TourProduct, DayInfoContent, TimelineContent, DetailSlide } from '../../../types/product';
 import { ImageLightbox } from '../../common/ImageLightbox';
-import { getOptimizedImageUrl } from '../../../utils/cloudflareImage';
 import { ScaledDesign } from './DesignBlockView';
 
 /**
@@ -92,7 +92,7 @@ function blockImages(b: Block): string[] {
     return [];
 }
 
-const img = (src: string) => getOptimizedImageUrl(src) || src;
+const img = (src: string) => src;
 
 export function DesignItinerary({ product, variant = 'desktop' }: { product: TourProduct; variant?: 'desktop' | 'mobile' }) {
     const S: Sizes = SIZES[variant];
@@ -128,7 +128,7 @@ export function DesignItinerary({ product, variant = 'desktop' }: { product: Tou
 
                 {/* 레거시(사진만 올린 상품) — 세로로 이어 붙인다 */}
                 {groups.length === 0 && legacy.map((src, i) => (
-                    <img key={i} src={img(src)} alt={`${product.name} 行程${i + 1}`} loading="lazy" decoding="async" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    <ResponsiveProductImage key={i} src={img(src)} alt={`${product.name} 行程${i + 1}`} loading="lazy" decoding="async" style={{ width: '100%', height: 'auto', display: 'block' }} />
                 ))}
 
                 {groups.map((day, i) => (
@@ -173,7 +173,7 @@ function DaySection({ day, index, all, S, onOpen }: {
 
     const Photo = ({ src, group, idx, height, radius }: { src: string; group: string[]; idx: number; height: number; radius: number }) => (
         <div className="dit-photo" onClick={() => onOpen(group, idx)} style={{ position: 'relative', height, borderRadius: radius, overflow: 'hidden', background: '#EFFEF9' }}>
-            <img src={img(src)} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            <ResponsiveProductImage src={img(src)} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
     );
 
@@ -183,7 +183,7 @@ function DaySection({ day, index, all, S, onOpen }: {
             <div style={{ position: 'relative', minHeight: S.heroH, overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', inset: 0, background: PHOTO_BG }}>
                     {hero && (
-                        <img src={img(hero)} alt="" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <ResponsiveProductImage src={img(hero)} alt="" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                     )}
                 </div>
                 <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.5) 100%)' }} />
