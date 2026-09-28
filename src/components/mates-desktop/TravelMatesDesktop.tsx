@@ -1,906 +1,476 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-import { MatIcon } from '../desktop-primitives/MatIcon';
-import { PageHero } from '../desktop-primitives/PageHero';
-import { MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
+import { useSpotImages } from '../../hooks/useSpotImages';
+import { MW, MW_FONT_EN, MW_GRADIENT, MW_STICKY_TOP, cleanTitle, isUsableImage } from '../desktop-primitives/mwTokens';
+import {
+    AGE_LABEL,
+    GENDER_LABEL,
+    STATUS_LABEL,
+    STYLE_LABEL,
+    hideBroken,
+    matePhoto,
+    regionPhoto,
+    seatText,
+    useMatePosts,
+    type MatePost,
+    type MateStatus,
+} from './matesData';
 
-interface ApiMatePost {
-    id: string;
-    title: string;
-    description?: string;
-    image?: string;
-    region?: string;
-    startDate?: string;
-    endDate?: string;
-    start_date?: string;
-    end_date?: string;
-    duration?: string;
-    gender?: string;
-    ageGroups?: string | string[];
-    age_groups?: string | string[];
-    styles?: string | string[];
-    recruitCount?: number;
-    recruit_count?: number;
-    maxMembers?: number;
-    max_members?: number;
-    currentMembers?: number;
-    current_members?: number;
-    status?: string;
-    createdAt?: string;
-    created_at?: string;
-    authorName?: string;
-    author_name?: string;
-    viewCount?: number;
-    view_count?: number;
-}
+type Sort = 'new' | 'date' | 'pop';
+type GroupKey = 'status' | 'gender' | 'age' | 'style' | 'size';
+type Filters = Partial<Record<GroupKey, string[]>>;
 
-interface MatePost {
-    id: string;
-    title: string;
-    excerpt: string;
-    image: string;
-    region: string;
-    dateRange: string;
-    duration: string;
-    styles: string[];
-    ageGroups: string[];
-    gender: string;
-    status: 'open' | 'almost' | 'full';
-    capacity: number;
-    joined: number;
-    views: number;
-    authorName: string;
-    authorInitial: string;
-    postedAgo: string;
-}
-
-const REGION_PILLS = [
-    { id: 'all', label: '全体', icon: '🌐' },
-    { id: 'central-mongolia', label: '中央モンゴル', icon: '🏞️' },
-    { id: 'gobi-desert', label: 'ゴビ砂漠', icon: '🏜️' },
-    { id: 'khuvsgul', label: 'フブスグル', icon: '🏔️' },
-    { id: 'terelj', label: 'テレルジ', icon: '🐎' },
-    { id: 'trekking', label: 'トレッキング', icon: '🥾' },
-    { id: 'golf', label: 'ゴルフ', icon: '⛳' },
-];
-
-const STYLE_OPTIONS = ['🌌 星空', '🐎 乗馬', '📸 撮影', '⛺ キャンプ', '🍽️ グルメ', '🧘 ヒーリング', '🥾 トレッキング', '🏛️ 文化'];
-const STATUS_OPTIONS = [
-    { v: 'open' as const, l: '募集中' },
-    { v: 'almost' as const, l: '残り席わずか' },
-    { v: 'full' as const, l: 'マッチ済み' },
-];
-
-interface Filters {
-    gender: string[];
-    age: string[];
-    styles: string[];
-    status: string[];
-    people: string[];
-}
-
-const DEFAULT_FILTERS: Filters = {
-    gender: [],
-    age: [],
-    styles: [],
-    status: [],
-    people: [],
+const ALL = 'all';
+const WRITE_PATH = '/travel-mates/write';
+const PANEL_BG = 'linear-gradient(160deg,#0F2A3B 0%,#1C8571 100%)';
+const STATUS_PILL: Record<MateStatus, [string, string]> = {
+    open: ['#3FC2A4', MW.navy],
+    few: ['#F2B544', MW.navy],
+    done: ['rgba(10,31,46,0.72)', '#FFFFFF'],
 };
+const SEAT_FG: Record<MateStatus, string> = { open: MW.mintDeep, few: '#9A5B00', done: MW.mute2 };
 
-function parseJsonArray(val: unknown): string[] {
-    if (!val) return [];
-    if (Array.isArray(val)) return val as string[];
-    if (typeof val === 'string') {
-        try {
-            const parsed = JSON.parse(val);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return val.split(',').map((s) => s.trim()).filter(Boolean);
-        }
-    }
-    return [];
+const SORTS: [Sort, string][] = [
+    ['new', '新着順'],
+    ['date', '出発日が近い順'],
+    ['pop', '人気順'],
+];
+
+const STEPS = [
+    ['01', '募集をさがす・投稿する', '行き先や日程、旅のスタイルで気の合う仲間を探せます。見つからなければ、無料で募集を投稿できます。'],
+    ['02', 'コメントで相談', '気になる募集には、コメントで質問や参加の希望を伝えましょう。日程やプランを気軽に相談できます。'],
+    ['03', '手配はmilkywayへ', 'メンバーが決まったら、日本語ガイド・車両・宿泊の手配をまとめてmilkywayにご相談いただけます。'],
+];
+
+/** Border-color hover used by the design's pill buttons (`style-hover="border-color:#27AB8F"`). */
+const hoverBorder = (base: string) => ({
+    onMouseEnter: (e: MouseEvent<HTMLElement>) => (e.currentTarget.style.borderColor = MW.mint),
+    onMouseLeave: (e: MouseEvent<HTMLElement>) => (e.currentTarget.style.borderColor = base),
+});
+
+function matchesQuery(p: MatePost, q: string) {
+    if (!q) return true;
+    const hay = `${p.title} ${p.description} ${p.region} ${p.styles.join(' ')}`.toLowerCase();
+    return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
 }
 
-function formatRange(start?: string, end?: string): string {
-    if (!start) return '';
-    const s = start.replace(/-/g, '.');
-    if (!end) return s;
-    const e = end.replace(/-/g, '.');
-    // If same year, abbreviate end
-    if (s.slice(0, 4) === e.slice(0, 4)) return `${s} 〜 ${e.slice(5)}`;
-    return `${s} 〜 ${e}`;
-}
-
-function timeAgo(iso?: string): string {
-    if (!iso) return '';
-    const t = new Date(iso).getTime();
-    if (Number.isNaN(t)) return '';
-    const diff = Date.now() - t;
-    const m = Math.floor(diff / 60000);
-    if (m < 60) return `${m} 分前`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h} 時間前`;
-    const d = Math.floor(h / 24);
-    if (d < 7) return `${d} 日前`;
-    const w = Math.floor(d / 7);
-    return `${w} 週間前`;
-}
-
-function statusFrom(p: ApiMatePost, capacity: number, joined: number): 'open' | 'almost' | 'full' {
-    if (p.status === 'closed' || p.status === 'full' || p.status === 'matched') return 'full';
-    if (capacity > 0 && joined >= capacity) return 'full';
-    if (capacity > 0 && joined / capacity >= 0.75) return 'almost';
-    return 'open';
-}
-
-export function TravelMatesDesktop({ contentWidth = 1280 }: { contentWidth?: number }) {
+export function TravelMatesDesktop() {
     const navigate = useNavigate();
-    const [region, setRegion] = useState('all');
-    const [search, setSearch] = useState('');
-    const [sort, setSort] = useState<'recent' | 'popular' | 'almost'>('recent');
-    const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+    const { pick } = useSpotImages();
+    const { data: posts = [], isLoading } = useMatePosts();
+    const [query, setQuery] = useState('');
+    const [dest, setDest] = useState(ALL);
+    const [sort, setSort] = useState<Sort>('new');
+    const [filters, setFilters] = useState<Filters>({});
 
-    const { data: posts = [], isLoading } = useQuery<MatePost[]>({
-        queryKey: ['travelMates', 'desktop'],
-        queryFn: async () => {
-            try {
-                const data = await api.travelMates.list();
-                if (!Array.isArray(data)) return [];
-                return (data as ApiMatePost[]).map((p): MatePost => {
-                    const capacity = p.recruitCount ?? p.recruit_count ?? p.maxMembers ?? p.max_members ?? 0;
-                    const joined = p.currentMembers ?? p.current_members ?? 0;
-                    const start = p.startDate || p.start_date;
-                    const end = p.endDate || p.end_date;
-                    const authorName = p.authorName || p.author_name || '匿名';
-                    return {
-                        id: p.id,
-                        title: p.title || '',
-                        excerpt: p.description || '',
-                        image: p.image || '/og-image.jpg',
-                        region: p.region || '',
-                        dateRange: formatRange(start, end),
-                        duration: p.duration || '',
-                        styles: parseJsonArray(p.styles).slice(0, 4),
-                        ageGroups: parseJsonArray(p.ageGroups || p.age_groups),
-                        gender: p.gender || '問わず',
-                        status: statusFrom(p, capacity, joined),
-                        capacity,
-                        joined,
-                        views: p.viewCount ?? p.view_count ?? 0,
-                        authorName,
-                        authorInitial: authorName.charAt(0),
-                        postedAgo: timeAgo(p.createdAt || p.created_at),
-                    };
-                });
-            } catch (e) {
-                console.error('TravelMates fetch error:', e);
-                return [];
-            }
-        },
-        staleTime: 1000 * 30,
-        refetchOnWindowFocus: true,
-    });
-
-    const filtered = useMemo(() => {
-        let list = posts.slice();
-        if (region !== 'all') list = list.filter((p) => p.region === region || regionMatch(p.region, region));
-        if (search) {
-            const q = search.toLowerCase();
-            list = list.filter((p) => p.title.toLowerCase().includes(q) || (p.region || '').toLowerCase().includes(q));
-        }
-        if (filters.status.length > 0) list = list.filter((p) => filters.status.includes(p.status));
-        if (filters.styles.length > 0) {
-            list = list.filter((p) => filters.styles.some((s) => p.styles.some((ps) => ps.includes(s.replace(/^[^ ]+ /, '')))));
-        }
-
-        list.sort((a, b) => {
-            if (sort === 'popular') return b.views - a.views;
-            if (sort === 'almost') {
-                const ar = a.capacity > 0 ? a.joined / a.capacity : 0;
-                const br = b.capacity > 0 ? b.joined / b.capacity : 0;
-                return br - ar;
-            }
-            return Number(b.id) - Number(a.id);
+    const q = query.trim();
+    const has = (k: GroupKey, v: string) => (filters[k] || []).includes(v);
+    const toggle = (k: GroupKey, v: string) =>
+        setFilters((f) => {
+            const cur = f[k] || [];
+            return { ...f, [k]: cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v] };
         });
-        return list;
-    }, [posts, region, search, filters, sort]);
+    const reset = () => {
+        setFilters({});
+        setQuery('');
+        setDest(ALL);
+    };
 
-    const resetFilters = () => setFilters(DEFAULT_FILTERS);
+    // Everything except the destination tab — the tab counts are computed from this.
+    const base = useMemo(() => {
+        const on = (k: GroupKey) => filters[k] || [];
+        return posts.filter(
+            (p) =>
+                matchesQuery(p, q) &&
+                (!on('status').length || on('status').includes(p.status)) &&
+                (!on('gender').length || on('gender').includes(p.gender)) &&
+                (!on('age').length || p.ages.some((a) => on('age').includes(a))) &&
+                (!on('style').length || p.styles.some((s) => on('style').includes(s))) &&
+                (!on('size').length || on('size').includes(p.size)),
+        );
+    }, [posts, q, filters]);
+
+    const items = useMemo(() => {
+        const list = base.filter((p) => dest === ALL || p.region === dest);
+        const upcoming = (p: MatePost) => (p.daysLeft == null || p.daysLeft < 0 ? Number.MAX_SAFE_INTEGER : p.daysLeft);
+        const sorters: Record<Sort, (a: MatePost, b: MatePost) => number> = {
+            new: (a, b) => b.createdAt - a.createdAt,
+            date: (a, b) => upcoming(a) - upcoming(b) || b.createdAt - a.createdAt,
+            pop: (a, b) => b.views - a.views,
+        };
+        return [...list].sort(sorters[sort]);
+    }, [base, dest, sort]);
+
+    // Destinations present in the data, most-posted first.
+    const regions = useMemo(() => {
+        const counts = new Map<string, number>();
+        posts.forEach((p) => counts.set(p.region, (counts.get(p.region) || 0) + 1));
+        return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([r]) => r);
+    }, [posts]);
+
+    // Popular keywords = the most frequent styles / destinations in the posts.
+    const keywords = useMemo(() => {
+        const counts = new Map<string, number>();
+        posts.forEach((p) => [...p.styles, p.region].forEach((w) => counts.set(w, (counts.get(w) || 0) + 1)));
+        return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([w]) => w);
+    }, [posts]);
+
+    const styleOptions = useMemo(() => {
+        const extra = posts.flatMap((p) => p.styles).filter((s) => !Object.values(STYLE_LABEL).includes(s));
+        return [...Object.values(STYLE_LABEL), ...new Set(extra)];
+    }, [posts]);
+
+    const groups: { key: GroupKey; title: string; opts: [string, string][] }[] = [
+        { key: 'status', title: '募集状況', opts: Object.entries(STATUS_LABEL) },
+        { key: 'gender', title: '性別', opts: [['any', '問わず'], ['female', GENDER_LABEL.female], ['male', GENDER_LABEL.male]] },
+        { key: 'age', title: '年齢層', opts: Object.entries(AGE_LABEL) },
+        { key: 'style', title: '旅行スタイル', opts: styleOptions.map((s) => [s, s]) },
+        { key: 'size', title: '募集人数', opts: [['s', '1〜2名'], ['m', '3〜4名'], ['l', '5名以上']] },
+    ];
+
+    const activeCount = Object.values(filters).reduce((n, a) => n + (a?.length || 0), 0);
+    const open = posts.filter((p) => p.status !== 'done');
+    const stats = [
+        { n: open.length, l: '募集中の旅' },
+        { n: open.reduce((n, p) => n + p.left, 0), l: '募集中の空き席' },
+        { n: regions.length, l: '行き先' },
+    ];
+    const tabs = [ALL, ...regions].map((key) => ({
+        key,
+        label: key === ALL ? '全体' : key,
+        n: key === ALL ? base.length : base.filter((p) => p.region === key).length,
+        photo: key === ALL ? pick(['モンゴルの大草原']) : regionPhoto(key, pick),
+    }));
+
+    const write = () => navigate(WRITE_PATH);
 
     return (
-        <div style={{ background: '#fff' }}>
-            <PageHero
-                eyebrow="Travel Mates"
-                title="同行者を見つけよう"
-                subtitle="モンゴルを一緒に旅する仲間を募集・参加できます。同じ趣味・予算・日程で旅費を分担し、より深く現地を楽しめます。"
-                breadcrumbs={[
-                    { label: 'ホーム', path: '/' },
-                    { label: '同行者募集' },
-                ]}
-                contentWidth={contentWidth}
-                aside={
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+        <section style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 104px', display: 'flex', flexDirection: 'column', gap: 40 }}>
+            <nav aria-label="パンくずリスト" style={{ display: 'flex', gap: 8, fontSize: 13, color: MW.mute }}>
+                <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} style={{ color: MW.mute, textDecoration: 'none' }}>ホーム</a>
+                <span>›</span>
+                <span style={{ color: MW.navy, fontWeight: 700 }}>同行者募集</span>
+            </nav>
+
+            {/* Header */}
+            <div style={{ marginTop: -16, borderRadius: 32, overflow: 'hidden', background: `linear-gradient(135deg,${MW.mintBg} 0%,#FFFFFF 60%)`, border: `1px solid ${MW.mintTint}`, display: 'flex', flexWrap: 'wrap', alignItems: 'stretch' }}>
+                <div style={{ flex: '1 1 520px', minWidth: 0, padding: 'clamp(28px,5vw,56px)', display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
+                    <span style={{ fontFamily: MW_FONT_EN, fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep }}>TRAVEL MATES</span>
+                    <h1 style={{ margin: 0, fontSize: 'clamp(34px,4.4vw,52px)', fontWeight: 900, lineHeight: 1.2, color: MW.navy }}>同行者を見つけよう</h1>
+                    <p style={{ margin: 0, fontSize: 15, lineHeight: 1.8, color: MW.mute, maxWidth: 520 }}>
+                        モンゴルを一緒に旅する仲間を募集・参加できます。同じ趣味・予算・日程で旅費を分担し、より深く現地を楽しめます。
+                    </p>
+                    <label style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12, height: 56, padding: '0 8px 0 22px', borderRadius: 999, background: '#fff', boxShadow: '0 8px 24px rgba(10,31,46,0.08)', border: `1px solid ${MW.line}`, maxWidth: 520 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MW.mintDeep} strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                            <circle cx="11" cy="11" r="6.5" />
+                            <path d="M16 16l4.5 4.5" />
+                        </svg>
+                        <input
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="行き先・キーワードで検索"
+                            aria-label="同行者募集を検索"
+                            style={{ flex: 1, minWidth: 0, border: 0, outline: 'none', fontSize: 15, fontFamily: 'inherit', color: MW.navy, background: 'transparent' }}
+                        />
+                        {query && (
+                            <button type="button" onClick={() => setQuery('')} aria-label="クリア" style={{ width: 40, height: 40, border: 0, borderRadius: '50%', background: MW.chip, color: MW.mute, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>
+                                ×
+                            </button>
+                        )}
+                    </label>
+                    {keywords.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: MW.mute, marginRight: 4 }}>人気のキーワード</span>
+                            {keywords.map((k) => {
+                                const on = q === k;
+                                const bd = on ? MW.mint : MW.mintTint;
+                                return (
+                                    <button
+                                        key={k}
+                                        type="button"
+                                        aria-pressed={on}
+                                        onClick={() => setQuery(on ? '' : k)}
+                                        {...hoverBorder(bd)}
+                                        style={{ height: 34, padding: '0 14px', borderRadius: 999, border: `1px solid ${bd}`, background: on ? MW.mintTint : '#FFFFFF', color: MW.mintDeep, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                                    >
+                                        #{k}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+                <div style={{ flex: '1 1 380px', minWidth: 280, position: 'relative', overflow: 'hidden', background: PANEL_BG, color: '#FFFFFF', padding: 'clamp(28px,4vw,44px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 32 }}>
+                    <span aria-hidden="true" style={{ position: 'absolute', right: -90, top: -90, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle,rgba(109,219,190,0.35),rgba(109,219,190,0) 70%)', pointerEvents: 'none' }} />
+                    <span aria-hidden="true" style={{ position: 'absolute', left: -60, bottom: -60, width: 200, height: 200, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <span style={{ fontFamily: MW_FONT_EN, fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}>
+                            milkyway<span style={{ color: MW.mintLight }}>.</span>mates
+                        </span>
+                        <span style={{ fontSize: 13, color: MW.mintTint }}>ひとり旅でも、仲間と分ければもっと身近に。</span>
+                    </div>
+                    <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
+                        {stats.map((s) => (
+                            <div key={s.l} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span style={{ fontFamily: MW_FONT_EN, fontSize: 26, fontWeight: 600 }}>{isLoading ? '–' : s.n}</span>
+                                <span style={{ fontSize: 12, color: MW.mintTint }}>{s.l}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <button
                             type="button"
-                            onClick={() => navigate('/travel-mates/write')}
-                            style={{
-                                padding: '14px 24px',
-                                background: '#0f766e',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 12,
-                                fontSize: 14,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                boxShadow: '0 8px 20px -6px rgba(15,118,110,0.45)',
-                            }}
+                            onClick={write}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.92')}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, border: 0, borderRadius: 999, background: MW_GRADIENT, fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: MW.navy, cursor: 'pointer' }}
                         >
-                            <MatIcon name="add" size={18} color="#fff" />
-                            同行者を募集する
+                            <span style={{ fontSize: 20, lineHeight: 1 }}>＋</span>同行者を募集する
                         </button>
-                        <span style={{ fontSize: 11, color: 'var(--fg-5)' }}>無料 ・ 1分で投稿</span>
+                        <span style={{ fontSize: 12, color: MW.mintTint, textAlign: 'center' }}>無料で投稿できます</span>
                     </div>
-                }
-            >
-                <div style={{ display: 'flex', gap: 24, marginTop: 22 }}>
-                    {[
-                        { n: String(posts.length), l: '募集中の旅' },
-                        { n: '1.2k', l: '登録メンバー' },
-                        { n: '~2日', l: '平均マッチ時間' },
-                    ].map((s) => (
-                        <div key={s.l}>
-                            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-1)', letterSpacing: '-0.02em' }}>{s.n}</div>
-                            <div style={{ fontSize: 12, color: 'var(--fg-5)', marginTop: 2 }}>{s.l}</div>
-                        </div>
-                    ))}
                 </div>
-                {/* Search bar */}
-                <div
-                    style={{
-                        marginTop: 28,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        background: '#fff',
-                        borderRadius: 14,
-                        padding: '8px 8px 8px 18px',
-                        border: '1px solid var(--border)',
-                        boxShadow: 'var(--shadow-toss)',
-                    }}
-                >
-                    <MatIcon name="search" size={20} color="var(--fg-5)" />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="行き先 (例: ゴビ砂漠、テレルジ)・キーワードで検索"
-                        style={{
-                            flex: 1,
-                            border: 'none',
-                            outline: 'none',
-                            background: 'transparent',
-                            fontSize: 14,
-                            color: 'var(--fg-1)',
-                            padding: '10px 0',
-                            fontFamily: 'inherit',
-                        }}
-                    />
-                </div>
-            </PageHero>
+            </div>
 
-            {/* Region pills */}
-            <section style={{ maxWidth: contentWidth, margin: '0 auto', padding: '28px 32px 0' }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {REGION_PILLS.map((r) => {
-                        const on = region === r.id;
+            {/* Destination tabs */}
+            {regions.length > 0 && (
+                <div role="tablist" aria-label="行き先" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', padding: '4px 2px', margin: '-8px -2px 0' }}>
+                    {tabs.map((t) => {
+                        const on = dest === t.key;
+                        const bd = on ? MW.mint : MW.line;
                         return (
                             <button
-                                key={r.id}
+                                key={t.key}
                                 type="button"
-                                onClick={() => setRegion(r.id)}
-                                style={{
-                                    padding: '10px 18px',
-                                    borderRadius: 999,
-                                    cursor: 'pointer',
-                                    fontFamily: 'inherit',
-                                    background: on ? 'var(--primary-dark)' : '#fff',
-                                    color: on ? '#fff' : 'var(--fg-2)',
-                                    border: on ? '1px solid var(--primary-dark)' : '1px solid var(--border)',
-                                    fontSize: 13,
-                                    fontWeight: on ? 700 : 500,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    boxShadow: on ? '0 4px 14px -4px rgba(15,118,110,0.4)' : 'none',
-                                }}
+                                role="tab"
+                                aria-selected={on}
+                                onClick={() => setDest(t.key)}
+                                {...hoverBorder(bd)}
+                                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 18px 0 6px', borderRadius: 999, border: `1.5px solid ${bd}`, background: on ? MW.mintBg : '#FFFFFF', color: on ? MW.mintDeep : MW.navy, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s' }}
                             >
-                                <span>{r.icon}</span>
-                                <span>{r.label}</span>
+                                <span aria-hidden="true" style={{ position: 'relative', width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: MW.mintTint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: MW.mintDeep }}>
+                                    {t.label.charAt(0)}
+                                    {isUsableImage(t.photo) && (
+                                        <img src={t.photo} onError={hideBroken} alt="" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    )}
+                                    {on && (
+                                        <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(10,31,46,0.45)', color: '#fff', fontSize: 16, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
+                                    )}
+                                </span>
+                                {t.label}
+                                <span style={{ fontFamily: MW_FONT_EN, fontSize: 11, fontWeight: 600, color: on ? MW.mintDeep : MW.mute2 }}>{t.n}</span>
                             </button>
                         );
                     })}
                 </div>
-            </section>
+            )}
 
-            {/* Body — sidebar + grid */}
-            <section style={{ maxWidth: contentWidth, margin: '0 auto', padding: '32px 32px 0' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 32, alignItems: 'start' }}>
-                    <aside style={{ position: 'sticky', top: MW_STICKY_TOP + 16 }}>
-                        <FilterSidebar filters={filters} onChange={setFilters} onReset={resetFilters} />
-                    </aside>
-
-                    <div>
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                paddingBottom: 18,
-                                marginBottom: 24,
-                                borderBottom: '1px solid var(--border-subtle)',
-                            }}
+            <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                {/* Filters */}
+                <aside aria-label="絞り込み" style={{ flex: '0 1 220px', minWidth: 200, display: 'flex', flexDirection: 'column', gap: 24, position: 'sticky', top: MW_STICKY_TOP + 24, maxHeight: `calc(100vh - ${MW_STICKY_TOP + 48}px)`, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 900, color: MW.navy }}>
+                            絞り込み
+                            {activeCount > 0 && (
+                                <span style={{ minWidth: 22, height: 22, padding: '0 7px', boxSizing: 'border-box', borderRadius: 999, background: MW.mint, color: MW.navy, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeCount}</span>
+                            )}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={reset}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = MW.mintDeep)}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = MW.mute)}
+                            style={{ border: 0, background: 'transparent', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: MW.mute, cursor: 'pointer' }}
                         >
-                            <div>
-                                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg-1)', margin: 0, letterSpacing: '-0.01em' }}>
-                                    募集中のメンバー
-                                </h2>
-                                <div style={{ fontSize: 13, color: 'var(--fg-5)', marginTop: 4 }}>
-                                    <span style={{ color: 'var(--fg-1)', fontWeight: 700 }}>{filtered.length} 件</span> の募集が見つかりました
-                                </div>
+                            リセット
+                        </button>
+                    </div>
+                    {groups.map((g) => (
+                        <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 20, borderTop: `1px solid ${MW.line}` }}>
+                            <span style={{ fontSize: 13, fontWeight: 900, color: MW.navy }}>{g.title}</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {g.opts.map(([v, label]) => {
+                                    const on = has(g.key, v);
+                                    const bd = on ? MW.mint : MW.line;
+                                    return (
+                                        <button
+                                            key={v}
+                                            type="button"
+                                            aria-pressed={on}
+                                            onClick={() => toggle(g.key, v)}
+                                            {...hoverBorder(bd)}
+                                            style={{ height: 34, padding: '0 14px', borderRadius: 999, border: `1px solid ${bd}`, background: on ? MW.mintTint : '#FFFFFF', fontFamily: 'inherit', fontSize: 13, fontWeight: on ? 700 : 500, color: on ? MW.mintDeep : MW.ink3, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            <select
-                                value={sort}
-                                onChange={(e) => setSort(e.target.value as typeof sort)}
-                                style={selectStyle}
-                            >
-                                <option value="recent">新着順</option>
-                                <option value="popular">人気順</option>
-                                <option value="almost">残り席わずか順</option>
-                            </select>
                         </div>
+                    ))}
+                </aside>
 
-                        {isLoading ? (
-                            <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>読み込み中...</div>
-                        ) : filtered.length === 0 ? (
-                            <EmptyState onCta={() => navigate('/travel-mates/write')} />
-                        ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
-                                {filtered.map((p) => (
-                                    <MateCard key={p.id} p={p} onClick={() => navigate(`/travel-mates/${p.id}`)} />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Promo at bottom */}
-            <section style={{ maxWidth: contentWidth, margin: '64px auto 0', padding: '0 32px' }}>
-                <div
-                    style={{
-                        padding: '36px 48px',
-                        background: 'linear-gradient(120deg, #0f766e 0%, #115e59 100%)',
-                        borderRadius: 24,
-                        color: '#fff',
-                        display: 'grid',
-                        gridTemplateColumns: '1fr auto',
-                        gap: 24,
-                        alignItems: 'center',
-                        position: 'relative',
-                        overflow: 'hidden',
-                    }}
-                >
-                    <div
-                        style={{
-                            position: 'absolute',
-                            right: -40,
-                            top: -50,
-                            width: 220,
-                            height: 220,
-                            borderRadius: 999,
-                            background: 'radial-gradient(circle, rgba(94,234,212,0.18) 0%, transparent 70%)',
-                        }}
-                    />
-                    <div style={{ position: 'relative' }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', color: '#5eead4', textTransform: 'uppercase', marginBottom: 8 }}>
-                            Be the host
+                {/* Results */}
+                <div style={{ flex: '1 1 440px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <span style={{ fontFamily: MW_FONT_EN, fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep }}>OPEN TRIPS</span>
+                            <h2 style={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.3, color: MW.navy }}>
+                                募集中の旅 <span style={{ fontFamily: MW_FONT_EN, fontSize: 18, fontWeight: 600, color: MW.mintDeep }}>{items.length}</span>
+                            </h2>
                         </div>
-                        <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-                            あなたが旅のホストになりませんか？
-                        </div>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 8, lineHeight: 1.6 }}>
-                            募集を作成すると、平均2日で参加者が集まります。日程・費用を共有して、お得に深く旅を楽しめます。
+                        <div role="tablist" aria-label="並び替え" style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 999, background: MW.chip }}>
+                            {SORTS.map(([k, label]) => {
+                                const on = sort === k;
+                                return (
+                                    <button
+                                        key={k}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={on}
+                                        onClick={() => setSort(k)}
+                                        style={{ height: 36, padding: '0 16px', border: 0, borderRadius: 999, background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 2px 6px rgba(10,31,46,0.08)' : 'none', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: on ? MW.navy : MW.mute, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                    >
+                                        {label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => navigate('/travel-mates/write')}
-                        style={{
-                            padding: '14px 28px',
-                            background: '#fff',
-                            color: 'var(--primary-dark)',
-                            border: 'none',
-                            borderRadius: 999,
-                            fontSize: 14,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            fontFamily: 'inherit',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            position: 'relative',
-                        }}
-                    >
-                        同行者を募集する <MatIcon name="arrow_forward" size={18} color="var(--primary-dark)" />
-                    </button>
-                </div>
-            </section>
-        </div>
-    );
-}
 
-function regionMatch(postRegion: string | undefined, pillId: string): boolean {
-    if (!postRegion) return false;
-    const lower = postRegion.toLowerCase();
-    return (pillId === 'gobi-desert' && (lower.includes('gobi') || postRegion.includes('ゴビ'))) ||
-        (pillId === 'central-mongolia' && (lower.includes('central') || postRegion.includes('中央'))) ||
-        (pillId === 'khuvsgul' && (lower.includes('khuvsgul') || postRegion.includes('フブスグル'))) ||
-        (pillId === 'terelj' && (lower.includes('terelj') || postRegion.includes('テレルジ'))) ||
-        (pillId === 'trekking' && (lower.includes('trekking') || postRegion.includes('トレッキング'))) ||
-        (pillId === 'golf' && (lower.includes('golf') || postRegion.includes('ゴルフ')));
-}
-
-function MateCard({ p, onClick }: { p: MatePost; onClick: () => void }) {
-    const pct = p.capacity > 0 ? (p.joined / p.capacity) * 100 : 0;
-    const statusInfo = {
-        open: { label: '募集中', bg: '#0f766e' },
-        almost: { label: '残り席わずか', bg: '#dc2626' },
-        full: { label: 'マッチ済み', bg: 'var(--fg-4)' },
-    }[p.status];
-
-    return (
-        <div
-            onClick={onClick}
-            role="button"
-            style={{
-                background: '#fff',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 18,
-                overflow: 'hidden',
-                boxShadow: 'var(--shadow-toss)',
-                cursor: 'pointer',
-                transition: 'all 200ms var(--ease-out)',
-                display: 'flex',
-                flexDirection: 'column',
-                opacity: p.status === 'full' ? 0.75 : 1,
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 14px 30px -6px rgba(0,0,0,0.12)';
-                e.currentTarget.style.transform = 'translateY(-3px)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = 'var(--shadow-toss)';
-                e.currentTarget.style.transform = '';
-            }}
-        >
-            <div
-                style={{
-                    position: 'relative',
-                    aspectRatio: '16/10',
-                    backgroundImage: `url(${p.image})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }}
-            >
-                <div
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background:
-                            'linear-gradient(to bottom, rgba(0,0,0,0.35), transparent 30%, transparent 60%, rgba(0,0,0,0.45) 100%)',
-                    }}
-                />
-                <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6 }}>
-                    <span
-                        style={{
-                            padding: '5px 10px',
-                            background: statusInfo.bg,
-                            color: '#fff',
-                            borderRadius: 6,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                        }}
-                    >
-                        {statusInfo.label}
-                    </span>
-                </div>
-                {p.views > 0 && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 12,
-                            right: 12,
-                            padding: '4px 10px',
-                            background: 'rgba(0,0,0,0.5)',
-                            backdropFilter: 'blur(6px)',
-                            borderRadius: 999,
-                            color: '#fff',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                        }}
-                    >
-                        <MatIcon name="visibility" size={13} color="#fff" /> {p.views}
-                    </div>
-                )}
-                {p.region && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: 12,
-                            left: 14,
-                            color: '#fff',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: 12,
-                            fontWeight: 700,
-                        }}
-                    >
-                        <MatIcon name="location_on" size={16} filled color="#fff" /> {p.region}
-                    </div>
-                )}
-            </div>
-
-            <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div
-                    style={{
-                        fontSize: 16,
-                        fontWeight: 700,
-                        color: 'var(--fg-1)',
-                        lineHeight: 1.4,
-                        marginBottom: 8,
-                        letterSpacing: '-0.01em',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        minHeight: 44,
-                    }}
-                >
-                    {p.title}
-                </div>
-                {p.excerpt && (
-                    <div
-                        style={{
-                            fontSize: 12,
-                            color: 'var(--fg-4)',
-                            marginBottom: 12,
-                            lineHeight: 1.55,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                        }}
-                    >
-                        {p.excerpt}
-                    </div>
-                )}
-
-                {p.dateRange && (
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            padding: '8px 0',
-                            borderTop: '1px solid var(--border-subtle)',
-                            marginBottom: 10,
-                        }}
-                    >
-                        <MatIcon name="calendar_month" size={15} color="var(--fg-5)" />
-                        <span style={{ fontSize: 12, color: 'var(--fg-3)', fontWeight: 600 }}>{p.dateRange}</span>
-                        {p.duration && (
-                            <>
-                                <span style={{ width: 3, height: 3, borderRadius: 999, background: 'var(--border-strong)' }} />
-                                <span style={{ fontSize: 12, color: 'var(--fg-5)' }}>{p.duration}</span>
-                            </>
-                        )}
-                    </div>
-                )}
-
-                {p.styles.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
-                        {p.styles.map((s) => (
-                            <span
-                                key={s}
-                                style={{
-                                    fontSize: 11,
-                                    color: 'var(--fg-3)',
-                                    padding: '3px 9px',
-                                    background: 'var(--bg-muted)',
-                                    borderRadius: 999,
-                                    fontWeight: 600,
-                                }}
-                            >
-                                {s}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                <div style={{ marginTop: 'auto' }}>
-                    {p.capacity > 0 && (
-                        <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--fg-3)' }}>
-                                    <MatIcon name="group" size={15} color="var(--fg-3)" />
-                                    <span style={{ fontWeight: 700, color: 'var(--fg-1)' }}>{p.joined}</span>
-                                    <span>/ {p.capacity} 名</span>
+                    {isLoading ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,250px),1fr))', gap: '36px 22px' }}>
+                            {[0, 1, 2].map((i) => (
+                                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                    <div style={{ aspectRatio: '4/3', borderRadius: 20, background: MW.chip }} />
+                                    <div style={{ height: 18, width: '80%', borderRadius: 6, background: MW.chip }} />
+                                    <div style={{ height: 14, width: '50%', borderRadius: 6, background: MW.chip }} />
                                 </div>
-                                <span
-                                    style={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        color: p.status === 'full' ? 'var(--fg-5)' : '#0f766e',
-                                    }}
+                            ))}
+                        </div>
+                    ) : items.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,250px),1fr))', gap: '36px 22px' }}>
+                            {items.map((p) => (
+                                <MateCard key={p.id} p={p} photo={matePhoto(p, pick)} onOpen={() => navigate(`/travel-mates/${p.id}`)} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ border: `1px dashed ${MW.line2}`, borderRadius: 20, padding: '56px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+                            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: MW.navy }}>
+                                {posts.length ? '条件に合う募集が見つかりませんでした' : 'まだ募集はありません'}
+                            </p>
+                            <p style={{ margin: 0, fontSize: 13, color: MW.mute }}>
+                                {posts.length ? '条件を変更するか、ご自身で同行者を募集してみましょう。' : '最初の同行者募集を投稿してみませんか？'}
+                            </p>
+                            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                                {posts.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={reset}
+                                        {...hoverBorder(MW.line)}
+                                        style={{ height: 44, padding: '0 20px', border: `1px solid ${MW.line}`, borderRadius: 999, background: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: MW.navy, cursor: 'pointer' }}
+                                    >
+                                        条件をリセット
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={write}
+                                    style={{ height: 44, padding: '0 20px', border: 0, borderRadius: 999, background: MW_GRADIENT, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: MW.navy, cursor: 'pointer' }}
                                 >
-                                    {p.status === 'full' ? '募集終了' : `残り ${p.capacity - p.joined} 席`}
-                                </span>
-                            </div>
-                            <div style={{ height: 6, background: 'var(--bg-muted)', borderRadius: 999, overflow: 'hidden' }}>
-                                <div
-                                    style={{
-                                        width: `${pct}%`,
-                                        height: '100%',
-                                        background:
-                                            p.status === 'full'
-                                                ? 'var(--fg-5)'
-                                                : p.status === 'almost'
-                                                    ? 'linear-gradient(to right, #dc2626, #ef4444)'
-                                                    : 'linear-gradient(to right, #0f766e, #115e59)',
-                                        borderRadius: 999,
-                                    }}
-                                />
-                            </div>
-                        </>
-                    )}
-
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginTop: 14,
-                            paddingTop: 12,
-                            borderTop: '1px solid var(--border-subtle)',
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div
-                                style={{
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: 999,
-                                    background: 'var(--primary-tint)',
-                                    color: '#0f766e',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                }}
-                            >
-                                {p.authorInitial}
-                            </div>
-                            <div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--fg-1)' }}>{p.authorName}</div>
-                                {p.postedAgo && <div style={{ fontSize: 10, color: 'var(--fg-5)' }}>{p.postedAgo}</div>}
+                                    ＋ 同行者を募集する
+                                </button>
                             </div>
                         </div>
-                        <MatIcon name="arrow_forward" size={18} color="var(--fg-3)" />
-                    </div>
+                    )}
                 </div>
             </div>
-        </div>
-    );
-}
 
-function FilterSidebar({ filters, onChange, onReset }: { filters: Filters; onChange: (f: Filters) => void; onReset: () => void }) {
-    const toggle = (group: keyof Filters, val: string) =>
-        onChange({
-            ...filters,
-            [group]: filters[group].includes(val) ? filters[group].filter((v) => v !== val) : [...filters[group], val],
-        });
-
-    return (
-        <div
-            style={{
-                background: '#fff',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 20,
-                boxShadow: 'var(--shadow-toss)',
-                overflow: 'hidden',
-            }}
-        >
-            <div
-                style={{
-                    padding: '18px 20px',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <MatIcon name="tune" size={18} color="var(--fg-2)" />
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>絞り込み</span>
+            {/* How it works */}
+            <div style={{ borderRadius: 32, background: 'radial-gradient(600px 320px at 88% 0%,rgba(39,171,143,0.14),rgba(39,171,143,0) 70%),#F7FAF9', border: `1px solid ${MW.line}`, padding: 'clamp(28px,4vw,48px)', display: 'flex', flexDirection: 'column', gap: 28 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <span style={{ fontFamily: MW_FONT_EN, fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep }}>HOW IT WORKS</span>
+                    <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: MW.navy }}>安心して同行者と旅するために</h2>
                 </div>
-                <button
-                    type="button"
-                    onClick={onReset}
-                    style={{ background: 'none', border: 'none', color: 'var(--fg-5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                    リセット
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
+                    {STEPS.map(([n, title, body]) => (
+                        <div key={n} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 22, borderRadius: 20, background: '#FFFFFF', border: `1px solid ${MW.line}` }}>
+                            <span style={{ fontFamily: MW_FONT_EN, fontSize: 13, fontWeight: 600, color: MW.mintDeep }}>{n}</span>
+                            <span style={{ fontSize: 16, fontWeight: 900, color: MW.navy }}>{title}</span>
+                            <span style={{ fontSize: 13, lineHeight: 1.7, color: MW.mute }}>{body}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
-
-            <FilterGroup label="募集状況">
-                {STATUS_OPTIONS.map((o) => (
-                    <FilterCheckbox key={o.v} label={o.l} checked={filters.status.includes(o.v)} onChange={() => toggle('status', o.v)} />
-                ))}
-            </FilterGroup>
-
-            <FilterGroup label="性別">
-                {[
-                    { v: 'any', l: '問わず' },
-                    { v: 'female', l: '女性のみ' },
-                    { v: 'male', l: '男性のみ' },
-                    { v: 'couple', l: '夫婦・カップル' },
-                ].map((o) => (
-                    <FilterCheckbox key={o.v} label={o.l} checked={filters.gender.includes(o.v)} onChange={() => toggle('gender', o.v)} />
-                ))}
-            </FilterGroup>
-
-            <FilterGroup label="年齢層">
-                {['20代', '30代', '40代', '50代以上'].map((o) => (
-                    <FilterCheckbox key={o} label={o} checked={filters.age.includes(o)} onChange={() => toggle('age', o)} />
-                ))}
-            </FilterGroup>
-
-            <FilterGroup label="旅行スタイル">
-                {STYLE_OPTIONS.map((o) => (
-                    <FilterCheckbox key={o} label={o} checked={filters.styles.includes(o)} onChange={() => toggle('styles', o)} />
-                ))}
-            </FilterGroup>
-
-            <FilterGroup label="参加人数" last>
-                {['1〜2 名', '3〜4 名', '5 名以上'].map((o) => (
-                    <FilterCheckbox key={o} label={o} checked={filters.people.includes(o)} onChange={() => toggle('people', o)} />
-                ))}
-            </FilterGroup>
-        </div>
+        </section>
     );
 }
 
-function FilterGroup({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
-    const [open, setOpen] = useState(true);
+function MateCard({ p, photo, onOpen }: { p: MatePost; photo: string; onOpen: () => void }) {
+    const [sbg, sfg] = STATUS_PILL[p.status];
+    const dots = Math.min(p.cap, 6);
+    const title = cleanTitle(p.title) || p.title;
     return (
-        <div style={{ borderBottom: last ? 'none' : '1px solid var(--border-subtle)' }}>
-            <button
-                type="button"
-                onClick={() => setOpen((o) => !o)}
-                style={{
-                    width: '100%',
-                    padding: '16px 20px 10px',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontFamily: 'inherit',
-                }}
-            >
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-1)' }}>{label}</span>
-                <MatIcon name={open ? 'expand_less' : 'expand_more'} size={18} color="var(--fg-4)" />
-            </button>
-            {open && <div style={{ padding: '0 20px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>{children}</div>}
-        </div>
-    );
-}
-
-function FilterCheckbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
-    return (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', cursor: 'pointer', fontSize: 13, color: 'var(--fg-2)' }}>
-            <span
-                style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 5,
-                    border: '1.5px solid ' + (checked ? '#0f766e' : 'var(--border-strong)'),
-                    background: checked ? '#0f766e' : '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                }}
-            >
-                {checked && <MatIcon name="check" size={14} color="#fff" />}
-            </span>
-            <input type="checkbox" checked={checked} onChange={onChange} style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
-            <span>{label}</span>
-        </label>
-    );
-}
-
-function EmptyState({ onCta }: { onCta: () => void }) {
-    return (
-        <div
-            style={{
-                padding: '60px 40px',
-                textAlign: 'center',
-                background: 'var(--bg-muted)',
-                borderRadius: 24,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 12,
-            }}
+        <a
+            href={`/travel-mates/${p.id}`}
+            onClick={(e) => { e.preventDefault(); onOpen(); }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = '')}
+            style={{ display: 'flex', flexDirection: 'column', gap: 12, color: MW.navy, opacity: p.status === 'done' ? 0.72 : 1, textDecoration: 'none', transition: 'transform .2s', minWidth: 0 }}
         >
-            <div
-                style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 999,
-                    background: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                }}
-            >
-                <MatIcon name="travel_explore" size={28} color="var(--fg-5)" />
+            <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 20, overflow: 'hidden', background: PANEL_BG }}>
+                {isUsableImage(photo) && (
+                    <img src={photo} onError={hideBroken} alt={p.image ? title : `${p.region}のイメージ`} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+                <span style={{ position: 'absolute', inset: 'auto 0 0 0', height: '55%', background: 'linear-gradient(180deg,rgba(10,31,46,0),rgba(10,31,46,0.6))', pointerEvents: 'none' }} />
+                <span style={{ position: 'absolute', left: 10, top: 10, display: 'inline-flex', alignItems: 'center', height: 24, padding: '0 10px', borderRadius: 999, background: sbg, color: sfg, fontSize: 11, fontWeight: 700 }}>{STATUS_LABEL[p.status]}</span>
+                <span style={{ position: 'absolute', right: 10, top: 10, display: 'inline-flex', alignItems: 'center', height: 24, padding: '0 10px', borderRadius: 999, background: 'rgba(255,255,255,0.92)', color: MW.navy, fontFamily: MW_FONT_EN, fontSize: 10, fontWeight: 600 }}>{p.period}</span>
+                <span style={{ position: 'absolute', left: 14, right: 14, bottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8, color: '#FFFFFF', pointerEvents: 'none' }}>
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: MW.mintTint }}>{p.region}</span>
+                        {p.nightsLabel && <span style={{ fontSize: 13, fontWeight: 700 }}>{p.nightsLabel}</span>}
+                    </span>
+                    {dots > 0 && (
+                        <span style={{ display: 'flex', paddingLeft: 5 }} aria-label={`${p.joined}/${p.cap}名`}>
+                            {Array.from({ length: dots }, (_, k) => (
+                                <span key={k} style={{ width: 22, height: 22, marginLeft: -5, borderRadius: '50%', border: '2px solid #FFFFFF', boxSizing: 'border-box', background: k < p.joined ? '#3FC2A4' : 'rgba(255,255,255,0.35)' }} />
+                            ))}
+                        </span>
+                    )}
+                </span>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--fg-1)' }}>条件に合う募集がありません</div>
-            <div style={{ fontSize: 13, color: 'var(--fg-4)' }}>あなたが最初の募集者になりませんか？</div>
-            <button
-                type="button"
-                onClick={onCta}
-                style={{
-                    padding: '10px 18px',
-                    background: '#0f766e',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 999,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                }}
-            >
-                同行者を募集する
-            </button>
-        </div>
+            <h3 style={{ margin: '4px 0 0', fontSize: 16, fontWeight: 900, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>{title}</h3>
+            {p.styles.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {p.styles.slice(0, 4).map((s) => (
+                        <span key={s} style={{ fontSize: 11, fontWeight: 700, color: MW.mintDeep, background: MW.mintBg, border: `1px solid ${MW.mintTint}`, padding: '3px 10px', borderRadius: 999 }}>#{s}</span>
+                    ))}
+                </div>
+            )}
+            <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, paddingTop: 12, borderTop: '1px solid #EEF1EF' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <HostAvatar p={p} size={30} />
+                    <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.host}</span>
+                        <span style={{ fontSize: 11, color: MW.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[p.hostInfo, p.posted].filter(Boolean).join('・')}</span>
+                    </span>
+                </span>
+                {p.cap > 0 && (
+                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 4, fontSize: 12, color: MW.mute }}>
+                        <strong style={{ fontFamily: MW_FONT_EN, fontSize: 14, fontWeight: 600, color: SEAT_FG[p.status] }}>{p.joined}/{p.cap}</strong>
+                        {seatText(p)}
+                    </span>
+                )}
+            </div>
+        </a>
     );
 }
 
-const selectStyle: CSSProperties = {
-    appearance: 'none',
-    padding: '10px 36px 10px 16px',
-    border: '1px solid var(--border)',
-    borderRadius: 12,
-    background: `#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center`,
-    fontSize: 13,
-    fontWeight: 600,
-    color: 'var(--fg-2)',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-};
+export function HostAvatar({ p, size }: { p: Pick<MatePost, 'hostImage' | 'initial'>; size: number }) {
+    return (
+        <span style={{ position: 'relative', width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: MW_GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MW_FONT_EN, fontSize: Math.round(size * 0.38), fontWeight: 600, color: MW.navy, flexShrink: 0 }}>
+            {p.initial}
+            {p.hostImage && <img src={p.hostImage} onError={hideBroken} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+        </span>
+    );
+}

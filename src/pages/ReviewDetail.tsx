@@ -19,108 +19,10 @@ export const ReviewDetail: React.FC = () => {
 };
 
 const ReviewDetailDesktopContainer: React.FC = () => {
-    const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const [review, setReview] = useState<any>(null);
-    const [currentUser, setCurrentUser] = useState<any>(null);
-    const [helpful, setHelpful] = useState(false);
-    const [helpfulSubmitting, setHelpfulSubmitting] = useState(false);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-        if (!id) return;
-        (async () => {
-            try {
-                const [r, me] = await Promise.all([
-                    api.reviews.get(id),
-                    api.auth.me().catch(() => null),
-                ]);
-                if (cancelled) return;
-                setCurrentUser(me);
-                let helpfulState = null;
-                if (me && r) {
-                    try {
-                        helpfulState = await api.reviews.getHelpfulStatus(id);
-                        setHelpful(Boolean(helpfulState.helpful));
-                    } catch (error) {
-                        console.error('Helpful status fetch error:', error);
-                    }
-                }
-                setReview({
-                    ...r,
-                    helpful_count: helpfulState?.helpful_count ?? r.helpful_count ?? 0,
-                });
-            } catch (e) {
-                console.error('Review detail fetch error:', e);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, [id]);
-
-    if (loading) {
-        return (
-            <DesktopLayout>
-                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>読み込み中...</div>
-            </DesktopLayout>
-        );
-    }
-    if (!review) {
-        return (
-            <DesktopLayout>
-                <div style={{ padding: 80, textAlign: 'center', color: 'var(--fg-5)' }}>レビューが見つかりません</div>
-            </DesktopLayout>
-        );
-    }
-
-    const toggleHelpful = async () => {
-        if (!id) return;
-        if (!currentUser) {
-            alert('「参考になった」を登録するにはログインしてください。');
-            navigate('/login', { state: { from: `/reviews/${id}` } });
-            return;
-        }
-        if (helpfulSubmitting) return;
-        setHelpfulSubmitting(true);
-        try {
-            const result = await api.reviews.toggleHelpful(id);
-            setHelpful(Boolean(result.helpful));
-            setReview((current) => ({
-                ...current,
-                helpful_count: Number(result.helpful_count || 0),
-            }));
-        } catch (error) {
-            console.error('Failed to toggle helpful:', error);
-            alert('操作に失敗しました。時間をおいてもう一度お試しください。');
-        } finally {
-            setHelpfulSubmitting(false);
-        }
-    };
-
-    const addComment = async (content: string) => {
-        if (!id || !currentUser) return;
-        let comments: any[] = [];
-        try { comments = typeof review.comments === 'string' ? JSON.parse(review.comments) : review.comments || []; }
-        catch { comments = []; }
-        const newComment = {
-            id: Date.now().toString(),
-            user_id: currentUser.id,
-            user_name: currentUser.name || currentUser.email || '匿名',
-            content,
-            created_at: new Date().toISOString(),
-        };
-        const next = [...comments, newComment];
-        try {
-            await api.reviews.update(id, { comments: JSON.stringify(next) });
-            setReview({ ...review, comments: JSON.stringify(next) });
-        } catch (e) { console.error(e); }
-    };
-
     return (
         <DesktopLayout>
-            <ReviewDetailDesktop review={review} helpful={helpful} helpfulSubmitting={helpfulSubmitting} onHelpful={toggleHelpful} onAddComment={addComment} />
+            {id && <ReviewDetailDesktop key={id} id={id} />}
         </DesktopLayout>
     );
 };

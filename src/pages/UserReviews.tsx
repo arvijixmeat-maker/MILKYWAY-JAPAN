@@ -10,6 +10,7 @@ import { ReviewAvatar } from '../components/review/ReviewAvatar';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
 import { UserReviewsDesktop } from '../components/reviews-desktop/UserReviewsDesktop';
+import { reviewsSeoProps } from '../components/reviews-desktop/reviewsData';
 
 // Define Review type locally or import if available, matching Cloudflare + Frontend needs
 interface Review {
@@ -124,30 +125,9 @@ const UserReviewsMobile: React.FC = () => {
         return totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
     };
 
-    // Build AggregateRating structured data only when we have actual reviews
-    const reviewStructuredData = totalReviews > 0 ? {
-        "@context": "https://schema.org",
-        "@type": "TravelAgency",
-        "name": "Milkyway Japan",
-        "url": "https://mongolryokou.com",
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": averageRating,
-            "reviewCount": totalReviews.toString(),
-            "bestRating": "5",
-            "worstRating": "1"
-        }
-    } : undefined;
-
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen pb-20">
-            <SEO
-                title="お客様のモンゴル旅行レビュー"
-                description={`モンゴルツアーに参加されたお客様のリアルな旅行レビュー${totalReviews > 0 ? `（${totalReviews}件・平均${averageRating}点）` : ''}。実際の体験談でツアー選びの参考にしてください。`}
-                keywords="モンゴル旅行レビュー, モンゴルツアー口コミ, モンゴル旅行体験談, Milkyway Japan レビュー"
-                canonical="/reviews"
-                structuredData={reviewStructuredData}
-            />
+            <SEO {...reviewsSeoProps(totalReviews, averageRating)} />
             {/* Nav */}
             <nav className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center p-4 justify-between max-w-md mx-auto">

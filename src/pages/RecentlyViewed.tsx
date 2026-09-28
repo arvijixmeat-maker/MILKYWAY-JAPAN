@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api'; 
 import { optimizeImage } from '../utils/imageOptimizer';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 interface RecentlyViewedItem {
     id: string; // Record ID
@@ -14,6 +17,18 @@ interface RecentlyViewedItem {
 }
 
 export const RecentlyViewed: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab="recently-viewed" />
+            </DesktopLayout>
+        );
+    }
+    return <RecentlyViewedMobile />;
+};
+
+const RecentlyViewedMobile: React.FC = () => {
     const navigate = useNavigate();
     const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
     const [loading, setLoading] = useState(true);

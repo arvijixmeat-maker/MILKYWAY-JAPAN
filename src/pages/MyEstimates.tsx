@@ -2,8 +2,23 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BottomNav } from '../components/layout/BottomNav';
 import { api } from '../lib/api';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MyPageDesktop } from '../components/mypage-desktop/MyPageDesktop';
 
 export const MyEstimates: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    if (isDesktop) {
+        return (
+            <DesktopLayout>
+                <MyPageDesktop tab="estimates" />
+            </DesktopLayout>
+        );
+    }
+    return <MyEstimatesMobile />;
+};
+
+const MyEstimatesMobile: React.FC = () => {
     const navigate = useNavigate();
 
     const [estimates, setEstimates] = React.useState<any[]>([]);
