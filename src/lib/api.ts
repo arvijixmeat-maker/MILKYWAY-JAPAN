@@ -395,6 +395,8 @@ export const api = {
             body: JSON.stringify(data)
         }),
         delete: async (id: string) => request(`${API_BASE}/travel-mates/${id}`, { method: 'DELETE' }),
+        // Public view counter (editing the post itself is author/admin-only).
+        view: async (id: string) => request(`${API_BASE}/travel-mates/${id}/view`, { method: 'POST' }),
     },
     chats: {
         list: async () => request(`${API_BASE}/chats`),

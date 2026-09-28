@@ -1,13 +1,46 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { uploadImage } from '../utils/upload';
 import { useTranslation } from 'react-i18next';
+
+const STYLE_KEYS = ['healing', 'photo', 'activity', 'food', 'camping'];
+
+/** Stored dates are "M.D" (no year); rebuild YYYY-MM-DD for the date input using the post's creation date. */
+const toInputDate = (value: string | undefined, createdAt: string | undefined): string => {
+    const v = (value || '').trim();
+    const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (iso) return `${iso[1]}-${pad(Number(iso[2]))}-${pad(Number(iso[3]))}`;
+    const md = v.match(/^(\d{1,2})\.(\d{1,2})$/);
+    if (!md) return '';
+    const base = createdAt ? new Date(createdAt) : new Date();
+    const d = new Date(base.getFullYear(), Number(md[1]) - 1, Number(md[2]));
+    // A trip date well before the posting date belongs to the following year.
+    if (d.getTime() < base.getTime() - 14 * 86400000) d.setFullYear(d.getFullYear() + 1);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const toList = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+    if (typeof v === 'string') {
+        try {
+            const parsed = JSON.parse(v);
+            return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};
 
 export const TravelMateWrite: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const imageInputRef = useRef<HTMLInputElement>(null);
+    // ?edit=<postId> opens the form on an existing post (author or admin only).
+    const [searchParams] = useSearchParams();
+    const editId = searchParams.get('edit');
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -20,6 +53,7 @@ export const TravelMateWrite: React.FC = () => {
     const [styles, setStyles] = useState<string[]>(['healing']);
     const [image, setImage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loadingPost, setLoadingPost] = useState(!!editId);
 
     const regions = [
         { key: 'central_mongolia', label: 'travel_mates.tabs.central_mongolia' },
@@ -28,6 +62,44 @@ export const TravelMateWrite: React.FC = () => {
         { key: 'trekking', label: 'travel_mates.tabs.trekking' },
         { key: 'golf', label: 'travel_mates.tabs.golf' }
     ];
+
+    // Edit mode: load the post and map its stored labels back onto the form's keys.
+    useEffect(() => {
+        if (!editId) return;
+        let cancelled = false;
+        (async () => {
+            const [post, me] = await Promise.all([
+                api.travelMates.get(editId).catch(() => null),
+                api.auth.me(),
+            ]);
+            if (cancelled) return;
+            if (!me) {
+                navigate('/login', { state: { from: `/travel-mates/write?edit=${editId}` } });
+                return;
+            }
+            if (!post || (post.user_id !== me.id && me.role !== 'admin')) {
+                alert(t('travel_mates.write.edit_forbidden', { defaultValue: 'この投稿を編集する権限がありません。' }));
+                navigate(post ? `/travel-mates/${editId}` : '/travel-mates');
+                return;
+            }
+            setTitle(post.title || '');
+            setDescription(post.description || post.content || '');
+            setStartDate(toInputDate(post.start_date, post.created_at));
+            setEndDate(toInputDate(post.end_date, post.created_at));
+            if (Number(post.recruit_count) > 0) setCount(Number(post.recruit_count));
+            if (post.gender) setGender(post.gender);
+            setSelectedAges(toList(post.age_groups));
+            const region = regions.find((r) => t(r.label) === post.region);
+            if (region) setSelectedRegion(region.key);
+            const storedStyles = toList(post.styles);
+            setStyles(STYLE_KEYS.filter((k) => storedStyles.includes(t(`travel_mates.filters.style_${k}`))));
+            setImage(post.image || '');
+            setLoadingPost(false);
+        })();
+        return () => { cancelled = true; };
+        // Load once per post; t/regions are stable for the page's lifetime.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editId]);
 
     const toggleAge = (age: string) => {
         if (selectedAges.includes(age)) {
@@ -100,6 +172,32 @@ export const TravelMateWrite: React.FC = () => {
         setIsSubmitting(true);
         try {
             const me = await api.auth.me();
+            if (!me) {
+                alert(t('travel_mates.detail.login_required'));
+                navigate('/login', { state: { from: editId ? `/travel-mates/write?edit=${editId}` : '/travel-mates/write' } });
+                return;
+            }
+
+            if (editId) {
+                // Only the editable fields; author, counters and status stay as they are.
+                await api.travelMates.update(editId, {
+                    title: title.trim(),
+                    description: description.trim(),
+                    start_date: formatDate(startDate),
+                    end_date: endDate ? formatDate(endDate) : formatDate(startDate),
+                    duration: calculateDuration(startDate, endDate || startDate),
+                    recruit_count: count,
+                    gender: gender,
+                    age_groups: selectedAges,
+                    region: t(`travel_mates.tabs.${selectedRegion}`),
+                    styles: styles.map(s => t(`travel_mates.filters.style_${s}`)),
+                    tags: generateTags(),
+                    image: image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+                });
+                alert(t('travel_mates.write.edit_success', { defaultValue: '投稿を更新しました。' }));
+                navigate(`/travel-mates/${editId}`);
+                return;
+            }
 
             const newPost = {
                 user_id: me?.id,
@@ -128,8 +226,8 @@ export const TravelMateWrite: React.FC = () => {
             alert(t('travel_mates.write.success'));
             navigate('/travel-mates');
         } catch (error) {
-            console.error('Failed to create post:', error);
-            alert('Failed to create post');
+            console.error('Failed to save post:', error);
+            alert(editId ? '保存に失敗しました。' : 'Failed to create post');
         } finally {
             setIsSubmitting(false);
         }
@@ -140,7 +238,7 @@ export const TravelMateWrite: React.FC = () => {
             <div className="relative min-h-screen max-w-md mx-auto bg-white dark:bg-[#12201d] shadow-xl overflow-hidden flex flex-col">
                 {/* Header */}
                 <header className="sticky top-0 z-30 flex items-center justify-between px-5 py-4 bg-white/90 dark:bg-[#12201d]/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800/50">
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{t('travel_mates.post.write_button')}</h1>
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{editId ? t('travel_mates.write.edit_title', { defaultValue: '投稿を編集' }) : t('travel_mates.post.write_button')}</h1>
                     <button
                         onClick={() => navigate(-1)}
                         className="flex items-center justify-center w-10 h-10 -mr-2 text-gray-500 rounded-full hover:bg-background-light dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
@@ -318,7 +416,7 @@ export const TravelMateWrite: React.FC = () => {
                     <div className="px-5 py-6">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('travel_mates.write.style_label')}</h2>
                         <div className="flex flex-wrap gap-2.5">
-                            {['healing', 'photo', 'activity', 'food', 'camping'].map((style) => (
+                            {STYLE_KEYS.map((style) => (
                                 <button
                                     key={style}
                                     onClick={() => toggleStyle(style)}
@@ -349,7 +447,7 @@ export const TravelMateWrite: React.FC = () => {
                 <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-white via-white to-transparent dark:from-[#12201d] dark:via-[#12201d] pt-10">
                     <button
                         onClick={handleSubmit}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || loadingPost}
                         className="w-full bg-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                     >
                         {isSubmitting ? (
@@ -358,7 +456,7 @@ export const TravelMateWrite: React.FC = () => {
                                 <span>{t('travel_mates.write.submitting')}</span>
                             </>
                         ) : (
-                            <span>{t('travel_mates.write.submit_btn')}</span>
+                            <span>{editId ? t('travel_mates.write.edit_submit', { defaultValue: '変更を保存' }) : t('travel_mates.write.submit_btn')}</span>
                         )}
                     </button>
                 </div>

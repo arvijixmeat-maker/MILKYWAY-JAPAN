@@ -1,10 +1,25 @@
 import { Hono } from 'hono';
+import { getCookie } from 'hono/cookie';
+import { initializeLucia } from '../lib/auth';
 
 interface Env {
     DB: any;
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+/** Signed-in user for this request, or null. Reads are public; writes need a user. */
+const sessionUser = async (c: any) => {
+    const lucia = initializeLucia(c.env.DB);
+    const sessionId = getCookie(c, lucia.sessionCookieName);
+    if (!sessionId) return null;
+    const { session, user } = await lucia.validateSession(sessionId);
+    return session ? user : null;
+};
+
+/** Post/comment authors and admins may change or remove it. */
+const canManage = (user: any, ownerId: string | null | undefined) =>
+    !!user && (user.role === 'admin' || (!!ownerId && ownerId === user.id));
 
 // GET /api/travel-mates
 app.get('/', async (c) => {
@@ -32,9 +47,11 @@ app.get('/:id', async (c) => {
 
 // POST /api/travel-mates
 app.post('/', async (c) => {
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const data = await c.req.json();
     const db = c.env.DB;
-    const id = data.id || crypto.randomUUID();
+    const id = crypto.randomUUID();
     
     try {
         await db.prepare(
@@ -44,8 +61,8 @@ app.post('/', async (c) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
             id, 
-            data.user_id || '', 
-            data.user_name || '', 
+            user.id, 
+            data.user_name || user.name || '', 
             data.user_avatar || '', 
             data.title || '', 
             data.content || '', 
@@ -66,14 +83,14 @@ app.post('/', async (c) => {
             data.region || '',
             JSON.stringify(data.styles || []),
             data.author_info || '',
-            data.view_count || 0,
-            data.comment_count || 0,
-            data.author_name || '',
-            data.author_image || '',
+            0,
+            0,
+            data.author_name || user.name || '',
+            data.author_image || user.avatarUrl || '',
             data.description || ''
         ).run();
         
-        return c.json({ id, ...data });
+        return c.json({ ...data, id, user_id: user.id });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
@@ -82,8 +99,13 @@ app.post('/', async (c) => {
 // PUT /api/travel-mates/:id
 app.put('/:id', async (c) => {
     const id = c.req.param('id');
-    const data = await c.req.json();
     const db = c.env.DB;
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const post = await db.prepare('SELECT user_id FROM travel_mates WHERE id=?').bind(id).first();
+    if (!post) return c.json({ error: 'Not found' }, 404);
+    if (!canManage(user, post.user_id)) return c.json({ error: 'Forbidden' }, 403);
+    const data = await c.req.json();
     
     try {
         const updateFields: string[] = [];
@@ -92,7 +114,7 @@ app.put('/:id', async (c) => {
         const safeKeys = [
             'title', 'content', 'destination', 'travel_date', 'max_members', 'current_members', 'status', 'tags',
             'image', 'start_date', 'end_date', 'duration', 'recruit_count', 'gender', 'age_groups', 'region', 
-            'styles', 'author_info', 'view_count', 'comment_count', 'author_name', 'author_image', 'description'
+            'styles', 'author_info', 'author_name', 'author_image', 'description'
         ];
 
         for (const key of safeKeys) {
@@ -123,8 +145,26 @@ app.put('/:id', async (c) => {
 app.delete('/:id', async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const post = await db.prepare('SELECT user_id FROM travel_mates WHERE id=?').bind(id).first();
+    if (!post) return c.json({ error: 'Not found' }, 404);
+    if (!canManage(user, post.user_id)) return c.json({ error: 'Forbidden' }, 403);
     try {
+        await ensureCommentsTable(db);
+        await db.prepare('DELETE FROM travel_mate_comments WHERE post_id=?').bind(id).run();
         await db.prepare('DELETE FROM travel_mates WHERE id=?').bind(id).run();
+        return c.json({ success: true });
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// POST /api/travel-mates/:id/view — public view counter (the post itself is owner/admin-only to edit)
+app.post('/:id/view', async (c) => {
+    const id = c.req.param('id');
+    try {
+        await c.env.DB.prepare('UPDATE travel_mates SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?').bind(id).run();
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
@@ -167,6 +207,8 @@ app.get('/:id/comments', async (c) => {
 app.post('/:id/comments', async (c) => {
     const postId = c.req.param('id');
     const db = c.env.DB;
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
     try {
         await ensureCommentsTable(db);
         const data = await c.req.json();
@@ -174,7 +216,7 @@ app.post('/:id/comments', async (c) => {
 
         await db.prepare(
             `INSERT INTO travel_mate_comments (id, post_id, user_id, user_name, user_image, content) VALUES (?, ?, ?, ?, ?, ?)`
-        ).bind(id, postId, data.user_id || '', data.user_name || '', data.user_image || '', data.content || '').run();
+        ).bind(id, postId, user.id, data.user_name || user.name || '', data.user_image || user.avatarUrl || '', data.content || '').run();
 
         // Increment comment_count on the post
         await db.prepare(
@@ -193,7 +235,15 @@ app.delete('/:postId/comments/:commentId', async (c) => {
     const postId = c.req.param('postId');
     const commentId = c.req.param('commentId');
     const db = c.env.DB;
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
     try {
+        await ensureCommentsTable(db);
+        const comment = await db.prepare('SELECT user_id FROM travel_mate_comments WHERE id = ? AND post_id = ?').bind(commentId, postId).first();
+        if (!comment) return c.json({ error: 'Not found' }, 404);
+        const post = await db.prepare('SELECT user_id FROM travel_mates WHERE id = ?').bind(postId).first();
+        if (!canManage(user, comment.user_id) && !canManage(user, post?.user_id)) return c.json({ error: 'Forbidden' }, 403);
+
         await db.prepare('DELETE FROM travel_mate_comments WHERE id = ? AND post_id = ?').bind(commentId, postId).run();
 
         // Decrement comment_count on the post

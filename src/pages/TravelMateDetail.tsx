@@ -19,6 +19,7 @@ interface MateUser {
     name?: string;
     email?: string;
     avatarUrl?: string;
+    role?: string;
 }
 
 const TravelMateDetailDesktopContainer: React.FC = () => {
@@ -43,6 +44,7 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
                 if (cancelled) return;
                 setPost(postData);
                 setCurrentUser(me);
+                if (postData) api.travelMates.view(id).catch(() => { /* view count is best-effort */ });
                 try {
                     const res = await fetch(`/api/travel-mates/${id}/comments`);
                     if (res.ok) {
@@ -68,6 +70,7 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
     }
 
     const isOwner = !!(currentUser && post.user_id && currentUser.id === post.user_id);
+    const canManage = isOwner || currentUser?.role === 'admin';
     const goLogin = () => navigate('/login', { state: { from: location.pathname } });
 
     const postComment = async (content: string) => {
@@ -100,8 +103,9 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
     const deleteComment = async (commentId: string) => {
         if (!id || !confirm('このコメントを削除しますか？')) return;
         try {
-            const res = await fetch(`/api/travel-mates/${id}/comments/${commentId}`, { method: 'DELETE' });
+            const res = await fetch(`/api/travel-mates/${id}/comments/${commentId}`, { method: 'DELETE', credentials: 'include' });
             if (res.ok) setComments((prev) => prev.filter((c) => c.id !== commentId));
+            else alert('コメントを削除できませんでした。');
         } catch (e) {
             console.error('Error deleting comment:', e);
         }
@@ -111,8 +115,13 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
     const onDelete = async () => {
         if (!id) return;
         if (!confirm('この投稿を削除しますか？')) return;
-        await api.travelMates.delete(id);
-        navigate('/travel-mates');
+        try {
+            await api.travelMates.delete(id);
+            navigate('/travel-mates');
+        } catch (e) {
+            console.error('Error deleting post:', e);
+            alert('投稿を削除できませんでした。');
+        }
     };
 
     return (
@@ -123,6 +132,7 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
                 userId={currentUser?.id ?? null}
                 userName={currentUser?.name || currentUser?.email || ''}
                 isOwner={isOwner}
+                canManage={canManage}
                 onPostComment={postComment}
                 onDeleteComment={deleteComment}
                 onLogin={goLogin}
@@ -232,14 +242,15 @@ const TravelMateDetailMobile: React.FC = () => {
         fetchComments();
     }, [id]);
 
-    const isOwner = currentUser && post && currentUser.id === post.user_id;
+    // Authors and admins can edit/delete (the API enforces the same rule).
+    const isOwner = currentUser && post && (currentUser.id === post.user_id || currentUser.role === 'admin');
 
     // Increment view count once
     useEffect(() => {
         const incrementView = async () => {
             if (post && !viewIncremented && id) {
                 try {
-                    await api.travelMates.update(id, { view_count: post.views + 1 });
+                    await api.travelMates.view(id);
                     setViewIncremented(true);
                 } catch (e) {
                     console.error("Error updating view count:", e);
@@ -343,7 +354,7 @@ const TravelMateDetailMobile: React.FC = () => {
                         <div className="flex gap-2">
                             {isOwner && (
                                 <>
-                                    <button onClick={() => navigate(`/travel-mates/edit/${id}`)} className="p-2 text-white/90 hover:text-white bg-black/20 backdrop-blur-sm rounded-full">
+                                    <button onClick={() => navigate(`/travel-mates/write?edit=${id}`)} className="p-2 text-white/90 hover:text-white bg-black/20 backdrop-blur-sm rounded-full">
                                         <span className="material-symbols-outlined">edit</span>
                                     </button>
                                     <button onClick={handleDelete} className="p-2 text-white/90 hover:text-white bg-black/20 backdrop-blur-sm rounded-full">
