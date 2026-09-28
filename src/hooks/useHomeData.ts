@@ -37,6 +37,7 @@ interface Product {
     originalPrice?: number;
     isPopular: boolean;
     isFeatured: boolean;
+    status?: string;
     mainImages: string[];
     duration: string;
     tags: string[];
@@ -78,6 +79,7 @@ export const useHomeData = () => {
                 originalPrice: p.originalPrice ?? p.original_price ?? undefined,
                 isPopular: !!(p.isPopular ?? p.is_popular),
                 isFeatured: !!(p.isFeatured ?? p.is_featured),
+                status: p.status,
                 mainImages: ensureStringArray(p.mainImages || p.main_images),
                 duration: p.duration,
                 tags: p.tags || []

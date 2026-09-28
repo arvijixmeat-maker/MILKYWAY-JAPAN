@@ -4,7 +4,7 @@ import { TourTabsSectionDesktop } from './TourTabsSection.desktop';
 import { ThemeRowSectionDesktop } from './ThemeRowSection.desktop';
 import { MagazineCardsDesktop } from './MagazineCards.desktop';
 import { ReviewCardsDesktop } from './ReviewCards.desktop';
-import { categoryImage, inCategory, useHomeReviews } from './homeDesktopData';
+import { categoryImage, inCategory, isPublished, useHomeReviews } from './homeDesktopData';
 
 interface Props {
     data: HomeData;
@@ -14,7 +14,8 @@ interface Props {
 /** PC home page (Claude Design "Milkyway Japan Home"). */
 export function HomeDesktop({ data, isLoading }: Props) {
     const { reviews, stats } = useHomeReviews();
-    const { products, categories, magazines } = data;
+    const { categories, magazines } = data;
+    const products = data.products.filter(isPublished);
 
     const cat = (id: string) => categories.find((c) => c.id === id);
     const gobi = cat('gobi-desert');

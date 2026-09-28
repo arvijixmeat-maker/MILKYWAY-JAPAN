@@ -66,6 +66,9 @@ export const discountPct = (p: HomeProduct) => {
     return pct >= 5 ? pct : 0;
 };
 
+/** /api/products also returns unpublished tours; PC listings show published ones only. */
+export const isPublished = (p: HomeProduct) => !p.status || p.status === 'active';
+
 /** Products store the category *name*; categories are addressed by slug id. */
 export const inCategory = (p: HomeProduct, c: Pick<Category, 'id' | 'name'>) => p.category === c.name || p.category === c.id;
 

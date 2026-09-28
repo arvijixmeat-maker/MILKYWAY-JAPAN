@@ -13,7 +13,7 @@ import { DEFAULT_CATEGORIES, type Category } from '../types/category';
 import { useTranslation } from 'react-i18next';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
-import { TourProductsDesktop } from '../components/tours-desktop/TourProductsDesktop';
+import { TourListDesktop } from '../components/tours-desktop/TourListDesktop';
 
 interface EventBanner {
     id: string;
@@ -43,7 +43,7 @@ export const TourProducts: React.FC = () => {
                     canonical="/products"
                 />
                 <DesktopLayout>
-                    <TourProductsDesktop />
+                    <TourListDesktop />
                 </DesktopLayout>
             </>
         );

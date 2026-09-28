@@ -39,19 +39,16 @@ export function MagazineCardsDesktop({ magazines }: Props) {
                                 <img src={m.image} alt={title} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                             )}
                             <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '30%', pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(10,31,46,0.35) 0%,rgba(10,31,46,0) 100%)' }} />
+                            {/* Partial gradient behind the text only — the photo above stays sharp. */}
                             <div
                                 style={{
                                     position: 'absolute',
                                     left: 0,
                                     right: 0,
                                     bottom: 0,
-                                    height: '60%',
+                                    height: '55%',
                                     pointerEvents: 'none',
-                                    backdropFilter: 'blur(8px)',
-                                    WebkitBackdropFilter: 'blur(8px)',
-                                    WebkitMaskImage: 'linear-gradient(180deg,transparent 0%,#000 45%)',
-                                    maskImage: 'linear-gradient(180deg,transparent 0%,#000 45%)',
-                                    background: 'linear-gradient(180deg,rgba(10,31,46,0) 0%,rgba(10,31,46,0.55) 40%,rgba(10,31,46,0.9) 100%)',
+                                    background: 'linear-gradient(180deg,rgba(10,31,46,0) 0%,rgba(10,31,46,0.35) 35%,rgba(10,31,46,0.75) 70%,rgba(10,31,46,0.9) 100%)',
                                 }}
                             />
                             <div style={{ position: 'absolute', left: 18, right: 18, top: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>

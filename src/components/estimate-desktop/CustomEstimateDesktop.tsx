@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { sendNotificationEmail } from '../../lib/email';
 import { useSpotImages } from '../../hooks/useSpotImages';
@@ -59,7 +59,11 @@ export function CustomEstimateDesktop() {
     const [adultCount, setAdultCount] = useState(2);
     const [childCount, setChildCount] = useState(0);
     const [themes, setThemes] = useState<string[]>([]);
-    const [accommodations, setAccommodations] = useState<string[]>([]);
+    // Trip-type cards on the tour list link here with ?stay=4つ星ホテル,デラックスゲル
+    const [searchParams] = useSearchParams();
+    const [accommodations, setAccommodations] = useState<string[]>(() =>
+        (searchParams.get('stay') || '').split(',').filter((v) => ACCOMMODATIONS.includes(v)),
+    );
     const [vehicle, setVehicle] = useState('');
     const [priceRange, setPriceRange] = useState(50);
     const [additionalRequest, setAdditionalRequest] = useState('');
