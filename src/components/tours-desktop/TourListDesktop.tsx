@@ -5,18 +5,7 @@ import { useWishlist } from '../../hooks/useWishlist';
 import { MW, MW_FONT_EN, MW_GRADIENT, isUsableImage, yen } from '../desktop-primitives/mwTokens';
 import { FavButton } from '../home-desktop/TourTabsSection.desktop';
 import { categoryImage, discountPct, inCategory, isPublished, useHomeReviews, type HomeProduct } from '../home-desktop/homeDesktopData';
-
-type Sort = 'rec' | 'low' | 'high' | 'rating' | 'reviews';
-
-/**
- * Trip-type cards, driven by each tour's 여행 타입 set in the admin (packageType).
- * They always filter; a type with no tours yet shows the empty state, whose quote
- * button carries that type's stays (?stay=).
- */
-const TRIP_TYPES = [
-    { key: 'full', label: 'フルパッケージ旅行', sub: '4つ星ホテル＋デラックスゲル宿泊', tier: 'PREMIUM', stays: ['4つ星ホテル', 'デラックスゲル'], dark: true },
-    { key: 'value', label: 'コスパ重視の旅行', sub: '3つ星ホテル＋スタンダードゲル宿泊', tier: 'STANDARD', stays: ['3つ星ホテル', 'スタンダードゲル'], dark: false },
-];
+import { TOUR_SORTS, TRIP_TYPES, matchesQuery, quotePathFor, sortTours, tripType, type TourSort } from '../../utils/tourList';
 
 export function TourListDesktop() {
     const navigate = useNavigate();
@@ -28,7 +17,7 @@ export function TourListDesktop() {
 
     const query = (params.get('q') || '').trim();
     const cat = params.get('category') || 'all';
-    const [sort, setSort] = useState<Sort>('rec');
+    const [sort, setSort] = useState<TourSort>('rec');
     const [type, setType] = useState('');
 
     const setParam = (key: string, value: string) => {
@@ -41,26 +30,8 @@ export function TourListDesktop() {
     const currentCat = categories.find((c) => c.id === cat);
 
     const items = useMemo(() => {
-        const words = query.toLowerCase().split(/[\s\u3000]+/).filter(Boolean);
-        const tripType = TRIP_TYPES.find((t) => t.key === type);
-        const list = products.filter((p) => {
-            if (currentCat && !inCategory(p, currentCat)) return false;
-            if (tripType && p.packageType !== tripType.key) return false;
-            if (words.length) {
-                const hay = `${p.name} ${p.tags.join(' ')} ${p.category} ${p.duration}`.toLowerCase();
-                if (!words.every((w) => hay.includes(w))) return false;
-            }
-            return true;
-        });
-        const rank = (p: HomeProduct) => Number(p.isPopular) * 2 + Number(p.isFeatured);
-        const sorters: Record<Sort, (a: HomeProduct, b: HomeProduct) => number> = {
-            rec: (a, b) => rank(b) - rank(a),
-            low: (a, b) => a.price - b.price,
-            high: (a, b) => b.price - a.price,
-            rating: (a, b) => (stats[b.id]?.avg ?? 0) - (stats[a.id]?.avg ?? 0) || (stats[b.id]?.count ?? 0) - (stats[a.id]?.count ?? 0),
-            reviews: (a, b) => (stats[b.id]?.count ?? 0) - (stats[a.id]?.count ?? 0),
-        };
-        return [...list].sort(sorters[sort]);
+        const list = products.filter((p) => (!currentCat || inCategory(p, currentCat)) && (!type || p.packageType === type) && matchesQuery(p, query));
+        return sortTours(list, sort, stats);
     }, [products, currentCat, type, query, sort, stats]);
 
     const dests = [
@@ -72,8 +43,8 @@ export function TourListDesktop() {
         })),
     ];
 
-    const selectedType = TRIP_TYPES.find((t) => t.key === type);
-    const quotePath = selectedType ? `/custom-estimate?stay=${encodeURIComponent(selectedType.stays.join(','))}` : '/custom-estimate';
+    const selectedType = tripType(type);
+    const quotePath = quotePathFor(type);
 
     const reset = () => {
         setType('');
@@ -178,14 +149,12 @@ export function TourListDesktop() {
                         並び替え
                         <select
                             value={sort}
-                            onChange={(e) => setSort(e.target.value as Sort)}
+                            onChange={(e) => setSort(e.target.value as TourSort)}
                             style={{ height: 44, padding: '0 36px 0 16px', border: `1.5px solid ${MW.line2}`, borderRadius: 999, background: '#fff', fontSize: 14, fontWeight: 700, color: MW.navy, cursor: 'pointer', appearance: 'none', fontFamily: 'inherit', backgroundImage: `linear-gradient(45deg,transparent 50%,${MW.navy} 50%),linear-gradient(135deg,${MW.navy} 50%,transparent 50%)`, backgroundPosition: 'calc(100% - 20px) 19px,calc(100% - 15px) 19px', backgroundSize: '5px 5px', backgroundRepeat: 'no-repeat' }}
                         >
-                            <option value="rec">おすすめ順</option>
-                            <option value="low">料金が安い順</option>
-                            <option value="high">料金が高い順</option>
-                            <option value="rating">評価が高い順</option>
-                            <option value="reviews">レビュー数順</option>
+                            {TOUR_SORTS.map((o) => (
+                                <option key={o.id} value={o.id}>{o.label}</option>
+                            ))}
                         </select>
                     </label>
                 </div>

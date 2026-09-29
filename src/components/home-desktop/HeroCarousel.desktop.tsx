@@ -1,69 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../../lib/api';
 import type { HomeData } from '../../hooks/useHomeData';
-import { MW, isUsableImage, yen } from '../desktop-primitives/mwTokens';
-
-interface ApiBanner {
-    id: string;
-    image?: string;
-    image_url?: string;
-    pc_image?: string;
-    pcImage?: string;
-    tag?: string;
-    title?: string;
-    subtitle?: string;
-    link?: string;
-    pc_title?: string;
-    pcTitle?: string;
-    pc_subtitle?: string;
-    pcSubtitle?: string;
-    pc_tag?: string;
-    pcTag?: string;
-}
-
-interface Slide {
-    key: string;
-    img: string;
-    eyebrow: string;
-    title: string;
-    sub: string;
-    label: string;
-    path: string;
-}
-
-// Strings the admin tooling inserts as placeholders that we should never display.
-const DEFAULT_TEXTS = new Set(['New Tag', 'new tag', '새로운 배너 타이틀', '배너 설명을 입력하세요', 'Premium Trip']);
-const clean = (v?: string) => {
-    const s = (v || '').trim();
-    return s && !DEFAULT_TEXTS.has(s) ? s : '';
-};
-
-/** Banner links are stored as absolute production URLs; route them in-app. */
-const toPath = (link?: string) => {
-    const l = (link || '').trim();
-    if (!l) return '/products';
-    try {
-        const u = new URL(l, window.location.origin);
-        if (u.hostname === window.location.hostname || u.hostname.endsWith('mongolryokou.com')) {
-            return u.pathname + u.search;
-        }
-        return l;
-    } catch {
-        return l.startsWith('/') ? l : '/products';
-    }
-};
-
-const FALLBACK: Slide = {
-    key: 'fallback',
-    img: '',
-    eyebrow: 'CUSTOM TOUR',
-    title: 'あなただけの特別なプランを、\n1分でリクエスト',
-    sub: '日本語スタッフが24時間以内にご返信。お見積もりは無料です。',
-    label: 'お見積もり無料',
-    path: '/custom-estimate',
-};
+import { useHeroSlides } from '../../hooks/useHeroSlides';
+import { MW, isUsableImage } from '../desktop-primitives/mwTokens';
 
 const GAP = 16;
 const W = 'min(880px, calc(100vw - 96px))';
@@ -75,34 +14,7 @@ interface Props {
 export function HeroCarouselDesktop({ products }: Props) {
     const navigate = useNavigate();
 
-    const { data: banners = [] } = useQuery<ApiBanner[]>({
-        queryKey: ['heroBannersDesktop'],
-        queryFn: async () => {
-            const data = await api.banners.get();
-            return Array.isArray(data?.banners) ? data.banners : [];
-        },
-        staleTime: 1000 * 60 * 5,
-    });
-
-    const slides: Slide[] = banners.length === 0
-        ? [FALLBACK]
-        : banners.slice(0, 6).map((b, i) => {
-            const path = toPath(b.link);
-            // Banners that point at a tour pick up its category, length and price.
-            const productId = path.match(/^\/products\/([^/?#]+)/)?.[1];
-            const product = productId ? products.find((p) => p.id === productId) : undefined;
-            const tag = clean(b.pc_tag || b.pcTag) || clean(b.tag);
-            const sub = clean(b.pc_subtitle || b.pcSubtitle) || clean(b.subtitle);
-            return {
-                key: b.id || String(i),
-                img: b.pc_image || b.pcImage || b.image || b.image_url || '',
-                eyebrow: tag || (product ? [product.category, product.duration].filter(Boolean).join('・') : ''),
-                title: clean(b.pc_title || b.pcTitle) || clean(b.title) || product?.name || 'モンゴル旅行',
-                sub: sub || (product ? `${yen(product.price)}〜` : ''),
-                label: product?.category || 'モンゴル旅行',
-                path,
-            };
-        });
+    const slides = useHeroSlides(products);
 
     const n = slides.length;
     const looping = n > 1;
