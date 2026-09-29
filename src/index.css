@@ -250,6 +250,10 @@ img {
         bottom: calc(168px + env(safe-area-inset-bottom, 0px));
     }
 }
+/* Hidden while a mobile sheet / drawer is open (useModalLayer). */
+body.mw-modal-open .floating-line-btn {
+    display: none;
+}
 
 /* PC header: hide the rotating HOT keyword when the logo/search row gets tight. */
 @media (max-width: 1100px) {

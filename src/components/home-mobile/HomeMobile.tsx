@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { useNavigate } from 'react-router-dom';
 import type { HomeData } from '../../hooks/useHomeData';
 import { useHeroSlides } from '../../hooks/useHeroSlides';
-import { useWishlist } from '../../hooks/useWishlist';
-import { getOptimizedImageUrl, type ImagePreset } from '../../utils/cloudflareImage';
-import { MW, MW_FONT, MW_FONT_EN, MW_GRADIENT, cleanTitle, isUsableImage, yen } from '../desktop-primitives/mwTokens';
+import { MW, MW_FONT, MW_FONT_EN, MW_GRADIENT, cleanTitle, yen } from '../desktop-primitives/mwTokens';
 import { categoryImage, discountPct, inCategory, isPublished, useHomeReviews, type HomeProduct } from '../home-desktop/homeDesktopData';
 import { ANIMALS, AnimalAvatar } from '../reviews-desktop/AnimalAvatar';
+import { img } from './mobileImage';
+import { Heart, Photo, TypeBadge } from './mobileParts';
 
 interface Props {
     data: HomeData;
@@ -18,8 +18,6 @@ const scrollToSlide = (track: HTMLElement | null, i: number) => {
     const el = track?.children[i] as HTMLElement | undefined;
     if (track && el) track.scrollTo({ left: el.offsetLeft - 16, behavior: 'smooth' });
 };
-
-const img = (url: string | undefined, preset: ImagePreset) => (isUsableImage(url) ? getOptimizedImageUrl(url, preset) : '');
 
 /** Mobile home page (Claude Design "Milkyway Japan Mobile"). */
 export function HomeMobile({ data, isLoading }: Props) {
@@ -349,40 +347,6 @@ function SectionHead({ en, title, more, onMore }: { en: string; title: string; m
 
 function Row({ children, pad = '18px 16px 0' }: { children: ReactNode; pad?: string }) {
     return <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', padding: pad, scrollPadding: '0 16px' }}>{children}</div>;
-}
-
-function Photo({ src, alt }: { src: string; alt: string }) {
-    if (!src) return null;
-    return <img src={src} alt={alt} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />;
-}
-
-/** PREMIUM / STANDARD from the admin's 여행 타입; hidden when unset. */
-function TypeBadge({ p }: { p: HomeProduct }) {
-    if (!p.packageType) return null;
-    const full = p.packageType === 'full';
-    return (
-        <span style={{ position: 'absolute', left: 8, bottom: 8, fontFamily: MW_FONT_EN, fontSize: 9, fontWeight: 700, letterSpacing: '0.04em', padding: '3px 7px', borderRadius: 999, background: full ? MW.mintDeep : 'rgba(255,255,255,0.92)', color: full ? '#FFFFFF' : MW.mintDeep, pointerEvents: 'none' }}>
-            {full ? 'PREMIUM' : 'STANDARD'}
-        </span>
-    );
-}
-
-function Heart({ p, size }: { p: HomeProduct; size: number }) {
-    const wishlist = useWishlist();
-    const on = wishlist.has(p.id);
-    return (
-        <button
-            type="button"
-            aria-label={on ? 'お気に入りから削除' : 'お気に入りに追加'}
-            aria-pressed={on}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); wishlist.toggle(p); }}
-            style={{ position: 'absolute', right: 6, top: 6, width: size, height: size, border: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-        >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill={on ? MW.red : 'none'} stroke={on ? MW.red : MW.navy} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
-            </svg>
-        </button>
-    );
 }
 
 const eyebrow: CSSProperties = { fontFamily: MW_FONT_EN, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep };

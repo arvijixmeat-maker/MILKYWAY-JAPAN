@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import logoSquare from '../../assets/new_logo_2026.png';
 import { api } from '../../lib/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useModalLayer } from '../../hooks/useModalLayer';
 import { HOT_WORDS, SITE_NAV, productMatches, pushRecent, readRecent, searchTokens, useSearchProducts, writeRecent } from '../../hooks/useTourSearch';
 import { MW, MW_FONT, MW_FONT_EN, isUsableImage, yen } from '../desktop-primitives/mwTokens';
 
@@ -20,6 +21,7 @@ export function MobileHeader() {
     const navigate = useNavigate();
     const location = useLocation();
     const { unreadCount } = useNotification();
+    const headerRef = useRef<HTMLElement>(null);
     const boxRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +34,19 @@ export function MobileHeader() {
     useEffect(() => {
         const t = window.setInterval(() => setHotIdx((i) => i + 1), 3000);
         return () => window.clearInterval(t);
+    }, []);
+
+    // Publish the header height so page toolbars can stick right below it (--mw-mheader-h).
+    useEffect(() => {
+        const el = headerRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') return;
+        const root = document.documentElement.style;
+        const ro = new ResizeObserver(() => root.setProperty('--mw-mheader-h', `${el.offsetHeight}px`));
+        ro.observe(el);
+        return () => {
+            ro.disconnect();
+            root.removeProperty('--mw-mheader-h');
+        };
     }, []);
 
     // Close the suggestion panel on an outside tap (navigation handlers close it themselves).
@@ -67,7 +82,7 @@ export function MobileHeader() {
 
     return (
         <>
-            <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #EEF1EF', fontFamily: MW_FONT, color: MW.navy }}>
+            <header ref={headerRef} style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #EEF1EF', fontFamily: MW_FONT, color: MW.navy }}>
                 <div style={{ maxWidth: 480, margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px' }}>
                         <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} aria-label="Milkyway.jp ホーム" style={{ display: 'flex', alignItems: 'center', gap: 8, color: MW.navy, flex: 1, minWidth: 0, textDecoration: 'none' }}>
@@ -218,16 +233,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
         navigate(path);
     };
 
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        window.addEventListener('keydown', onKey);
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => {
-            window.removeEventListener('keydown', onKey);
-            document.body.style.overflow = prev;
-        };
-    }, [onClose]);
+    useModalLayer(onClose);
 
     const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', height: 54, padding: '0 20px', border: 0, borderTop: '1px solid #EEF1EF', background: 'transparent', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: MW.navy, cursor: 'pointer', textAlign: 'left' } as const;
 
