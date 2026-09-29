@@ -73,8 +73,8 @@ export function MobileHeader() {
                         <a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }} aria-label="Milkyway.jp ホーム" style={{ display: 'flex', alignItems: 'center', gap: 8, color: MW.navy, flex: 1, minWidth: 0, textDecoration: 'none' }}>
                             <img src={logoSquare} alt="" width={34} height={34} style={{ width: 34, height: 34, objectFit: 'contain', flexShrink: 0 }} />
                             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, minWidth: 0 }}>
-                                <span style={{ fontFamily: MW_FONT_EN, fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
-                                    Milkyway<span style={{ color: MW.mint }}>.jp</span>
+                                <span style={{ fontFamily: MW_FONT_EN, fontWeight: 700, fontSize: 17, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+                                    Milkyway<span style={{ color: MW.mint }}>.</span>jp
                                 </span>
                                 <span style={{ fontSize: 10, color: MW.mute, whiteSpace: 'nowrap' }}>モンゴル旅行・モンゴルツアー専門</span>
                             </span>

@@ -47,7 +47,7 @@ export function MobileFooter() {
         <footer style={{ marginTop: 48, borderTop: `1px solid ${MW.line}`, padding: '28px 16px 116px', display: 'flex', flexDirection: 'column', gap: 20, fontFamily: MW_FONT, color: MW.navy }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span style={{ fontFamily: MW_FONT_EN, fontWeight: 700, fontSize: 18 }}>
-                    Milkyway<span style={{ color: MW.mint }}>.jp</span>
+                    Milkyway<span style={{ color: MW.mint }}>.</span>jp
                 </span>
                 <span style={{ fontSize: 11, color: MW.mute }}>Mongolia Milky Way (SUUN ZAM)</span>
                 <p style={{ margin: 0, fontSize: 12, lineHeight: 1.8, color: MW.mute }}>
