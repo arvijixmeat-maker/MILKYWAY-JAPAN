@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './QuoteHero.css';
-
-const MEDIA = '/media/estimate-journey';
-const SCENES = [
-    { title: '私だけのモンゴル旅行', subtitle: '草原と砂漠、そして星空へ', start: 0 },
-    { title: 'テレルジ 草原乗馬', subtitle: '緑の大草原を、ゆったり駆ける時間', start: 4 },
-    { title: 'ミニ砂漠の一日', subtitle: 'ラクダと出会い、黄金色の砂丘へ', start: 8 },
-    { title: '遊牧民の文化体験', subtitle: 'ゲルで出会う、あたたかなモンゴルの日常', start: 12 },
-    { title: '砂漠の夜、天の川', subtitle: 'モンゴルで出会う、特別な星空', start: 16 },
-    { title: 'さあ、モンゴルへ', subtitle: 'ご希望の日程で、プライベート旅行を', start: 20 },
-];
+import { QUOTE_MEDIA as MEDIA, QUOTE_SCENES as SCENES } from './quoteScenes';
 
 export function QuoteHero({ onHome }: { onHome: () => void }) {
     const root = useRef<HTMLElement>(null);

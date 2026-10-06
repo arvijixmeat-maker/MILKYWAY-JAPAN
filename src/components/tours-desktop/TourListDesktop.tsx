@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useHomeData } from '../../hooks/useHomeData';
 import { useWishlist } from '../../hooks/useWishlist';
 import { MW, MW_FONT_EN, MW_GRADIENT, isUsableImage, yen } from '../desktop-primitives/mwTokens';
+import { TypePill } from '../desktop-primitives/TypePill';
 import { FavButton } from '../home-desktop/TourTabsSection.desktop';
 import { categoryImage, discountPct, inCategory, isPublished, useHomeReviews, type HomeProduct } from '../home-desktop/homeDesktopData';
 
@@ -258,10 +259,9 @@ function TourCard({ p }: { p: HomeProduct }) {
                     <img src={img} alt={`${p.name}｜${p.category}`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 )}
                 <FavButton on={wishlist.has(p.id)} onToggle={() => wishlist.toggle(p)} />
-                {(p.isPopular || p.isFeatured) && (
-                    <div style={{ position: 'absolute', left: 10, top: 10, right: 56, display: 'flex', gap: 4, flexWrap: 'wrap', pointerEvents: 'none' }}>
-                        {p.isPopular && <span style={{ ...badge, color: '#fff', background: MW.navy }}>BEST</span>}
-                        {p.isFeatured && <span style={{ ...badge, color: MW.mintDeep, background: '#FFFFFF' }}>おすすめ</span>}
+                {p.packageType && (
+                    <div style={{ position: 'absolute', left: 12, top: 12, right: 56, display: 'flex', gap: 4, pointerEvents: 'none' }}>
+                        <TypePill type={p.packageType} lg />
                     </div>
                 )}
             </div>
@@ -278,4 +278,3 @@ function TourCard({ p }: { p: HomeProduct }) {
 }
 
 const chipBtn = { border: 0, background: MW.mintTint, color: MW.mintDeep, fontSize: 12, fontWeight: 700, borderRadius: 999, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' } as const;
-const badge = { display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 6, fontSize: 11, fontWeight: 700 } as const;

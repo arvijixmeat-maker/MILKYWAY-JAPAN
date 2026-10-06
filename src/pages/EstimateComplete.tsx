@@ -2,20 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { DEFAULT_CATEGORIES, type Category } from '../types/category';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { MobileShell } from '../components/mobile/MobileShell';
+import { QuoteDoneSummary } from '../components/estimate-mobile/QuoteDone';
+
+interface CategoryRow {
+    id: string;
+    name: string;
+    type?: string;
+    icon?: string;
+    description?: string;
+    is_active?: boolean;
+    isActive?: boolean;
+    sort_order?: number;
+    order?: number;
+}
 
 export const EstimateComplete: React.FC = () => {
+    const isDesktop = useIsDesktop();
+    return isDesktop ? <EstimateCompleteDesktop /> : <EstimateCompleteMobile />;
+};
+
+/** Mobile: the "request sent" screen of the redesign (Claude Design: M Quote Done) as a page. */
+const EstimateCompleteMobile: React.FC = () => {
+    const navigate = useNavigate();
+    const estimate: Record<string, unknown> = useLocation().state || {};
+    const go = (path: string) => {
+        navigate(path);
+        window.scrollTo(0, 0);
+    };
+
+    return (
+        <MobileShell title="お見積もり">
+            <div style={{ padding: '28px 18px 0', display: 'flex', flexDirection: 'column', gap: 22 }}>
+                <QuoteDoneSummary page estimate={estimate} onStatus={() => go('/mypage/estimates')} go={go} />
+            </div>
+        </MobileShell>
+    );
+};
+
+const EstimateCompleteDesktop: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const estimate = location.state || {};
     const [categories, setCategories] = useState<Category[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchCategories = async () => {
             try {
                 const data = await api.categories.list('product');
                 if (Array.isArray(data) && data.length > 0) {
-                    const mapped = data.filter((c: any) => c.type === 'product' || !c.type).map((c: any) => ({
+                    const mapped = data.filter((c: CategoryRow) => c.type === 'product' || !c.type).map((c: CategoryRow) => ({
                         id: c.id,
                         icon: c.icon || 'category',
                         name: c.name,
@@ -30,8 +67,6 @@ export const EstimateComplete: React.FC = () => {
             } catch (error) {
                 console.error('Error fetching categories:', error);
                 setCategories(DEFAULT_CATEGORIES);
-            } finally {
-                setIsLoading(false);
             }
         };
         fetchCategories();

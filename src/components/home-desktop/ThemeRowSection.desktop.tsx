@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWishlist } from '../../hooks/useWishlist';
 import { MW, isUsableImage, yen } from '../desktop-primitives/mwTokens';
+import { TypePill } from '../desktop-primitives/TypePill';
 import { FavButton } from './TourTabsSection.desktop';
 import { discountPct, type HomeProduct, type ReviewStat } from './homeDesktopData';
 
@@ -115,11 +116,9 @@ function MiniCard({ p, stat }: { p: HomeProduct; stat?: ReviewStat }) {
             <h3 style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 500, lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {p.duration ? `[${p.duration}] ` : ''}{p.name}
             </h3>
-            {off > 0 && (
+            {p.packageType && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 22, overflow: 'hidden', marginTop: 4 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, boxSizing: 'border-box', whiteSpace: 'nowrap', flexShrink: 0, fontSize: 11, fontWeight: 700, lineHeight: 1, color: MW.mintDeep, background: MW.mintTint, padding: '0 7px', borderRadius: 4 }}>
-                        {off}%OFF
-                    </span>
+                    <TypePill type={p.packageType} />
                 </div>
             )}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>

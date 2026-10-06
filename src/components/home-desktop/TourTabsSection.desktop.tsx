@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Category } from '../../types/category';
 import { useWishlist } from '../../hooks/useWishlist';
 import { MW, MW_EYEBROW as eyebrow, MW_SEE_ALL as seeAll, isUsableImage, yen } from '../desktop-primitives/mwTokens';
+import { TypePill } from '../desktop-primitives/TypePill';
 import { discountPct, inCategory, type HomeProduct } from './homeDesktopData';
 
 interface Props {
@@ -140,10 +141,9 @@ function TourCard({ p }: { p: HomeProduct }) {
                     />
                 )}
                 <FavButton on={fav} onToggle={() => wishlist.toggle(p)} />
-                {(p.isPopular || p.isFeatured) && (
+                {p.packageType && (
                     <div style={{ position: 'absolute', left: 8, top: 8, right: 48, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', pointerEvents: 'none' }}>
-                        {p.isPopular && <span style={{ ...badge, color: '#fff', background: MW.red }}>BEST</span>}
-                        {p.isFeatured && <span style={{ ...badge, color: MW.redDeep, background: '#FFFFFF' }}>おすすめ</span>}
+                        <TypePill type={p.packageType} />
                     </div>
                 )}
             </div>
@@ -196,17 +196,3 @@ export function FavButton({ on, onToggle, variant = 'solid' }: { on: boolean; on
     );
 }
 
-
-const badge = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    height: 22,
-    boxSizing: 'border-box',
-    whiteSpace: 'nowrap',
-    flexShrink: 0,
-    fontSize: 11,
-    fontWeight: 700,
-    lineHeight: 1,
-    padding: '0 8px',
-    borderRadius: 4,
-} as const;

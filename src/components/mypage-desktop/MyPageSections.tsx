@@ -8,7 +8,7 @@ import { STATUS_MAP } from '../../utils/reservationDetail';
 import type { HomeProduct, ReviewStat } from '../home-desktop/homeDesktopData';
 import { MW, MW_FONT_EN, MW_GRADIENT, cleanTitle, isUsableImage, yen } from '../desktop-primitives/mwTokens';
 import { EmptyBox, FilterPills, Ico, Loading, PanelHead } from './myPageUi';
-import { HAIR, ICON, PAPER, TONE, cardBox, ghostBtn, ghostHover, hover, mintBtn, mintHover, reservationTone, smallPill, type BadgeTone } from './myPageTheme';
+import { HAIR, ICON, NOTICE_TYPES, PAPER, QUOTE_STATUS, TONE, cardBox, ghostBtn, ghostHover, hover, mintBtn, mintHover, reservationTone, smallPill, type BadgeTone } from './myPageTheme';
 import { daysUntil, parseDbTime, type MeUser, type MyMatePost, type MyQuote, type MyReservation, type MyReview, type RecentItem } from './useMyPageData';
 
 type Go = (path: string) => void;
@@ -52,18 +52,6 @@ function Thumb({ src, size, radius = 12 }: { src?: string; size: number; radius?
         </span>
     );
 }
-
-const QUOTE_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
-    new: { label: '回答待ち', tone: TONE.plain },
-    pending: { label: '回答待ち', tone: TONE.plain },
-    waiting: { label: '回答待ち', tone: TONE.plain },
-    processing: { label: 'ご相談中', tone: TONE.plain },
-    answered: { label: '回答済み', tone: TONE.tint },
-    reservation_requested: { label: '予約リクエスト中', tone: TONE.tint },
-    converted: { label: '予約確定済み', tone: TONE.solid },
-    completed: { label: '完了', tone: TONE.done },
-    cancelled: { label: 'キャンセル', tone: TONE.red },
-};
 
 function QuoteRows({ quotes, go }: { quotes: MyQuote[]; go: Go }) {
     return (
@@ -616,13 +604,6 @@ export function ReviewsSection({ me, reviews, pending, productById, loading, go 
 }
 
 /* ---------- お知らせ ---------- */
-
-const NOTICE_TYPES: Record<string, { label: string; d: string }> = {
-    reservation: { label: '予約', d: ICON.bookings },
-    comment: { label: 'コメント', d: ICON.chat },
-    event: { label: 'キャンペーン', d: ICON.megaphone },
-    system: { label: 'お知らせ', d: ICON.notice },
-};
 
 export function NoticeSection({ go }: { go: Go }) {
     const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotification();

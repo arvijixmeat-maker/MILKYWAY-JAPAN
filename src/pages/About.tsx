@@ -1,6 +1,5 @@
 import React from 'react';
 import { SEO } from '../components/seo/SEO';
-import { BottomNav } from '../components/layout/BottomNav';
 import { getOptimizedImageUrl } from '../utils/cloudflareImage';
 
 // Single marketing image containing the full company introduction layout.
@@ -128,8 +127,6 @@ export const About: React.FC = () => {
                     </div>
                 </section>
             </main>
-
-            <BottomNav />
         </>
     );
 };

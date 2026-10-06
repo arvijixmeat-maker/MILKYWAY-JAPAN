@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSpotImages } from '../../hooks/useSpotImages';
 import { MW, MW_FONT_EN, MW_GRADIENT, cleanTitle, isUsableImage } from '../desktop-primitives/mwTokens';
+import { ALL, KEYWORDS } from '../magazine/magazineShared';
 
 export interface MagazineListItem {
     id: string;
@@ -16,9 +17,6 @@ interface Props {
     magazines: MagazineListItem[];
     categories: string[];
 }
-
-const ALL = '全体';
-const KEYWORDS = ['ウランバートル', '星空', '草原', 'ゲル'];
 
 export function MagazineListDesktop({ magazines, categories }: Props) {
     const navigate = useNavigate();

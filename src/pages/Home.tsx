@@ -1,17 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { SEO } from '../components/seo/SEO';
-import { HeroSection } from '../components/home/HeroSection';
-import { TravelThemeSection } from '../components/home/TravelThemeSection';
-import { PromoBanner } from '../components/home/PromoBanner';
-import { ReviewSection } from '../components/home/ReviewSection';
-import { CategoryRowSection } from '../components/home/CategoryRowSection';
-import { MagazineSection } from '../components/home/MagazineSection';
 import { useHomeData } from '../hooks/useHomeData';
 import { useIsDesktop } from '../hooks/useIsDesktop';
-import { TravelThemeSkeleton } from '../components/skeletons/TravelThemeSkeleton';
-import { AdventureSkeleton } from '../components/skeletons/AdventureSkeleton';
 import { HomeDesktop } from '../components/home-desktop/HomeDesktop';
+import { HomeMobile } from '../components/home-mobile/HomeMobile';
 
 export const Home: React.FC = () => {
     const { data, isLoading } = useHomeData();
@@ -76,13 +69,10 @@ export const Home: React.FC = () => {
         );
     }
 
-    // ====== MOBILE RENDER (unchanged) ======
+    // ====== MOBILE RENDER ======
     return (
         <>
             {seo}
-            <div style={{ contentVisibility: 'auto', containIntrinsicSize: '400px' }}>
-                <HeroSection />
-            </div>
 
             {/* SEO: H1 + Intro (Visually hidden but available for crawlers and screen readers) */}
             <section className="sr-only">
@@ -92,33 +82,7 @@ export const Home: React.FC = () => {
                 </p>
             </section>
 
-            {isLoading ? (
-                <>
-                    <TravelThemeSkeleton />
-                    <AdventureSkeleton />
-                </>
-            ) : (
-                <>
-                    <div style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
-                        <TravelThemeSection products={data.products} tabs={data.tabs} />
-                    </div>
-                    <PromoBanner />
-                    <div className="flex flex-col gap-2" style={{ contentVisibility: 'auto', containIntrinsicSize: '800px' }}>
-                        {data.categories?.map(category => (
-                            <CategoryRowSection
-                                key={category.id}
-                                category={category}
-                                products={data.products}
-                            />
-                        ))}
-                    </div>
-                    <div style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
-                        <MagazineSection magazines={data.magazines} />
-                    </div>
-                </>
-            )}
-
-            <ReviewSection />
+            <HomeMobile data={data} isLoading={isLoading} />
         </>
     );
 };

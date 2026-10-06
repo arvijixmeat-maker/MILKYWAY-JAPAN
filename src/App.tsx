@@ -14,7 +14,6 @@ import { AuthGuard } from './components/auth/AuthGuard'
 import { SEO } from './components/seo/SEO'
 
 import { NotificationProvider } from './contexts/NotificationContext'
-import { HeroSkeleton } from './components/skeletons/HeroSkeleton' // Minimal loading state
 import { FloatingConsultation } from './components/common/FloatingConsultation'
 
 // Lazy Load Pages - Handling Named Exports
@@ -40,6 +39,8 @@ const FAQPage = lazy(() => import('./pages/FAQ').then(module => ({ default: modu
 const TermsOfService = lazy(() => import('./pages/TermsOfService').then(module => ({ default: module.TermsOfService })))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
 const GuideApply = lazy(() => import('./pages/GuideApply').then(module => ({ default: module.GuideApply })))
+const Promotions = lazy(() => import('./pages/Promotions').then(module => ({ default: module.Promotions })))
+const Contact = lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })))
 
 // MyPage components
 const MyPage = lazy(() => import('./pages/MyPage').then(module => ({ default: module.MyPage })))
@@ -174,6 +175,8 @@ function App() {
             <Route path="/admin/guide-intro" element={<AdminGuard><AdminGuideIntroManage /></AdminGuard>} />
             <Route path="/admin/tour-faqs" element={<AdminGuard><AdminTourFAQManage /></AdminGuard>} />
             <Route path="/faq" element={<FAQPage />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/promotions" element={<Promotions />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/guide-apply" element={<GuideApply />} />
