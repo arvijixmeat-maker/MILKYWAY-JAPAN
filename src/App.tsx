@@ -40,6 +40,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService').then(module =
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
 const GuideApply = lazy(() => import('./pages/GuideApply').then(module => ({ default: module.GuideApply })))
 const Promotions = lazy(() => import('./pages/Promotions').then(module => ({ default: module.Promotions })))
+const PromotionDetail = lazy(() => import('./pages/PromotionDetail').then(module => ({ default: module.PromotionDetail })))
 const Contact = lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })))
 
 // MyPage components
@@ -74,6 +75,7 @@ const AdminTemplateManage = lazy(() => import('./pages/AdminTemplateManage').the
 const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(module => ({ default: module.AdminReviewManage })))
 const AdminFAQManage = lazy(() => import('./pages/AdminFAQManage').then(module => ({ default: module.AdminFAQManage })))
 const AdminGuideIntroManage = lazy(() => import('./pages/AdminGuideIntroManage').then(module => ({ default: module.AdminGuideIntroManage })))
+const AdminPromotionManage = lazy(() => import('./pages/AdminPromotionManage').then(module => ({ default: module.AdminPromotionManage })))
 const AdminTourFAQManage = lazy(() => import('./pages/AdminTourFAQManage').then(module => ({ default: module.AdminTourFAQManage })))
 
 // Loading Component
@@ -173,10 +175,12 @@ function App() {
             <Route path="/admin/reviews" element={<AdminGuard><AdminReviewManage /></AdminGuard>} />
             <Route path="/admin/faq" element={<AdminGuard><AdminFAQManage /></AdminGuard>} />
             <Route path="/admin/guide-intro" element={<AdminGuard><AdminGuideIntroManage /></AdminGuard>} />
+            <Route path="/admin/promotions" element={<AdminGuard><AdminPromotionManage /></AdminGuard>} />
             <Route path="/admin/tour-faqs" element={<AdminGuard><AdminTourFAQManage /></AdminGuard>} />
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/promotions" element={<Promotions />} />
+            <Route path="/promotions/:id" element={<PromotionDetail />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/guide-apply" element={<GuideApply />} />

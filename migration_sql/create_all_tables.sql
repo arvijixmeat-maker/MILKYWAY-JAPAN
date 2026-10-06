@@ -331,3 +331,21 @@ CREATE TABLE IF NOT EXISTS tourist_spots (
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Promotions (旅行企画展) — admin-curated campaign cards on /promotions.
+-- product_ids is a JSON string array of product ids in display order.
+CREATE TABLE IF NOT EXISTS promotions (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    subtitle TEXT DEFAULT '',
+    group_name TEXT DEFAULT '',
+    badge TEXT DEFAULT '',
+    art_text TEXT DEFAULT '',
+    theme TEXT DEFAULT 'mint',
+    image TEXT DEFAULT '',
+    product_ids TEXT DEFAULT '[]',
+    is_active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);

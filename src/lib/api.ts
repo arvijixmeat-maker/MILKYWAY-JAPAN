@@ -1,4 +1,9 @@
+import type { Promotion } from '../components/promotions/promotionTypes';
+
 const API_BASE = '/api';
+
+/** Body of a promotion create / update; the server assigns id and timestamps (and sort_order when omitted). */
+type PromotionInput = Partial<Omit<Promotion, 'id' | 'created_at' | 'updated_at'>>;
 
 async function request(url: string, options?: RequestInit) {
     // credentials: 'include' guarantees the session cookie is sent even if the
@@ -420,6 +425,31 @@ export const api = {
     },
     eventBanners: {
         list: async () => request(`${API_BASE}/event-banners`),
+    },
+    // 旅行企画展 — the /promotions cards, curated at /admin/promotions.
+    promotions: {
+        /** Active promotions in display order (public). */
+        list: async (): Promise<Promotion[]> => request(`${API_BASE}/promotions`),
+        /** Every promotion, hidden ones included (admin only). */
+        listAll: async (): Promise<Promotion[]> => request(`${API_BASE}/promotions?all=1`),
+        get: async (id: string): Promise<Promotion> => request(`${API_BASE}/promotions/${encodeURIComponent(id)}`),
+        create: async (data: PromotionInput): Promise<{ success: boolean; id: string }> => request(`${API_BASE}/promotions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        /** Only the fields passed are changed. */
+        update: async (id: string, data: Partial<PromotionInput>): Promise<{ success: boolean }> => request(`${API_BASE}/promotions/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        reorder: async (items: { id: string; sort_order: number }[]): Promise<{ success: boolean }> => request(`${API_BASE}/promotions/reorder`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items })
+        }),
+        delete: async (id: string): Promise<{ success: boolean }> => request(`${API_BASE}/promotions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     },
     recentlyViewed: {
         list: async () => request(`${API_BASE}/recently-viewed`),

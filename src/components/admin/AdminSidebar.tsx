@@ -32,6 +32,7 @@ const primaryItems: NavItem[] = [
 
 const settingItems: NavItem[] = [
     { id: 'banners', icon: 'ad_units', label: '홈 화면 관리', href: '/admin/banners' },
+    { id: 'promotions', icon: 'campaign', label: '여행기획전 관리', href: '/admin/promotions' },
     { id: 'categories', icon: 'category', label: '카테고리 관리', href: '/admin/categories' },
     { id: 'hotels', icon: 'hotel', label: '호텔 마스터', href: '/admin/hotels' },
     { id: 'tourist-spots', icon: 'location_on', label: '관광지 마스터', href: '/admin/tourist-spots' },

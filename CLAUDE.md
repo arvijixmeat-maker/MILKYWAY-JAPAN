@@ -194,7 +194,8 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 - 모바일 공통: `src/components/mobile/` — `MobileShell`(헤더·검색·뒤로가기 바·푸터·하단 탭), `MobileTabBar`,
   `mobileUi.tsx`(공용 조각), `mobileTheme.ts`(상수·아이콘 path·퀵 메뉴). 화면 자체 고정 바는 `useMobileShell().stickyTop` 사용.
 - 리디자인되지 **않은** 모바일 화면(상품 상세, 예약·결제, 카테고리 랜딩, 会社案内, 리뷰/동행 작성, 채팅 등)은 옛 스타일 그대로.
-- 새 라우트: `/promotions`(旅行企画展 — 이벤트 배너 + 카테고리 특집, 가짜 캠페인 금지), `/contact`(서버 접수 API 없음 → mailto/LINE/채널톡).
+- 새 라우트: `/promotions`·`/promotions/:id`(旅行企画展 — 관리자 `/admin/promotions`에서 등록, `promotions` 테이블·`/api/promotions`; 등록이 0건이면 카테고리 특집 카드로 대체. 가짜 캠페인 금지), `/contact`(서버 접수 API 없음 → mailto/LINE/채널톡).
+- ⚠ `promotions` 테이블은 배포 후 `/api/migrate-db`를 한 번 열어야 생성됨(그 전에는 관리자 화면에 안내 배너).
 - 고객 로그인은 Google OAuth뿐(이메일/비밀번호는 관리자 전용).
 - 시트·드로어에는 `data-mw-overlay`, 하단 액션 바 화면에는 `data-mw-actionbar`가 붙어 플로팅 LINE/채널톡 버튼을 숨김(`index.css`).
 - ⚠ `npm run build`의 아이콘 검사(6.5)는 따옴표 문자열·단독 토큰을 아이콘 이름으로 오인함 —
