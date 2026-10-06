@@ -406,8 +406,9 @@ export function ProductDetailDesktop({
                 </div>
 
                 {/* Two-column body */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 56, alignItems: 'flex-start', paddingTop: 40 }}>
-                    <div>
+                {/* minmax(0, …): wide detail content must not stretch the column and push the booking panel off screen. */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 56, alignItems: 'flex-start', paddingTop: 40 }}>
+                    <div style={{ minWidth: 0 }}>
                         <Section id="overview" title="概要" eyebrow="About this tour">
                             {product.description ? (
                                 <div
