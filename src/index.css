@@ -415,3 +415,37 @@ img {
         opacity: 1 !important;
     }
 }
+
+/* Mobile redesign (Claude Design: "Milkyway Japan Mobile"): horizontal scrollers without a scrollbar. */
+[data-noscroll]::-webkit-scrollbar {
+    display: none;
+}
+
+/* Mobile magazine article body: the PC .mw-article typography scaled for phone widths. */
+.mw-article.mw-article-m { gap: 20px; font-size: 15px; line-height: 1.95; }
+.mw-article.mw-article-m > div { gap: 20px; }
+.mw-article.mw-article-m h2 { margin: 14px 0 0; gap: 10px; font-size: 20px; }
+.mw-article.mw-article-m h2::before { font-size: 12px; }
+.mw-article.mw-article-m h3 { margin: 0; gap: 8px; font-size: 16px; align-items: flex-start; }
+.mw-article.mw-article-m h3::before { width: 7px; height: 7px; margin-top: calc(0.75em - 3.5px); }
+.mw-article.mw-article-m h4 { font-size: 15px; }
+.mw-article.mw-article-m img { border-radius: 16px; }
+.mw-article.mw-article-m iframe, .mw-article.mw-article-m video { max-width: 100%; }
+.mw-article.mw-article-m blockquote { padding: 14px 16px; border-radius: 16px; font-size: 14px; line-height: 1.7; }
+.mw-article.mw-article-m table { font-size: 14px; }
+.mw-article.mw-article-m th, .mw-article.mw-article-m td { padding: 10px 12px; }
+.mw-article.mw-article-m th { white-space: normal; }
+.mw-article.mw-article-m .not-prose { margin: 6px 0; }
+.mw-article.mw-article-m .not-prose h3::before { content: none; }
+.mw-article.mw-article-m .magazine-slider-container { margin: 0; }
+
+/* Mobile redesign: the floating chat buttons step aside while a sheet / drawer is open
+   and on screens whose bottom edge is a sticky action bar (quote form, mate detail). */
+body:has([data-mw-overlay]) .floating-line-btn,
+body:has([data-mw-overlay]) #ch-plugin-entry,
+body:has([data-mw-overlay]) #ch-plugin-launcher,
+body:has([data-mw-actionbar]) .floating-line-btn,
+body:has([data-mw-actionbar]) #ch-plugin-entry,
+body:has([data-mw-actionbar]) #ch-plugin-launcher {
+    display: none !important;
+}

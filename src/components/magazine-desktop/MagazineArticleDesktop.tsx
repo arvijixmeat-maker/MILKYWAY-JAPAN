@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { useNavigate } from 'react-router-dom';
 import { useRelatedTourMatches } from '../magazine/relatedTourMatches';
 import { MW, MW_FONT_EN, MW_GRADIENT, MW_SEE_ALL, MW_STICKY_TOP, cleanTitle, isUsableImage, yen } from '../desktop-primitives/mwTokens';
+import { EDITORIAL, SITE, formatDate } from '../magazine/magazineShared';
 import { ArticleCard, type MagazineListItem } from './MagazineListDesktop';
 
 export interface ArticleData {
@@ -31,14 +32,6 @@ interface TocItem {
     text: string;
     level: 2 | 3;
 }
-
-const SITE = 'https://mongolryokou.com';
-const EDITORIAL = 'モンゴル銀河旅行社 編集部';
-
-const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
-};
 
 export function MagazineArticleDesktop({ magazine, body, faqs, more, prev, next }: Props) {
     const navigate = useNavigate();

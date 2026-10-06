@@ -184,6 +184,24 @@ UI 컴포넌트를 새로 만들거나 디자인을 변경하기 전에 다음 �
 - **카피는 일본어 정중체** (`〜ください` / `ご〜します`). 1인칭 브랜드 호칭(`私たち`) X.
 - 가격 표기: `¥NNN,NNN〜` (일본 엔, 콤마, 〜).
 
+## 9.6. 리디자인(Claude Design) 구조 — 2026-10-06 모바일 적용
+
+9.5의 teal 디자인 시스템은 **리디자인 이전 화면에만** 해당한다. PC(2026-09)에 이어 모바일도
+Claude Design 「Milkyway Japan Mobile」 디자인으로 교체됨: 민트 `#27AB8F` + 네이비 `#0A1F2E`,
+Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `MW` 토큰(`desktop-primitives/mwTokens.ts`).
+
+- 페이지 파일(`src/pages/*`)은 `useIsDesktop()`으로 분기만 하고, 화면은 `*-desktop` / `*-mobile` 폴더에 있음.
+- 모바일 공통: `src/components/mobile/` — `MobileShell`(헤더·검색·뒤로가기 바·푸터·하단 탭), `MobileTabBar`,
+  `mobileUi.tsx`(공용 조각), `mobileTheme.ts`(상수·아이콘 path·퀵 메뉴). 화면 자체 고정 바는 `useMobileShell().stickyTop` 사용.
+- 리디자인되지 **않은** 모바일 화면(상품 상세, 예약·결제, 카테고리 랜딩, 会社案内, 리뷰/동행 작성, 채팅 등)은 옛 스타일 그대로.
+- 새 라우트: `/promotions`·`/promotions/:id`(旅行企画展 — 관리자 `/admin/promotions`에서 등록, `promotions` 테이블·`/api/promotions`; 등록이 0건이면 카테고리 특집 카드로 대체. 가짜 캠페인 금지), `/contact`(서버 접수 API 없음 → mailto/LINE/채널톡).
+- ⚠ `promotions` 테이블은 배포 후 `/api/migrate-db`를 한 번 열어야 생성됨(그 전에는 관리자 화면에 안내 배너).
+- 고객 로그인은 Google OAuth뿐(이메일/비밀번호는 관리자 전용).
+- 시트·드로어에는 `data-mw-overlay`, 하단 액션 바 화면에는 `data-mw-actionbar`가 붙어 플로팅 LINE/채널톡 버튼을 숨김(`index.css`).
+- ⚠ `npm run build`의 아이콘 검사(6.5)는 따옴표 문자열·단독 토큰을 아이콘 이름으로 오인함 —
+  `'book'`, `loop`, `role="switch"`처럼 Material Symbols 이름과 같은 표기는 피할 것.
+- ⚠ `/api/faq-categories` 라우트는 존재하지 않음(404). FAQ 페이지는 질문만으로도 뜨도록 되어 있음.
+
 ## 10. 다른 환경에서 작업 이어가는 법
 
 1. 저장소 클론: `git clone https://github.com/arvijixmeat-maker/MILKYWAY-JAPAN.git`
@@ -194,4 +212,4 @@ UI 컴포넌트를 새로 만들거나 디자인을 변경하기 전에 다음 �
 
 ---
 
-마지막 업데이트: 2026-05-02 (디자인 시스템 추가)
+마지막 업데이트: 2026-10-06 (모바일 리디자인 적용)

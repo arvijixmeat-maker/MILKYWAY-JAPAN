@@ -5,8 +5,8 @@ import { api } from '../../lib/api';
 import { GuideDetailModal, AccommodationDetailModal } from '../common/DetailModals';
 import { toTourDateKey } from '../../utils/formatDate';
 import {
-    STATUS_MAP, computeDays, formatDateShort, formatDateTime, parseArr, parseImage,
-    type Accommodation, type PriceBreakdown, type ReservationDetail,
+    STATUS_MAP, computeDays, formatDateShort, formatDateTime, parseArr, parseImage, readBreakdown,
+    type Accommodation, type ReservationDetail,
 } from '../../utils/reservationDetail';
 import { MW, MW_FONT_EN, MW_STICKY_TOP, isUsableImage, yen } from '../desktop-primitives/mwTokens';
 import { Ico } from './myPageUi';
@@ -21,21 +21,6 @@ const HISTORY_ICON: Record<string, string> = {
     admin_memo: ICON.chat,
     created: ICON.bookings,
     review_submitted: ICON.reviews,
-};
-
-/** The list API parses price_breakdown, but the raw `priceBreakdown` column is a JSON string. */
-const readBreakdown = (r: ReservationDetail): PriceBreakdown | null => {
-    for (const v of [r.price_breakdown, r.priceBreakdown as unknown]) {
-        let o: unknown = v;
-        if (typeof v === 'string') {
-            try { o = JSON.parse(v); } catch { o = null; }
-        }
-        if (o && typeof o === 'object') {
-            const b = o as Partial<PriceBreakdown>;
-            return { total: Number(b.total) || 0, deposit: Number(b.deposit) || 0, local: Number(b.local) || 0 };
-        }
-    }
-    return null;
 };
 
 const h3: CSSProperties = { margin: 0, fontSize: 18, fontWeight: 900 };

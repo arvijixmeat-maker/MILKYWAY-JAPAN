@@ -1,59 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
-import { BottomNav } from '../components/layout/BottomNav';
+import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
+import { MW, MW_FONT_EN } from '../components/desktop-primitives/mwTokens';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { FaqMobile, FaqPanel, type FaqCategory, type FaqItem } from '../components/support-mobile/FaqMobile';
+
+interface RawFaqCategory { id: string; name: string; is_active?: number | boolean }
+interface RawFaq { id: string; question: string; answer: string; category?: string; is_active?: number | boolean; view_count?: number }
 
 export const FAQPage: React.FC = () => {
-    const navigate = useNavigate();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('すべて');
-    const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [faqs, setFaqs] = useState<any[]>([]);
+    const isDesktop = useIsDesktop();
+    const [loading, setLoading] = useState(true);
+    const [categories, setCategories] = useState<FaqCategory[]>([]);
+    const [faqs, setFaqs] = useState<FaqItem[]>([]);
 
-    // Fetch data from Cloudflare
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                const [catData, faqData] = await Promise.all([
-                    api.faqCategories.list(),
-                    api.faqs.list()
-                ]);
-                if (Array.isArray(catData)) setCategories(catData.filter((c: any) => c.is_active).map((c: any) => ({ id: c.id, name: c.name })));
-                if (Array.isArray(faqData)) setFaqs(faqData.filter((f: any) => f.is_active).map((f: any) => ({ id: f.id, question: f.question, answer: f.answer, category: f.category, viewCount: f.view_count || 0 })));
-            } catch (error) {
-                console.error('Error fetching FAQ data:', error);
-            }
+            // Loaded independently: the questions must still show when the category list is unavailable.
+            const [catRes, faqRes] = await Promise.allSettled([api.faqCategories.list(), api.faqs.list()]);
+            const items: FaqItem[] = faqRes.status === 'fulfilled' && Array.isArray(faqRes.value)
+                ? (faqRes.value as RawFaq[]).filter((f) => f.is_active).map((f) => ({ id: f.id, question: f.question, answer: f.answer, category: f.category || '', viewCount: f.view_count || 0 }))
+                : [];
+            if (faqRes.status === 'rejected') console.error('Error fetching FAQ data:', faqRes.reason);
+            const used = new Set(items.map((f) => f.category).filter(Boolean));
+            const fromApi: FaqCategory[] = catRes.status === 'fulfilled' && Array.isArray(catRes.value)
+                ? (catRes.value as RawFaqCategory[]).filter((c) => c.is_active).map((c) => ({ id: c.id, name: c.name }))
+                : [];
+            // Without a category list, group by the categories the questions themselves carry.
+            const cats = fromApi.length > 0 ? fromApi : [...used].map((name) => ({ id: name, name }));
+            setFaqs(items);
+            setCategories(cats.length > 1 ? cats : []);
+            setLoading(false);
         };
         fetchData();
     }, []);
-
-    // All categories including "すべて"
-    const allCategories = ['すべて', ...categories.map(c => c.name)];
-
-    // Filter FAQs
-    const filteredFaqs = faqs.filter(faq => {
-        const matchesCategory = selectedCategory === 'すべて' || faq.category === selectedCategory;
-        const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
-
-    // Toggle accordion
-    const toggleAccordion = async (id: string) => {
-        if (expandedId === id) {
-            setExpandedId(null);
-        } else {
-            setExpandedId(id);
-            // Increment view count via API
-            try {
-                await api.faqs.update(id, { view_count: (faqs.find(f => f.id === id)?.viewCount || 0) + 1 });
-            } catch (error) {
-                console.error('Error updating FAQ view count:', error);
-            }
-        }
-    };
 
     // Build FAQPage structured data from loaded FAQs (only when data exists)
     const faqStructuredData = faqs.length > 0 ? {
@@ -69,124 +50,38 @@ export const FAQPage: React.FC = () => {
         }))
     } : undefined;
 
+    const seo = (
+        <SEO
+            title="よくある質問（FAQ）"
+            description="モンゴル旅行に関するよくある質問と回答。予約方法、ツアー内容、持ち物、ビザ、決済・キャンセルなど、モンゴルツアーの疑問を解決します。"
+            keywords="モンゴル旅行FAQ, モンゴルツアー質問, モンゴル旅行準備, モンゴルビザ, 旅行社よくある質問"
+            canonical="/faq"
+            structuredData={faqStructuredData}
+        />
+    );
+
+    if (!isDesktop) {
+        return (
+            <>
+                {seo}
+                <FaqMobile faqs={faqs} categories={categories} loading={loading} />
+            </>
+        );
+    }
+
+    // PC: the same panel in a centred column inside the PC shell.
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
-            <SEO
-                title="よくある質問（FAQ）"
-                description="モンゴル旅行に関するよくある質問と回答。予約方法、ツアー内容、持ち物、ビザ、決済・キャンセルなど、モンゴルツアーの疑問を解決します。"
-                keywords="モンゴル旅行FAQ, モンゴルツアー質問, モンゴル旅行準備, モンゴルビザ, 旅行社よくある質問"
-                canonical="/faq"
-                structuredData={faqStructuredData}
-            />
-            <div className="max-w-lg mx-auto bg-white dark:bg-gray-900 min-h-screen overflow-y-auto">
-                {/* Header */}
-                <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center justify-between px-4 h-14">
-                        <button onClick={() => navigate(-1)} className="p-2 -ml-2">
-                            <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">arrow_back</span>
-                        </button>
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">よくある質問</span>
-                        <div className="w-10"></div>
-                    </div>
-                </header>
-
-                {/* SEO: H1 + Intro */}
-                <section className="px-4 pt-4 pb-1">
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">モンゴル旅行のよくある質問</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                        モンゴルツアーの予約・決済・キャンセル・持ち物・ビザなど、お客様からよくいただくご質問と回答をまとめました。
-                    </p>
-                </section>
-
-                {/* Search */}
-                <div className="p-4">
-                    <div className="relative">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                        <input
-                            type="text"
-                            placeholder="気になる内容を検索してみてください"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-teal-500"
-                        />
-                    </div>
+        <DesktopLayout>
+            {seo}
+            <section style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 72px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <span style={{ fontFamily: MW_FONT_EN, fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep }}>SUPPORT</span>
+                    <h1 style={{ margin: 0, fontSize: 32, fontWeight: 900, lineHeight: 1.3 }}>モンゴル旅行のよくある質問</h1>
                 </div>
-
-                {/* Category Tabs */}
-                <div className="px-4 overflow-x-auto">
-                    <div className="flex gap-2 pb-3">
-                        {allCategories.map((category) => (
-                            <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category
-                                    ? 'bg-teal-500 text-white'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                    }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
-                    </div>
+                <div style={{ borderRadius: 24, overflow: 'hidden', border: `1px solid ${MW.line}` }}>
+                    <FaqPanel faqs={faqs} categories={categories} loading={loading} />
                 </div>
-
-                {/* FAQ List */}
-                <div className="px-4 pb-56">
-                    {filteredFaqs.length === 0 ? (
-                        <div className="text-center py-12">
-                            <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600">help_outline</span>
-                            <p className="mt-4 text-gray-500 dark:text-gray-400">
-                                {searchQuery || selectedCategory !== 'すべて'
-                                    ? '検索条件に一致するFAQがありません。'
-                                    : '登録されたFAQはありません。'}
-                            </p>
-                            {(searchQuery || selectedCategory !== 'すべて') && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSearchQuery('');
-                                        setSelectedCategory('すべて');
-                                    }}
-                                    className="mt-4 rounded-lg border border-teal-500 px-4 py-2 text-sm font-bold text-teal-600"
-                                >
-                                    検索条件をリセット
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {filteredFaqs.map((faq) => (
-                                <div key={faq.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                                    <button
-                                        onClick={() => toggleAccordion(faq.id)}
-                                        className="w-full flex items-center justify-between p-4 text-left"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-teal-500 font-bold">Q</span>
-                                            <span className="text-gray-900 dark:text-white font-medium">{faq.question}</span>
-                                        </div>
-                                        <span className={`material-symbols-outlined text-gray-400 transition-transform ${expandedId === faq.id ? 'rotate-180' : ''}`}>
-                                            expand_more
-                                        </span>
-                                    </button>
-                                    {expandedId === faq.id && (
-                                        <div className="px-4 pb-4 pt-0">
-                                            <div className="pl-6 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed whitespace-pre-wrap">
-                                                    {faq.answer}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-
-                <BottomNav />
-            </div>
-        </div>
+            </section>
+        </DesktopLayout>
     );
 };

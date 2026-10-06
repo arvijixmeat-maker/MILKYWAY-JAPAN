@@ -1,6 +1,9 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { LoginMobile } from '../components/mypage-mobile/LoginMobile';
+import { googleLoginUrl, loginReturnPath } from '../components/mypage-mobile/googleLogin';
 
 import loginBg2 from '../assets/login_bg_2.jpg';
 import logo from '../assets/new_logo_2026.png';
@@ -38,7 +41,11 @@ const ScrollingColumn: React.FC<{ images: string[]; direction: 'up' | 'down'; du
 };
 
 export const Login: React.FC = () => {
-    const navigate = useNavigate();
+    const isDesktop = useIsDesktop();
+    return isDesktop ? <LoginDesktop /> : <LoginMobile />;
+};
+
+const LoginDesktop: React.FC = () => {
     const location = useLocation();
     const { t } = useTranslation();
 
@@ -46,21 +53,7 @@ export const Login: React.FC = () => {
         // Forward the original page (set by AuthGuard via location.state.from) to the
         // OAuth start endpoint so the callback can redirect the user back after login.
         // Only same-origin paths are accepted; other inputs fall back to "/".
-        const from = (location.state as { from?: string } | null)?.from;
-        const safeRedirect = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') && from !== '/login'
-            ? from
-            : null;
-        // Google OAuth redirect URIs are origin-sensitive. Desktop users may land
-        // on the www domain, while the production OAuth callback is registered
-        // against the apex domain. Start OAuth from the canonical production
-        // origin so PC and mobile use the same callback URL and cookies.
-        const authOrigin = window.location.hostname === 'www.mongolryokou.com'
-            ? 'https://mongolryokou.com'
-            : '';
-        const url = safeRedirect
-            ? `${authOrigin}/api/auth/login/google?redirect=${encodeURIComponent(safeRedirect)}`
-            : `${authOrigin}/api/auth/login/google`;
-        window.location.href = url;
+        window.location.href = googleLoginUrl(loginReturnPath(location.state));
     };
 
     return (

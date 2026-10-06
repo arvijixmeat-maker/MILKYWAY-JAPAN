@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
-import { BottomNav } from '../components/layout/BottomNav';
 import { CategoryLanding, type CategoryLandingContent } from '../components/category/CategoryLanding';
 import { CategoryLandingDesktop } from '../components/category-desktop/CategoryLandingDesktop';
 import { useIsDesktop } from '../hooks/useIsDesktop';
@@ -150,15 +149,11 @@ export const CategoryPage: React.FC = () => {
                     isLoadingProducts={isLoadingProducts}
                 />
             ) : (
-                <>
-                    <CategoryLanding
-                        content={content}
-                        products={products}
-                        isLoadingProducts={isLoadingProducts}
-                        headerTitle={category.name}
-                    />
-                    <BottomNav />
-                </>
+                <CategoryLanding
+                    content={content}
+                    products={products}
+                    isLoadingProducts={isLoadingProducts}
+                />
             )}
         </>
     );

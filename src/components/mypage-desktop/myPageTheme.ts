@@ -61,6 +61,27 @@ export const TONE = {
     red: { bg: '#FCE9E7', fg: '#B23A3A', bd: '#F6CFCA' },
 } satisfies Record<string, BadgeTone>;
 
+/** Quote request status → label and badge tone (shared by the PC and mobile my page). */
+export const QUOTE_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+    new: { label: '回答待ち', tone: TONE.plain },
+    pending: { label: '回答待ち', tone: TONE.plain },
+    waiting: { label: '回答待ち', tone: TONE.plain },
+    processing: { label: 'ご相談中', tone: TONE.plain },
+    answered: { label: '回答済み', tone: TONE.tint },
+    reservation_requested: { label: '予約リクエスト中', tone: TONE.tint },
+    converted: { label: '予約確定済み', tone: TONE.solid },
+    completed: { label: '完了', tone: TONE.done },
+    cancelled: { label: 'キャンセル', tone: TONE.red },
+};
+
+/** Notification type → filter label and icon; unknown types fall back to `system`. */
+export const NOTICE_TYPES: Record<string, { label: string; d: string }> = {
+    reservation: { label: '予約', d: ICON.bookings },
+    comment: { label: 'コメント', d: ICON.chat },
+    event: { label: 'キャンペーン', d: ICON.megaphone },
+    system: { label: 'お知らせ', d: ICON.notice },
+};
+
 /** Reservation status → design badge tone. */
 export const reservationTone = (status: string): BadgeTone =>
     status === 'confirmed' ? TONE.solid

@@ -14,6 +14,7 @@ const NAV_ITEMS: { id: string; label: string; path: string; match: (p: string) =
     { id: 'reviews', label: 'レビュー', path: '/reviews', match: (p) => p.startsWith('/reviews') },
     { id: 'magazine', label: '旅マガジン', path: '/travel-guide', match: (p) => p.startsWith('/travel-guide') },
     { id: 'quote', label: 'お見積もり', path: '/custom-estimate', match: (p) => p.startsWith('/custom-estimate') || p.startsWith('/estimate') },
+    { id: 'promo', label: '旅行企画展', path: '/promotions', match: (p) => p.startsWith('/promotions') },
 ];
 
 const HOT_WORDS = ['ゴビ砂漠', '乗馬', '星空', '温泉'];
@@ -182,6 +183,7 @@ export function DesktopHeader() {
             en: 'GUIDE',
             title: '旅の情報',
             items: [
+                { label: '旅行企画展', onClick: () => go('/promotions') },
                 { label: '旅マガジン', onClick: () => go('/travel-guide') },
                 { label: 'お客様のレビュー', onClick: () => go('/reviews') },
                 { label: '同行者募集', onClick: () => go('/travel-mates') },
@@ -475,15 +477,17 @@ export function DesktopHeader() {
                     <nav style={{ display: 'flex', alignItems: 'stretch', gap: 'clamp(16px,2.2vw,28px)', fontSize: 15, flex: 1, minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
                         {NAV_ITEMS.map((it) => {
                             const on = it.match(location.pathname);
+                            const promo = it.id === 'promo';
                             return (
                                 <a
                                     key={it.id}
                                     href={it.path}
                                     onClick={(e) => { e.preventDefault(); navigate(it.path); }}
                                     aria-current={on ? 'page' : undefined}
-                                    style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', textDecoration: 'none', color: on ? MW.navy : MW.ink3, fontWeight: on ? 700 : 500 }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', textDecoration: 'none', color: promo && on ? MW.mintDeep : on || promo ? MW.navy : MW.ink3, fontWeight: on || promo ? 700 : 500 }}
                                 >
                                     {it.label}
+                                    {promo && <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: MW.mint }} />}
                                 </a>
                             );
                         })}

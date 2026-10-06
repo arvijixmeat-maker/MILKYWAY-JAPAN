@@ -46,9 +46,9 @@ export function MagazineCardsDesktop({ magazines }: Props) {
                                     left: 0,
                                     right: 0,
                                     bottom: 0,
-                                    height: '55%',
+                                    height: '65%',
                                     pointerEvents: 'none',
-                                    background: 'linear-gradient(180deg,rgba(10,31,46,0) 0%,rgba(10,31,46,0.35) 35%,rgba(10,31,46,0.75) 70%,rgba(10,31,46,0.9) 100%)',
+                                    background: 'linear-gradient(180deg,rgba(10,31,46,0) 0%,rgba(10,31,46,0.18) 25%,rgba(10,31,46,0.5) 50%,rgba(10,31,46,0.78) 75%,rgba(10,31,46,0.92) 100%)',
                                 }}
                             />
                             <div style={{ position: 'absolute', left: 18, right: 18, top: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>

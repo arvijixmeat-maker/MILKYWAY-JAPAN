@@ -36,8 +36,6 @@ interface Props {
     content: CategoryLandingContent;
     products: any[];
     isLoadingProducts?: boolean;
-    onBack?: () => void;
-    headerTitle?: string;
 }
 
 // ─── Hero ─────────────────────────────────────────────────
@@ -255,30 +253,11 @@ export const CategoryLanding: React.FC<Props> = ({
     content,
     products,
     isLoadingProducts,
-    onBack,
-    headerTitle,
 }) => {
-    const navigate = useNavigate();
     const accent = content.accentColor || '#0f766e';
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-[#0e1a18] dark:text-white min-h-screen pb-24">
-            {/* Sticky header (transparent over hero, solid on scroll) */}
-            <header className="sticky top-0 z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center p-4 justify-between">
-                    <button
-                        onClick={onBack || (() => navigate(-1))}
-                        className="text-[#0e1a18] dark:text-white flex size-10 shrink-0 items-center justify-center -ml-2"
-                        aria-label="back"
-                    >
-                        <span className="material-symbols-outlined">arrow_back_ios</span>
-                    </button>
-                    <span className="text-base font-bold leading-tight tracking-tight flex-1 text-center pr-8">
-                        {headerTitle || content.heroTitle}
-                    </span>
-                </div>
-            </header>
-
             <main>
                 <Hero content={content} />
 

@@ -105,6 +105,41 @@ export const computeDays = (start?: string, end?: string) => {
     } catch { return null; }
 };
 
+/** Fields the payment helpers read; reservation list rows and the detail response both carry them. */
+export interface PaymentSource {
+    status?: unknown;
+    depositStatus?: unknown;
+    balanceStatus?: unknown;
+    priceBreakdown?: unknown;
+    price_breakdown?: unknown;
+}
+
+/** The list API parses price_breakdown, but the raw `priceBreakdown` column is a JSON string. */
+export const readBreakdown = (r: PaymentSource): PriceBreakdown | null => {
+    for (const v of [r.price_breakdown, r.priceBreakdown]) {
+        let o: unknown = v;
+        if (typeof v === 'string') {
+            try { o = JSON.parse(v); } catch { o = null; }
+        }
+        if (o && typeof o === 'object') {
+            const b = o as Partial<PriceBreakdown>;
+            return { total: Number(b.total) || 0, deposit: Number(b.deposit) || 0, local: Number(b.local) || 0 };
+        }
+    }
+    return null;
+};
+
+/** Paid amount and progress: the deposit counts once paid/confirmed, the local balance once the trip is completed. */
+export const paymentSummary = (r: PaymentSource) => {
+    const pb = readBreakdown(r);
+    const status = typeof r.status === 'string' ? r.status : '';
+    const depositPaid = r.depositStatus === 'paid' || ['paid', 'confirmed', 'completed'].includes(status);
+    const balancePaid = r.balanceStatus === 'paid' || status === 'completed';
+    const paid = pb ? (depositPaid ? pb.deposit : 0) + (balancePaid ? pb.local : 0) : 0;
+    const percent = pb && pb.total > 0 ? Math.round((paid / pb.total) * 100) : 0;
+    return { pb, depositPaid, balancePaid, paid, percent };
+};
+
 export type StatusTone = 'pending' | 'partial' | 'paid' | 'cancelled' | 'neutral';
 
 export const STATUS_MAP: Record<string, { label: string; tone: StatusTone }> = {

@@ -463,6 +463,31 @@ app.get('/', async (c) => {
         }
     }
 
+    // Promotions (旅行企画展) — admin-curated campaign cards on /promotions,
+    // each listing the tours in product_ids (JSON string array, display order).
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS promotions (
+                id TEXT PRIMARY KEY NOT NULL,
+                title TEXT NOT NULL,
+                subtitle TEXT DEFAULT '',
+                group_name TEXT DEFAULT '',
+                badge TEXT DEFAULT '',
+                art_text TEXT DEFAULT '',
+                theme TEXT DEFAULT 'mint',
+                image TEXT DEFAULT '',
+                product_ids TEXT DEFAULT '[]',
+                is_active INTEGER DEFAULT 1,
+                sort_order INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        `).run();
+        migrationResults.push('Created promotions table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped promotions table: ${e.message}`);
+    }
+
     // ── settings 정리 ────────────────────────────────────────────────
     // api.settings.save(key, value)가 {key, value} 객체를 그대로 보내던 탓에
     // 설정이 제 이름이 아니라 'key' / 'value' 라는 칸에 저장되고 있었다.

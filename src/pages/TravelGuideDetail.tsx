@@ -2,17 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { api } from '../lib/api';
-import { BottomNav } from '../components/layout/BottomNav';
 import { SEO } from '../components/seo/SEO';
 import { SimpleSlider } from '../components/ui/SimpleSlider';
 import { LocationCard } from '../components/magazine/LocationCard';
 import type { LocationInfo } from '../components/magazine/LocationCard';
-import { RelatedTours } from '../components/magazine/RelatedTours';
 import { useTranslation } from 'react-i18next';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
 import { MagazineArticleDesktop } from '../components/magazine-desktop/MagazineArticleDesktop';
 import type { MagazineListItem } from '../components/magazine-desktop/MagazineListDesktop';
+import { MobileShell } from '../components/mobile/MobileShell';
+import { MEmpty, MLoading } from '../components/mobile/mobileUi';
+import { MagazineArticleMobile } from '../components/magazine-mobile/MagazineArticleMobile';
 
 interface Magazine {
     id: string;
@@ -26,6 +27,19 @@ interface Magazine {
     authorImage?: string;
     createdAt: string;
     updatedAt?: string;
+}
+
+/** List row as returned by /api/magazines (snake_case). */
+interface RawMagazine {
+    id: string;
+    title: string;
+    subtitle?: string;
+    description?: string;
+    category: string;
+    thumbnail?: string;
+    image?: string;
+    is_active?: boolean | number | null;
+    order?: number;
 }
 
 interface MagazineFaq {
@@ -57,8 +71,7 @@ export const TravelGuideDetail: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [magazine, setMagazine] = useState<Magazine | null>(null);
-    const [relatedMagazines, setRelatedMagazines] = useState<Magazine[]>([]);
-    // Every published article in list order — PC page uses it for prev/next and "その他の記事".
+    // Every published article in list order — used for prev/next and "その他の記事".
     const [allMagazines, setAllMagazines] = useState<MagazineListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const isDesktop = useIsDesktop();
@@ -93,40 +106,19 @@ export const TravelGuideDetail: React.FC = () => {
                 };
                 setMagazine(currentMagazine);
 
-                // 2. Fetch related magazines
-                // API doesn't have a direct filtering endpoint for this, so we fetch all and filter client-side
-                // In a production environment with many items, a specific endpoint would be better.
+                // 2. Fetch the article list (prev/next + related articles are picked client-side)
                 const allMagazines = await api.magazines.list();
                 if (Array.isArray(allMagazines)) {
                     setAllMagazines(allMagazines
-                        .filter((m: any) => m.is_active ?? true)
-                        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-                        .map((m: any) => ({
+                        .filter((m: RawMagazine) => m.is_active ?? true)
+                        .sort((a: RawMagazine, b: RawMagazine) => (a.order || 0) - (b.order || 0))
+                        .map((m: RawMagazine) => ({
                             id: m.id,
                             title: m.title,
                             description: m.subtitle || m.description || '',
                             category: m.category,
                             image: m.thumbnail || m.image || '',
                         })));
-
-                    const relatedData = allMagazines
-                        .filter((m: any) =>
-                            m.category === magData.category &&
-                            m.id !== id &&
-                            (m.is_active ?? true)
-                        )
-                        .slice(0, 3);
-
-                    setRelatedMagazines(relatedData.map((m: any) => ({
-                        id: m.id,
-                        title: m.title,
-                        description: m.subtitle || m.description || '',
-                        content: m.content,
-                        category: m.category,
-                        image: m.thumbnail || m.image || '',
-                        tag: m.tag,
-                        createdAt: m.created_at
-                    })));
                 }
             } catch (error) {
                 console.error('Error fetching magazine details:', error);
@@ -244,30 +236,53 @@ export const TravelGuideDetail: React.FC = () => {
         return <>{result}</>;
     };
 
-    // PC keeps the site header/footer around loading and not-found states.
-    const shell = (node: React.ReactElement) => (isDesktop ? <DesktopLayout>{node}</DesktopLayout> : node);
+    // Both shells keep the site header/footer around loading and not-found states.
+    if (!isDesktop && (loading || !magazine)) {
+        return (
+            <>
+                {/* Empty slot where <SEO> sits once loaded: same tree shape, so the shell is not remounted. */}
+                {null}
+                <MobileShell title="旅マガジン">
+                    {loading ? (
+                        <MLoading />
+                    ) : (
+                        <div style={{ padding: '24px 16px 0' }}>
+                            <MEmpty
+                                text={t('travel_guide.detail.loading_or_not_found')}
+                                action={{ label: t('travel_guide.detail.go_back_to_list'), onClick: () => navigate('/travel-guide') }}
+                            />
+                        </div>
+                    )}
+                </MobileShell>
+            </>
+        );
+    }
 
     if (loading) {
-        return shell(
-            <div className={`${isDesktop ? 'min-h-[60vh]' : 'min-h-screen'} bg-white dark:bg-slate-900 flex items-center justify-center`}>
-                <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-            </div>
+        return (
+            <DesktopLayout>
+                <div className="min-h-[60vh] bg-white dark:bg-slate-900 flex items-center justify-center">
+                    <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                </div>
+            </DesktopLayout>
         );
     }
 
     if (!magazine) {
-        return shell(
-            <div className={`${isDesktop ? 'min-h-[60vh]' : 'min-h-screen'} bg-white dark:bg-slate-900 flex items-center justify-center`}>
-                <div className="text-center">
-                    <p className="text-slate-500 mb-4">{t('travel_guide.detail.loading_or_not_found')}</p>
-                    <button
-                        onClick={() => navigate('/travel-guide')}
-                        className="text-primary font-bold hover:underline"
-                    >
-                        {t('travel_guide.detail.go_back_to_list')}
-                    </button>
+        return (
+            <DesktopLayout>
+                <div className="min-h-[60vh] bg-white dark:bg-slate-900 flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-slate-500 mb-4">{t('travel_guide.detail.loading_or_not_found')}</p>
+                        <button
+                            onClick={() => navigate('/travel-guide')}
+                            className="text-primary font-bold hover:underline"
+                        >
+                            {t('travel_guide.detail.go_back_to_list')}
+                        </button>
+                    </div>
                 </div>
-            </div>
+            </DesktopLayout>
         );
     }
 
@@ -341,14 +356,17 @@ export const TravelGuideDetail: React.FC = () => {
         />
     );
 
+    const pos = allMagazines.findIndex((m) => m.id === magazine.id);
+    const others = allMagazines.filter((m) => m.id !== magazine.id);
+    // Same-category articles first, then the rest, three in total.
+    const more = [
+        ...others.filter((m) => m.category === magazine.category),
+        ...others.filter((m) => m.category !== magazine.category),
+    ].slice(0, 3);
+    const prev = pos > 0 ? allMagazines[pos - 1] : undefined;
+    const next = pos >= 0 && pos < allMagazines.length - 1 ? allMagazines[pos + 1] : undefined;
+
     if (isDesktop) {
-        const pos = allMagazines.findIndex((m) => m.id === magazine.id);
-        const others = allMagazines.filter((m) => m.id !== magazine.id);
-        // Same-category articles first, then the rest, three in total.
-        const more = [
-            ...others.filter((m) => m.category === magazine.category),
-            ...others.filter((m) => m.category !== magazine.category),
-        ].slice(0, 3);
         return (
             <>
                 {seo}
@@ -358,8 +376,8 @@ export const TravelGuideDetail: React.FC = () => {
                         body={renderContent(magazine.content || '')}
                         faqs={magazineFaqs}
                         more={more}
-                        prev={pos > 0 ? allMagazines[pos - 1] : undefined}
-                        next={pos >= 0 && pos < allMagazines.length - 1 ? allMagazines[pos + 1] : undefined}
+                        prev={prev}
+                        next={next}
                     />
                 </DesktopLayout>
             </>
@@ -367,173 +385,18 @@ export const TravelGuideDetail: React.FC = () => {
     }
 
     return (
-        <div className="bg-white dark:bg-slate-900 min-h-screen pb-24 font-display overflow-x-hidden">
+        <>
             {seo}
-            {/* Header Image */}
-            <div className="relative h-[240px] md:h-[360px]">
-                {magazine.image ? (
-                    <img
-                        src={magazine.image}
-                        alt={`${magazine.title}｜モンゴル旅行ガイド`}
-                        className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                ) : (
-                    <div className="w-full h-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-6xl text-slate-400">image</span>
-                    </div>
-                )}
-
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate(-1)}
-                    className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition-colors z-10"
-                >
-                    <span className="material-symbols-outlined">arrow_back</span>
-                </button>
-
-                {/* Mint Brand Gradient at Bottom */}
-                <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#0f766e]/90 via-[#0f766e]/35 to-transparent"></div>
-                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent"></div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-5 md:p-8 text-white">
-                    <div className="flex items-center gap-2 mb-2.5">
-                        <span className="bg-white text-primary px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                            {magazine.category}
-                        </span>
-                        {magazine.tag && (
-                            <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[11px] font-bold text-white border border-white/30">
-                                {magazine.tag}
-                            </span>
-                        )}
-                    </div>
-                    <h1 className="text-[19px] md:text-2xl font-bold leading-tight mb-1.5 drop-shadow-sm line-clamp-3">
-                        {magazine.title}
-                    </h1>
-                    <div className="text-white/80 text-[12px] md:text-sm font-medium flex items-center gap-2">
-                        <span>{new Date(magazine.createdAt).toLocaleDateString('ja-JP')}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Content Body */}
-            <div className="max-w-3xl mx-auto px-5 py-6 md:py-8">
-                {/* Intro/Description */}
-                {/* Intro/Description - Removed to prevent duplicate title display as per feedback */}
-                {/* {magazine.description && (
-                    <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl mb-8 border-l-4 border-primary">
-                        <p className="text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
-                            {magazine.description}
-                        </p>
-                    </div>
-                )} */}
-
-                {/* Main Content */}
-                <div className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-img:rounded-2xl">
-                    {renderContent(magazine.content || '')}
-                </div>
-
-                <aside className="mt-12 flex items-center gap-4 rounded-xl border border-teal-100 bg-teal-50/70 p-5 dark:border-teal-900/60 dark:bg-teal-950/20">
-                    {magazine.authorImage ? (
-                        <img
-                            src={magazine.authorImage}
-                            alt={`${authorName}｜モンゴル旅行記事の著者`}
-                            className="h-16 w-16 flex-none rounded-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                        />
-                    ) : (
-                        <div
-                            className="flex h-16 w-16 flex-none items-center justify-center rounded-full bg-primary text-xl font-bold text-white"
-                            aria-hidden="true"
-                        >
-                            {authorName.slice(0, 1)}
-                        </div>
-                    )}
-                    <div>
-                        <p className="text-xs font-bold text-primary">この記事の執筆・監修</p>
-                        <p className="mt-1 font-bold text-slate-900 dark:text-white">{authorName}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                            モンゴル現地の旅行情報とツアー運営経験に基づき、旅行前に役立つ情報を確認してお届けします。
-                        </p>
-                    </div>
-                </aside>
-
-                {/* Related Tours (auto-matched by magazine category/tag) */}
-                <RelatedTours
-                    category={magazine.category}
-                    tag={magazine.tag}
-                    title={magazine.title}
-                    description={`${magazine.description} ${magazine.content.replace(/<[^>]+>/g, ' ').slice(0, 500)}`}
+            <MobileShell title="旅マガジン">
+                <MagazineArticleMobile
+                    magazine={magazine}
+                    body={renderContent(magazine.content || '')}
+                    faqs={magazineFaqs}
+                    more={more}
+                    prev={prev}
+                    next={next}
                 />
-
-                <section className="mt-16 border-t border-slate-200 pt-8 dark:border-slate-800" aria-labelledby="magazine-faq-heading">
-                    <h2 id="magazine-faq-heading" className="text-xl font-bold text-slate-900 dark:text-white">
-                        よくある質問
-                    </h2>
-                    <div className="mt-5 divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-700 dark:border-slate-700">
-                        {magazineFaqs.map((faq) => (
-                            <details key={faq.question} className="group py-4">
-                                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-slate-900 dark:text-white">
-                                    <span>{faq.question}</span>
-                                    <span className="material-symbols-outlined text-primary transition-transform group-open:rotate-180">
-                                        expand_more
-                                    </span>
-                                </summary>
-                                <p className="mt-3 pr-9 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                                    {faq.answer}
-                                </p>
-                            </details>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Related Magazines */}
-                {relatedMagazines && relatedMagazines.length > 0 && (
-                    <div className="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800">
-                        <h3 className="text-xl font-bold text-text-primary dark:text-white mb-6">
-                            {t('travel_guide.detail.recommended_guides')}
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {relatedMagazines.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => {
-                                        navigate(`/travel-guide/${item.id}`);
-                                        window.scrollTo(0, 0); // Scroll to top on navigation
-                                    }}
-                                    className="group cursor-pointer bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5"
-                                >
-                                    <div className="h-40 overflow-hidden relative">
-                                        {item.image ? (
-                                            <img
-                                                src={item.image}
-                                                alt={`${item.title}｜モンゴル旅行ガイド`}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
-                                        ) : (
-                                            <div className="w-full h-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-slate-400">image</span>
-                                            </div>
-                                        )}
-                                        <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full">
-                                            {item.category}
-                                        </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <h4 className="font-bold text-text-primary dark:text-white line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                                            {item.title}
-                                        </h4>
-                                        <p className="text-sm text-text-secondary line-clamp-2">
-                                            {item.description}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Bottom Nav for easy navigation */}
-            <BottomNav />
-        </div>
+            </MobileShell>
+        </>
     );
 };

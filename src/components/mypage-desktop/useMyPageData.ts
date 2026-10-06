@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { toTourDateKey } from '../../utils/formatDate';
-import { parseArr } from '../../utils/reservationDetail';
+import { parseArr, paymentSummary, readBreakdown } from '../../utils/reservationDetail';
 
 export interface MeUser {
     id: string;
@@ -21,6 +21,9 @@ export interface MyReservation {
     end: string;
     travelers: number;
     reviewed: boolean;
+    /** Total price (0 when the reservation has no price breakdown) and how much of it is paid. */
+    payTotal: number;
+    payPercent: number;
     createdAt: string;
 }
 
@@ -127,6 +130,8 @@ export function useMyPageData(me: MeUser | null | undefined) {
                 end: toTourDateKey(str(r, 'endDate', 'end_date')),
                 travelers: num(r, 'totalPeople', 'travelers', 'total_people'),
                 reviewed: Array.isArray(r.history) && (r.history as Row[]).some((h) => h && h.type === 'review_submitted'),
+                payTotal: readBreakdown(r)?.total ?? 0,
+                payPercent: paymentSummary(r).percent,
                 createdAt: str(r, 'createdAt', 'created_at'),
             }))
             .sort(byNewest),
