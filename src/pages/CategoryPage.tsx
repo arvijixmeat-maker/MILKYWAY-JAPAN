@@ -1,26 +1,32 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
-import { CategoryLanding, type CategoryLandingContent } from '../components/category/CategoryLanding';
+import { toTourProduct, type CategoryLandingContent, type RawProduct } from '../components/category/categoryContent';
 import { CategoryLandingDesktop } from '../components/category-desktop/CategoryLandingDesktop';
+import { CategoryLandingMobile } from '../components/category-mobile/CategoryLandingMobile';
+import { MW, MW_GRADIENT } from '../components/desktop-primitives/mwTokens';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import type { Category } from '../types/category';
 
 // Fallback hero when admin hasn't configured the landing page yet.
 const FALLBACK_HERO = 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1200';
+
+/** Row of /api/categories/:slug. */
+type CategoryRow = Category & { image?: string };
 
 export const CategoryPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const isDesktop = useIsDesktop();
 
-    const { data: category, isLoading: isLoadingCategory } = useQuery({
+    const { data: category, isLoading: isLoadingCategory } = useQuery<CategoryRow | null>({
         queryKey: ['category', slug],
         queryFn: async () => {
             if (!slug) return null;
             try {
                 return await api.categories.get(slug);
-            } catch (e) {
+            } catch {
                 return null;
             }
         },
@@ -34,45 +40,39 @@ export const CategoryPage: React.FC = () => {
         enabled: !!slug,
         queryFn: async () => {
             if (!slug) return [];
-            const data = await api.products.list();
+            const data: unknown = await api.products.list();
             if (!Array.isArray(data)) return [];
-            const normalize = (t: string) => t ? t.toLowerCase().replace(/\s+/g, '') : '';
+            const normalize = (t: unknown) => (typeof t === 'string' && t ? t.toLowerCase().replace(/\s+/g, '') : '');
             const targets = [normalize(slug), categoryName ? normalize(categoryName) : ''].filter(Boolean);
-            return data
-                .filter((item: any) => {
+            return (data as RawProduct[])
+                .filter((item) => {
                     if (item.status !== 'active') return false;
                     const cat = normalize(item.category || '');
-                    const tags: string[] = (item.tags || []).map((t: string) => normalize(t));
+                    const tags = (Array.isArray(item.tags) ? item.tags : []).map(normalize);
                     // Match if the product's stored category OR any of its tags matches the slug or the category display name.
                     return targets.some((t) => cat === t || cat.includes(t) || tags.some((tag) => tag === t || tag.includes(t)));
                 })
-                .map((item: any) => ({
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    originalPrice: item.original_price,
-                    duration: item.duration,
-                    category: item.category,
-                    mainImages: item.mainImages || item.main_images || [],
-                    status: item.status,
-                }));
+                .map(toTourProduct);
         },
         staleTime: 1000 * 60 * 5,
     });
 
     if (isLoadingCategory) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-500" />
+            <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: MW.mute }}>
+                読み込み中…
             </div>
         );
     }
 
-    if (!category) {
+    if (!category || !slug) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 gap-3">
-                <p className="text-lg font-bold text-slate-800">カテゴリが見つかりません</p>
-                <p className="text-sm text-slate-500">URLをご確認ください。</p>
+            <div style={{ minHeight: '60vh', padding: isDesktop ? '96px 24px' : '72px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 900, color: MW.navy }}>カテゴリが見つかりません</p>
+                <p style={{ margin: 0, fontSize: 14, color: MW.mute }}>URLをご確認ください。</p>
+                <Link to="/products" style={{ marginTop: 12, display: 'flex', alignItems: 'center', height: 46, padding: '0 22px', borderRadius: 999, background: MW_GRADIENT, fontSize: 14, fontWeight: 700, color: MW.navy, textDecoration: 'none' }}>
+                    ツアー商品一覧を見る
+                </Link>
             </div>
         );
     }
@@ -86,12 +86,13 @@ export const CategoryPage: React.FC = () => {
     })();
 
     const content: CategoryLandingContent = {
+        name: category.name,
         heroImage: heroImages[0],
         heroImages,
         heroTagline: category.landing_hero_tagline || undefined,
         heroTitle: category.landing_hero_title || category.name,
         heroSubtitle: category.landing_hero_subtitle || category.description || undefined,
-        accentColor: category.landing_accent_color || '#0f766e',
+        accentColor: category.landing_accent_color || undefined,
         highlights: Array.isArray(category.landing_highlights) ? category.landing_highlights : [],
         productGridTitle: category.landing_product_grid_title || `${category.name}のツアー`,
     };
@@ -115,7 +116,7 @@ export const CategoryPage: React.FC = () => {
         '@context': 'https://schema.org',
         '@type': 'ItemList',
         name: `${category.name}のツアー商品`,
-        itemListElement: products.slice(0, 20).map((p: any, i: number) => ({
+        itemListElement: products.slice(0, 20).map((p, i) => ({
             '@type': 'ListItem',
             position: i + 1,
             url: `https://mongolryokou.com/products/${p.id}`,
@@ -143,17 +144,9 @@ export const CategoryPage: React.FC = () => {
                 structuredData={[collectionLd, breadcrumbLd, itemListLd]}
             />
             {isDesktop ? (
-                <CategoryLandingDesktop
-                    content={content}
-                    products={products}
-                    isLoadingProducts={isLoadingProducts}
-                />
+                <CategoryLandingDesktop key={slug} slug={slug} content={content} products={products} isLoadingProducts={isLoadingProducts} />
             ) : (
-                <CategoryLanding
-                    content={content}
-                    products={products}
-                    isLoadingProducts={isLoadingProducts}
-                />
+                <CategoryLandingMobile key={slug} slug={slug} content={content} products={products} isLoadingProducts={isLoadingProducts} />
             )}
         </>
     );

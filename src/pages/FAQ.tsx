@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
-import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
-import { MW, MW_FONT_EN } from '../components/desktop-primitives/mwTokens';
+import { InfoLayoutDesktop } from '../components/info/InfoLayoutDesktop';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { FaqMobile, FaqPanel, type FaqCategory, type FaqItem } from '../components/support-mobile/FaqMobile';
 
@@ -69,19 +68,13 @@ export const FAQPage: React.FC = () => {
         );
     }
 
-    // PC: the same panel in a centred column inside the PC shell.
+    // PC: the same panel as the body of the Info layout.
     return (
-        <DesktopLayout>
+        <InfoLayoutDesktop page="faqList" heading="モンゴル旅行のよくある質問">
             {seo}
-            <section style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 72px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <span style={{ fontFamily: MW_FONT_EN, fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', color: MW.mintDeep }}>SUPPORT</span>
-                    <h1 style={{ margin: 0, fontSize: 32, fontWeight: 900, lineHeight: 1.3 }}>モンゴル旅行のよくある質問</h1>
-                </div>
-                <div style={{ borderRadius: 24, overflow: 'hidden', border: `1px solid ${MW.line}` }}>
-                    <FaqPanel faqs={faqs} categories={categories} loading={loading} />
-                </div>
-            </section>
-        </DesktopLayout>
+            <div style={{ maxWidth: 760 }}>
+                <FaqPanel faqs={faqs} categories={categories} loading={loading} bare />
+            </div>
+        </InfoLayoutDesktop>
     );
 };
