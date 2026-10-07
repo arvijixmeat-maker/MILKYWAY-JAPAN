@@ -6,7 +6,7 @@ import { BookingDateCard, BookingOptionCard, BookingPeopleCard } from '../reserv
 import { BookingSummaryCard } from '../reservation-shared/BookingSummaryCard';
 import { PriceTableDialog } from '../reservation-shared/PriceTableDialog';
 import {
-    BK_HINT_FREE_CANCEL, BK_HINT_PICK_DATE, BK_PAGE_BG, addDays, findOption, sortTiers,
+    BK_HINT_DEPOSIT, BK_HINT_PICK_DATE, BK_PAGE_BG, addDays, findOption, sortTiers,
     type ReservationStepProps,
 } from '../reservation-shared/bookingShared';
 import { BookingActionBar } from './BookingActionBar';
@@ -49,7 +49,7 @@ export function ReservationMobile({
                     label="次へ"
                     disabled={!ready}
                     onAction={onNext}
-                    hint={ready ? BK_HINT_FREE_CANCEL : BK_HINT_PICK_DATE}
+                    hint={ready ? BK_HINT_DEPOSIT : BK_HINT_PICK_DATE}
                     hintError={!ready}
                 />
             )}

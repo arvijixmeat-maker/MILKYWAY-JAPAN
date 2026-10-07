@@ -546,7 +546,7 @@ export function CancelNote() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '16px 18px', borderRadius: 20, background: MW.mintBg }}>
             <Svg d={ICON.shield} size={20} color={MW.mintDeep} />
             <span style={{ fontSize: 12, lineHeight: 1.7, color: MW.ink3 }}>
-                <strong style={{ color: MW.mintDeep, marginRight: 10 }}>無料キャンセル</strong>出発30日前まで全額返金。日本語スタッフが24時間サポート。
+                <strong style={{ color: MW.mintDeep, marginRight: 10 }}>ご予約金について</strong>予約金はホテル・宿泊施設の前払金に充てるため、キャンセルの場合も返金不可となります。ご不明な点は日本語スタッフまでお気軽にご相談ください。
             </span>
         </div>
     );

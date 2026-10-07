@@ -118,12 +118,10 @@ export const BK_HEAD: Record<BookingStepNo, { title: string; sub: string }> = {
     3: { title: 'お申し込み完了', sub: 'お支払い完了をもって予約確定となります' },
 };
 
-/** Same four tiers as the tour FAQ and the previous PC booking page. */
-export const BK_CANCEL_POLICY: { k: string; v: string; bg: string; fg: string; pct: number }[] = [
-    { k: '出発31日前まで', v: '全額返金', bg: '#F1FCF8', fg: '#1C8571', pct: 100 },
-    { k: '30〜15日前', v: '30%', bg: '#FFF8EB', fg: '#9A5B00', pct: 30 },
-    { k: '14〜8日前', v: '50%', bg: '#FFF1E0', fg: '#B45309', pct: 50 },
-    { k: '7日前以降', v: '100%', bg: BK_ERR_BG, fg: '#B3261E', pct: 100 },
+/** Shown under the deposit rule on STEP 2; the rule itself is DEPOSIT_POLICY in constants/company.ts. */
+export const BK_CANCEL_NOTES = [
+    'キャンセルや日程変更をご希望の場合は、お早めにLINEまたはメールでご連絡ください。',
+    '詳しい契約条件は、ご予約後にお送りする海外旅行契約書をご確認ください。',
 ];
 
 export const BK_PAY_NOTES = [
@@ -138,7 +136,7 @@ export const BK_NEXT_STEPS: { t: string; d: string }[] = [
     { t: 'お支払い完了で予約確定', d: 'お支払いが確認できない場合、自動的にキャンセルとなることがございます。' },
 ];
 
-export const BK_HINT_FREE_CANCEL = '無料キャンセル：出発31日前まで';
+export const BK_HINT_DEPOSIT = '予約金はキャンセル時も返金不可となります';
 export const BK_HINT_PICK_DATE = 'カレンダーから出発日を選択してください';
 export const BK_HINT_INVOICE = '申し込み後、PayPal請求書をメールでお送りします';
 

@@ -3,7 +3,7 @@ import { BookingDateCard, BookingOptionCard, BookingPeopleCard } from '../reserv
 import { BookingSummaryCard } from '../reservation-shared/BookingSummaryCard';
 import { PriceTableDialog } from '../reservation-shared/PriceTableDialog';
 import {
-    BK_HINT_FREE_CANCEL, BK_HINT_PICK_DATE, BK_STICKY_TOP_PC, addDays, findOption, sortTiers,
+    BK_HINT_DEPOSIT, BK_HINT_PICK_DATE, BK_STICKY_TOP_PC, addDays, findOption, sortTiers,
     type ReservationStepProps,
 } from '../reservation-shared/bookingShared';
 import { ReservationShell } from './ReservationShell';
@@ -53,7 +53,7 @@ export function ReservationDesktop({
                 accom={findOption(accommodations, selectedAccomId)}
                 vehicle={findOption(vehicles, selectedVehicleId)}
                 stickyTop={BK_STICKY_TOP_PC}
-                cta={{ label: '次のステップへ', onClick: onNext, disabled: !ready, hint: ready ? BK_HINT_FREE_CANCEL : BK_HINT_PICK_DATE, hintError: !ready }}
+                cta={{ label: '次のステップへ', onClick: onNext, disabled: !ready, hint: ready ? BK_HINT_DEPOSIT : BK_HINT_PICK_DATE, hintError: !ready }}
             />
 
             {showPriceTable && tiers.length > 0 && (

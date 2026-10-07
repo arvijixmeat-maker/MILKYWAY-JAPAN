@@ -1,11 +1,12 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
+import { DEPOSIT_POLICY } from '../../constants/company';
 import type { TourPricingOption } from '../../types/product';
 import { MW, MW_FONT_EN, isUsableImage, yen } from '../desktop-primitives/mwTokens';
 import { D } from '../mobile/mobileTheme';
 import { Ico } from '../mobile/mobileUi';
 import { BookCard, LineLink } from './BookingCard';
 import {
-    BK_CANCEL_POLICY, BK_D, BK_DARK_GRADIENT, BK_ERR_BG, BK_HAIR, BK_PAY_NOTES, BK_SOFT,
+    BK_CANCEL_NOTES, BK_D, BK_DARK_GRADIENT, BK_ERR_BG, BK_HAIR, BK_PAY_NOTES, BK_SOFT,
     bareName, durationLabel, periodLong,
     type BookingProduct, type CustomerInfo, type FieldError, type PriceBreakdown,
 } from './bookingShared';
@@ -257,18 +258,19 @@ export function BookingPayMethodCard({ pc }: { pc: boolean }) {
 export function BookingCancelCard({ pc }: { pc: boolean }) {
     return (
         <BookCard pc={pc} eyebrow="CANCELLATION POLICY" title="キャンセル規定">
-            <div style={{ display: 'grid', gridTemplateColumns: pc ? 'repeat(auto-fit,minmax(min(100%,150px),1fr))' : 'repeat(2,minmax(0,1fr))', gap: 8 }}>
-                {BK_CANCEL_POLICY.map((c) => (
-                    <div key={c.k} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pc ? 18 : 14, borderRadius: 18, background: c.bg }}>
-                        <span style={{ fontSize: 12, color: MW.mute }}>{c.k}</span>
-                        <span style={{ fontSize: 18, fontWeight: 900, color: c.fg }}>{c.v}</span>
-                        <span style={{ height: 4, borderRadius: 999, background: 'rgba(10,31,46,0.08)', overflow: 'hidden' }}>
-                            <span style={{ display: 'block', height: '100%', width: `${c.pct}%`, background: c.fg }} />
-                        </span>
-                    </div>
-                ))}
+            {/* The deposit pays the hotels and camps in advance, so it is never refunded (owner policy). */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: pc ? 20 : 16, borderRadius: 18, background: '#FFF8EB' }}>
+                <span style={{ fontSize: pc ? 18 : 16, fontWeight: 900, color: '#9A5B00' }}>予約金は返金不可</span>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.8, color: MW.ink3 }}>{DEPOSIT_POLICY}</p>
             </div>
-            <span style={{ fontSize: 12, color: MW.mute2, marginTop: -6 }}>キャンセル料は旅行代金総額に対する割合です。</span>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {BK_CANCEL_NOTES.map((note) => (
+                    <li key={note} style={{ display: 'flex', gap: 8, fontSize: 12, lineHeight: 1.7, color: MW.mute }}>
+                        <span aria-hidden="true" style={{ color: MW.mint }}>・</span>
+                        {note}
+                    </li>
+                ))}
+            </ul>
         </BookCard>
     );
 }
