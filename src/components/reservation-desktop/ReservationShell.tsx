@@ -1,162 +1,72 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MatIcon } from '../desktop-primitives/MatIcon';
-import { Stepper, type StepIdx } from './Stepper';
+import { MW, MW_FONT } from '../desktop-primitives/mwTokens';
+import { D } from '../mobile/mobileTheme';
+import { Ico } from '../mobile/mobileUi';
+import { BK_HEAD, BK_PAGE_BG, bareName, type BookingStepNo } from '../reservation-shared/bookingShared';
+import { Stepper } from './Stepper';
 
 interface ReservationShellProps {
-    step: StepIdx;
+    step: BookingStepNo;
     productName?: string;
-    /** Custom back behavior. Defaults to navigate(-1). */
+    /** Custom back behaviour. Defaults to navigate(-1). */
     onBack?: () => void;
-    /** Hide the back button on the final "complete" step. */
+    /** No back button on the final "complete" step. */
     hideBack?: boolean;
-    /** Inline content under the stepper. */
     children: ReactNode;
 }
 
-const CONTENT_WIDTH = 1280;
-
-const STEP_TITLES: Record<StepIdx, { title: string; subtitle: string }> = {
-    0: {
-        title: '予約日およびオプションの選択',
-        subtitle: '旅行開始日と人数、オプションを選択してください',
-    },
-    1: {
-        title: '予約情報および決済確認',
-        subtitle: 'ご予約者情報と決済方法をご確認ください',
-    },
-    2: {
-        title: '予約申し込み完了',
-        subtitle: 'ありがとうございます。お支払い完了をもって予約確定となります',
-    },
-};
+const crumb: CSSProperties = { color: MW.mute2, textDecoration: 'none' };
 
 /**
- * Shared chrome for the 3-step desktop booking flow:
- *   - Breadcrumb + Back button
- *   - Step title + subtitle
- *   - Stepper visualizing progress
- *   - Slot for the main step body
- *
- * Used by all three pages (Reservation, Payment, ReservationComplete) so the
- * visual continuity stays even though the URL changes on Next.
+ * Chrome shared by the three PC booking pages (Claude Design: "Booking Header" + "Booking Body"):
+ * breadcrumb, step title, stepper and the grey body that holds the cards.
+ * The URL changes between steps, so this keeps the pages visually continuous.
  */
-export function ReservationShell({
-    step,
-    productName,
-    onBack,
-    hideBack,
-    children,
-}: ReservationShellProps) {
+export function ReservationShell({ step, productName, onBack, hideBack, children }: ReservationShellProps) {
     const navigate = useNavigate();
-    const { title, subtitle } = STEP_TITLES[step];
+    const { title, sub } = BK_HEAD[step];
     const handleBack = onBack ?? (() => navigate(-1));
-    const cleanName = productName?.replace(/^\[[^\]]+\]\s*/, '') ?? null;
+    const name = productName ? bareName(productName) : '';
+    const go = (to: string) => (e: { preventDefault: () => void }) => {
+        e.preventDefault();
+        navigate(to);
+    };
 
     return (
-        <div style={{ background: 'var(--bg-muted)', minHeight: '100vh' }}>
-            {/* Breadcrumb + back */}
-            <div
-                style={{ background: '#fff', borderBottom: '1px solid var(--border-subtle)' }}
-            >
-                <div
-                    style={{
-                        maxWidth: CONTENT_WIDTH,
-                        margin: '0 auto',
-                        padding: '16px 32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                    }}
-                >
-                    {!hideBack && (
-                        <button
-                            type="button"
-                            onClick={handleBack}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                padding: '8px 14px 8px 10px',
-                                background: '#fff',
-                                border: '1px solid var(--border)',
-                                borderRadius: 999,
-                                cursor: 'pointer',
-                                fontFamily: 'inherit',
-                                fontSize: 13,
-                                fontWeight: 600,
-                                color: 'var(--fg-2)',
-                            }}
-                        >
-                            <MatIcon name="chevron_left" size={18} color="var(--fg-2)" /> 戻る
-                        </button>
-                    )}
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            fontSize: 12,
-                            color: 'var(--fg-5)',
-                            flexWrap: 'wrap',
-                        }}
-                    >
-                        <span>ホーム</span>
-                        <MatIcon name="chevron_right" size={14} color="var(--fg-6)" />
-                        <span>ツアー商品</span>
-                        {cleanName && (
-                            <>
-                                <MatIcon name="chevron_right" size={14} color="var(--fg-6)" />
-                                <span>{cleanName}</span>
-                            </>
+        <div style={{ minHeight: '100vh', background: BK_PAGE_BG, color: MW.navy, fontFamily: MW_FONT, WebkitFontSmoothing: 'antialiased' }}>
+            <div style={{ background: '#FFFFFF', borderBottom: `1px solid ${MW.line}` }}>
+                <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+                        {!hideBack && (
+                            <button type="button" onClick={handleBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 36, padding: '0 14px 0 8px', border: `1px solid ${MW.line2}`, borderRadius: 999, background: '#FFFFFF', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: MW.navy, cursor: 'pointer', flexShrink: 0 }}>
+                                <Ico d={D.back} size={16} width={2} />
+                                戻る
+                            </button>
                         )}
-                        <MatIcon name="chevron_right" size={14} color="var(--fg-6)" />
-                        <span style={{ color: 'var(--fg-2)', fontWeight: 700 }}>予約</span>
+                        <nav aria-label="パンくずリスト" style={{ display: 'flex', gap: 8, fontSize: 12, color: MW.mute2, whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0 }}>
+                            <a href="/" onClick={go('/')} style={crumb}>ホーム</a>
+                            <span>›</span>
+                            <a href="/products" onClick={go('/products')} style={crumb}>ツアー商品</a>
+                            {name && (
+                                <>
+                                    <span>›</span>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                                </>
+                            )}
+                            <span>›</span>
+                            <span style={{ color: MW.navy, fontWeight: 700 }}>予約</span>
+                        </nav>
                     </div>
-                </div>
-            </div>
-
-            {/* Step header + stepper */}
-            <div style={{ background: '#fff', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div
-                    style={{
-                        maxWidth: CONTENT_WIDTH,
-                        margin: '0 auto',
-                        padding: '32px 32px 28px',
-                    }}
-                >
-                    <h1
-                        style={{
-                            fontSize: 28,
-                            fontWeight: 700,
-                            color: 'var(--fg-1)',
-                            margin: '0 0 4px',
-                            letterSpacing: '-0.02em',
-                        }}
-                    >
-                        {title}
-                    </h1>
-                    <p
-                        style={{
-                            fontSize: 13,
-                            color: 'var(--fg-4)',
-                            margin: '0 0 24px',
-                        }}
-                    >
-                        {subtitle}
-                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <h1 style={{ margin: 0, fontSize: 'clamp(26px,3vw,34px)', fontWeight: 900, lineHeight: 1.3 }}>{title}</h1>
+                        <span style={{ fontSize: 14, color: MW.mute }}>{sub}</span>
+                    </div>
                     <Stepper step={step} />
                 </div>
             </div>
 
-            {/* Body */}
-            <div
-                style={{
-                    maxWidth: CONTENT_WIDTH,
-                    margin: '0 auto',
-                    padding: '36px 32px 80px',
-                }}
-            >
+            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 104px', display: 'flex', gap: 28, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 {children}
             </div>
         </div>

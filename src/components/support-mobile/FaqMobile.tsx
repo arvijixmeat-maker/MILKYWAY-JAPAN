@@ -42,8 +42,11 @@ export function FaqMobile(props: FaqProps) {
     );
 }
 
-/** The FAQ body without a shell; the PC page shows the same panel in a centred column. */
-export function FaqPanel({ faqs, categories, loading }: FaqProps) {
+/**
+ * The FAQ body without a shell. `bare` drops the paper section and its intro,
+ * for the PC Info layout that already has its own header.
+ */
+export function FaqPanel({ faqs, categories, loading, bare = false }: FaqProps & { bare?: boolean }) {
     const navigate = useNavigate();
     const [cat, setCat] = useState(ALL);
     const [openId, setOpenId] = useState<string | null>(null);
@@ -56,9 +59,9 @@ export function FaqPanel({ faqs, categories, loading }: FaqProps) {
         setOpenId(null);
     };
 
-    return (
-            <ScreenBody eyebrow="FAQ" lead="モンゴル旅行・ツアーのよくあるご質問をまとめました。解決しない場合はお問い合わせください。" label="よくある質問">
-                {categories.length > 0 && <MPills items={chips} value={cat} onChange={pick} style={{ margin: '0 -16px', padding: '0 16px' }} />}
+    const body = (
+            <>
+                {categories.length > 0 && <MPills items={chips} value={cat} onChange={pick} style={bare ? { flexWrap: 'wrap' } : { margin: '0 -16px', padding: '0 16px' }} />}
                 {loading ? <MLoading /> : items.length > 0 ? (
                     <div style={{ border: `1px solid ${MW.line}`, borderRadius: 18, background: '#fff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         {items.map((f, i) => {
@@ -98,6 +101,13 @@ export function FaqPanel({ faqs, categories, loading }: FaqProps) {
                 >
                     お問い合わせはこちら →
                 </a>
-            </ScreenBody>
+            </>
+    );
+
+    if (bare) return <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{body}</div>;
+    return (
+        <ScreenBody eyebrow="FAQ" lead="モンゴル旅行・ツアーのよくあるご質問をまとめました。解決しない場合はお問い合わせください。" label="よくある質問">
+            {body}
+        </ScreenBody>
     );
 }

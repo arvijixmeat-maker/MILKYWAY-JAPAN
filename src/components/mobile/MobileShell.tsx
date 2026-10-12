@@ -65,7 +65,7 @@ const FOOT_GROUPS: { title: string; links: { label: string; path?: string; line?
     {
         title: 'ご利用案内',
         links: [
-            { label: 'ご予約の流れ', path: '/about' },
+            { label: 'ご予約の流れ', path: '/booking-flow' },
             { label: 'よくある質問 (FAQ)', path: '/faq' },
             { label: '利用規約', path: '/terms-of-service' },
             { label: 'プライバシーポリシー', path: '/privacy-policy' },

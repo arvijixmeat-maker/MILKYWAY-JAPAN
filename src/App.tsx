@@ -39,6 +39,7 @@ const FAQPage = lazy(() => import('./pages/FAQ').then(module => ({ default: modu
 const TermsOfService = lazy(() => import('./pages/TermsOfService').then(module => ({ default: module.TermsOfService })))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
 const GuideApply = lazy(() => import('./pages/GuideApply').then(module => ({ default: module.GuideApply })))
+const BookingFlow = lazy(() => import('./pages/BookingFlow').then(module => ({ default: module.BookingFlow })))
 const Promotions = lazy(() => import('./pages/Promotions').then(module => ({ default: module.Promotions })))
 const PromotionDetail = lazy(() => import('./pages/PromotionDetail').then(module => ({ default: module.PromotionDetail })))
 const Contact = lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })))
@@ -184,6 +185,7 @@ function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/guide-apply" element={<GuideApply />} />
+            <Route path="/booking-flow" element={<BookingFlow />} />
             <Route path="/documents/itinerary/:reservationId" element={<DocumentItinerary />} />
             <Route path="/documents/contract/:reservationId" element={<DocumentContract />} />
           </Routes>

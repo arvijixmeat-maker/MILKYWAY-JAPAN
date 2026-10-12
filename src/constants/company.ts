@@ -35,11 +35,52 @@ export const LOCAL_EMERGENCY: Array<{ label: string; number: string }> = [
     { label: '災害・緊急', number: '105' },
 ];
 
+/** 予約金は宿泊施設の前払金に充てるため、キャンセル時も返金しない（オーナー方針）。 */
+export const DEPOSIT_POLICY = '予約金はホテルおよび宿泊施設の前払金として使用されるため、日程キャンセルの場合は全額返金不可となりますので、予めご了承ください。';
+
+export interface CancellationRow {
+    period: string;
+    fee: string;
+}
+
+/**
+ * 契約書のキャンセル規定（オーナー方針 2026-10）。予約金は宿泊施設の前払金のため返金不可、
+ * 残金は現地でお支払いいただくため、旅行開始前のキャンセルでは発生しない。
+ */
+export const CONTRACT_CANCELLATION_ROWS: CancellationRow[] = [
+    { period: '予約金', fee: 'キャンセルの時期にかかわらず返金不可' },
+    { period: '残金（現地払い）', fee: '旅行開始前のキャンセルの場合、お支払いは不要です' },
+    { period: '残金（事前お振込み済み）', fee: '旅行開始前のキャンセルの場合、全額返金（振込手数料はお客様負担）' },
+    { period: '旅行開始後のキャンセル・途中離団', fee: '返金はありません' },
+];
+
+/** The percentage table every template was seeded with before the rules above. */
+const LEGACY_CANCELLATION_ROWS: CancellationRow[] = [
+    { period: '30日〜15日前まで', fee: '旅行代金の10%' },
+    { period: '14日〜8日前まで', fee: '旅行代金の20%' },
+    { period: '7日〜3日前まで', fee: '旅行代金の30%' },
+    { period: '2日前〜当日', fee: '旅行代金の50%' },
+    { period: '無連絡不参加', fee: '旅行代金の100%' },
+];
+
+/**
+ * Saved templates carry a copy of whatever the default table was when they were saved.
+ * An untouched copy of the old percentage table is replaced by the current rules; a table the
+ * admin edited is kept as is.
+ */
+export const resolveCancellationRows = (rows: unknown): CancellationRow[] => {
+    if (!Array.isArray(rows) || rows.length === 0) return CONTRACT_CANCELLATION_ROWS;
+    const list = rows as CancellationRow[];
+    const untouchedLegacy = list.length === LEGACY_CANCELLATION_ROWS.length
+        && list.every((r, i) => r?.period === LEGACY_CANCELLATION_ROWS[i].period && r?.fee === LEGACY_CANCELLATION_ROWS[i].fee);
+    return untouchedLegacy ? CONTRACT_CANCELLATION_ROWS : list;
+};
+
 export const CONTRACT_NOTICES = [
     '旅行中にお客様自身の過失による事故が発生した場合、旅行会社には一切の責任および損害賠償責任がないことを予めご了承ください。',
     '旅行中は天候状況や都市の交通渋滞等により、パッケージ日程が変更となる場合がございます。その際は現地ガイドの判断によりご案内させていただきます。',
     '乗馬体験およびラクダ体験は各回1回ずつ含まれておりますが、追加で体験をご希望の場合は現地にて追加料金をお支払いいただくことでご利用いただけます。また、博物館や各種文化施設を追加でご利用される場合には、別途入場料が発生する場合がございます。',
-    '予約金はホテルおよび宿泊施設の前払金として使用されるため、日程キャンセルの場合は全額返金不可となりますので、予めご了承ください。',
+    DEPOSIT_POLICY,
     '残金は現地にて日本円でお支払いいただくか、またはご出発の3日前までに予約金をお振込みいただいた銀行口座へご送金くださいますようお願いいたします。',
 ];
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
-import { COMPANY_INFO, CONTRACT_NOTICES, PRIVACY_NOTICES, OTHER_NOTICES } from '../constants/company';
+import { COMPANY_INFO, CONTRACT_CANCELLATION_ROWS, CONTRACT_NOTICES, PRIVACY_NOTICES, OTHER_NOTICES, resolveCancellationRows } from '../constants/company';
 
 /**
  * ご旅行契約書（고객용）— Claude Design "Contract.dc.html" 디자인 적용.
@@ -72,13 +72,7 @@ const fallbackContract: Required<ContractSettings> = {
     bankInfo: 'お振込先は別途ご案内します。',
     includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
     excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
-    cancellationRows: [
-        { period: '30日〜15日前まで', fee: '旅行代金の10%' },
-        { period: '14日〜8日前まで', fee: '旅行代金の20%' },
-        { period: '7日〜3日前まで', fee: '旅行代金の30%' },
-        { period: '2日前〜当日', fee: '旅行代金の50%' },
-        { period: '無連絡不参加', fee: '旅行代金の100%' },
-    ],
+    cancellationRows: CONTRACT_CANCELLATION_ROWS,
     signatureNote: '上記内容を確認し、同意の上、本契約を締結いたします。',
 };
 
@@ -371,7 +365,7 @@ export const DocumentContract: React.FC = () => {
     const contractSettings = { ...fallbackContract, ...(template?.documentSettings?.contract || {}) };
     const issuedDate = contract.issuedDate || reservation.createdAt?.split('T')[0] || '';
     const contractNumber = reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase();
-    const cancellationRows = contractSettings.cancellationRows?.length ? contractSettings.cancellationRows : fallbackContract.cancellationRows;
+    const cancellationRows = resolveCancellationRows(contractSettings.cancellationRows);
     const includedItems = (data.productIncluded && data.productIncluded.length) ? data.productIncluded : splitLines(contractSettings.includedText);
     const excludedItems = (data.productExcluded && data.productExcluded.length) ? data.productExcluded : splitLines(contractSettings.excludedText);
     const includedDisplay = includedItems.length ? includedItems : splitLines(fallbackContract.includedText);

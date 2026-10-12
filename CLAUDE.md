@@ -193,7 +193,9 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 - 페이지 파일(`src/pages/*`)은 `useIsDesktop()`으로 분기만 하고, 화면은 `*-desktop` / `*-mobile` 폴더에 있음.
 - 모바일 공통: `src/components/mobile/` — `MobileShell`(헤더·검색·뒤로가기 바·푸터·하단 탭), `MobileTabBar`,
   `mobileUi.tsx`(공용 조각), `mobileTheme.ts`(상수·아이콘 path·퀵 메뉴). 화면 자체 고정 바는 `useMobileShell().stickyTop` 사용.
-- 리디자인되지 **않은** 모바일 화면(상품 상세, 예약·결제, 카테고리 랜딩, 会社案内, 리뷰/동행 작성, 채팅 등)은 옛 스타일 그대로.
+- 2026-10-07 추가 적용(PC·모바일): 투어 상세(`product/detail/*`, `product-mobile/`), 예약 3단계(`reservation-shared/`, `reservation-mobile/` — 요청·금액 로직은 `pages/Reservation·Payment·ReservationComplete`에 그대로), 카테고리 랜딩(`category/CategoryParts.tsx`), 会社案内(`about-desktop/` — 모션은 `useAboutMotion` + `about.css`), 이용 안내 틀(`info/` — `/booking-flow` 신규, 약관·개인정보·가이드 모집·FAQ·문의).
+- 리디자인되지 **않은** 화면(리뷰/동행 작성, 채팅, 예약 상태 조회, 견적 상세, 문서 출력 등)은 옛 스타일 그대로.
+- 약관·개인정보 본문은 실제 법적 문구 그대로 유지할 것(디자인 파일의 문구는 샘플). 예약 안내(`info/bookingFlow.ts`)의 문구는 실제 코드와 대조해 확인된 내용만 적혀 있음.
 - 새 라우트: `/promotions`·`/promotions/:id`(旅行企画展 — 관리자 `/admin/promotions`에서 등록, `promotions` 테이블·`/api/promotions`; 등록이 0건이면 카테고리 특집 카드로 대체. 가짜 캠페인 금지), `/contact`(서버 접수 API 없음 → mailto/LINE/채널톡).
 - ⚠ `promotions` 테이블은 배포 후 `/api/migrate-db`를 한 번 열어야 생성됨(그 전에는 관리자 화면에 안내 배너).
 - 고객 로그인은 Google OAuth뿐(이메일/비밀번호는 관리자 전용).
@@ -212,4 +214,4 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 
 ---
 
-마지막 업데이트: 2026-10-06 (모바일 리디자인 적용)
+마지막 업데이트: 2026-10-07 (투어 상세·예약·카테고리·会社案内·이용 안내 리디자인)
