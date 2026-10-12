@@ -332,7 +332,7 @@ export const EstimateDetail: React.FC = () => {
                     </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 12.5, color: MUTE }}>ご予約金（銀行振込）</span>
+                    <span style={{ fontSize: 12.5, color: MUTE }}>ご予約金（PayPal）</span>
                     <span style={{ fontSize: m ? 15 : 17, fontWeight: 800, color: BLUE_DK }}>{yen(deposit)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 }}>

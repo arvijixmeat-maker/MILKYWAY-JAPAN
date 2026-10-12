@@ -605,6 +605,15 @@ app.get('/', requireAdmin, async (c) => {
         migrationResults.push(`Skipped settings cleanup: ${e.message}`);
     }
 
+    // 예약금은 PayPal로만 받는다 — 계좌 정보 설정은 쓰지 않으므로 남아 있는 값을 지운다.
+    // (설정은 로그인 없이 읽을 수 있는 /api/settings 로 그대로 내려간다.)
+    try {
+        const removed = await c.env.DB.prepare("DELETE FROM settings WHERE key = 'bank_account'").run();
+        if (removed?.meta?.changes) migrationResults.push('settings: removed unused bank_account');
+    } catch (e: any) {
+        migrationResults.push(`Skipped bank_account cleanup: ${e.message}`);
+    }
+
     return c.json({
         success: true,
         message: "Migrations executed",

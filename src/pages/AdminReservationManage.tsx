@@ -3396,11 +3396,6 @@ export const AdminReservationManage: React.FC = () => {
                                     deposit: data.deposit,
                                     local: data.totalAmount - data.deposit
                                 },
-                                bank_account: {
-                                    bankName: '국민은행',
-                                    accountNumber: '123-456-789012',
-                                    accountHolder: '밀키웨이투어'
-                                },
                                 user_id: convertTarget.userId
                             };
 

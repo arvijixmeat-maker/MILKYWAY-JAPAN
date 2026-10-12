@@ -69,7 +69,7 @@ const FOOT_GROUPS: { title: string; links: { label: string; path?: string; line?
             { label: 'よくある質問 (FAQ)', path: '/faq' },
             { label: '利用規約', path: '/terms-of-service' },
             { label: 'プライバシーポリシー', path: '/privacy-policy' },
-            { label: 'ご予約状況の確認', path: '/reservation-status' },
+            { label: 'ご予約状況の確認', path: '/mypage/reservations' },
         ],
     },
     {

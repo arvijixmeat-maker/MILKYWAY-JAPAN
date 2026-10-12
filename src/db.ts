@@ -35,10 +35,7 @@ export interface Wishlist {
 }
 
 export interface Settings {
-    id: string; // e.g., 'bankAccount', 'company', etc.
-    bankName?: string;
-    accountNumber?: string;
-    accountHolder?: string;
+    id: string; // e.g., 'company', etc.
     [key: string]: any;
 }
 
@@ -260,11 +257,6 @@ const sampleReservations: Reservation[] = [
             deposit: 500000,
             local: 2000000
         },
-        bankAccount: {
-            bankName: '신한은행',
-            accountNumber: '110-123-456789',
-            accountHolder: '몽골리아은하수'
-        },
         createdAt: '2023-09-15T10:00:00Z',
         history: []
     },
@@ -287,11 +279,6 @@ const sampleReservations: Reservation[] = [
             total: 150000,
             deposit: 50000,
             local: 100000
-        },
-        bankAccount: {
-            bankName: '신한은행',
-            accountNumber: '110-123-456789',
-            accountHolder: '몽골리아은하수'
         },
         createdAt: '2023-09-20T10:00:00Z',
         history: []
@@ -343,11 +330,6 @@ export interface Reservation {
         total: number;
         deposit: number;
         local: number;
-    };
-    bankAccount: {
-        bankName: string;
-        accountNumber: string;
-        accountHolder: string;
     };
     createdAt: string;
     history: {

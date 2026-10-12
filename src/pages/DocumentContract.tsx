@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { SEO } from '../components/seo/SEO';
-import { COMPANY_INFO, CONTRACT_CANCELLATION_ROWS, CONTRACT_NOTICES, PRIVACY_NOTICES, OTHER_NOTICES, resolveCancellationRows } from '../constants/company';
+import { COMPANY_INFO, CONTRACT_CANCELLATION_ROWS, CONTRACT_NOTICES, DEPOSIT_PAYMENT_METHOD, PRIVACY_NOTICES, OTHER_NOTICES, resolveCancellationRows, resolveDepositMethod } from '../constants/company';
 
 /**
  * ご旅行契約書（고객용）— Claude Design "Contract.dc.html" 디자인 적용.
@@ -35,7 +35,6 @@ interface ContractSettings {
     intro?: string;
     paymentMethod?: string;
     paymentDeadline?: string;
-    bankInfo?: string;
     includedText?: string;
     excludedText?: string;
     cancellationRows?: { period: string; fee: string }[];
@@ -67,9 +66,8 @@ interface ContractPageData {
 
 const fallbackContract: Required<ContractSettings> = {
     intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
-    paymentMethod: '銀行振込',
+    paymentMethod: DEPOSIT_PAYMENT_METHOD,
     paymentDeadline: 'ご案内メールに記載の期日まで',
-    bankInfo: 'お振込先は別途ご案内します。',
     includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
     excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
     cancellationRows: CONTRACT_CANCELLATION_ROWS,
@@ -366,6 +364,7 @@ export const DocumentContract: React.FC = () => {
     const issuedDate = contract.issuedDate || reservation.createdAt?.split('T')[0] || '';
     const contractNumber = reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase();
     const cancellationRows = resolveCancellationRows(contractSettings.cancellationRows);
+    const depositMethod = resolveDepositMethod(contractSettings.paymentMethod);
     const includedItems = (data.productIncluded && data.productIncluded.length) ? data.productIncluded : splitLines(contractSettings.includedText);
     const excludedItems = (data.productExcluded && data.productExcluded.length) ? data.productExcluded : splitLines(contractSettings.excludedText);
     const includedDisplay = includedItems.length ? includedItems : splitLines(fallbackContract.includedText);
@@ -383,11 +382,10 @@ export const DocumentContract: React.FC = () => {
     ];
     const payRows: Array<{ label: string; value: string; vStyle: React.CSSProperties; note?: string }> = [
         { label: '合計金額', value: fmtYen(reservation.totalPrice), vStyle: t.payStrong },
-        { label: '予約金', value: reservation.depositAmount ? fmtYen(reservation.depositAmount) : '-', vStyle: t.kvValue, note: `${contractSettings.paymentMethod}（ご予約確定時）` },
+        { label: '予約金', value: reservation.depositAmount ? fmtYen(reservation.depositAmount) : '-', vStyle: t.kvValue, note: `${depositMethod}（ご予約確定時）` },
         { label: '残金', value: fmtYen(balance), vStyle: t.payAccent, note: '現地にて現金（日本円）でお支払い' },
-        { label: '支払方法', value: `予約金：${contractSettings.paymentMethod} ／ 残金：現地にて現金（日本円）`, vStyle: t.kvValue },
+        { label: '支払方法', value: `予約金：${depositMethod} ／ 残金：現地にて現金（日本円）`, vStyle: t.kvValue },
         { label: '支払期限', value: contractSettings.paymentDeadline, vStyle: t.kvValue },
-        { label: 'お振込先', value: contractSettings.bankInfo, vStyle: t.kvValue, note: '※ 予約金のお振込先です（残金は現地で現金払い）' },
     ];
     const termRows = [...CONTRACT_NOTICES, ...PRIVACY_NOTICES, ...OTHER_NOTICES].map((text, i) => ({ n: i + 1, text }));
     const companyRows: Array<{ label: string; value: string }> = [

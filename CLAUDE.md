@@ -33,7 +33,7 @@
 - D1 (SQLite, Cloudflare 관리형) + Drizzle ORM
 - Tailwind CSS
 - TanStack Query, react-i18next (다국어), react-helmet-async (SEO)
-- 결제: PayPal + 은행 송금
+- 결제: 예약금은 PayPal로만 받음(은행 계좌 안내 없음), 잔금은 현지에서 현금(일본 엔)
 - 챗: Channel Talk (지연 로딩)
 
 ## 4. 배포 워크플로 — **반드시 지킬 것**
@@ -209,6 +209,7 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 - 모바일 사진은 `MPhoto`(`mobile/mobileUi.tsx`)가 `utils/productImage.ts`로 화면 크기에 맞는 축소본을 요청함(`sizes` prop으로 표시 폭 전달). 모바일 화면에 `<img>`를 직접 쓰지 말고 `MPhoto`를 쓸 것.
 - 예약 STEP 1 선택값(출발일·인원·옵션)은 STEP 2로 넘어갈 때 `sessionStorage`(`mw-booking-draft:<상품 id>`)에 저장되어 뒤로 가도 유지되고, 예약 완료 시 지워짐(`reservation-shared/bookingShared.ts`).
 - 동행 참가 요청(2026-10-12): `travel_mate_requests` 테이블·`/api/travel-mates/:id/requests`(GET/POST/DELETE). 요청은 호스트에게 알림만 보내고 모집 인원·상태는 바꾸지 않음(수락/거절 기능 없음). 테이블은 배포 후 `/api/migrate-db` 한 번 필요.
+- 계좌 정보(2026-10-12 오너 방침): 예약금은 PayPal 전용이라 계좌 등록·안내 기능을 모두 제거함. 계약서 템플릿의 계좌 안내 칸, `bank_account` 설정, 가짜 계좌가 나오던 `/reservation-status` 화면 삭제(→ `/mypage/reservations`로 이동). 옛 기본값 「銀行振込」가 저장된 템플릿은 `resolveDepositMethod`(`constants/company.ts`)가 PayPal로 바꿔 보여 줌. 계좌·은행 송금 문구를 다시 넣지 말 것.
 - 최근 본 상품은 `DELETE /api/recently-viewed/:id`·`DELETE /api/recently-viewed`로 본인 것만 삭제(마이그레이션 불필요).
 
 ## 10. 다른 환경에서 작업 이어가는 법
@@ -221,4 +222,4 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 
 ---
 
-마지막 업데이트: 2026-10-12 (API 권한 점검, FAQ 카테고리 API, 대표 주소 기본값 / 문의 접수, 동행 참가 요청, 최근 본 상품 삭제, 모바일 사진 축소, 예약 선택값 유지)
+마지막 업데이트: 2026-10-12 (API 권한 점검, FAQ 카테고리 API, 대표 주소 기본값 / 문의 접수, 동행 참가 요청, 최근 본 상품 삭제, 모바일 사진 축소, 예약 선택값 유지 / 계좌 정보 기능 제거)
