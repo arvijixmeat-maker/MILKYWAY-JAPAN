@@ -151,10 +151,10 @@ export function BookingDetailMobile() {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '16px 18px 18px', borderTop: `1px solid ${M_HAIR}` }}>
                                 <PayRow label="予約金" sub="PayPalで事前にお支払い" amount={pb.deposit} paid={depositPaid} />
-                                <PayRow label="現地支払い" sub="ウランバートル到着時 現金 / カード" amount={pb.local} paid={balancePaid} />
+                                <PayRow label="現地支払い" sub="現地到着後、担当ガイドへ現金（日本円）" amount={pb.local} paid={balancePaid} />
                                 {depositPaid ? (
                                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 14, background: MW.chip, fontSize: 13, fontWeight: 700, color: MW.mute2, whiteSpace: 'nowrap' }}>
-                                        {balancePaid ? 'お支払い完了' : '現地支払いは現地でお支払い'}
+                                        {balancePaid ? 'お支払い完了' : '残金は現地で担当ガイドへお支払い'}
                                     </span>
                                 ) : (
                                     <>

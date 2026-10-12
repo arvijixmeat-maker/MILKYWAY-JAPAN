@@ -178,7 +178,7 @@ export function tplPaymentConfirmed(data: any) {
     <ol class="steps">
       <li>宿泊、車両、ガイドなどの現地手配を進めます。</li>
       <li>確定日程表と海外旅行契約書を順番にご案内します。</li>
-      <li>残金のお支払い方法と期限は、ご出発前に改めてご案内します。</li>
+      <li>残金は現地到着後、担当ガイドへ現金（日本円）でお支払いください。</li>
     </ol>
   </div>
   ${cta('予約状況を確認する', `${SITE_URL}/mypage/reservations${data.reservationDbId ? `/${data.reservationDbId}` : ''}`)}

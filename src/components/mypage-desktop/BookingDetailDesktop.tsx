@@ -174,10 +174,10 @@ export function BookingDetailDesktop() {
                                 </div>
                                 <div style={{ padding: '8px 24px 24px', display: 'flex', flexDirection: 'column' }}>
                                     <PayRow label="予約金" sub="PayPalで事前にお支払い" amount={pb.deposit} paid={depositPaid} line />
-                                    <PayRow label="現地支払い" sub="ウランバートル到着時 現金 / カード" amount={pb.local} paid={balancePaid} />
+                                    <PayRow label="現地支払い" sub="現地到着後、担当ガイドへ現金（日本円）" amount={pb.local} paid={balancePaid} />
                                     {depositPaid ? (
                                         <div style={{ height: 52, borderRadius: 14, background: PAPER, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: MW.mute }}>
-                                            {balancePaid ? 'お支払い完了' : '現地支払いは現地でお支払い'}
+                                            {balancePaid ? 'お支払い完了' : '残金は現地で担当ガイドへお支払い'}
                                         </div>
                                     ) : (
                                         <>
