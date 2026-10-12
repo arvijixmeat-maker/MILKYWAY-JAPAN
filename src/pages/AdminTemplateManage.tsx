@@ -3,6 +3,7 @@ import { AdminLayout } from '../components/admin/AdminLayout';
 import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
+import { CONTRACT_CANCELLATION_ROWS, resolveCancellationRows } from '../constants/company';
 import { uploadImage } from '../utils/upload';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
@@ -99,13 +100,7 @@ export const defaultDocumentSettings = (): DocumentSettings => ({
         bankInfo: 'お振込先は別途ご案内します。',
         includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
         excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
-        cancellationRows: [
-            { period: '30日〜15日前まで', fee: '旅行代金の10%' },
-            { period: '14日〜8日前まで', fee: '旅行代金の20%' },
-            { period: '7日〜3日前まで', fee: '旅行代金の30%' },
-            { period: '2日前〜当日', fee: '旅行代金の50%' },
-            { period: '無連絡不参加', fee: '旅行代金の100%' },
-        ],
+        cancellationRows: CONTRACT_CANCELLATION_ROWS.map((row) => ({ ...row })),
         signatureNote: '上記内容を確認し、同意の上、本契約を締結いたします。',
     },
     detail: {
@@ -137,7 +132,7 @@ export const mergeDocumentSettings = (value: any): DocumentSettings => {
     if (!value || typeof value !== 'object') return base;
     return {
         overview: { ...base.overview, ...(value.overview || {}), included: Array.isArray(value.overview?.included) ? value.overview.included : base.overview.included },
-        contract: { ...base.contract, ...(value.contract || {}), cancellationRows: Array.isArray(value.contract?.cancellationRows) ? value.contract.cancellationRows : base.contract.cancellationRows },
+        contract: { ...base.contract, ...(value.contract || {}), cancellationRows: resolveCancellationRows(value.contract?.cancellationRows).map((row) => ({ ...row })) },
         detail: { ...base.detail, ...(value.detail || {}), footerBadges: Array.isArray(value.detail?.footerBadges) ? value.detail.footerBadges : base.detail.footerBadges },
         guide: { ...base.guide, ...(value.guide || {}), notices: Array.isArray(value.guide?.notices) ? value.guide.notices : base.guide.notices },
     };

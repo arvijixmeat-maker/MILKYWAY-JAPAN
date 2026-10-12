@@ -237,14 +237,12 @@ export const ProductDetail: React.FC = () => {
             "transitTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 0, "unitCode": "DAY" },
         },
     };
-    // 14-day cancellation window — baseline tour policy. Satisfies "hasMerchantReturnPolicy missing".
+    // The deposit is non-refundable (it prepays the hotels and camps), so the policy is "not permitted".
+    // Declaring a policy at all is what satisfies Google's "hasMerchantReturnPolicy missing" check.
     const merchantReturnPolicy = {
         "@type": "MerchantReturnPolicy",
         "applicableCountry": "JP",
-        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-        "merchantReturnDays": 14,
-        "returnMethod": "https://schema.org/ReturnByMail",
-        "returnFees": "https://schema.org/FreeReturn",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
     };
 
     const offersLd = pricingOptionPrices.length > 1 ? {

@@ -167,15 +167,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                                 transitTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 0, unitCode: 'DAY' },
                             },
                         },
-                        // 14-day cancellation window is a reasonable baseline for tour bookings;
-                        // satisfies Google's requirement and signals a trustworthy refund policy.
+                        // The deposit is non-refundable (it prepays the hotels and camps), so the policy
+                        // is "not permitted"; declaring a policy is what satisfies Google's requirement.
                         hasMerchantReturnPolicy: {
                             '@type': 'MerchantReturnPolicy',
                             applicableCountry: 'JP',
-                            returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-                            merchantReturnDays: 14,
-                            returnMethod: 'https://schema.org/ReturnByMail',
-                            returnFees: 'https://schema.org/FreeReturn',
+                            returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
                         },
                     },
                 };
