@@ -4,6 +4,7 @@ import { quotes } from '../../src/db/schema';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { eq, desc } from 'drizzle-orm';
+import { getSessionUser } from '../lib/userAuth';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -126,12 +127,17 @@ app.post('/', async (c) => {
             return c.json({ error: 'Missing required fields: name, type' }, 400);
         }
 
+        // Guests may ask for a quote. The owner, status and timestamp come from the
+        // server unless an admin is entering the quote on someone's behalf.
+        const user = await getSessionUser(c);
+        const isAdmin = user?.role === 'admin';
+
         const db = drizzle(c.env.DB);
         const id = crypto.randomUUID();
 
         await db.insert(quotes).values({
             id,
-            userId: body.user_id || null,
+            userId: isAdmin ? (body.user_id || null) : (user?.id ?? null),
             type: body.type,
             name: body.name,
             phone: body.phone || null,
@@ -148,8 +154,8 @@ app.post('/', async (c) => {
                 : (body.accommodations || null),
             vehicle: body.vehicle || null,
             additionalRequest: body.additional_request || null,
-            status: body.status || 'new',
-            createdAt: body.created_at || new Date().toISOString(),
+            status: (isAdmin && body.status) || 'new',
+            createdAt: (isAdmin && body.created_at) || new Date().toISOString(),
         }).run();
 
         return c.json({ id, success: true });

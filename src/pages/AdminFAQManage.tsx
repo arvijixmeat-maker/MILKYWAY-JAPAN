@@ -150,52 +150,59 @@ export const AdminFAQManage: React.FC = () => {
         }
     };
 
+    // The category table is created by /api/migrate-db; until then every write is refused.
+    const alertCategoryError = (action: string, e: unknown) => {
+        const message = e instanceof Error ? e.message : String(e);
+        if (message.includes('migrate-db')) {
+            alert('FAQ 카테고리 테이블이 아직 없습니다.\n관리자로 로그인한 상태에서 /api/migrate-db 를 한 번 열어 주세요. (배포 후 1회)');
+        } else {
+            alert(`${action} 실패: ${message}`);
+        }
+    };
+
+    // The table follows the saved order, so moving a row is visible right away.
+    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+
     // Add/Edit Category
     const handleSaveCategory = async () => {
-        if (!categoryForm.name) {
+        const name = categoryForm.name.trim();
+        if (!name) {
             alert('카테고리명을 입력해주세요.');
             return;
         }
+        if (categories.some(c => c.name === name && c.id !== selectedCategory?.id)) {
+            alert('이미 같은 이름의 카테고리가 있습니다.');
+            return;
+        }
 
-        if (selectedCategory) {
-            // Update Category
-            const result = await api.faqCategories.update(selectedCategory.id, {
-                name: categoryForm.name,
-                is_active: categoryForm.isActive
-            }) as any;
+        try {
+            if (selectedCategory) {
+                await api.faqCategories.update(selectedCategory.id, {
+                    name,
+                    is_active: categoryForm.isActive
+                });
 
-            if (result?.error) {
-                alert('카테고리 수정 실패: ' + (result.error.message || result.error));
-                return;
-            }
-
-            // If name changed, update all associated FAQs
-            if (selectedCategory.name !== categoryForm.name) {
-                // Update FAQs that reference the old category name
-                const affectedFaqs = faqs.filter(f => f.category === selectedCategory.name);
-                for (const faq of affectedFaqs) {
-                    await api.faqs.update(faq.id, { category: categoryForm.name });
+                // The server moves the FAQ rows that carried the old name in the same request.
+                if (selectedCategory.name !== name) {
+                    setFaqs(faqs.map(f => f.category === selectedCategory.name ? { ...f, category: name } : f));
                 }
-                setFaqs(faqs.map(f => f.category === selectedCategory.name ? { ...f, category: categoryForm.name } : f));
+
+                setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, name, isActive: categoryForm.isActive } : c));
+            } else {
+                const maxOrder = categories.length > 0 ? Math.max(...categories.map(c => c.order)) : 0;
+                const newCat = {
+                    id: `faq-cat-${Date.now()}`,
+                    name,
+                    is_active: categoryForm.isActive,
+                    order: maxOrder + 1
+                };
+                await api.faqCategories.create(newCat);
+
+                setCategories([...categories, { ...newCat, isActive: newCat.is_active }]);
             }
-
-            setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, ...categoryForm } : c));
-        } else {
-            const maxOrder = categories.length > 0 ? Math.max(...categories.map(c => c.order)) : 0;
-            const newCat = {
-                id: `faq-cat-${Date.now()}`,
-                name: categoryForm.name,
-                is_active: categoryForm.isActive,
-                order: maxOrder + 1
-            };
-            const result = await api.faqCategories.create(newCat) as any;
-
-            if (result?.error) {
-                alert('카테고리 추가 실패: ' + (result.error.message || result.error));
-                return;
-            }
-
-            setCategories([...categories, { ...newCat, isActive: newCat.is_active }]);
+        } catch (e) {
+            alertCategoryError(selectedCategory ? '카테고리 수정' : '카테고리 추가', e);
+            return;
         }
 
         setIsCategoryModalOpen(false);
@@ -211,26 +218,37 @@ export const AdminFAQManage: React.FC = () => {
             return;
         }
         if (confirm('이 카테고리를 삭제하시겠습니까?')) {
-            await api.faqCategories.delete(id);
-            setCategories(categories.filter(c => c.id !== id));
+            try {
+                await api.faqCategories.delete(id);
+                setCategories(categories.filter(c => c.id !== id));
+            } catch (e) {
+                alertCategoryError('카테고리 삭제', e);
+            }
+        }
+    };
+
+    // Toggle Category Active
+    const toggleCategoryActive = async (cat: FAQCategory) => {
+        try {
+            await api.faqCategories.update(cat.id, { is_active: !cat.isActive });
+            setCategories(categories.map(c => c.id === cat.id ? { ...c, isActive: !c.isActive } : c));
+        } catch (e) {
+            alertCategoryError('노출 상태 변경', e);
         }
     };
 
     // Move Category Order
     const moveCategoryOrder = async (cat: FAQCategory, direction: 'up' | 'down') => {
-        const sorted = [...categories].sort((a, b) => a.order - b.order);
-        const index = sorted.findIndex(c => c.id === cat.id);
+        const index = sortedCategories.findIndex(c => c.id === cat.id);
+        const other = sortedCategories[direction === 'up' ? index - 1 : index + 1];
+        if (!other) return;
 
-        if (direction === 'up' && index > 0) {
-            const prev = sorted[index - 1];
-            await api.faqCategories.update(cat.id, { order: prev.order });
-            await api.faqCategories.update(prev.id, { order: cat.order });
-            setCategories(categories.map(c => c.id === cat.id ? { ...c, order: prev.order } : c.id === prev.id ? { ...c, order: cat.order } : c));
-        } else if (direction === 'down' && index < sorted.length - 1) {
-            const next = sorted[index + 1];
-            await api.faqCategories.update(cat.id, { order: next.order });
-            await api.faqCategories.update(next.id, { order: cat.order });
-            setCategories(categories.map(c => c.id === cat.id ? { ...c, order: next.order } : c.id === next.id ? { ...c, order: cat.order } : c));
+        try {
+            await api.faqCategories.update(cat.id, { order: other.order });
+            await api.faqCategories.update(other.id, { order: cat.order });
+            setCategories(categories.map(c => c.id === cat.id ? { ...c, order: other.order } : c.id === other.id ? { ...c, order: cat.order } : c));
+        } catch (e) {
+            alertCategoryError('순서 변경', e);
         }
     };
 
@@ -414,7 +432,7 @@ export const AdminFAQManage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {categories.map((cat, index) => (
+                                    {sortedCategories.map((cat, index) => (
                                         <tr key={cat.id}>
                                             <td>
                                                 <span className="row" style={{ gap: 6 }}>
@@ -423,7 +441,7 @@ export const AdminFAQManage: React.FC = () => {
                                                         <button onClick={() => moveCategoryOrder(cat, 'up')} disabled={index === 0} title="위로">
                                                             <Icon name="arrow_upward" />
                                                         </button>
-                                                        <button onClick={() => moveCategoryOrder(cat, 'down')} disabled={index === categories.length - 1} title="아래로">
+                                                        <button onClick={() => moveCategoryOrder(cat, 'down')} disabled={index === sortedCategories.length - 1} title="아래로">
                                                             <Icon name="arrow_downward" />
                                                         </button>
                                                     </span>
@@ -435,10 +453,7 @@ export const AdminFAQManage: React.FC = () => {
                                                 <button
                                                     className={`switch${cat.isActive ? ' on' : ''}`}
                                                     title={cat.isActive ? '활성' : '비활성'}
-                                                    onClick={async () => {
-                                                        await api.faqCategories.update(cat.id, { is_active: !cat.isActive });
-                                                        setCategories(categories.map(c => c.id === cat.id ? { ...c, isActive: !c.isActive } : c));
-                                                    }}
+                                                    onClick={() => toggleCategoryActive(cat)}
                                                 >
                                                     <span className="knob" />
                                                 </button>

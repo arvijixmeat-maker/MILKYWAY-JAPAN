@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -23,8 +24,8 @@ app.get('/', async (c) => {
     }
 });
 
-// PUT /api/settings
-app.put('/', async (c) => {
+// PUT /api/settings (admin)
+app.put('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     try {

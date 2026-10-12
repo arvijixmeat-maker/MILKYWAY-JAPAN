@@ -1,10 +1,16 @@
 import { Hono } from 'hono';
+import { requireAuth } from '../lib/userAuth';
 
 type Bindings = {
     DB: D1Database;
 };
 
-const chats = new Hono<{ Bindings: Bindings }>();
+const chats = new Hono<{ Bindings: Bindings; Variables: { user: any } }>();
+
+// Chats are private: a room is visible to its two participants (and admins) only.
+chats.use('*', requireAuth);
+
+const isParticipant = (room: any, userId: string) => room.user1_id === userId || room.user2_id === userId;
 
 // Create chats table if it doesn't exist
 const ensureTable = async (db: D1Database) => {
@@ -36,10 +42,10 @@ chats.get('/', async (c) => {
     const db = c.env.DB;
     await ensureTable(db);
 
-    const userId = c.req.query('user_id');
-    if (!userId) {
-        return c.json([]);
-    }
+    // The signed-in user's rooms; only an admin may list another user's.
+    const user = c.get('user');
+    const requested = c.req.query('user_id');
+    const userId = user.role === 'admin' && requested ? requested : user.id;
 
     try {
         const { results } = await db.prepare(
@@ -66,6 +72,10 @@ chats.get('/:id', async (c) => {
         if (!room) {
             return c.json({ error: 'Room not found' }, 404);
         }
+        const user = c.get('user');
+        if (user.role !== 'admin' && !isParticipant(room, user.id)) {
+            return c.json({ error: 'Forbidden' }, 403);
+        }
         return c.json(room);
     } catch (error) {
         console.error('Error fetching chat room:', error);
@@ -80,10 +90,12 @@ chats.post('/', async (c) => {
 
     try {
         const body = await c.req.json();
-        const { user_id, partner_id } = body;
+        const { partner_id } = body;
+        // The room is always opened by the signed-in user, whatever the body says.
+        const user_id = c.get('user').id;
 
-        if (!user_id || !partner_id) {
-            return c.json({ error: 'user_id and partner_id are required' }, 400);
+        if (!partner_id || partner_id === user_id) {
+            return c.json({ error: 'partner_id is required' }, 400);
         }
 
         // Check if room already exists between these two users

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { sendPayPalInvoice } from '../lib/paypal';
+import { requireAdmin } from '../lib/adminAuth';
 
 interface Env {
     PAYPAL_CLIENT_ID: string;
@@ -10,8 +11,8 @@ interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /api/test-paypal?email=customer@example.com
-app.get('/', async (c) => {
+// GET /api/test-paypal?email=customer@example.com (admin) — sends a real invoice
+app.get('/', requireAdmin, async (c) => {
     const customerEmail = c.req.query('email');
 
     if (!customerEmail) {

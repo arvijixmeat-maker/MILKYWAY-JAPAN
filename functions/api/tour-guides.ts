@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 interface Env {
     DB: any;
@@ -8,8 +9,16 @@ interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /api/tour-guides
-app.get('/', async (c) => {
+const escapeHtml = (value: unknown) =>
+    String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+const joinList = (value: unknown) => (Array.isArray(value) ? value.join(', ') : '');
+
+// GET /api/tour-guides (admin) — rows carry guides' and applicants' phone numbers
+app.get('/', requireAdmin, async (c) => {
     const db = c.env.DB;
     try {
         const result = await db.prepare('SELECT * FROM guides ORDER BY created_at DESC').all();
@@ -56,12 +65,12 @@ app.post('/apply', async (c) => {
                 body: JSON.stringify({
                     from: 'Milkyway Japan <noreply@mongolryokou.com>',
                     to: [adminEmail],
-                    subject: `【ガイド申請】${data.name} 様`,
+                    subject: `【ガイド申請】${String(data.name).slice(0, 80)} 様`,
                     html: `<p>新しいガイド申請が届きました。</p>
-                           <p><strong>名前:</strong> ${data.name}</p>
-                           <p><strong>電話:</strong> ${data.phone}</p>
-                           <p><strong>言語:</strong> ${(data.languages || []).join(', ')}</p>
-                           <p><strong>専門分野:</strong> ${(data.specialties || []).join(', ')}</p>
+                           <p><strong>名前:</strong> ${escapeHtml(data.name)}</p>
+                           <p><strong>電話:</strong> ${escapeHtml(data.phone)}</p>
+                           <p><strong>言語:</strong> ${escapeHtml(joinList(data.languages))}</p>
+                           <p><strong>専門分野:</strong> ${escapeHtml(joinList(data.specialties))}</p>
                            <p><a href="https://mongolryokou.com/admin/guides">管理画面で確認する</a></p>`,
                 }),
             }).catch(() => {});
@@ -74,7 +83,7 @@ app.post('/apply', async (c) => {
 });
 
 // POST /api/tour-guides (admin create)
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
@@ -98,8 +107,8 @@ app.post('/', async (c) => {
     }
 });
 
-// PUT /api/tour-guides/:id
-app.put('/:id', async (c) => {
+// PUT /api/tour-guides/:id (admin)
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
@@ -123,8 +132,8 @@ app.put('/:id', async (c) => {
     }
 });
 
-// DELETE /api/tour-guides/:id
-app.delete('/:id', async (c) => {
+// DELETE /api/tour-guides/:id (admin)
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {

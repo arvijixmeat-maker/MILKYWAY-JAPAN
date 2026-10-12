@@ -34,3 +34,19 @@ export const requireAuth = async (c: Context<{ Bindings: any; Variables: { user:
 
     await next();
 };
+
+/**
+ * Signed-in user for this request, or null. Never throws.
+ * For routes that stay public but act differently for the owner or an admin.
+ */
+export const getSessionUser = async (c: Context<any>) => {
+    try {
+        const lucia = initializeLucia(c.env.DB);
+        const sessionId = getCookie(c, lucia.sessionCookieName);
+        if (!sessionId) return null;
+        const { session, user } = await lucia.validateSession(sessionId);
+        return session ? user : null;
+    } catch {
+        return null;
+    }
+};

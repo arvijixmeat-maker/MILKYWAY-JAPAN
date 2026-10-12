@@ -131,6 +131,15 @@ CREATE TABLE IF NOT EXISTS faqs (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- FAQ categories for the /faq page. FAQ rows reference a category by name (faqs.category).
+CREATE TABLE IF NOT EXISTS faq_categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Reviews
 CREATE TABLE IF NOT EXISTS reviews (
     id TEXT PRIMARY KEY,

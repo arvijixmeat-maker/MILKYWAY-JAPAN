@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 type Env = {
     DB: any;
@@ -6,7 +7,8 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get('/', async (c) => {
+// Stays a GET so a signed-in admin can run it by opening /api/migrate-db in the browser.
+app.get('/', requireAdmin, async (c) => {
     let migrationResults: string[] = [];
 
     // Add reservation_number column to reservations table
@@ -486,6 +488,48 @@ app.get('/', async (c) => {
         migrationResults.push('Created promotions table');
     } catch (e: any) {
         migrationResults.push(`Skipped promotions table: ${e.message}`);
+    }
+
+    // FAQ categories for the /faq page (admin: /admin/faq, category tab).
+    // FAQ rows reference a category by name (faqs.category).
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS faq_categories (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        `).run();
+        migrationResults.push('Created faq_categories table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped faq_categories table: ${e.message}`);
+    }
+    // First run only: list the categories the FAQ rows already use, so the admin
+    // screen starts from what /faq shows today. 'tour-common' is the product-page
+    // FAQ block (tour-faqs.ts), not a /faq category.
+    try {
+        const existing = await c.env.DB.prepare('SELECT COUNT(*) AS count FROM faq_categories').first();
+        if (!Number((existing as any)?.count)) {
+            const used = await c.env.DB.prepare(`
+                SELECT category AS name, MIN(sort_order) AS first_order
+                FROM faqs
+                WHERE category IS NOT NULL AND TRIM(category) != '' AND category != 'tour-common'
+                GROUP BY category
+                ORDER BY first_order ASC, category ASC
+            `).all();
+            const names = ((used.results || []) as any[]).map((row) => String(row.name));
+            if (names.length > 0) {
+                await c.env.DB.batch(names.map((name, index) =>
+                    c.env.DB.prepare('INSERT INTO faq_categories (id, name, sort_order, is_active) VALUES (?, ?, ?, 1)')
+                        .bind(`faq-cat-${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`, name, index + 1),
+                ));
+            }
+            migrationResults.push(`faq_categories: seeded ${names.length} from existing FAQ rows`);
+        }
+    } catch (e: any) {
+        migrationResults.push(`Skipped faq_categories seed: ${e.message}`);
     }
 
     // ── settings 정리 ────────────────────────────────────────────────

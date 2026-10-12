@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -27,7 +28,7 @@ app.get('/:id', async (c) => {
 });
 
 // POST /api/guides
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
@@ -43,7 +44,7 @@ app.post('/', async (c) => {
 });
 
 // PUT /api/guides/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
@@ -59,7 +60,7 @@ app.put('/:id', async (c) => {
 });
 
 // DELETE /api/guides/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {

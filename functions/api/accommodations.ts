@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -27,7 +28,7 @@ app.get('/:id', async (c) => {
 });
 
 // POST /api/accommodations/bulk
-app.post('/bulk', async (c) => {
+app.post('/bulk', requireAdmin, async (c) => {
     const body = await c.req.json();
     const db = c.env.DB;
     const items: any[] = body.accommodations || [];
@@ -74,7 +75,7 @@ app.post('/bulk', async (c) => {
 });
 
 // POST /api/accommodations
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
@@ -90,7 +91,7 @@ app.post('/', async (c) => {
 });
 
 // PUT /api/accommodations/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
@@ -106,7 +107,7 @@ app.put('/:id', async (c) => {
 });
 
 // DELETE /api/accommodations/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {

@@ -1,50 +1,73 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /api/faqs
+const activeFlag = (v: unknown) => (v === false || v === 0 || v === '0' || v === 'false' ? 0 : 1);
+
+// GET /api/faqs (public). `order` mirrors sort_order for the admin page.
 app.get('/', async (c) => {
     const db = c.env.DB;
     try {
         const result = await db.prepare('SELECT * FROM faqs ORDER BY sort_order ASC').all();
-        return c.json(result.results);
+        return c.json((result.results as any[]).map((r) => ({ ...r, order: r.sort_order })));
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
 });
 
-// POST /api/faqs
-app.post('/', async (c) => {
+// POST /api/faqs (admin)
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
-    const id = crypto.randomUUID();
+    const id = typeof data.id === 'string' && data.id ? data.id : crypto.randomUUID();
     try {
         await db.prepare(
             "INSERT INTO faqs (id, question, answer, category, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?)"
-        ).bind(id, data.question, data.answer, data.category || 'general', data.sort_order || 0, data.is_active ?? 1).run();
-        return c.json({ id, ...data });
+        ).bind(
+            id,
+            String(data.question ?? ''),
+            String(data.answer ?? ''),
+            data.category || 'general',
+            Number(data.sort_order ?? data.order) || 0,
+            activeFlag(data.is_active ?? data.isActive),
+        ).run();
+        return c.json({ ...data, id });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
 });
 
-// PUT /api/faqs/:id
-app.put('/:id', async (c) => {
+// PUT /api/faqs/:id (admin) — only the fields present in the body are changed.
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
+
+    const sets: string[] = [];
+    const values: (string | number)[] = [];
+    const set = (column: string, value: string | number) => { sets.push(`${column} = ?`); values.push(value); };
+
+    if (data.question !== undefined) set('question', String(data.question ?? ''));
+    if (data.answer !== undefined) set('answer', String(data.answer ?? ''));
+    if (data.category !== undefined) set('category', data.category || 'general');
+    const order = data.sort_order ?? data.order;
+    if (order !== undefined) set('sort_order', Number(order) || 0);
+    const active = data.is_active ?? data.isActive;
+    if (active !== undefined) set('is_active', activeFlag(active));
+
     try {
-        await db.prepare(
-            "UPDATE faqs SET question=?, answer=?, category=?, sort_order=?, is_active=? WHERE id=?"
-        ).bind(data.question, data.answer, data.category || 'general', data.sort_order || 0, data.is_active ?? 1, id).run();
+        if (sets.length > 0) {
+            await db.prepare(`UPDATE faqs SET ${sets.join(', ')} WHERE id = ?`).bind(...values, id).run();
+        }
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
     }
 });
 
-// DELETE /api/faqs/:id
-app.delete('/:id', async (c) => {
+// DELETE /api/faqs/:id (admin)
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {
@@ -55,8 +78,8 @@ app.delete('/:id', async (c) => {
     }
 });
 
-// PUT /api/faqs - Bulk save (replace all)
-app.put('/bulk', async (c) => {
+// PUT /api/faqs/bulk (admin) — replace all. Registered after /:id, so it is not reachable today.
+app.put('/bulk', requireAdmin, async (c) => {
     const { faqs } = await c.req.json();
     const db = c.env.DB;
     try {

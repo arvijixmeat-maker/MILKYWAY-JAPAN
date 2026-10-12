@@ -202,7 +202,10 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 - 시트·드로어에는 `data-mw-overlay`, 하단 액션 바 화면에는 `data-mw-actionbar`가 붙어 플로팅 LINE/채널톡 버튼을 숨김(`index.css`).
 - ⚠ `npm run build`의 아이콘 검사(6.5)는 따옴표 문자열·단독 토큰을 아이콘 이름으로 오인함 —
   `'book'`, `loop`, `role="switch"`처럼 Material Symbols 이름과 같은 표기는 피할 것.
-- ⚠ `/api/faq-categories` 라우트는 존재하지 않음(404). FAQ 페이지는 질문만으로도 뜨도록 되어 있음.
+- `/api/faq-categories`는 2026-10-12에 추가됨(`faq_categories` 테이블 — 배포 후 `/api/migrate-db` 한 번 필요). 테이블이 비어 있으면 FAQ 페이지는 질문에 적힌 카테고리로 대체.
+- API 권한(2026-10-12 점검): 관리자용 쓰기 라우트는 모두 `requireAdmin`(`functions/lib/adminAuth.ts`). `/api/migrate-db`·`/api/test-paypal`도 관리자 로그인 필요. 새 라우터를 만들 때 쓰기 라우트에 권한 검사를 반드시 붙일 것(전역 미들웨어 없음).
+- 고객 메일(`/api/notifications/email`)은 비관리자의 경우 예약 접수·견적 접수 두 템플릿만, 저장된 예약/견적 내용으로 서버가 다시 구성해 보냄. 예약 생성(`POST /api/reservations`)은 로그인 필수이며 `user_id`·`status`는 서버가 정함.
+- SEO 컴포넌트는 `canonical`을 지정하지 않으면 현재 경로를 대표 주소로 씀(예전에는 홈 주소였음).
 
 ## 10. 다른 환경에서 작업 이어가는 법
 
@@ -214,4 +217,4 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 
 ---
 
-마지막 업데이트: 2026-10-07 (투어 상세·예약·카테고리·会社案内·이용 안내 리디자인)
+마지막 업데이트: 2026-10-12 (API 권한 점검, FAQ 카테고리 API, 대표 주소 기본값)

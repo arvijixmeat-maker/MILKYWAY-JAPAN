@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 import { SEO_CONSTANTS } from '../../constants/seo';
 
 interface SEOProps {
@@ -30,8 +31,12 @@ export const SEO: React.FC<SEOProps> = ({
     const metaDescription = description || SEO_CONSTANTS.DESCRIPTION;
     const metaKeywords = keywords || SEO_CONSTANTS.KEYWORDS;
     const metaImage = image ? (image.startsWith('http') ? image : `${SEO_CONSTANTS.SITE_URL}${image}`) : `${SEO_CONSTANTS.SITE_URL}${SEO_CONSTANTS.OG_IMAGE}`;
-    const metaUrl = url ? `${SEO_CONSTANTS.SITE_URL}${url}` : SEO_CONSTANTS.SITE_URL;
-    const canonicalUrl = canonical ? `${SEO_CONSTANTS.SITE_URL}${canonical}` : metaUrl;
+    // Without an explicit canonical the page points at itself (query string dropped). It used to fall
+    // back to the home URL, which told search engines that e.g. the terms page duplicates the home page.
+    const { pathname } = useLocation();
+    const selfPath = pathname === '/' ? '/' : pathname.replace(/\/$/, '');
+    const canonicalUrl = `${SEO_CONSTANTS.SITE_URL}${canonical ?? url ?? selfPath}`;
+    const metaUrl = url ? `${SEO_CONSTANTS.SITE_URL}${url}` : canonicalUrl;
 
     // Normalize structuredData to always be an array
     const structuredDataArray = structuredData
