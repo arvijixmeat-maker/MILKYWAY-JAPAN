@@ -32,6 +32,8 @@ app.get('/*', async (c) => {
         headers.set('etag', object.httpEtag);
         // Add cache control for better performance
         headers.set('Cache-Control', 'public, max-age=31536000');
+        // Serve uploads strictly as the type they were stored with.
+        headers.set('X-Content-Type-Options', 'nosniff');
 
         return new Response(object.body, {
             headers,

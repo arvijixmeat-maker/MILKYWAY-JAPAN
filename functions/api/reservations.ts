@@ -5,6 +5,7 @@ import { eq, desc, or } from 'drizzle-orm';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { sendPayPalInvoice } from '../lib/paypal';
+import { getSessionUser } from '../lib/userAuth';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -106,7 +107,10 @@ app.get('/:id', async (c) => {
             return c.json({ error: "Unauthorized" }, 401);
         }
 
-        if (user.role !== 'admin' && result.userId !== user.id) {
+        // Same visibility as the list: the owner, or the account whose e-mail the booking carries.
+        const sameEmail = !!user.email && !!result.customerEmail
+            && user.email.trim().toLowerCase() === result.customerEmail.trim().toLowerCase();
+        if (user.role !== 'admin' && result.userId !== user.id && !sameEmail) {
             return c.json({ error: "Forbidden" }, 403);
         }
     }
@@ -245,8 +249,12 @@ app.put('/:id', async (c) => {
     return c.json(parsed);
 });
 
-// POST /api/reservations
+// POST /api/reservations — signed-in customers (booking flow) and admins (manual entry)
 app.post('/', async (c) => {
+    const user = await getSessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const isAdmin = user.role === 'admin';
+
     const body = await c.req.json();
     const db = drizzle(c.env.DB);
 
@@ -261,7 +269,9 @@ app.post('/', async (c) => {
         return c.json({ error: 'Missing required fields' }, 400);
     }
 
-    const id = body.id || crypto.randomUUID();
+    // Customers book for themselves as a new, unpaid request; only admins choose these fields.
+    const id = (isAdmin && body.id) || crypto.randomUUID();
+    const rawDocumentContent = body.document_content || body.documentContent;
 
     // Generate the next number from the historical maximum so deleted rows
     // never cause a PayPal invoice number to be reused.
@@ -284,7 +294,9 @@ app.post('/', async (c) => {
             type: body.type ? String(body.type) : 'tour',
             productName: String(productName),
             productId: (body.product_id || body.productId) ? String(body.product_id || body.productId) : null,
-            userId: (body.user_id || body.userId) ? String(body.user_id || body.userId) : null,
+            userId: isAdmin
+                ? ((body.user_id || body.userId) ? String(body.user_id || body.userId) : null)
+                : user.id,
             customerName: String(customerName),
             customerEmail: String(customerEmail),
             customerPhone: String(customerPhone),
@@ -292,23 +304,21 @@ app.post('/', async (c) => {
             startDate: (body.start_date || body.date) ? String(body.start_date || body.date) : null,
             endDate: body.end_date ? String(body.end_date) : null,
             duration: body.duration ? String(body.duration) : null,
-            status: body.status ? String(body.status) : 'pending_payment',
-            source: body.source ? String(body.source) : null,
+            status: isAdmin && body.status ? String(body.status) : 'pending_payment',
+            source: isAdmin && body.source ? String(body.source) : null,
             totalPrice: Number(body.price_breakdown?.total ?? body.totalAmount ?? 0),
             depositAmount: Number(body.price_breakdown?.deposit ?? body.deposit ?? 0),
             balanceAmount: Number(body.price_breakdown?.local ?? body.balance ?? 0),
             paymentMethod: body.paymentMethod ? String(body.paymentMethod) : null,
             notes: body.notes ? String(body.notes) : null,
             dailyAccommodations: body.dailyAccommodations ? JSON.stringify(body.dailyAccommodations) : null,
-            history: body.history ? JSON.stringify(body.history) : null,
-            itineraryTemplateId: (body.itinerary_template_id || body.itineraryTemplateId)
+            history: isAdmin && body.history ? JSON.stringify(body.history) : null,
+            itineraryTemplateId: isAdmin && (body.itinerary_template_id || body.itineraryTemplateId)
                 ? String(body.itinerary_template_id || body.itineraryTemplateId)
                 : null,
-            documentContent: body.document_content
-                ? (typeof body.document_content === 'string' ? body.document_content : JSON.stringify(body.document_content))
-                : body.documentContent
-                    ? (typeof body.documentContent === 'string' ? body.documentContent : JSON.stringify(body.documentContent))
-                    : null,
+            documentContent: isAdmin && rawDocumentContent
+                ? (typeof rawDocumentContent === 'string' ? rawDocumentContent : JSON.stringify(rawDocumentContent))
+                : null,
             reservationNumber,
         }).run();
 

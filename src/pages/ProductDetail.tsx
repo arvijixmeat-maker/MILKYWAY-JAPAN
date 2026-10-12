@@ -218,10 +218,6 @@ export const ProductDetail: React.FC = () => {
         "name": r.title || undefined,
     }));
 
-    // ── Offer: AggregateOffer when multiple pricing options exist ──
-    const pricingOptionPrices = Array.isArray(product.pricingOptions)
-        ? product.pricingOptions.map((p: any) => Number(p.price)).filter((n: number) => Number.isFinite(n) && n > 0)
-        : [];
     const availability = product.status === 'active' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
     const priceValidUntil = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
 
@@ -245,18 +241,10 @@ export const ProductDetail: React.FC = () => {
         "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
     };
 
-    const offersLd = pricingOptionPrices.length > 1 ? {
-        "@type": "AggregateOffer",
-        "priceCurrency": "JPY",
-        "lowPrice": Math.min(...pricingOptionPrices),
-        "highPrice": Math.max(...pricingOptionPrices),
-        "offerCount": pricingOptionPrices.length,
-        "availability": availability,
-        "url": window.location.href,
-        "seller": { "@type": "Organization", "name": "Milkyway Japan" },
-        "shippingDetails": shippingDetails,
-        "hasMerchantReturnPolicy": merchantReturnPolicy,
-    } : {
+    // One Offer at the tour's "from" price. An AggregateOffer branch used to sit here but read a field
+    // that does not exist, so it never ran; a single Offer is also what Google's merchant listing
+    // (shipping / return policy below) is defined on, and it matches the server-rendered JSON-LD.
+    const offersLd = {
         "@type": "Offer",
         "url": window.location.href,
         "priceCurrency": "JPY",

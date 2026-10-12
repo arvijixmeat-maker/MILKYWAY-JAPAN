@@ -126,14 +126,14 @@ export const BK_CANCEL_NOTES = [
 
 export const BK_PAY_NOTES = [
     '請求書メールにお支払い期限が記載されています。期限内に決済をお願いします。',
-    '24時間以内に入金がない場合、予約は自動的にキャンセルされます。',
+    '期限内にお支払いが確認できない場合、ご予約をキャンセルさせていただくことがございます。',
     '現地残金は旅行当日にガイドへ直接お渡しください。',
 ];
 
 export const BK_NEXT_STEPS: { t: string; d: string }[] = [
     { t: 'PayPal請求書をメールで受信', d: 'ご登録のEメール宛に決済用のPayPalご請求メールをお送りします。' },
     { t: 'メール内のリンクからお支払い', d: 'クレジットカード等で安全・簡単にお支払いいただけます。' },
-    { t: 'お支払い完了で予約確定', d: 'お支払いが確認できない場合、自動的にキャンセルとなることがございます。' },
+    { t: 'お支払い完了で予約確定', d: '期限内にお支払いが確認できない場合、ご予約がキャンセルとなることがございます。' },
 ];
 
 export const BK_HINT_DEPOSIT = '予約金はキャンセル時も返金不可となります';
@@ -171,6 +171,54 @@ export const addDays = (date: Date, n: number): Date => {
 
 export const sameDay = (a: Date | null, b: Date | null): boolean =>
     !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/** STEP 1 choices, kept for this tab so going back from STEP 2 does not reset them. */
+export interface BookingDraft {
+    startDate: Date | null;
+    totalPeople: number;
+    selectedAccomId: string;
+    selectedVehicleId: string;
+}
+
+const draftKey = (productId: string) => `mw-booking-draft:${productId}`;
+
+export const saveBookingDraft = (productId: string, draft: BookingDraft): void => {
+    try {
+        const d = draft.startDate;
+        sessionStorage.setItem(draftKey(productId), JSON.stringify({
+            ...draft,
+            startDate: d ? [d.getFullYear(), d.getMonth(), d.getDate()] : null,
+        }));
+    } catch {
+        // Storage can be blocked (private mode); the flow works without it.
+    }
+};
+
+export const readBookingDraft = (productId: string): BookingDraft | null => {
+    try {
+        const raw = sessionStorage.getItem(draftKey(productId));
+        if (!raw) return null;
+        const v = JSON.parse(raw);
+        const ymd = Array.isArray(v.startDate) && v.startDate.length === 3 ? v.startDate.map(Number) : null;
+        const startDate = ymd && ymd.every(Number.isFinite) ? new Date(ymd[0], ymd[1], ymd[2]) : null;
+        return {
+            startDate,
+            totalPeople: Number.isFinite(Number(v.totalPeople)) ? Number(v.totalPeople) : 0,
+            selectedAccomId: typeof v.selectedAccomId === 'string' ? v.selectedAccomId : '',
+            selectedVehicleId: typeof v.selectedVehicleId === 'string' ? v.selectedVehicleId : '',
+        };
+    } catch {
+        return null;
+    }
+};
+
+export const clearBookingDraft = (productId: string): void => {
+    try {
+        sessionStorage.removeItem(draftKey(productId));
+    } catch {
+        // see saveBookingDraft
+    }
+};
 
 /** "9/12（金）" */
 export const fmtShort = (d: Date): string => `${d.getMonth() + 1}/${d.getDate()}（${WEEK[d.getDay()]}）`;

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { drizzle } from 'drizzle-orm/d1';
+import { requireAdmin } from '../lib/adminAuth';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -24,8 +25,8 @@ app.get('/', async (c) => {
     }
 });
 
-// PUT /api/banners - Save all banner data
-app.put('/', async (c) => {
+// PUT /api/banners - Save all banner data (admin)
+app.put('/', requireAdmin, async (c) => {
     const { banners, quickLinks, eventBanners, categoryTabs } = await c.req.json();
     const db = c.env.DB;
 

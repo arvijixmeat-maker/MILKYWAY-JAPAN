@@ -25,7 +25,7 @@
     "assigned_guide_data": null,
     "daily_accommodations": [],
     "deposit_amount": 0,
-    "bank_account": "{\"bankName\":\"우리은행\",\"accountHolder\":\"DAVAASUREN BOLOR\",\"accountNumber\":\"1002-245-516496\"}",
+    "bank_account": null,
     "contract_url": null,
     "itinerary_url": null,
     "assigned_guide": null,

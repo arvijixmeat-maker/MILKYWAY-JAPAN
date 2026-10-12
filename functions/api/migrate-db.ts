@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 type Env = {
     DB: any;
@@ -6,7 +7,8 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get('/', async (c) => {
+// Stays a GET so a signed-in admin can run it by opening /api/migrate-db in the browser.
+app.get('/', requireAdmin, async (c) => {
     let migrationResults: string[] = [];
 
     // Add reservation_number column to reservations table
@@ -488,6 +490,91 @@ app.get('/', async (c) => {
         migrationResults.push(`Skipped promotions table: ${e.message}`);
     }
 
+    // Join requests on travel-mate posts (参加リクエスト). One row per member and post;
+    // a request never changes the post's member count — the host decides.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS travel_mate_requests (
+                id TEXT PRIMARY KEY,
+                post_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                user_name TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(post_id, user_id)
+            )
+        `).run();
+        migrationResults.push('Created travel_mate_requests table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped travel_mate_requests table: ${e.message}`);
+    }
+
+    // FAQ categories for the /faq page (admin: /admin/faq, category tab).
+    // FAQ rows reference a category by name (faqs.category).
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS faq_categories (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        `).run();
+        migrationResults.push('Created faq_categories table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped faq_categories table: ${e.message}`);
+    }
+    // First run only: list the categories the FAQ rows already use, so the admin
+    // screen starts from what /faq shows today. 'tour-common' is the product-page
+    // FAQ block (tour-faqs.ts), not a /faq category.
+    try {
+        const existing = await c.env.DB.prepare('SELECT COUNT(*) AS count FROM faq_categories').first();
+        if (!Number((existing as any)?.count)) {
+            const used = await c.env.DB.prepare(`
+                SELECT category AS name, MIN(sort_order) AS first_order
+                FROM faqs
+                WHERE category IS NOT NULL AND TRIM(category) != '' AND category != 'tour-common'
+                GROUP BY category
+                ORDER BY first_order ASC, category ASC
+            `).all();
+            const names = ((used.results || []) as any[]).map((row) => String(row.name));
+            if (names.length > 0) {
+                await c.env.DB.batch(names.map((name, index) =>
+                    c.env.DB.prepare('INSERT INTO faq_categories (id, name, sort_order, is_active) VALUES (?, ?, ?, 1)')
+                        .bind(`faq-cat-${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`, name, index + 1),
+                ));
+            }
+            migrationResults.push(`faq_categories: seeded ${names.length} from existing FAQ rows`);
+        }
+    } catch (e: any) {
+        migrationResults.push(`Skipped faq_categories seed: ${e.message}`);
+    }
+
+    // Inquiries (お問い合わせ) — /contact form intake, read at /admin/inquiries.
+    // status: 'new' | 'answered' | 'closed'. user_id is set only for signed-in senders.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS inquiries (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                name TEXT,
+                email TEXT,
+                kind TEXT,
+                reservation_number TEXT,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT 'new',
+                admin_note TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT
+            )
+        `).run();
+        // The intake throttle counts recent rows on every submission.
+        await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_inquiries_created_at ON inquiries (created_at)').run();
+        migrationResults.push('Created inquiries table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped inquiries table: ${e.message}`);
+    }
+
     // ── settings 정리 ────────────────────────────────────────────────
     // api.settings.save(key, value)가 {key, value} 객체를 그대로 보내던 탓에
     // 설정이 제 이름이 아니라 'key' / 'value' 라는 칸에 저장되고 있었다.
@@ -516,6 +603,15 @@ app.get('/', async (c) => {
         }
     } catch (e: any) {
         migrationResults.push(`Skipped settings cleanup: ${e.message}`);
+    }
+
+    // 예약금은 PayPal로만 받는다 — 계좌 정보 설정은 쓰지 않으므로 남아 있는 값을 지운다.
+    // (설정은 로그인 없이 읽을 수 있는 /api/settings 로 그대로 내려간다.)
+    try {
+        const removed = await c.env.DB.prepare("DELETE FROM settings WHERE key = 'bank_account'").run();
+        if (removed?.meta?.changes) migrationResults.push('settings: removed unused bank_account');
+    } catch (e: any) {
+        migrationResults.push(`Skipped bank_account cleanup: ${e.message}`);
     }
 
     return c.json({

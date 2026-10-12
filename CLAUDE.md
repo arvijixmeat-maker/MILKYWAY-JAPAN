@@ -33,7 +33,7 @@
 - D1 (SQLite, Cloudflare 관리형) + Drizzle ORM
 - Tailwind CSS
 - TanStack Query, react-i18next (다국어), react-helmet-async (SEO)
-- 결제: PayPal + 은행 송금
+- 결제: 예약금은 PayPal로만 받음(은행 계좌 안내 없음), 잔금은 현지에서 현금(일본 엔)
 - 챗: Channel Talk (지연 로딩)
 
 ## 4. 배포 워크플로 — **반드시 지킬 것**
@@ -74,9 +74,9 @@
 
 ### 5.3 Sitemap (`functions/sitemap.xml.ts`)
 
-- 동적 생성. D1에서 products / categories / magazines를 읽음
+- 동적 생성. D1에서 products / categories / promotions / magazines를 읽음
 - robots.txt에서 참조: `https://mongolryokou.com/sitemap.xml`
-- 현재 24개 URL + 11개 이미지 (image:image)
+- 고정 URL 13개(2026-10-12에 `/promotions`·`/booking-flow`·`/contact` 추가) + 상품·카테고리·기획전 상세·매거진
 - xmlns:image 네임스페이스 선언됨
 
 ## 6. ⚠️ 주의해야 할 함정
@@ -196,13 +196,21 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 - 2026-10-07 추가 적용(PC·모바일): 투어 상세(`product/detail/*`, `product-mobile/`), 예약 3단계(`reservation-shared/`, `reservation-mobile/` — 요청·금액 로직은 `pages/Reservation·Payment·ReservationComplete`에 그대로), 카테고리 랜딩(`category/CategoryParts.tsx`), 会社案内(`about-desktop/` — 모션은 `useAboutMotion` + `about.css`), 이용 안내 틀(`info/` — `/booking-flow` 신규, 약관·개인정보·가이드 모집·FAQ·문의).
 - 리디자인되지 **않은** 화면(리뷰/동행 작성, 채팅, 예약 상태 조회, 견적 상세, 문서 출력 등)은 옛 스타일 그대로.
 - 약관·개인정보 본문은 실제 법적 문구 그대로 유지할 것(디자인 파일의 문구는 샘플). 예약 안내(`info/bookingFlow.ts`)의 문구는 실제 코드와 대조해 확인된 내용만 적혀 있음.
-- 새 라우트: `/promotions`·`/promotions/:id`(旅行企画展 — 관리자 `/admin/promotions`에서 등록, `promotions` 테이블·`/api/promotions`; 등록이 0건이면 카테고리 특집 카드로 대체. 가짜 캠페인 금지), `/contact`(서버 접수 API 없음 → mailto/LINE/채널톡).
+- 새 라우트: `/promotions`·`/promotions/:id`(旅行企画展 — 관리자 `/admin/promotions`에서 등록, `promotions` 테이블·`/api/promotions`; 등록이 0건이면 카테고리 특집 카드로 대체. 가짜 캠페인 금지), `/contact`(2026-10-12부터 서버 접수: `inquiries` 테이블·`POST /api/inquiries`(공개, 발신자당 시간당 5건 제한·허니팟)·관리자 `/admin/inquiries`. 접수 시 회사 주소로 알림 메일(고객 자동 회신 없음). 실패하면 mailto/LINE으로 대체. 테이블은 배포 후 `/api/migrate-db` 한 번 필요).
 - ⚠ `promotions` 테이블은 배포 후 `/api/migrate-db`를 한 번 열어야 생성됨(그 전에는 관리자 화면에 안내 배너).
 - 고객 로그인은 Google OAuth뿐(이메일/비밀번호는 관리자 전용).
 - 시트·드로어에는 `data-mw-overlay`, 하단 액션 바 화면에는 `data-mw-actionbar`가 붙어 플로팅 LINE/채널톡 버튼을 숨김(`index.css`).
 - ⚠ `npm run build`의 아이콘 검사(6.5)는 따옴표 문자열·단독 토큰을 아이콘 이름으로 오인함 —
   `'book'`, `loop`, `role="switch"`처럼 Material Symbols 이름과 같은 표기는 피할 것.
-- ⚠ `/api/faq-categories` 라우트는 존재하지 않음(404). FAQ 페이지는 질문만으로도 뜨도록 되어 있음.
+- `/api/faq-categories`는 2026-10-12에 추가됨(`faq_categories` 테이블 — 배포 후 `/api/migrate-db` 한 번 필요). 테이블이 비어 있으면 FAQ 페이지는 질문에 적힌 카테고리로 대체.
+- API 권한(2026-10-12 점검): 관리자용 쓰기 라우트는 모두 `requireAdmin`(`functions/lib/adminAuth.ts`). `/api/migrate-db`·`/api/test-paypal`도 관리자 로그인 필요. 새 라우터를 만들 때 쓰기 라우트에 권한 검사를 반드시 붙일 것(전역 미들웨어 없음).
+- 고객 메일(`/api/notifications/email`)은 비관리자의 경우 예약 접수·견적 접수 두 템플릿만, 저장된 예약/견적 내용으로 서버가 다시 구성해 보냄. 예약 생성(`POST /api/reservations`)은 로그인 필수이며 `user_id`·`status`는 서버가 정함.
+- SEO 컴포넌트는 `canonical`을 지정하지 않으면 현재 경로를 대표 주소로 씀(예전에는 홈 주소였음).
+- 모바일 사진은 `MPhoto`(`mobile/mobileUi.tsx`)가 `utils/productImage.ts`로 화면 크기에 맞는 축소본을 요청함(`sizes` prop으로 표시 폭 전달). 모바일 화면에 `<img>`를 직접 쓰지 말고 `MPhoto`를 쓸 것.
+- 예약 STEP 1 선택값(출발일·인원·옵션)은 STEP 2로 넘어갈 때 `sessionStorage`(`mw-booking-draft:<상품 id>`)에 저장되어 뒤로 가도 유지되고, 예약 완료 시 지워짐(`reservation-shared/bookingShared.ts`).
+- 동행 참가 요청(2026-10-12): `travel_mate_requests` 테이블·`/api/travel-mates/:id/requests`(GET/POST/DELETE). 요청은 호스트에게 알림만 보내고 모집 인원·상태는 바꾸지 않음(수락/거절 기능 없음). 테이블은 배포 후 `/api/migrate-db` 한 번 필요.
+- 계좌 정보(2026-10-12 오너 방침): 예약금은 PayPal 전용이라 계좌 등록·안내 기능을 모두 제거함. 계약서 템플릿의 계좌 안내 칸, `bank_account` 설정, 가짜 계좌가 나오던 `/reservation-status` 화면 삭제(→ `/mypage/reservations`로 이동). 옛 기본값 「銀行振込」가 저장된 템플릿은 `resolveDepositMethod`(`constants/company.ts`)가 PayPal로 바꿔 보여 줌. 계좌·은행 송금 문구를 다시 넣지 말 것.
+- 최근 본 상품은 `DELETE /api/recently-viewed/:id`·`DELETE /api/recently-viewed`로 본인 것만 삭제(마이그레이션 불필요).
 
 ## 10. 다른 환경에서 작업 이어가는 법
 
@@ -214,4 +222,4 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 
 ---
 
-마지막 업데이트: 2026-10-07 (투어 상세·예약·카테고리·会社案内·이용 안내 리디자인)
+마지막 업데이트: 2026-10-12 (API 권한 점검, FAQ 카테고리 API, 대표 주소 기본값 / 문의 접수, 동행 참가 요청, 최근 본 상품 삭제, 모바일 사진 축소, 예약 선택값 유지 / 계좌 정보 기능 제거)

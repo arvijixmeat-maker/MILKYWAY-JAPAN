@@ -109,17 +109,7 @@ export const AdminQuoteManage: React.FC = () => {
             const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
             const durationText = `${diffDays}박 ${diffDays + 1}일`;
 
-            // 1. 실제 계좌 정보 가져오기
-            let bankAccount = { bankName: '', accountNumber: '', accountHolder: '' };
-            try {
-                const settings = await api.settings.get('bank_account');
-                // 설정 값은 문자열(JSON)로 저장된다 — 객체로 들어오는 경우도 있어 둘 다 처리
-                const raw = settings?.value;
-                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                if (parsed && typeof parsed === 'object') bankAccount = parsed;
-            } catch { /* 설정 없으면 빈 값 */ }
-
-            // 2. 예약 생성
+            // 1. 예약 생성 (예약금은 PayPal로만 받으므로 계좌 정보는 넣지 않는다)
             const newReservation = await api.reservations.create({
                 user_id: selectedRequest.userId || null,
                 type: 'quote',
@@ -137,7 +127,6 @@ export const AdminQuoteManage: React.FC = () => {
                     deposit: data.deposit,
                     local: data.totalAmount - data.deposit
                 },
-                bank_account: bankAccount,
                 itinerary_template_id: selectedRequest.itineraryTemplateId || selectedRequest.itinerary_template_id || null,
                 document_content: selectedRequest.documentContent
                     ? (typeof selectedRequest.documentContent === 'string' ? selectedRequest.documentContent : JSON.stringify(selectedRequest.documentContent))

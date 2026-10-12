@@ -55,8 +55,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             { loc: `${baseUrl}/travel-mates`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
             { loc: `${baseUrl}/reviews`, lastmod: today, changefreq: 'daily', priority: '0.8' },
             { loc: `${baseUrl}/custom-estimate`, lastmod: today, changefreq: 'monthly', priority: '0.7' },
+            { loc: `${baseUrl}/promotions`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
             { loc: `${baseUrl}/about`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
             { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/booking-flow`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
+            { loc: `${baseUrl}/contact`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
             { loc: `${baseUrl}/privacy-policy`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
             { loc: `${baseUrl}/terms-of-service`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
         ];
@@ -104,6 +107,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             }
         } catch (e) {
             console.error('Failed to fetch categories for sitemap:', e);
+        }
+
+        // Add 旅行企画展 detail pages registered in the admin (/promotions/:id).
+        // The table only exists after /api/migrate-db has run, so a failure just skips them.
+        try {
+            const promotionsResult = await context.env.DB.prepare(
+                'SELECT id, updated_at, image FROM promotions WHERE is_active = 1 ORDER BY sort_order ASC'
+            ).all();
+            (promotionsResult?.results || []).forEach((promo: any) => {
+                const images: string[] = [];
+                const abs = toAbsoluteImageUrl(promo.image, baseUrl);
+                if (abs) images.push(abs);
+                urls.push({
+                    loc: `${baseUrl}/promotions/${promo.id}`,
+                    lastmod: promo.updated_at ? String(promo.updated_at).split(' ')[0] : today,
+                    changefreq: 'weekly',
+                    priority: '0.6',
+                    images,
+                });
+            });
+        } catch (e) {
+            console.error('Failed to fetch promotions for sitemap:', e);
         }
 
         // Add dynamic travel guide (magazine) URLs using raw D1 query (with thumbnail image)

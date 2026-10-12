@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { initializeLucia } from '../../lib/auth';
 import { getCookie } from 'hono/cookie';
+import { requireAdmin } from '../../lib/adminAuth';
 
 interface Env {
     DB: any;
@@ -40,8 +41,8 @@ app.get('/', async (c) => {
     }
 });
 
-// POST /api/notifications — create a notification (admin or internal use)
-app.post('/', async (c) => {
+// POST /api/notifications — create a notification for any user (admin)
+app.post('/', requireAdmin, async (c) => {
     const body = await c.req.json();
     const { userId, type, title, message, body: bodyText, link } = body;
     if (!userId || !title) return c.json({ error: 'userId and title required' }, 400);

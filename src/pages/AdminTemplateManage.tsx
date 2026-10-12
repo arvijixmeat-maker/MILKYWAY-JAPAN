@@ -3,7 +3,7 @@ import { AdminLayout } from '../components/admin/AdminLayout';
 import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
-import { CONTRACT_CANCELLATION_ROWS, resolveCancellationRows } from '../constants/company';
+import { CONTRACT_CANCELLATION_ROWS, DEPOSIT_PAYMENT_METHOD, resolveCancellationRows, resolveDepositMethod } from '../constants/company';
 import { uploadImage } from '../utils/upload';
 import { TouristSpotPickerModal } from '../components/admin/TouristSpotPickerModal';
 import { HotelPickerModal } from '../components/admin/HotelPickerModal';
@@ -47,7 +47,6 @@ export interface DocumentSettings {
         intro: string;
         paymentMethod: string;
         paymentDeadline: string;
-        bankInfo: string;
         includedText: string;
         excludedText: string;
         cancellationRows: { period: string; fee: string }[];
@@ -95,9 +94,8 @@ export const defaultDocumentSettings = (): DocumentSettings => ({
     },
     contract: {
         intro: '本旅行条件書および下記の旅行条件に基づき、募集型企画旅行契約を締結いたします。',
-        paymentMethod: '銀行振込',
+        paymentMethod: DEPOSIT_PAYMENT_METHOD,
         paymentDeadline: 'ご案内メールに記載の期日まで',
-        bankInfo: 'お振込先は別途ご案内します。',
         includedText: '宿泊費、食事代、専用車、ドライバー、日本語ガイド、日程表記載の体験料金',
         excludedText: '国際航空券、海外旅行保険、個人的費用、日程表に記載のない食事',
         cancellationRows: CONTRACT_CANCELLATION_ROWS.map((row) => ({ ...row })),
@@ -116,7 +114,7 @@ export const defaultDocumentSettings = (): DocumentSettings => ({
             { title: '持ち物について', body: 'パスポート、保険証券、常備薬、充電器などをご準備ください。' },
         ],
         conditions: '本旅行は、当社旅行条件書および旅行業約款に基づいて実施いたします。',
-        paymentInfo: 'お支払い方法：銀行振込\nお支払い期限：ご案内メールに記載の期日まで',
+        paymentInfo: `お支払い方法：${DEPOSIT_PAYMENT_METHOD}\nお支払い期限：ご案内メールに記載の期日まで`,
         guideName: '',
         guidePhone: '',
         accommodationInfo: '',
@@ -127,14 +125,27 @@ export const defaultDocumentSettings = (): DocumentSettings => ({
     },
 });
 
+/** 템플릿에 저장돼 있을 수 있는 옛 기본 문구(은행 송금 안내). */
+const LEGACY_GUIDE_PAYMENT_INFO = 'お支払い方法：銀行振込\nお支払い期限：ご案内メールに記載の期日まで';
+
 export const mergeDocumentSettings = (value: any): DocumentSettings => {
     const base = defaultDocumentSettings();
     if (!value || typeof value !== 'object') return base;
+    // 예약금은 PayPal로만 받는다 — 예전에 저장된 계좌 안내(bankInfo)는 버리고, 옛 기본값 「銀行振込」는 PayPal로 바꾼다.
+    const { bankInfo: _legacyBankInfo, ...savedContract } = (value.contract || {}) as Record<string, unknown>;
+    void _legacyBankInfo;
+    const savedGuide = { ...(value.guide || {}) };
+    if (savedGuide.paymentInfo === LEGACY_GUIDE_PAYMENT_INFO) savedGuide.paymentInfo = base.guide.paymentInfo;
     return {
         overview: { ...base.overview, ...(value.overview || {}), included: Array.isArray(value.overview?.included) ? value.overview.included : base.overview.included },
-        contract: { ...base.contract, ...(value.contract || {}), cancellationRows: resolveCancellationRows(value.contract?.cancellationRows).map((row) => ({ ...row })) },
+        contract: {
+            ...base.contract,
+            ...savedContract,
+            paymentMethod: resolveDepositMethod(savedContract.paymentMethod),
+            cancellationRows: resolveCancellationRows(value.contract?.cancellationRows).map((row) => ({ ...row })),
+        },
         detail: { ...base.detail, ...(value.detail || {}), footerBadges: Array.isArray(value.detail?.footerBadges) ? value.detail.footerBadges : base.detail.footerBadges },
-        guide: { ...base.guide, ...(value.guide || {}), notices: Array.isArray(value.guide?.notices) ? value.guide.notices : base.guide.notices },
+        guide: { ...base.guide, ...savedGuide, notices: Array.isArray(value.guide?.notices) ? value.guide.notices : base.guide.notices },
     };
 };
 
@@ -503,7 +514,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                 <div className="mx-auto mt-3 flex max-w-[560px] items-start gap-2 rounded-xl border border-[#BBD9FF] bg-[#EAF3FF] px-3.5 py-2.5">
                                     <span className="material-symbols-outlined mt-px text-[16px]" style={{ color: '#1656D6' }}>info</span>
                                     <p className="text-[11px] font-bold leading-relaxed" style={{ color: '#1656D6' }}>
-                                        여기서는 <b>취소규정·お支払い(계좌 포함)·문구</b>만 편집합니다.
+                                        여기서는 <b>취소규정·お支払い·문구</b>만 편집합니다.
                                         고객이 작성한 <b>여행자 정보</b>와 배정된 <b>숙소·가이드 표</b>는 발송되는 계약서에 자동으로 합쳐집니다
                                         — 완성본은 「작성 내용 확인」에서 보세요.
                                     </p>
@@ -534,7 +545,6 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ name, descript
                                     <p className="flex items-center gap-1 text-xs font-black" style={{ color: '#1656D6' }}><span className="material-symbols-outlined text-[15px]">payments</span>お支払い</p>
                                     <input value={settings.contract.paymentMethod} onChange={e => onDocSection('contract', { paymentMethod: e.target.value })} className={`${fieldClass} mt-2 text-[10px] font-semibold text-slate-500`} />
                                     <input value={settings.contract.paymentDeadline} onChange={e => onDocSection('contract', { paymentDeadline: e.target.value })} className={`${fieldClass} mt-1 text-[10px] font-semibold text-slate-500`} />
-                                    <AutoTextarea value={settings.contract.bankInfo} onChange={e => onDocSection('contract', { bankInfo: e.target.value })} rows={3} placeholder="振込先・お支払い案内（自由入力）" className={`${fieldClass} mt-1 resize-none text-[10px] font-semibold leading-relaxed text-slate-500`} />
                                     <input value={settings.contract.signatureNote} onChange={e => onDocSection('contract', { signatureNote: e.target.value })} className={`${fieldClass} mt-3 text-[10px] font-semibold text-slate-500`} />
                                     <div className="mt-2 border-b border-slate-300 pb-1 text-[10px] text-slate-400">旅行者署名</div>
                                 </div>

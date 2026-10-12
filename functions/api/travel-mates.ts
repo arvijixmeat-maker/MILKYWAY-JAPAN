@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { initializeLucia } from '../lib/auth';
+import { createNotification } from './notifications/index';
 
 interface Env {
     DB: any;
@@ -153,6 +154,10 @@ app.delete('/:id', async (c) => {
     try {
         await ensureCommentsTable(db);
         await db.prepare('DELETE FROM travel_mate_comments WHERE post_id=?').bind(id).run();
+        // The requests table only exists after /api/migrate-db has run.
+        try {
+            await db.prepare('DELETE FROM travel_mate_requests WHERE post_id=?').bind(id).run();
+        } catch { /* nothing to clean up */ }
         await db.prepare('DELETE FROM travel_mates WHERE id=?').bind(id).run();
         return c.json({ success: true });
     } catch (e: any) {
@@ -254,6 +259,114 @@ app.delete('/:postId/comments/:commentId', async (c) => {
         return c.json({ success: true });
     } catch (e: any) {
         return c.json({ error: e.message }, 500);
+    }
+});
+
+// ===== Join requests (参加リクエスト) =====
+// A request only tells the host that someone wants to join. It never changes the post's
+// member count or status: the host still decides (comments, closing the post).
+// The table is created by /api/migrate-db; until then reads are empty and writes answer 503.
+
+const REQUESTS_UNAVAILABLE = '参加リクエストは現在ご利用いただけません。時間をおいて再度お試しください。';
+const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const isMissingTable = (e: unknown) => /no such table/i.test(errorText(e));
+
+/** Same closed / full rule as the screens (src/components/mates-desktop/matesData.ts). */
+const CLOSED_STATUSES = ['closed', 'full', 'matched', 'completed'];
+const isClosed = (post: { status?: unknown; recruit_count?: unknown; current_members?: unknown }) => {
+    const cap = Math.max(0, Number(post.recruit_count) || 0);
+    const joined = Math.max(0, Number(post.current_members) || 0);
+    return CLOSED_STATUSES.includes(String(post.status || '').toLowerCase()) || (cap > 0 && joined >= cap);
+};
+
+const requestCount = async (db: Env['DB'], postId: string) => {
+    const row = await db.prepare('SELECT COUNT(*) AS n FROM travel_mate_requests WHERE post_id = ?').bind(postId).first();
+    return Number(row?.n) || 0;
+};
+
+// GET /api/travel-mates/:id/requests — { count, mine } for anyone; the host / an admin also gets the list.
+app.get('/:id/requests', async (c) => {
+    const postId = c.req.param('id');
+    const db = c.env.DB;
+    try {
+        const post = await db.prepare('SELECT user_id FROM travel_mates WHERE id = ?').bind(postId).first();
+        if (!post) return c.json({ error: 'Not found' }, 404);
+        const user = await sessionUser(c);
+        const manage = canManage(user, post.user_id);
+        try {
+            const count = await requestCount(db, postId);
+            const mine = user
+                ? !!(await db.prepare('SELECT id FROM travel_mate_requests WHERE post_id = ? AND user_id = ?').bind(postId, user.id).first())
+                : false;
+            if (!manage) return c.json({ count, mine });
+            const { results } = await db.prepare(
+                'SELECT user_id, user_name, created_at FROM travel_mate_requests WHERE post_id = ? ORDER BY created_at ASC'
+            ).bind(postId).all();
+            return c.json({ count, mine, requesters: results || [] });
+        } catch (e) {
+            if (!isMissingTable(e)) throw e;
+            return c.json(manage ? { count: 0, mine: false, requesters: [] } : { count: 0, mine: false });
+        }
+    } catch (e) {
+        return c.json({ error: errorText(e) }, 500);
+    }
+});
+
+// POST /api/travel-mates/:id/requests — signed-in members other than the host; idempotent.
+app.post('/:id/requests', async (c) => {
+    const postId = c.req.param('id');
+    const db = c.env.DB;
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    try {
+        const post = await db.prepare(
+            'SELECT user_id, title, status, recruit_count, current_members FROM travel_mates WHERE id = ?'
+        ).bind(postId).first();
+        if (!post) return c.json({ error: 'Not found' }, 404);
+        if (post.user_id && post.user_id === user.id) return c.json({ error: 'ご自身の募集には参加リクエストを送れません。' }, 403);
+
+        const existing = await db.prepare('SELECT id FROM travel_mate_requests WHERE post_id = ? AND user_id = ?').bind(postId, user.id).first();
+        if (existing) return c.json({ success: true, requested: true, already: true, count: await requestCount(db, postId) });
+        if (isClosed(post)) return c.json({ error: 'この募集は締め切られました。' }, 409);
+
+        const userName = String(user.name || '').trim() || String(user.email || '').split('@')[0] || '';
+        const inserted = await db.prepare(
+            'INSERT OR IGNORE INTO travel_mate_requests (id, post_id, user_id, user_name) VALUES (?, ?, ?, ?)'
+        ).bind(crypto.randomUUID(), postId, user.id, userName).run();
+
+        // Tell the host once: cancelling and asking again while the earlier notice is unread adds no new one.
+        if (post.user_id && inserted?.meta?.changes !== 0) {
+            const link = `/travel-mates/${postId}`;
+            const message = `${userName || '会員'}さんが「${String(post.title || '').trim() || '同行者募集'}」への参加を希望しています。`;
+            let unread = null;
+            try {
+                unread = await db.prepare(
+                    'SELECT id FROM notifications WHERE user_id = ? AND link = ? AND body = ? AND read = 0 LIMIT 1'
+                ).bind(post.user_id, link, message).first();
+            } catch { /* fall through and notify */ }
+            if (!unread) {
+                await createNotification(db, { userId: post.user_id, type: 'comment', title: '参加リクエストが届きました', message, link });
+            }
+        }
+        return c.json({ success: true, requested: true, count: await requestCount(db, postId) });
+    } catch (e) {
+        if (isMissingTable(e)) return c.json({ error: REQUESTS_UNAVAILABLE }, 503);
+        return c.json({ error: errorText(e) }, 500);
+    }
+});
+
+// DELETE /api/travel-mates/:id/requests — the requester withdraws their own request.
+app.delete('/:id/requests', async (c) => {
+    const postId = c.req.param('id');
+    const db = c.env.DB;
+    const user = await sessionUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    try {
+        await db.prepare('DELETE FROM travel_mate_requests WHERE post_id = ? AND user_id = ?').bind(postId, user.id).run();
+        return c.json({ success: true, requested: false, count: await requestCount(db, postId) });
+    } catch (e) {
+        if (isMissingTable(e)) return c.json({ error: REQUESTS_UNAVAILABLE }, 503);
+        return c.json({ error: errorText(e) }, 500);
     }
 });
 

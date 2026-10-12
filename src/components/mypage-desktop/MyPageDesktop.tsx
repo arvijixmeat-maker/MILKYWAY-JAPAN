@@ -10,7 +10,7 @@ import { useHomeReviews, type HomeProduct } from '../home-desktop/homeDesktopDat
 import { MW, MW_FONT_EN, MW_STICKY_TOP } from '../desktop-primitives/mwTokens';
 import { Ico } from './myPageUi';
 import { HAIR, ICON, PAPER, hover, mintBtn, mintHover } from './myPageTheme';
-import { useMe, useMyPageData, type MeUser } from './useMyPageData';
+import { useMe, useMyPageData, useRecentActions, type MeUser } from './useMyPageData';
 import {
     EstimatesSection, MatesSection, NoticeSection, OverviewSection, RecentSection, ReservationsSection, ReviewsSection, SupportCard, WishlistSection,
     type TripCardData,
@@ -36,6 +36,7 @@ export function MyPageDesktop({ tab = 'overview' }: { tab?: MyTab }) {
     const meQuery = useMe();
     const me = meQuery.data;
     const { reservations, quotes, mates, reviews, recent } = useMyPageData(me);
+    const recentActions = useRecentActions(me?.id);
     const { unreadCount } = useNotification();
     const wishlist = useWishlist();
     const { data: home } = useHomeData();
@@ -176,6 +177,8 @@ export function MyPageDesktop({ tab = 'overview' }: { tab?: MyTab }) {
                             stats={stats}
                             isFav={wishlist.has}
                             onFav={toggleRecentFav}
+                            onRemove={recentActions.remove}
+                            onClearAll={recentActions.clear}
                             loading={recent.isPending}
                             go={go}
                         />

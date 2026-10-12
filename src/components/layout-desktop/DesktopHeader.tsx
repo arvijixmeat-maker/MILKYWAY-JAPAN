@@ -195,7 +195,7 @@ export function DesktopHeader() {
             title: 'サポート',
             items: [
                 { label: 'お見積もり', onClick: () => go('/custom-estimate') },
-                { label: 'ご予約状況の確認', onClick: () => go('/reservation-status') },
+                { label: 'ご予約状況の確認', onClick: () => go('/mypage/reservations') },
                 { label: 'よくある質問 (FAQ)', onClick: () => go('/faq') },
                 { label: 'お問い合わせ', onClick: () => { setMenuOpen(false); onConsult(); } },
             ],
@@ -422,7 +422,7 @@ export function DesktopHeader() {
                             <path d="M3 20c0-3.9 3.1-6.5 7-6.5" />
                             <path d="M15 15h6M15 18h6M15 21h6" />
                         </IconLink>
-                        <IconLink label="予約確認" onClick={() => navigate('/reservation-status')}>
+                        <IconLink label="予約確認" onClick={() => navigate('/mypage/reservations')}>
                             <rect x="5" y="3" width="14" height="18" rx="2" />
                             <path d="M9 8h6M9 12h6M9 16h4" />
                         </IconLink>

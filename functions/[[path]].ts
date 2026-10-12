@@ -51,6 +51,26 @@ const STATIC_PAGE_META: Record<string, { title: string; description: string }> =
         title: '同行者募集 | Milkyway Japan',
         description: 'モンゴル旅行の同行者を募集・検索。一人旅が不安な方も、旅仲間を見つけてモンゴルツアーを一緒に楽しみましょう。'
     },
+    '/promotions': {
+        title: '旅行企画展｜モンゴル旅行の特集・キャンペーン | Milkyway Japan',
+        description: 'モンゴル旅行の特集やキャンペーンをまとめてご紹介。ゴビ砂漠・乗馬・中央モンゴルなど、テーマ別のモンゴルツアー特集からお選びいただけます。'
+    },
+    '/booking-flow': {
+        title: 'ご予約の流れ | Milkyway Japan',
+        description: 'モンゴル旅行・モンゴルツアーのご予約の流れをご案内します。ツアー選び・無料のお見積もりから、予約金のお支払い、ご出発までの手順をまとめました。'
+    },
+    '/contact': {
+        title: 'お問い合わせ | Milkyway Japan',
+        description: 'Milkyway Japan（モンゴル旅行・モンゴルツアー専門の現地旅行社）へのお問い合わせ。ご予約・お支払い・ツアー内容のご質問を日本語で承ります。'
+    },
+    '/terms-of-service': {
+        title: '利用規約 | Milkyway Japan',
+        description: 'モンゴリア銀河系の利用規約です。'
+    },
+    '/privacy-policy': {
+        title: 'プライバシーポリシー | Milkyway Japan',
+        description: 'モンゴリア銀河系のプライバシーポリシー（個人情報保護方針）です。'
+    },
     '/about': {
         title: '会社案内 – モンゴル現地の旅行会社 | Milkyway Japan',
         description: 'モンゴル現地の旅行会社「モンゴリア銀河系（天の川）」。韓国でホテル経営学科を卒業しモンゴルで暮らす代表と副代表が設立した家族経営の旅行会社です。日本人旅行客に合わせた日程とリーズナブルな価格で、どこにもないモンゴル旅行をご提案します。'

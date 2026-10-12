@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { D1PreparedStatement } from '@cloudflare/workers-types';
+import { requireAdmin } from '../lib/adminAuth';
 
 type Env = {
     DB: any; // Using any for simplicity or you can use D1Database if imported
@@ -62,7 +63,7 @@ app.get('/:slug', async (c) => {
 });
 
 // POST /api/categories
-app.post('/', async (c) => {
+app.post('/', requireAdmin, async (c) => {
     const data = await c.req.json();
     const db = c.env.DB;
     const id = data.id || crypto.randomUUID();
@@ -100,7 +101,7 @@ app.post('/', async (c) => {
 });
 
 // PUT /api/categories/:id
-app.put('/:id', async (c) => {
+app.put('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
     const db = c.env.DB;
@@ -138,7 +139,7 @@ app.put('/:id', async (c) => {
 });
 
 // POST /api/categories/:id/rename - change the category's id (URL slug)
-app.post('/:id/rename', async (c) => {
+app.post('/:id/rename', requireAdmin, async (c) => {
     const oldId = c.req.param('id');
     const db = c.env.DB;
     let body: any = {};
@@ -175,7 +176,7 @@ app.post('/:id/rename', async (c) => {
 });
 
 // DELETE /api/categories/:id
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireAdmin, async (c) => {
     const id = c.req.param('id');
     const db = c.env.DB;
     try {
@@ -187,7 +188,7 @@ app.delete('/:id', async (c) => {
 });
 
 // PUT /api/categories/bulk - Replace all categories
-app.put('/bulk', async (c) => {
+app.put('/bulk', requireAdmin, async (c) => {
     const { categories } = await c.req.json();
     const db = c.env.DB;
     try {

@@ -1,4 +1,5 @@
-import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+import { productImageSet, productImageUrl } from '../../utils/productImage';
 import { MW, MW_FONT_EN } from '../desktop-primitives/mwTokens';
 import { useMobileShell } from './mobileShellContext';
 import { D, M_AMBER, type QuickMenuItem } from './mobileTheme';
@@ -203,15 +204,28 @@ export function MLoading({ pad = 60 }: { pad?: number }) {
     return <div style={{ padding: `${pad}px 20px`, textAlign: 'center', fontSize: 13, color: MW.mute }}>読み込み中…</div>;
 }
 
-/** Photo that fills its (relatively positioned) parent; neutral tile when there is no image. */
-export function MPhoto({ src, alt = '', eager, style }: { src?: string; alt?: string; eager?: boolean; style?: CSSProperties }) {
+/**
+ * Photo that fills its (relatively positioned) parent; neutral tile when there is no image.
+ * Uploaded photos are requested at the displayed size through the zone's image service
+ * (`sizes` = how wide the photo is shown; the default suits a two-column card). Other
+ * sources, and an uploaded photo whose resized variant fails, load as they are.
+ */
+export function MPhoto({
+    src, alt = '', eager, priority, sizes = '(max-width: 480px) 50vw, 240px', style,
+}: { src?: string; alt?: string; eager?: boolean; priority?: boolean; sizes?: string; style?: CSSProperties }) {
+    const [failedSrc, setFailedSrc] = useState<string | null>(null);
     if (!src) return <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: MW.chip, ...style }} />;
+    const srcSet = failedSrc === src ? undefined : productImageSet(src);
     return (
         <img
-            src={src}
+            src={srcSet ? productImageUrl(src, 640) : src}
+            srcSet={srcSet}
+            sizes={srcSet ? sizes : undefined}
             alt={alt}
-            loading={eager ? 'eager' : 'lazy'}
+            loading={eager || priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : undefined}
             decoding="async"
+            onError={() => { if (srcSet) setFailedSrc(src); }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', ...style }}
         />
     );

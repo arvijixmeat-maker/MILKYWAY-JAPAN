@@ -109,7 +109,7 @@ export const PaymentSummary: React.FC<{ total: number; deposit: number; methodNo
         ['総旅行代金', <b key="t" style={{ color: DOC_BLUE }}>{yen(total)}</b>],
         [<span key="dl">ご予約金 <small className="font-semibold text-slate-400">（ご予約確定時にお支払い）</small></span>, <b key="d" style={{ color: DOC_BLUE }}>{yen(deposit)}</b>],
         [<span key="bl">現地お支払い残金 <small className="font-semibold text-slate-400">（ご到着後に現地でお支払い）</small></span>, <b key="b" style={{ color: DOC_BLUE }}>{yen(balance)}</b>],
-        ['お支払い方法', <span key="m" className="text-right text-[12px] font-bold text-slate-600">{methodNote || '銀行振込 / PayPal（残金は現地払い）'}</span>],
+        ['お支払い方法', <span key="m" className="text-right text-[12px] font-bold text-slate-600">{methodNote || 'PayPal（残金は現地払い）'}</span>],
     ];
     return (
         <DocCard>
@@ -165,7 +165,7 @@ export const IncludeExclude: React.FC<{ included: string[]; excluded: string[] }
 export const BookingSteps: React.FC = () => {
     const steps = [
         { icon: 'edit_calendar', t: 'ご予約申込' },
-        { icon: 'credit_card', t: '予約金お振込', s: '（ご予約確定）' },
+        { icon: 'credit_card', t: '予約金お支払い', s: '（ご予約確定）' },
         { icon: 'account_balance_wallet', t: '現地で残金払い', s: '（到着後）' },
     ];
     return (

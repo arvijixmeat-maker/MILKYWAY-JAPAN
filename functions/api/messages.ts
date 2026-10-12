@@ -1,10 +1,22 @@
 import { Hono } from 'hono';
+import { requireAuth } from '../lib/userAuth';
 
 type Bindings = {
     DB: D1Database;
 };
 
-const messages = new Hono<{ Bindings: Bindings }>();
+const messages = new Hono<{ Bindings: Bindings; Variables: { user: any } }>();
+
+// Messages are private: only the two participants of a room (and admins) may read or post.
+messages.use('*', requireAuth);
+
+/** 'ok' when the user may use the room, otherwise the reason. Throws on database errors. */
+const roomAccess = async (db: D1Database, roomId: string, user: any): Promise<'ok' | 'missing' | 'forbidden'> => {
+    const room = await db.prepare('SELECT user1_id, user2_id FROM chat_rooms WHERE id = ?').bind(roomId).first<{ user1_id: string; user2_id: string }>();
+    if (!room) return 'missing';
+    if (user.role === 'admin' || room.user1_id === user.id || room.user2_id === user.id) return 'ok';
+    return 'forbidden';
+};
 
 // List messages for a chat room
 messages.get('/', async (c) => {
@@ -16,6 +28,10 @@ messages.get('/', async (c) => {
     }
 
     try {
+        const access = await roomAccess(db, roomId, c.get('user'));
+        if (access === 'missing') return c.json([]);
+        if (access === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
+
         const { results } = await db.prepare(
             `SELECT * FROM chat_messages WHERE room_id = ? ORDER BY created_at ASC`
         ).bind(roomId).all();
@@ -33,11 +49,18 @@ messages.post('/', async (c) => {
 
     try {
         const body = await c.req.json();
-        const { room_id, sender_id, content } = body;
+        const { room_id, content } = body;
+        // The sender is always the signed-in user, whatever the body says.
+        const user = c.get('user');
+        const sender_id = user.id;
 
-        if (!room_id || !sender_id || !content) {
-            return c.json({ error: 'room_id, sender_id, and content are required' }, 400);
+        if (!room_id || !content) {
+            return c.json({ error: 'room_id and content are required' }, 400);
         }
+
+        const access = await roomAccess(db, room_id, user);
+        if (access === 'missing') return c.json({ error: 'Room not found' }, 404);
+        if (access === 'forbidden') return c.json({ error: 'Forbidden' }, 403);
 
         const id = crypto.randomUUID().replace(/-/g, '');
         await db.prepare(

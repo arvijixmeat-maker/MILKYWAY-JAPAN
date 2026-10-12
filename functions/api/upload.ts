@@ -16,6 +16,19 @@ const PUBLIC_FOLDERS = new Set([
     'travel-mates',
 ]);
 
+// Members upload photos only. Uploads are served back from this origin, so anything
+// a browser would render as a page (HTML, SVG) must not get in through this path.
+const MEMBER_IMAGE_TYPES: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    avif: 'image/avif',
+    heic: 'image/heic',
+    heif: 'image/heif',
+};
+
 app.post('/', async (c) => {
     try {
         const body = await c.req.parseBody();
@@ -51,9 +64,26 @@ app.post('/', async (c) => {
         }
 
         // Generate a unique filename
-        const ext = (file.name.split('.').pop() || 'webp').toLowerCase();
+        let ext = (file.name.split('.').pop() || 'webp').toLowerCase();
+        let contentType = file.type;
+        let targetFolder = folder;
+        if (user.role !== 'admin') {
+            // Trust the declared type when it is an allowed image type; fall back to the
+            // file extension only when the browser could not name one (some HEIC uploads).
+            const declaredType = (file.type || '').toLowerCase();
+            const untyped = !declaredType || declaredType === 'application/octet-stream';
+            const imageType = Object.values(MEMBER_IMAGE_TYPES).includes(declaredType)
+                ? declaredType
+                : (untyped ? MEMBER_IMAGE_TYPES[ext] : undefined);
+            if (!imageType) {
+                return c.json({ error: 'Only image files can be uploaded' }, 400);
+            }
+            contentType = imageType;
+            ext = Object.keys(MEMBER_IMAGE_TYPES).find((key) => MEMBER_IMAGE_TYPES[key] === imageType) || 'webp';
+            targetFolder = folderRoot;
+        }
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}.${ext}`;
-        const filePath = `${folder}/${fileName}`;
+        const filePath = `${targetFolder}/${fileName}`;
 
         // Convert the file to an ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
@@ -67,7 +97,7 @@ app.post('/', async (c) => {
         // Upload to Cloudflare R2
         await c.env.BUCKET.put(filePath, arrayBuffer, {
             httpMetadata: {
-                contentType: file.type,
+                contentType,
             },
         });
 

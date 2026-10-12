@@ -50,30 +50,48 @@ export interface CancellationRow {
 export const CONTRACT_CANCELLATION_ROWS: CancellationRow[] = [
     { period: '予約金', fee: 'キャンセルの時期にかかわらず返金不可' },
     { period: '残金（現地払い）', fee: '旅行開始前のキャンセルの場合、お支払いは不要です' },
-    { period: '残金（事前お振込み済み）', fee: '旅行開始前のキャンセルの場合、全額返金（振込手数料はお客様負担）' },
     { period: '旅行開始後のキャンセル・途中離団', fee: '返金はありません' },
 ];
 
-/** The percentage table every template was seeded with before the rules above. */
-const LEGACY_CANCELLATION_ROWS: CancellationRow[] = [
-    { period: '30日〜15日前まで', fee: '旅行代金の10%' },
-    { period: '14日〜8日前まで', fee: '旅行代金の20%' },
-    { period: '7日〜3日前まで', fee: '旅行代金の30%' },
-    { period: '2日前〜当日', fee: '旅行代金の50%' },
-    { period: '無連絡不参加', fee: '旅行代金の100%' },
+/** Default tables earlier versions seeded templates with: the percentage table, then the one that still listed a bank-transferred balance. */
+const LEGACY_CANCELLATION_TABLES: CancellationRow[][] = [
+    [
+        { period: '30日〜15日前まで', fee: '旅行代金の10%' },
+        { period: '14日〜8日前まで', fee: '旅行代金の20%' },
+        { period: '7日〜3日前まで', fee: '旅行代金の30%' },
+        { period: '2日前〜当日', fee: '旅行代金の50%' },
+        { period: '無連絡不参加', fee: '旅行代金の100%' },
+    ],
+    [
+        { period: '予約金', fee: 'キャンセルの時期にかかわらず返金不可' },
+        { period: '残金（現地払い）', fee: '旅行開始前のキャンセルの場合、お支払いは不要です' },
+        { period: '残金（事前お振込み済み）', fee: '旅行開始前のキャンセルの場合、全額返金（振込手数料はお客様負担）' },
+        { period: '旅行開始後のキャンセル・途中離団', fee: '返金はありません' },
+    ],
 ];
 
 /**
  * Saved templates carry a copy of whatever the default table was when they were saved.
- * An untouched copy of the old percentage table is replaced by the current rules; a table the
+ * An untouched copy of an earlier default table is replaced by the current rules; a table the
  * admin edited is kept as is.
  */
 export const resolveCancellationRows = (rows: unknown): CancellationRow[] => {
     if (!Array.isArray(rows) || rows.length === 0) return CONTRACT_CANCELLATION_ROWS;
     const list = rows as CancellationRow[];
-    const untouchedLegacy = list.length === LEGACY_CANCELLATION_ROWS.length
-        && list.every((r, i) => r?.period === LEGACY_CANCELLATION_ROWS[i].period && r?.fee === LEGACY_CANCELLATION_ROWS[i].fee);
+    const untouchedLegacy = LEGACY_CANCELLATION_TABLES.some((legacy) => list.length === legacy.length
+        && list.every((r, i) => r?.period === legacy[i].period && r?.fee === legacy[i].fee));
     return untouchedLegacy ? CONTRACT_CANCELLATION_ROWS : list;
+};
+
+/**
+ * 予約金のお支払い方法。予約金は PayPal でのみお受けし、銀行口座のご案内は行わない（オーナー方針 2026-10）。
+ * Templates saved while the default was still a bank transfer fall back to it as well.
+ */
+export const DEPOSIT_PAYMENT_METHOD = 'PayPal';
+
+export const resolveDepositMethod = (saved: unknown): string => {
+    const value = typeof saved === 'string' ? saved.trim() : '';
+    return !value || value === '銀行振込' ? DEPOSIT_PAYMENT_METHOD : value;
 };
 
 export const CONTRACT_NOTICES = [
@@ -81,7 +99,7 @@ export const CONTRACT_NOTICES = [
     '旅行中は天候状況や都市の交通渋滞等により、パッケージ日程が変更となる場合がございます。その際は現地ガイドの判断によりご案内させていただきます。',
     '乗馬体験およびラクダ体験は各回1回ずつ含まれておりますが、追加で体験をご希望の場合は現地にて追加料金をお支払いいただくことでご利用いただけます。また、博物館や各種文化施設を追加でご利用される場合には、別途入場料が発生する場合がございます。',
     DEPOSIT_POLICY,
-    '残金は現地にて日本円でお支払いいただくか、またはご出発の3日前までに予約金をお振込みいただいた銀行口座へご送金くださいますようお願いいたします。',
+    '残金は現地にて日本円（現金）でお支払いくださいますようお願いいたします。',
 ];
 
 export const PRIVACY_NOTICES = [

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createNotification } from './index';
+import { getSessionUser } from '../../lib/userAuth';
 
 interface Env {
     DB: any;
@@ -290,7 +291,7 @@ function tplEstimateCompleted(data: any) {
   </div>
   ${data.adminNote ? `<div class="notice"><strong>担当者メモ</strong><br>${escapeHtml(data.adminNote).replace(/\n/g, '<br>')}</div>` : ''}
   ${cta('お見積り・旅行日程を確認する', `${SITE_URL}/estimate/${data.quoteId || data.reservationId || ''}`)}
-  ${data.estimateUrl ? `<p style="text-align:center;margin-top:8px"><a href="${data.estimateUrl}" style="color:#0f766e;font-size:13px">外部見積書(PDF/資料)はこちら</a></p>` : ''}
+  ${data.estimateUrl ? `<p style="text-align:center;margin-top:8px"><a href="${escapeHtml(data.estimateUrl)}" style="color:#0f766e;font-size:13px">外部見積書(PDF/資料)はこちら</a></p>` : ''}
 </div>
 ${footer()}`);
 }
@@ -352,9 +353,81 @@ function tplItineraryReady(data: any) {
 ${footer()}`);
 }
 
+// How long after a booking / quote request its own confirmation mail may be requested.
+const CONFIRMATION_WINDOW = '-30 minutes';
+
+type Recipient = { to: string; data: Record<string, unknown> };
+
+// Customer-triggered mails are rebuilt from the stored row, so the recipient and the
+// contents are never taken from the request. Returns null when the caller has no
+// matching booking / quote of their own.
+async function reservationRecipient(db: any, userId: string, reservationDbId: unknown): Promise<Recipient | null> {
+    if (typeof reservationDbId !== 'string' || !reservationDbId) return null;
+    const row = await db.prepare(
+        // A missing or unreadable timestamp must not cost the customer their confirmation.
+        `SELECT * FROM reservations WHERE id = ? AND user_id = ?
+         AND (datetime(created_at) IS NULL OR datetime(created_at) >= datetime('now', ?))`
+    ).bind(reservationDbId, userId, CONFIRMATION_WINDOW).first();
+    if (!row || !row.customer_email) return null;
+    return {
+        to: String(row.customer_email),
+        data: {
+            customerName: row.customer_name,
+            productName: row.product_name,
+            reservationId: row.reservation_number || `MN-${String(row.id).slice(0, 8).toUpperCase()}`,
+            reservationDbId: row.id,
+            depositAmount: Number(row.deposit_amount) || 0,
+            localAmount: Number(row.balance_amount) || 0,
+            customerPhone: row.customer_phone,
+            userId,
+        },
+    };
+}
+
+async function quoteRecipient(db: any, to: unknown): Promise<Recipient | null> {
+    if (typeof to !== 'string' || !to.trim()) return null;
+    const row = await db.prepare(
+        `SELECT * FROM quotes WHERE lower(email) = lower(?) AND datetime(created_at) >= datetime('now', ?)
+         ORDER BY created_at DESC LIMIT 1`
+    ).bind(to.trim(), CONFIRMATION_WINDOW).first();
+    if (!row) return null;
+    return {
+        to: String(row.email),
+        data: {
+            customerName: row.name,
+            productName: `モンゴルオーダーメイド旅行 (${row.period || '未定'})`,
+            customerPhone: row.phone,
+        },
+    };
+}
+
+// POST /api/notifications/email
+// - Admins: every template, any recipient (documents, estimates, guide assignment…).
+// - Everyone else: only the confirmation of their own fresh booking (signed in) or
+//   quote request (guests too), sent to the address stored with it.
 app.post('/', async (c) => {
     try {
-        const { to, type, data = {} } = await c.req.json();
+        const body = await c.req.json();
+        const type = body.type;
+        let to = body.to;
+        let data = body.data && typeof body.data === 'object' ? body.data : {};
+
+        const sessionUser = await getSessionUser(c);
+        if (sessionUser?.role !== 'admin') {
+            let recipient: Recipient | null = null;
+            if (type === 'RESERVATION_REQUESTED') {
+                if (!sessionUser) return c.json({ error: 'Unauthorized' }, 401);
+                recipient = await reservationRecipient(c.env.DB, sessionUser.id, data.reservationDbId);
+            } else if (type === 'QUOTE_RECEIVED') {
+                recipient = await quoteRecipient(c.env.DB, to);
+            } else {
+                return sessionUser ? c.json({ error: 'Forbidden' }, 403) : c.json({ error: 'Unauthorized' }, 401);
+            }
+            if (!recipient) return c.json({ error: 'Forbidden' }, 403);
+            to = recipient.to;
+            data = recipient.data;
+        }
+
         const apiKey = c.env.RESEND_API_KEY;
         const adminEmail = c.env.ADMIN_EMAIL || 'agape_ibeel@hanpass.com';
 

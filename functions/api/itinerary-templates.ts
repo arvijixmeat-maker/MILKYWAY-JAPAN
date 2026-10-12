@@ -1,7 +1,12 @@
 import { Hono } from 'hono';
+import { requireAdmin } from '../lib/adminAuth';
 
 interface Env { DB: any; }
 const app = new Hono<{ Bindings: Env }>();
+
+// Internal itinerary library: only admin screens read or write it.
+// Customers get their itinerary through /api/documents and /api/quotes/:id.
+app.use('*', requireAdmin);
 
 app.get('/', async (c) => {
     try {

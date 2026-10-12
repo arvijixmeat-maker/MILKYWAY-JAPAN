@@ -272,9 +272,44 @@ app.post('/', requireAuth, async (c) => {
     }
 });
 
-// PUT /api/reviews/:id — login required. Used by users for comments
-// and by admins for moderation. Sensitive fields (is_approved) are honored only when
-// the requester is an admin.
+type ReviewComment = Record<string, unknown>;
+
+function parseComments(value: unknown): ReviewComment[] {
+    let parsed = value;
+    if (typeof value === 'string') {
+        try { parsed = JSON.parse(value || '[]'); } catch { return []; }
+    }
+    return Array.isArray(parsed)
+        ? parsed.filter((entry): entry is ReviewComment => !!entry && typeof entry === 'object' && !Array.isArray(entry))
+        : [];
+}
+
+// A member sends the whole comment list back. Keep what the server has for everyone
+// else's comments and take only this member's own entries (new, edited or removed)
+// from the request, so nobody can rewrite or drop another person's comment.
+function mergeOwnComments(stored: ReviewComment[], requested: ReviewComment[], userId: string): ReviewComment[] {
+    const key = (entry: ReviewComment) => String(entry.id ?? '');
+    const requestedById = new Map(requested.map((entry) => [key(entry), entry]));
+    const storedIds = new Set(stored.map(key));
+    const merged: ReviewComment[] = [];
+    for (const entry of stored) {
+        if (entry.userId !== userId) {
+            merged.push(entry);
+            continue;
+        }
+        const mine = requestedById.get(key(entry));
+        if (mine) merged.push({ ...mine, userId });
+    }
+    for (const entry of requested) {
+        if (!storedIds.has(key(entry))) merged.push({ ...entry, userId });
+    }
+    return merged;
+}
+
+// PUT /api/reviews/:id — login required.
+// - rating / title / content / images: the review's author or an admin.
+// - comments: any member, limited to their own entries (see mergeOwnComments); admins may replace the list.
+// - is_approved: admin only.
 app.put('/:id', requireAuth, async (c) => {
     const id = c.req.param('id');
     const data = await c.req.json();
@@ -283,6 +318,18 @@ app.put('/:id', requireAuth, async (c) => {
     const isAdmin = sessionUser.role === 'admin';
 
     try {
+        const existing: { user_id: string | null; comments: string | null } | null = await db
+            .prepare('SELECT user_id, comments FROM reviews WHERE id = ?')
+            .bind(id)
+            .first();
+        if (!existing) return c.json({ error: 'Not found' }, 404);
+
+        const editsReview = data.rating !== undefined || data.title !== undefined
+            || data.content !== undefined || data.images !== undefined;
+        if (editsReview && !isAdmin && existing.user_id !== sessionUser.id) {
+            return c.json({ error: 'Forbidden' }, 403);
+        }
+
         const fields: string[] = [];
         const binds: any[] = [];
 
@@ -304,7 +351,13 @@ app.put('/:id', requireAuth, async (c) => {
         }
         if (data.comments !== undefined) {
             fields.push('comments = ?');
-            binds.push(typeof data.comments === 'string' ? data.comments : JSON.stringify(data.comments));
+            if (isAdmin) {
+                binds.push(typeof data.comments === 'string' ? data.comments : JSON.stringify(data.comments));
+            } else {
+                binds.push(JSON.stringify(
+                    mergeOwnComments(parseComments(existing.comments), parseComments(data.comments), sessionUser.id),
+                ));
+            }
         }
         // is_approved is admin-only.
         if (data.is_approved !== undefined && isAdmin) {

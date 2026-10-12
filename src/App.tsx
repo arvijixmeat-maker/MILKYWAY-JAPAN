@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, Suspense, lazy } from 'react'
 import { Layout } from './components/layout/Layout'
 import { Home } from './pages/Home'
@@ -20,7 +20,6 @@ import { FloatingConsultation } from './components/common/FloatingConsultation'
 const Reservation = lazy(() => import('./pages/Reservation').then(module => ({ default: module.Reservation })))
 const Payment = lazy(() => import('./pages/Payment').then(module => ({ default: module.Payment })))
 const ReservationComplete = lazy(() => import('./pages/ReservationComplete').then(module => ({ default: module.ReservationComplete })))
-const ReservationStatus = lazy(() => import('./pages/ReservationStatus').then(module => ({ default: module.ReservationStatus })))
 const UserReviews = lazy(() => import('./pages/UserReviews').then(module => ({ default: module.UserReviews })))
 const ReviewWrite = lazy(() => import('./pages/ReviewWrite').then(module => ({ default: module.ReviewWrite })))
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(module => ({ default: module.ReviewDetail })))
@@ -77,6 +76,7 @@ const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(mo
 const AdminFAQManage = lazy(() => import('./pages/AdminFAQManage').then(module => ({ default: module.AdminFAQManage })))
 const AdminGuideIntroManage = lazy(() => import('./pages/AdminGuideIntroManage').then(module => ({ default: module.AdminGuideIntroManage })))
 const AdminPromotionManage = lazy(() => import('./pages/AdminPromotionManage').then(module => ({ default: module.AdminPromotionManage })))
+const AdminInquiryManage = lazy(() => import('./pages/AdminInquiryManage').then(module => ({ default: module.AdminInquiryManage })))
 const AdminTourFAQManage = lazy(() => import('./pages/AdminTourFAQManage').then(module => ({ default: module.AdminTourFAQManage })))
 
 // Loading Component
@@ -129,7 +129,8 @@ function App() {
             <Route path="/reservation/:id" element={<Reservation />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/reservation-complete" element={<ReservationComplete />} />
-            <Route path="/reservation-status" element={<ReservationStatus />} />
+            {/* Old link: the real booking status lives in My Page (sign-in required). */}
+            <Route path="/reservation-status" element={<Navigate to="/mypage/reservations" replace />} />
             <Route path="/reviews" element={<UserReviews />} />
             <Route path="/reviews/write" element={<AuthGuard><ReviewWrite /></AuthGuard>} />
             <Route path="/reviews/:id" element={<ReviewDetail />} />
@@ -177,6 +178,7 @@ function App() {
             <Route path="/admin/faq" element={<AdminGuard><AdminFAQManage /></AdminGuard>} />
             <Route path="/admin/guide-intro" element={<AdminGuard><AdminGuideIntroManage /></AdminGuard>} />
             <Route path="/admin/promotions" element={<AdminGuard><AdminPromotionManage /></AdminGuard>} />
+            <Route path="/admin/inquiries" element={<AdminGuard><AdminInquiryManage /></AdminGuard>} />
             <Route path="/admin/tour-faqs" element={<AdminGuard><AdminTourFAQManage /></AdminGuard>} />
             <Route path="/faq" element={<FAQPage />} />
             <Route path="/contact" element={<Contact />} />
