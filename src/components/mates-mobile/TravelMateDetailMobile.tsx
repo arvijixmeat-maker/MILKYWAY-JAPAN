@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSpotImages } from '../../hooks/useSpotImages';
 import { MW, MW_FONT_EN, cleanTitle } from '../desktop-primitives/mwTokens';
+import { JoinRequesterList } from '../mates-desktop/JoinRequesterList';
+import { JOIN_CANCEL_CONFIRM, joinNote } from '../mates-desktop/joinRequest';
 import { AGE_LABEL, GENDER_LABEL, STATUS_LABEL, matePhoto, seatText, timeAgo, toMatePost, type MatePost } from '../mates-desktop/matesData';
 import { MobileShell } from '../mobile/MobileShell';
 import { D, M_GRADIENT, M_HAIR, M_PAPER } from '../mobile/mobileTheme';
@@ -15,18 +17,17 @@ export function TravelMateDetailMobile() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const detail = useMateDetail(id);
-    const { post, loading, userId } = detail;
+    const { post, loading, userId, join } = detail;
     const p = useMemo(() => (post ? toMatePost(post) : null), [post]);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    // There is no join-request API: like the PC page, joining is asked for in the comments.
-    const joinByComment = () => {
+    // One button: ask to join, or (after a confirm) take the request back.
+    const toggleJoin = () => {
         if (!userId) {
             detail.goLogin();
             return;
         }
-        inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        inputRef.current?.focus({ preventScroll: true });
+        if (!join.mine) join.ask();
+        else if (window.confirm(JOIN_CANCEL_CONFIRM)) join.withdraw();
     };
 
     // Wait for the session too, so the login prompt never flashes for a signed-in user.
@@ -34,10 +35,10 @@ export function TravelMateDetailMobile() {
     return (
         <MobileShell
             title="募集詳細"
-            bottomBar={shown ? <MateActionBar p={shown} isOwner={detail.isOwner} loggedIn={!!userId} onJoin={joinByComment} onEdit={detail.editPost} /> : undefined}
+            bottomBar={shown ? <MateActionBar p={shown} isOwner={detail.isOwner} loggedIn={!!userId} requested={join.mine} busy={join.busy} onJoin={toggleJoin} onEdit={detail.editPost} /> : undefined}
         >
             {shown ? (
-                <MateDetailBody key={shown.id} p={shown} detail={detail} inputRef={inputRef} />
+                <MateDetailBody key={shown.id} p={shown} detail={detail} />
             ) : loading ? (
                 <MLoading pad={120} />
             ) : (
@@ -49,10 +50,10 @@ export function TravelMateDetailMobile() {
     );
 }
 
-function MateDetailBody({ p, detail, inputRef }: { p: MatePost; detail: ReturnType<typeof useMateDetail>; inputRef: RefObject<HTMLTextAreaElement | null> }) {
+function MateDetailBody({ p, detail }: { p: MatePost; detail: ReturnType<typeof useMateDetail> }) {
     const navigate = useNavigate();
     const { pick } = useSpotImages();
-    const { comments, userId, userName, isOwner, canManage } = detail;
+    const { comments, userId, userName, isOwner, canManage, join } = detail;
     const [draft, setDraft] = useState('');
     const [focused, setFocused] = useState(false);
     const [posting, setPosting] = useState(false);
@@ -167,12 +168,14 @@ function MateDetailBody({ p, detail, inputRef }: { p: MatePost; detail: ReturnTy
                         </div>
                     </>
                 )}
+                {join.requesters && <JoinRequesterList count={join.count} requesters={join.requesters} />}
                 <button type="button" onClick={() => window.openChannelTalk?.()} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46, border: '1px solid rgba(255,255,255,0.35)', borderRadius: 999, background: 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     <Ico d={MATE_ICON.chat} size={16} color="#FFFFFF" />
                     旅の手配をmilkywayに相談
                 </button>
                 <span style={{ position: 'relative', fontSize: 11, lineHeight: 1.7, color: MW.mintTint }}>
-                    {isOwner ? 'あなたが投稿した募集です。コメントで届いた質問や参加の希望にお答えください。' : '参加の希望や質問は、ページ下部のコメントからホストに伝えられます。'}
+                    {joinNote({ host: isOwner, closed: p.status === 'done', mine: join.mine })}
+                    {!isOwner && p.status !== 'done' && join.mine && 'ボタンをもう一度押すと取り消せます。'}
                 </span>
             </div>
 
@@ -234,7 +237,6 @@ function MateDetailBody({ p, detail, inputRef }: { p: MatePost; detail: ReturnTy
                 {userId ? (
                     <div style={{ display: 'flex', flexDirection: 'column', border: `1.5px solid ${focused ? MW.mint : MW.line}`, borderRadius: 18, background: '#fff', overflow: 'hidden' }}>
                         <textarea
-                            ref={inputRef}
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
                             onFocus={() => setFocused(true)}
@@ -298,8 +300,18 @@ function MateDetailBody({ p, detail, inputRef }: { p: MatePost; detail: ReturnTy
 }
 
 /** Sticky bar that replaces the tab bar: dates, seats and the main action. */
-function MateActionBar({ p, isOwner, loggedIn, onJoin, onEdit }: { p: MatePost; isOwner: boolean; loggedIn: boolean; onJoin: () => void; onEdit: () => void }) {
+function MateActionBar({ p, isOwner, loggedIn, requested, busy, onJoin, onEdit }: {
+    p: MatePost;
+    isOwner: boolean;
+    loggedIn: boolean;
+    /** The visitor already asked to join; pressing again withdraws the request. */
+    requested: boolean;
+    busy: boolean;
+    onJoin: () => void;
+    onEdit: () => void;
+}) {
     const closed = p.status === 'done';
+    const sent = loggedIn && requested;
     const cta: CSSProperties = { flex: 1, minWidth: 0, height: 50, padding: '0 10px', borderRadius: 999, fontFamily: 'inherit', fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
     return (
         <div style={{ position: 'sticky', bottom: 0, zIndex: 30, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(10px)', borderTop: `1px solid ${MW.line}`, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', color: MW.navy }}>
@@ -316,8 +328,14 @@ function MateActionBar({ p, isOwner, loggedIn, onJoin, onEdit }: { p: MatePost; 
             ) : closed ? (
                 <button type="button" disabled style={{ ...cta, border: 0, background: MW.chip, color: MW.mute2, cursor: 'default' }}>この募集は締め切りました</button>
             ) : (
-                <button type="button" onClick={onJoin} style={{ ...cta, border: 0, background: M_GRADIENT, color: MW.navy, cursor: 'pointer' }}>
-                    {loggedIn ? 'コメントで参加を希望する' : 'ログインして参加を希望する'}
+                <button
+                    type="button"
+                    onClick={onJoin}
+                    disabled={busy}
+                    aria-pressed={loggedIn ? sent : undefined}
+                    style={{ ...cta, border: sent ? `1.5px solid ${MW.mint}` : 0, background: sent ? '#FFFFFF' : M_GRADIENT, color: MW.navy, cursor: 'pointer' }}
+                >
+                    {!loggedIn ? 'ログインして参加を希望する' : sent ? '✓ 参加リクエスト送信済み' : '参加リクエストを送る'}
                 </button>
             )}
         </div>

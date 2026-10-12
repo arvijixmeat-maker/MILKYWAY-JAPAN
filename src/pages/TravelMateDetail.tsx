@@ -5,6 +5,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLayout } from '../components/layout-desktop/DesktopLayout';
 import { TravelMateDetailDesktop, type MateComment } from '../components/mates-desktop/TravelMateDetailDesktop';
 import type { ApiMatePost } from '../components/mates-desktop/matesData';
+import { useJoinRequest } from '../components/mates-desktop/joinRequest';
 import { TravelMateDetailMobile } from '../components/mates-mobile/TravelMateDetailMobile';
 
 export const TravelMateDetail: React.FC = () => {
@@ -29,6 +30,7 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
     const [comments, setComments] = useState<MateComment[]>([]);
     const [currentUser, setCurrentUser] = useState<MateUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const join = useJoinRequest(id, currentUser?.id ?? null, !loading);
 
     useEffect(() => {
         let cancelled = false;
@@ -132,6 +134,7 @@ const TravelMateDetailDesktopContainer: React.FC = () => {
                 userName={currentUser?.name || currentUser?.email || ''}
                 isOwner={isOwner}
                 canManage={canManage}
+                join={join}
                 onPostComment={postComment}
                 onDeleteComment={deleteComment}
                 onLogin={goLogin}

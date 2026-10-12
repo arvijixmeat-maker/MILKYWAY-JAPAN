@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import type { ApiMatePost } from '../mates-desktop/matesData';
+import { useJoinRequest } from '../mates-desktop/joinRequest';
 import type { MateComment } from '../mates-desktop/TravelMateDetailDesktop';
 import { LIST_PATH, WRITE_PATH } from './matesMobileTheme';
 
@@ -16,7 +17,7 @@ interface MateUser {
 
 /**
  * Data and actions of the mobile post detail: the post, its comments, the session user,
- * the view counter and the comment / owner actions. Same API calls and rules as the PC
+ * the view counter, the join request and the comment / owner actions. Same API calls and rules as the PC
  * container in pages/TravelMateDetail.tsx.
  */
 export function useMateDetail(id: string | undefined) {
@@ -60,6 +61,8 @@ export function useMateDetail(id: string | undefined) {
     useEffect(() => {
         if (postId) api.travelMates.view(postId).catch(() => { /* view count is best-effort */ });
     }, [postId]);
+
+    const join = useJoinRequest(id, user?.id ?? null, !meLoading);
 
     const isOwner = !!(user && post?.user_id && user.id === post.user_id);
     const canManage = isOwner || user?.role === 'admin';
@@ -125,6 +128,7 @@ export function useMateDetail(id: string | undefined) {
         userName: user?.name || user?.email?.split('@')[0] || '',
         isOwner,
         canManage,
+        join,
         goLogin,
         postComment,
         deleteComment,

@@ -5,6 +5,7 @@ export async function sendEmail(
     to: string | string[],
     subject: string,
     html: string,
+    options: { replyTo?: string } = {},
 ) {
     const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -17,6 +18,7 @@ export async function sendEmail(
             to: Array.isArray(to) ? to : [to],
             subject,
             html,
+            ...(options.replyTo ? { reply_to: options.replyTo } : {}),
         }),
     });
     if (!res.ok) throw new Error(`Resend error: ${await res.text()}`);

@@ -8,7 +8,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { ReservationDesktop } from '../components/reservation-desktop/ReservationDesktop';
 import { ReservationMobile } from '../components/reservation-mobile/ReservationMobile';
 import { BookingFallback } from '../components/reservation-shared/BookingFallback';
-import type { ReservationStepProps } from '../components/reservation-shared/bookingShared';
+import { readBookingDraft, saveBookingDraft, startOfToday, type ReservationStepProps } from '../components/reservation-shared/bookingShared';
 
 export const Reservation: React.FC = () => {
     const { t } = useTranslation();
@@ -124,6 +124,15 @@ export const Reservation: React.FC = () => {
                         const sorted = [...found.pricingOptions].sort((a, b) => a.people - b.people);
                         setTotalPeople(sorted[0].people);
                     }
+                    // Coming back from STEP 2 remounts this page — put the visitor's
+                    // choices back instead of the defaults (only values still valid).
+                    const draft = readBookingDraft(found.id);
+                    if (draft) {
+                        if (found.pricingOptions?.some(o => o.people === draft.totalPeople)) setTotalPeople(draft.totalPeople);
+                        if (found.accommodationOptions?.some(o => o.id === draft.selectedAccomId)) setSelectedAccomId(draft.selectedAccomId);
+                        if (found.vehicleOptions?.some(o => o.id === draft.selectedVehicleId)) setSelectedVehicleId(draft.selectedVehicleId);
+                        if (draft.startDate && draft.startDate >= startOfToday()) setSelectedStartDate(draft.startDate);
+                    }
                 }
             } catch (error) {
                 console.error('Product not found or error:', error);
@@ -193,6 +202,7 @@ export const Reservation: React.FC = () => {
             alert(t('reservation.messages.please_select_date'));
             return;
         }
+        saveBookingDraft(product.id, { startDate: selectedStartDate, totalPeople, selectedAccomId, selectedVehicleId });
         navigate('/payment', {
             state: {
                 product,

@@ -131,7 +131,7 @@ export function MagazineListMobile({ magazines, categories, loading = false }: P
                             onClick={(e) => { e.preventDefault(); open(feature.id); }}
                             style={{ position: 'relative', display: 'block', aspectRatio: '4/5', borderRadius: 22, overflow: 'hidden', color: '#fff', background: MW.navySoft, marginTop: -10, textDecoration: 'none' }}
                         >
-                            {isUsableImage(feature.image) && <MPhoto src={feature.image} alt={`${cleanTitle(feature.title)}｜モンゴル旅行ガイド`} eager />}
+                            {isUsableImage(feature.image) && <MPhoto src={feature.image} alt={`${cleanTitle(feature.title)}｜モンゴル旅行ガイド`} eager sizes="(max-width: 480px) 100vw, 480px" />}
                             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(10,31,46,0) 35%,rgba(10,31,46,0.9) 100%)' }} />
                             <div style={{ position: 'absolute', left: 18, right: 18, bottom: 18, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none' }}>
                                 <div style={{ display: 'flex', gap: 6 }}>

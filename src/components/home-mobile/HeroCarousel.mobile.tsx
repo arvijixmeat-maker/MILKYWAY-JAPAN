@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type UIEvent } from 'react';
 import { MW, isUsableImage } from '../desktop-primitives/mwTokens';
 import type { HomeProduct } from '../home-desktop/homeDesktopData';
+import { MPhoto } from '../mobile/mobileUi';
 import { linkTo, useGo, useHeroSlides } from './homeMobileData';
 
 const GAP = 10;
@@ -77,14 +78,13 @@ export function HeroCarouselMobile({ products }: { products: HomeProduct[] }) {
                             aria-roledescription="slide"
                             style={{ ...slideBox, flex: `0 0 ${basis}`, textDecoration: 'none', background: `linear-gradient(135deg, ${MW.navySoft} 0%, ${MW.mintDeep} 100%)` }}
                         >
+                            {/* The first slide is the page's largest paint; MPhoto requests it at the shown size. */}
                             {isUsableImage(s.img) && (
-                                <img
+                                <MPhoto
                                     src={s.img}
                                     alt={`${s.title.replace(/\n/g, ' ')}｜モンゴル旅行・モンゴルツアー専門 Milkyway Japan`}
-                                    loading={k === 0 ? 'eager' : 'lazy'}
-                                    fetchPriority={k === 0 ? 'high' : 'auto'}
-                                    decoding="async"
-                                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                    priority={k === 0}
+                                    sizes="(max-width: 480px) 92vw, 440px"
                                 />
                             )}
                             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(10,31,46,0.55) 0%,rgba(10,31,46,0) 40%,rgba(10,31,46,0) 55%,rgba(10,31,46,0.7) 100%)' }} />

@@ -130,7 +130,7 @@ export function TourListMobile() {
                             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px 0 4px', borderRadius: 999, border: `1px solid ${on ? MW.navy : MW.line}`, background: on ? MW.navy : '#FFFFFF', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: on ? '#FFFFFF' : MW.navy, cursor: 'pointer', whiteSpace: 'nowrap' }}
                         >
                             <span style={{ position: 'relative', width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: MW.mintTint, pointerEvents: 'none' }}>
-                                {isUsableImage(d.img) && <MPhoto src={d.img} />}
+                                {isUsableImage(d.img) && <MPhoto src={d.img} sizes="48px" />}
                                 {on && (
                                     <span style={{ position: 'absolute', inset: 0, background: 'rgba(10,31,46,0.45)', color: '#fff', fontSize: 14, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
                                 )}

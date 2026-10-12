@@ -8,7 +8,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PaymentDesktop } from '../components/reservation-desktop/PaymentDesktop';
 import { PaymentMobile } from '../components/reservation-mobile/PaymentMobile';
 import { BookingFallback } from '../components/reservation-shared/BookingFallback';
-import type { PaymentStepProps } from '../components/reservation-shared/bookingShared';
+import { clearBookingDraft, type PaymentStepProps } from '../components/reservation-shared/bookingShared';
 import { toLocalDateKey } from '../utils/formatDate';
 
 export const Payment: React.FC = () => {
@@ -240,6 +240,7 @@ export const Payment: React.FC = () => {
             }
 
             // Proceed to reservation complete
+            if (product?.id) clearBookingDraft(String(product.id));
             navigate('/reservation-complete', { state: { reservationId }, replace: true });
         } catch (e) {
             console.error('Failed to save reservation', e);

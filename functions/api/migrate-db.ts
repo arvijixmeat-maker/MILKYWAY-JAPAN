@@ -490,6 +490,24 @@ app.get('/', requireAdmin, async (c) => {
         migrationResults.push(`Skipped promotions table: ${e.message}`);
     }
 
+    // Join requests on travel-mate posts (参加リクエスト). One row per member and post;
+    // a request never changes the post's member count — the host decides.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS travel_mate_requests (
+                id TEXT PRIMARY KEY,
+                post_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                user_name TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(post_id, user_id)
+            )
+        `).run();
+        migrationResults.push('Created travel_mate_requests table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped travel_mate_requests table: ${e.message}`);
+    }
+
     // FAQ categories for the /faq page (admin: /admin/faq, category tab).
     // FAQ rows reference a category by name (faqs.category).
     try {
@@ -530,6 +548,31 @@ app.get('/', requireAdmin, async (c) => {
         }
     } catch (e: any) {
         migrationResults.push(`Skipped faq_categories seed: ${e.message}`);
+    }
+
+    // Inquiries (お問い合わせ) — /contact form intake, read at /admin/inquiries.
+    // status: 'new' | 'answered' | 'closed'. user_id is set only for signed-in senders.
+    try {
+        await c.env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS inquiries (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                name TEXT,
+                email TEXT,
+                kind TEXT,
+                reservation_number TEXT,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT 'new',
+                admin_note TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT
+            )
+        `).run();
+        // The intake throttle counts recent rows on every submission.
+        await c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_inquiries_created_at ON inquiries (created_at)').run();
+        migrationResults.push('Created inquiries table');
+    } catch (e: any) {
+        migrationResults.push(`Skipped inquiries table: ${e.message}`);
     }
 
     // ── settings 정리 ────────────────────────────────────────────────

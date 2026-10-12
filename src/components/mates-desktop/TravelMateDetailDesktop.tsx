@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEve
 import { useNavigate } from 'react-router-dom';
 import { useSpotImages } from '../../hooks/useSpotImages';
 import { MW, MW_FONT_EN, MW_GRADIENT, MW_STICKY_TOP, cleanTitle, isUsableImage } from '../desktop-primitives/mwTokens';
+import { JoinRequesterList } from './JoinRequesterList';
+import { joinNote, type JoinRequestState } from './joinRequest';
 import { AGE_LABEL, GENDER_LABEL, STATUS_LABEL, hideBroken, matePhoto, seatText, timeAgo, toMatePost, useMatePosts, type ApiMatePost, type MateStatus } from './matesData';
 import { HostAvatar } from './TravelMatesDesktop';
 
@@ -24,6 +26,8 @@ interface Props {
     isOwner: boolean;
     /** Author or admin: may edit/delete the post and remove any comment on it. */
     canManage: boolean;
+    /** 参加リクエスト: the visitor's own request and, for the host / an admin, who asked. */
+    join: JoinRequestState;
     /** Resolves true when the comment was saved. */
     onPostComment: (content: string) => Promise<boolean>;
     onDeleteComment: (id: string) => void;
@@ -51,7 +55,7 @@ const hoverBorder = (base: string) => ({
     onMouseLeave: (e: MouseEvent<HTMLElement>) => (e.currentTarget.style.borderColor = base),
 });
 
-export function TravelMateDetailDesktop({ post, comments, userId, userName, isOwner, canManage, onPostComment, onDeleteComment, onLogin, onEdit, onDelete }: Props) {
+export function TravelMateDetailDesktop({ post, comments, userId, userName, isOwner, canManage, join, onPostComment, onDeleteComment, onLogin, onEdit, onDelete }: Props) {
     const navigate = useNavigate();
     const { pick } = useSpotImages();
     const { data: all = [] } = useMatePosts();
@@ -59,7 +63,6 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
     const [draft, setDraft] = useState('');
     const [posting, setPosting] = useState(false);
     const [copied, setCopied] = useState(false);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
     const copyTimer = useRef<number | undefined>(undefined);
 
     useEffect(() => {
@@ -89,15 +92,7 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
                 : { key: k, initial: '＋', label: '空き', bg: 'transparent', bd: '1.5px dashed rgba(255,255,255,0.5)', fg: MW.mintTint },
     );
     const moreSeats = p.cap - members.length;
-
-    const joinByComment = () => {
-        if (!userId) {
-            onLogin();
-            return;
-        }
-        inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        inputRef.current?.focus({ preventScroll: true });
-    };
+    const closed = p.status === 'done';
 
     const submit = async () => {
         const text = draft.trim();
@@ -212,7 +207,6 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
                                 <span style={{ ...avatar, background: MW_GRADIENT, color: MW.navy }}>{(userName || 'U').charAt(0).toUpperCase()}</span>
                                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', border: `1.5px solid ${MW.line}`, borderRadius: 18, background: '#fff', overflow: 'hidden' }}>
                                     <textarea
-                                        ref={inputRef}
                                         value={draft}
                                         onChange={(e) => setDraft(e.target.value)}
                                         rows={3}
@@ -307,25 +301,37 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
                                 </div>
                             </>
                         )}
-                        {isOwner ? (
-                            <div style={{ position: 'relative', padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.1)', fontSize: 13, lineHeight: 1.6, color: MW.mintTint }}>
-                                あなたが投稿した募集です。コメントで届いた質問や参加の希望にお答えください。
-                            </div>
-                        ) : p.status === 'done' ? (
+                        {isOwner ? null : closed ? (
                             <div style={{ position: 'relative', height: 54, borderRadius: 999, background: 'rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: MW.mintTint }}>
                                 この募集は締め切りました
+                            </div>
+                        ) : userId && join.mine ? (
+                            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ height: 54, borderRadius: 999, background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: MW.mintDeep }}>
+                                    ✓ 参加リクエスト送信済み
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={join.withdraw}
+                                    disabled={join.busy}
+                                    style={{ alignSelf: 'center', padding: 4, border: 0, background: 'transparent', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: MW.mintTint, cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    リクエストを取り消す
+                                </button>
                             </div>
                         ) : (
                             <button
                                 type="button"
-                                onClick={joinByComment}
+                                onClick={userId ? join.ask : onLogin}
+                                disabled={join.busy}
                                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.92')}
                                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
                                 style={{ position: 'relative', height: 54, border: 0, borderRadius: 999, background: MW_GRADIENT, fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: MW.navy, cursor: 'pointer' }}
                             >
-                                {userId ? 'コメントで参加を希望する' : 'ログインして参加を希望する'}
+                                {userId ? '参加リクエストを送る' : 'ログインして参加を希望する'}
                             </button>
                         )}
+                        {join.requesters && <JoinRequesterList count={join.count} requesters={join.requesters} />}
                         <button
                             type="button"
                             onClick={() => window.openChannelTalk?.()}
@@ -337,7 +343,7 @@ export function TravelMateDetailDesktop({ post, comments, userId, userName, isOw
                             旅の手配をmilkywayに相談
                         </button>
                         <span style={{ position: 'relative', fontSize: 12, lineHeight: 1.6, color: MW.mintTint }}>
-                            参加の希望や質問は、ページ下部のコメントからホストに伝えられます。
+                            {joinNote({ host: isOwner, closed, mine: !!userId && join.mine })}
                         </span>
                     </div>
 

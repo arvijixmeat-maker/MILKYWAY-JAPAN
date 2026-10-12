@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 import { toTourDateKey } from '../../utils/formatDate';
 import { parseArr, paymentSummary, readBreakdown } from '../../utils/reservationDetail';
 
@@ -211,4 +212,44 @@ export function useMyPageData(me: MeUser | null | undefined) {
     });
 
     return { reservations, quotes, mates, reviews, recent };
+}
+
+/**
+ * Removing entries of 最近見た商品 (PC tab and mobile screen). The cached list — and with it
+ * every count derived from it — changes at once and is restored when the request fails.
+ */
+export function useRecentActions(uid: string | undefined) {
+    const queryClient = useQueryClient();
+    const { showToast } = useToast();
+    const key = ['myPage', 'recent', uid];
+
+    const apply = async (keep: (r: RecentItem) => boolean, call: () => Promise<unknown>) => {
+        await queryClient.cancelQueries({ queryKey: key });
+        const prev = queryClient.getQueryData<RecentItem[]>(key);
+        queryClient.setQueryData<RecentItem[]>(key, (cur = []) => cur.filter(keep));
+        try {
+            await call();
+            // The tour detail page keeps its own copy of the history.
+            queryClient.invalidateQueries({ queryKey: ['tourDetail', 'recentlyViewed'] });
+        } catch (e) {
+            console.error('Recently viewed delete failed:', e);
+            queryClient.setQueryData<RecentItem[]>(key, prev);
+            queryClient.invalidateQueries({ queryKey: key });
+            showToast('error', '閲覧履歴の削除に失敗しました。');
+        }
+    };
+
+    /** One tour: the history rows of that product (the cards are keyed by product). */
+    const remove = (productId: string) => {
+        const ids = (queryClient.getQueryData<RecentItem[]>(key) ?? []).filter((r) => r.productId === productId).map((r) => r.id);
+        if (!ids.length) return;
+        void apply((r) => r.productId !== productId, () => Promise.all(ids.map((id) => api.recentlyViewed.remove(id))));
+    };
+
+    const clear = () => {
+        if (!window.confirm('最近見た商品の履歴をすべて削除しますか？')) return;
+        void apply(() => false, () => api.recentlyViewed.clear());
+    };
+
+    return { remove, clear };
 }

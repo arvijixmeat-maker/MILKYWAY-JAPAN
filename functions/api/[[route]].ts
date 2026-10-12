@@ -45,6 +45,7 @@ import tourGuides from './tour-guides';
 import itineraryTemplates from './itinerary-templates';
 import documents from './documents';
 import promotions from './promotions';
+import inquiries from './inquiries';
 
 // Register routes
 app.route('/products', products);
@@ -84,5 +85,6 @@ app.route('/tour-guides', tourGuides);
 app.route('/itinerary-templates', itineraryTemplates);
 app.route('/documents', documents);
 app.route('/promotions', promotions);
+app.route('/inquiries', inquiries);
 
 export const onRequest = handle(app);

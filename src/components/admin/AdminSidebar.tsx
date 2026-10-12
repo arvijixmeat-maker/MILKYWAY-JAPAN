@@ -28,6 +28,7 @@ const primaryItems: NavItem[] = [
     { id: 'templates', icon: 'folder_special', label: '템플릿 관리', href: '/admin/templates' },
     { id: 'reviews', icon: 'reviews', label: '후기 관리', href: '/admin/reviews' },
     { id: 'faq', icon: 'help', label: 'FAQ 관리', href: '/admin/faq' },
+    { id: 'inquiries', icon: 'mail', label: '문의 관리', href: '/admin/inquiries' },
 ];
 
 const settingItems: NavItem[] = [

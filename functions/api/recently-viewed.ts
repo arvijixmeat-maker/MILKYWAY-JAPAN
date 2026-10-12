@@ -104,4 +104,32 @@ app.post('/', async (c) => {
     }
 });
 
+// DELETE /api/recently-viewed — clear the caller's whole history
+app.delete('/', async (c) => {
+    try {
+        const db = c.env.DB;
+        await ensureTable(db);
+        await db.prepare('DELETE FROM recently_viewed WHERE user_id = ?').bind(c.get('user').id).run();
+        return c.json({ success: true });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    }
+});
+
+// DELETE /api/recently-viewed/:id — one entry, only when it is the caller's own
+app.delete('/:id', async (c) => {
+    try {
+        const db = c.env.DB;
+        await ensureTable(db);
+        const id = c.req.param('id');
+        const userId = c.get('user').id;
+        const row = await db.prepare('SELECT id FROM recently_viewed WHERE id = ? AND user_id = ?').bind(id, userId).first();
+        if (!row) return c.json({ error: 'Not found' }, 404);
+        await db.prepare('DELETE FROM recently_viewed WHERE id = ? AND user_id = ?').bind(id, userId).run();
+        return c.json({ success: true });
+    } catch (e) {
+        return c.json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    }
+});
+
 export default app;

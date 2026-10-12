@@ -1,9 +1,17 @@
 import type { Promotion } from '../components/promotions/promotionTypes';
+import { INQUIRY_REQUEST_FAILED, type InquiryInput, type InquiryRecord, type InquiryStatus } from '../types/inquiry';
 
 const API_BASE = '/api';
 
 /** Body of a promotion create / update; the server assigns id and timestamps (and sort_order when omitted). */
 type PromotionInput = Partial<Omit<Promotion, 'id' | 'created_at' | 'updated_at'>>;
+
+/** GET /api/travel-mates/:id/requests. `requesters` is only sent to the post's host or an admin. */
+export interface MateJoinRequests {
+    count: number;
+    mine: boolean;
+    requesters?: Array<{ user_id: string; user_name?: string | null; created_at?: string }>;
+}
 
 async function request(url: string, options?: RequestInit) {
     // credentials: 'include' guarantees the session cookie is sent even if the
@@ -402,6 +410,14 @@ export const api = {
         delete: async (id: string) => request(`${API_BASE}/travel-mates/${id}`, { method: 'DELETE' }),
         // Public view counter (editing the post itself is author/admin-only).
         view: async (id: string) => request(`${API_BASE}/travel-mates/${id}/view`, { method: 'POST' }),
+        // 参加リクエスト — tells the host someone wants to join; it never changes the member count.
+        /** Request count and whether the caller asked; the host / an admin also gets `requesters`. */
+        requests: async (id: string): Promise<MateJoinRequests> => request(`${API_BASE}/travel-mates/${encodeURIComponent(id)}/requests`),
+        /** Signed-in members other than the host, while the post is open. Asking twice is harmless. */
+        requestJoin: async (id: string): Promise<{ success: boolean; requested: boolean; count: number }> =>
+            request(`${API_BASE}/travel-mates/${encodeURIComponent(id)}/requests`, { method: 'POST' }),
+        cancelJoin: async (id: string): Promise<{ success: boolean; requested: boolean; count: number }> =>
+            request(`${API_BASE}/travel-mates/${encodeURIComponent(id)}/requests`, { method: 'DELETE' }),
     },
     chats: {
         list: async () => request(`${API_BASE}/chats`),
@@ -451,6 +467,33 @@ export const api = {
         }),
         delete: async (id: string): Promise<{ success: boolean }> => request(`${API_BASE}/promotions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     },
+    // お問い合わせ — the /contact form; read and managed at /admin/inquiries.
+    inquiries: {
+        /** Public. A rejection throws an Error whose message is the server's error code (see INQUIRY_REQUEST_FAILED). */
+        create: async (data: InquiryInput): Promise<{ success: boolean; id: string }> => {
+            const res = await fetch(`${API_BASE}/inquiries`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(typeof err?.code === 'string' && err.code ? err.code : INQUIRY_REQUEST_FAILED);
+            }
+            return res.json();
+        },
+        /** Newest first (admin only). */
+        list: async (status?: InquiryStatus): Promise<InquiryRecord[]> =>
+            request(`${API_BASE}/inquiries${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+        /** Only the fields passed are changed (admin only). */
+        update: async (id: string, data: { status?: InquiryStatus; admin_note?: string }): Promise<{ success: boolean }> => request(`${API_BASE}/inquiries/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }),
+        delete: async (id: string): Promise<{ success: boolean }> => request(`${API_BASE}/inquiries/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    },
     recentlyViewed: {
         list: async () => request(`${API_BASE}/recently-viewed`),
         upsert: async (data: any) => request(`${API_BASE}/recently-viewed`, {
@@ -458,6 +501,10 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }),
+        /** Removes one history entry (the row id from `list`, not the product id). */
+        remove: async (id: string): Promise<{ success: boolean }> => request(`${API_BASE}/recently-viewed/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+        /** Removes the caller's whole history. */
+        clear: async (): Promise<{ success: boolean }> => request(`${API_BASE}/recently-viewed`, { method: 'DELETE' }),
     },
     wishlist: {
         list: async () => request(`${API_BASE}/wishlist`),

@@ -374,7 +374,15 @@ export interface TripCardData {
     price: number;
 }
 
-function TripCard({ t, stat, fav, onFav, onRemove, go }: { t: TripCardData; stat?: ReviewStat; fav: boolean; onFav: () => void; onRemove?: () => void; go: Go }) {
+function TripCard({ t, stat, fav, onFav, onRemove, removeLabel = 'ウィッシュリストから削除', go }: {
+    t: TripCardData;
+    stat?: ReviewStat;
+    fav: boolean;
+    onFav: () => void;
+    onRemove?: () => void;
+    removeLabel?: string;
+    go: Go;
+}) {
     const stop = (fn: () => void) => (e: { preventDefault: () => void; stopPropagation: () => void }) => { e.preventDefault(); e.stopPropagation(); fn(); };
     const roundBtn: CSSProperties = { width: 34, height: 34, border: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' };
     return (
@@ -396,7 +404,7 @@ function TripCard({ t, stat, fav, onFav, onRemove, go }: { t: TripCardData; stat
                         </svg>
                     </button>
                     {onRemove && (
-                        <button type="button" onClick={stop(onRemove)} aria-label="ウィッシュリストから削除" style={{ ...roundBtn, fontSize: 15, color: MW.mute, fontFamily: 'inherit' }}>×</button>
+                        <button type="button" onClick={stop(onRemove)} aria-label={removeLabel} style={{ ...roundBtn, fontSize: 15, color: MW.mute, fontFamily: 'inherit' }}>×</button>
                     )}
                 </span>
             </span>
@@ -464,13 +472,16 @@ export function WishlistSection({ items, stats, onRemove, onClearAll, go }: {
 const WEEK = '日月火水木金土';
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 
-export function RecentSection({ items, now, productById, stats, isFav, onFav, loading, go }: {
+export function RecentSection({ items, now, productById, stats, isFav, onFav, onRemove, onClearAll, loading, go }: {
     items: RecentItem[];
     now: number;
     productById: Map<string, HomeProduct>;
     stats: Record<string, ReviewStat>;
     isFav: (productId: string) => boolean;
     onFav: (item: TripCardData) => void;
+    /** Takes one tour out of the history. */
+    onRemove: (productId: string) => void;
+    onClearAll: () => void;
     loading: boolean;
     go: Go;
 }) {
@@ -494,7 +505,13 @@ export function RecentSection({ items, now, productById, stats, isFav, onFav, lo
 
     return (
         <div style={{ ...cardBox, gap: 24 }}>
-            <PanelHead eyebrow="RECENTLY VIEWED" title="最近見た商品" count={loading ? undefined : items.length} sub="最近閲覧したツアー（最大20件）が表示されます。" />
+            <PanelHead
+                eyebrow="RECENTLY VIEWED"
+                title="最近見た商品"
+                count={loading ? undefined : items.length}
+                sub="最近閲覧したツアー（最大20件）が表示されます。"
+                action={!loading && items.length > 0 ? <button type="button" onClick={onClearAll} style={ghostBtn} {...ghostHover}>すべて削除</button> : undefined}
+            />
             {loading ? <Loading /> : groups.length > 0 ? (
                 groups.map((g) => (
                     <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -504,7 +521,7 @@ export function RecentSection({ items, now, productById, stats, isFav, onFav, lo
                         </div>
                         <div style={cardGrid}>
                             {g.cards.map((c) => (
-                                <TripCard key={c.key} t={c} stat={stats[c.productId]} fav={isFav(c.productId)} onFav={() => onFav(c)} go={go} />
+                                <TripCard key={c.key} t={c} stat={stats[c.productId]} fav={isFav(c.productId)} onFav={() => onFav(c)} onRemove={() => onRemove(c.productId)} removeLabel="履歴から削除" go={go} />
                             ))}
                         </div>
                     </div>
