@@ -267,7 +267,7 @@ export const EstimateDetail: React.FC = () => {
             : requestedNow
                 ? { sub: '担当者が確認後、ご連絡いたします', label: '確定リクエスト済み ✓', disabled: true }
                 : pricing.total > 0
-                    ? { sub: `お一人様 ¥${yenNum(tripDoc.price?.perPerson || 0)} × ${tripDoc.people}名`, amount: yenNum(pricing.deposit), amountLabel: '予約金', label: 'この内容で確定する', onClick: handleReservationRequest }
+                    ? { sub: `${tripDoc.people}名様`, amount: yenNum(pricing.total), amountLabel: '合計', label: 'この内容で確定する', onClick: handleReservationRequest }
                     : { sub: 'お見積り内容のご相談', label: '予約を相談する', onClick: handleReservationRequest };
 
         const notice = (converted || estimate.adminNote) ? (

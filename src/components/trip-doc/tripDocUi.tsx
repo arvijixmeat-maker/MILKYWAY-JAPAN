@@ -25,15 +25,15 @@ export const Svg: React.FC<{ d: string; size?: number; stroke?: string; sw?: num
 /** 섹션 머리 — 영문 대제목 + 타원 라벨 + 큰 일본어 제목 */
 export const SectionHead: React.FC<{ en: string; pill?: string; children?: React.ReactNode; lead?: string }> = ({ en, pill, children, lead }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ ...anton, fontSize: 'clamp(40px,12cqw,60px)', fontWeight: 400, lineHeight: 0.95, color: C.ink, marginBottom: 6 }}>{en}</span>
-        {lead && <span style={{ fontSize: 'clamp(15px,4.2cqw,19px)', fontWeight: 500, letterSpacing: '-0.02em', color: C.ink }}>{lead}</span>}
-        {pill && <span style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', minHeight: 36, padding: '2px 22px', border: `1.5px solid ${C.ink}`, borderRadius: '50%', fontSize: 13, fontWeight: 600, letterSpacing: '-0.02em', color: C.ink, whiteSpace: 'nowrap' }}>{pill}</span>}
+        <span style={{ ...anton, fontSize: 'clamp(28px,7.2cqw,60px)', fontWeight: 400, lineHeight: 0.95, color: C.ink, marginBottom: 4 }}>{en}</span>
+        {lead && <span style={{ fontSize: 'clamp(14px,3.6cqw,19px)', fontWeight: 500, letterSpacing: '-0.02em', color: C.ink }}>{lead}</span>}
+        {pill && <span style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', minHeight: 30, padding: '2px 16px', border: `1.5px solid ${C.ink}`, borderRadius: '50%', fontSize: 12, fontWeight: 600, letterSpacing: '-0.02em', color: C.ink, whiteSpace: 'nowrap' }}>{pill}</span>}
         {children}
     </div>
 );
 
 /** 큰 제목 한 줄 — parts 중 accent 는 민트색 */
-export const BigLine: React.FC<{ parts: Array<string | { a: string }>; size?: string; weight?: number }> = ({ parts, size = 'clamp(30px,9cqw,46px)', weight = 800 }) => (
+export const BigLine: React.FC<{ parts: Array<string | { a: string }>; size?: string; weight?: number }> = ({ parts, size = 'clamp(21px,5.4cqw,46px)', weight = 800 }) => (
     <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, fontSize: size, fontWeight: weight, lineHeight: 1.1, letterSpacing: '-0.05em', color: C.ink }}>
         {parts.map((p, i) => typeof p === 'string'
             ? <span key={i}>{p}</span>
@@ -42,7 +42,7 @@ export const BigLine: React.FC<{ parts: Array<string | { a: string }>; size?: st
 );
 
 /** 「ツアー [料金]」 형식 — 두 번째 단어를 남색 칩으로 */
-export const ChipTitle: React.FC<{ before?: string; chip: string; after?: string; size?: string; gradient?: boolean }> = ({ before, chip, after, size = 'clamp(22px,6.4cqw,30px)', gradient }) => (
+export const ChipTitle: React.FC<{ before?: string; chip: string; after?: string; size?: string; gradient?: boolean }> = ({ before, chip, after, size = 'clamp(20px,5.1cqw,30px)', gradient }) => (
     <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: size, fontWeight: 700, letterSpacing: '-0.04em', color: C.ink, whiteSpace: 'nowrap' }}>
         {before && <span>{before}</span>}
         <span style={{ padding: '1px 10px 5px', borderRadius: 12, background: gradient ? C.grad : C.ink, color: gradient ? '#FFFFFF' : C.mintPale }}>{chip}</span>

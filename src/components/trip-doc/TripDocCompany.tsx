@@ -17,7 +17,7 @@ interface Props {
     legal?: React.ReactNode;
 }
 
-const sec: React.CSSProperties = { position: 'relative', padding: '32px 20px 36px', display: 'flex', flexDirection: 'column', gap: 24, scrollMarginTop: 56, overflow: 'hidden' };
+const sec: React.CSSProperties = { position: 'relative', padding: '28px 16px 32px', display: 'flex', flexDirection: 'column', gap: 24, scrollMarginTop: 104, overflow: 'hidden' };
 const gradNum: React.CSSProperties = { ...inter, fontWeight: 700, background: C.gradText, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' };
 const glow = (size: number, off: number): React.CSSProperties => ({ position: 'absolute', right: off, top: off, width: size, height: size, borderRadius: '50%', background: 'radial-gradient(circle,rgba(6,196,160,0.38) 0%,rgba(6,196,160,0) 70%)', pointerEvents: 'none' });
 
@@ -56,10 +56,10 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     <div style={{ position: 'absolute', left: 0, bottom: 20, height: 150, display: 'flex', width: 'max-content', animation: anim('qRowR 46s linear infinite') }}>{tilesRow(STAY_TILES_BOTTOM)}{tilesRow(STAY_TILES_BOTTOM)}</div>
                     <div style={{ position: 'absolute', left: 0, right: 0, top: 190, zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center', pointerEvents: 'none' }}>
                         <span style={{ fontSize: 13, fontWeight: 500, color: C.faint }}>旅の品質だけは決して妥協しません</span>
-                        <span style={{ fontSize: 'clamp(30px,9cqw,46px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: '-0.05em', whiteSpace: 'nowrap' }}>モンゴリア天の川<br />宿泊施設の <span style={{ color: C.mintSoft }}>こだわり</span></span>
+                        <span style={{ fontSize: 'clamp(21px,5.4cqw,46px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: '-0.05em', whiteSpace: 'nowrap' }}>モンゴリア天の川<br />宿泊施設の <span style={{ color: C.mintSoft }}>こだわり</span></span>
                     </div>
                     <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 418, transform: 'translateY(-50%)', overflow: 'hidden', pointerEvents: 'none' }}>
-                        <div style={{ display: 'flex', width: 'max-content', ...anton, fontSize: 'clamp(60px,17cqw,96px)', lineHeight: 1, letterSpacing: '0.01em', animation: anim('qBand 22s linear infinite') }}>
+                        <div style={{ display: 'flex', width: 'max-content', ...anton, fontSize: 'clamp(42px,10.8cqw,96px)', lineHeight: 1, letterSpacing: '0.01em', animation: anim('qBand 22s linear infinite') }}>
                             {[0, 1].map(k => (
                                 <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 22, paddingRight: 22, flexShrink: 0 }}>
                                     {['GER CAMP', 'LUXURY', 'PRIVATE', 'STARLIGHT', 'GER CAMP', 'LUXURY', 'PRIVATE', 'STARLIGHT'].map((w, i) => (
@@ -81,9 +81,9 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 }}>
                         <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <span style={{ alignSelf: 'flex-start', height: 24, padding: '0 10px', borderRadius: 999, background: C.grad, fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>モンゴリア天の川</span>
-                            <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em' }}>設備がすべて揃っています</span>
+                            <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em' }}>設備がすべて揃っています</span>
                         </span>
-                        <span style={{ ...inter, fontSize: 'clamp(46px,13cqw,68px)', fontWeight: 700, lineHeight: 0.85, letterSpacing: '-0.05em', color: C.mintPale }}>5<span style={{ fontSize: '0.42em', color: C.faint }}>/5</span></span>
+                        <span style={{ ...inter, fontSize: 'clamp(32px,8.2cqw,68px)', fontWeight: 700, lineHeight: 0.85, letterSpacing: '-0.05em', color: C.mintPale }}>5<span style={{ fontSize: '0.42em', color: C.faint }}>/5</span></span>
                     </div>
                     <div onMouseEnter={() => setFilmHold(true)} onMouseLeave={() => setFilmHold(false)} style={{ position: 'relative', aspectRatio: '4/5', borderRadius: 20, overflow: 'hidden', background: '#0C2B2A' }}>
                         {STAY_FILM.map((f, i) => (
@@ -92,14 +92,14 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                                 <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(20,16,12,0.6) 0%,rgba(20,16,12,0.5) 50%,rgba(20,16,12,0.66) 100%)', pointerEvents: 'none' }} />
                                 <div style={{ position: 'absolute', left: 16, right: 16, top: '50%', transform: 'translateY(-54%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26, textAlign: 'center', pointerEvents: 'none' }}>
                                     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                                        <span style={{ fontFamily: "'Jost',sans-serif", fontSize: 'clamp(40px,12cqw,62px)', fontWeight: 300, lineHeight: 1, color: '#F6F3EC' }}>{f.en}</span>
+                                        <span style={{ fontFamily: "'Jost',sans-serif", fontSize: 'clamp(28px,7.2cqw,62px)', fontWeight: 300, lineHeight: 1, color: '#F6F3EC' }}>{f.en}</span>
                                         <span style={{ fontFamily: "'Jost','Noto Sans JP',sans-serif", fontSize: 13, fontWeight: 300, letterSpacing: '0.06em', color: 'rgba(246,243,236,0.9)' }}>{f.name} · {i === 1 ? (premium ? '今回のご宿泊' : 'アップグレード可') : (premium ? 'スタンダード' : '今回のご宿泊')}</span>
                                     </span>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: '24px 18px', width: '100%', maxWidth: 340 }}>
                                         {f.items.map(([d, k, v]) => (
                                             <span key={k} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                                                 <Svg d={d} size={26} stroke="#F6F3EC" sw={1.1} />
-                                                <span style={{ fontFamily: "'Jost','Noto Sans JP',sans-serif", fontSize: 'clamp(15px,4.2cqw,18px)', fontWeight: 300, lineHeight: 1.35, color: '#F6F3EC' }}>{k}<br />{v}</span>
+                                                <span style={{ fontFamily: "'Jost','Noto Sans JP',sans-serif", fontSize: 'clamp(14px,3.6cqw,18px)', fontWeight: 300, lineHeight: 1.35, color: '#F6F3EC' }}>{k}<br />{v}</span>
                                             </span>
                                         ))}
                                     </div>
@@ -136,13 +136,13 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 16px 0', textAlign: 'center' }}>
-                        <span style={{ fontSize: 'clamp(24px,7cqw,34px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.04em', color: 'transparent', WebkitTextStroke: `1.2px ${C.mintBright}`, whiteSpace: 'nowrap' }}>他社ツアー vs</span>
-                        <span style={{ fontSize: 'clamp(30px,9cqw,46px)', fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.05em', color: C.mint, whiteSpace: 'nowrap' }}>モンゴリア天の川！</span>
+                        <span style={{ fontSize: 'clamp(17px,4.4cqw,34px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.04em', color: 'transparent', WebkitTextStroke: `1.2px ${C.mintBright}`, whiteSpace: 'nowrap' }}>他社ツアー vs</span>
+                        <span style={{ fontSize: 'clamp(21px,5.4cqw,46px)', fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.05em', color: C.mint, whiteSpace: 'nowrap' }}>モンゴリア天の川！</span>
                         <span style={{ marginTop: 8, fontSize: 13, lineHeight: 1.7, color: C.sub }}>同じモンゴル旅行でも<br />宿泊施設の設備に大きな差があります。</span>
                     </div>
                     <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', alignItems: 'stretch' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', background: '#4F5857', borderRadius: '20px 0 0 20px', color: '#E6EAE9', textAlign: 'center', padding: '22px 0 6px' }}>
-                            <span style={{ padding: '0 12px', fontSize: 'clamp(15px,4.4cqw,19px)', fontWeight: 700, lineHeight: 1.35, letterSpacing: '-0.03em', color: '#F1F4F3' }}>他社ツアー<br />テント · 遊牧民ゲル</span>
+                            <span style={{ padding: '0 12px', fontSize: 'clamp(14px,3.6cqw,19px)', fontWeight: 700, lineHeight: 1.35, letterSpacing: '-0.03em', color: '#F1F4F3' }}>他社ツアー<br />テント · 遊牧民ゲル</span>
                             <div style={{ position: 'relative', margin: '16px 14px 6px', aspectRatio: '1/1', borderRadius: 16, overflow: 'hidden', background: '#646D6C', filter: 'grayscale(1) brightness(1.05)', opacity: 0.55 }}><Photo src={img('stay-cmp-theirs')} placeholder="テント · 遊牧民ゲル" /></div>
                             {STAY_ROWS.map(([k, v]) => (
                                 <div key={k} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3, minHeight: 76, padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.14)' }}>
@@ -152,7 +152,7 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                             ))}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', background: '#FFFFFF', border: `2px solid ${C.mintBright}`, borderLeft: 0, borderRadius: '0 20px 20px 0', color: C.ink, textAlign: 'center', padding: '20px 0 4px', boxShadow: '0 16px 32px rgba(18,59,58,0.12)' }}>
-                            <span style={{ padding: '0 12px', fontSize: 'clamp(15px,4.4cqw,19px)', fontWeight: 800, lineHeight: 1.35, letterSpacing: '-0.03em' }}>モンゴリア天の川<br />スタンダード · 高級ゲル</span>
+                            <span style={{ padding: '0 12px', fontSize: 'clamp(14px,3.6cqw,19px)', fontWeight: 800, lineHeight: 1.35, letterSpacing: '-0.03em' }}>モンゴリア天の川<br />スタンダード · 高級ゲル</span>
                             <div style={{ position: 'relative', margin: '16px 14px 6px', aspectRatio: '1/1', borderRadius: 16, overflow: 'hidden', background: C.mintBg }}><Photo src={img('stay-cmp-ours')} placeholder="天の川のゲル" dark={false} /></div>
                             {STAY_ROWS.map(([k, v]) => (
                                 <div key={k} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3, minHeight: 76, padding: '10px 12px', borderTop: '1px solid #E3ECE9' }}>
@@ -186,11 +186,11 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                         <span style={{ fontSize: 13, fontWeight: 500, color: C.sub }}>モンゴリア天の川 現地旅行会社の</span>
                         <ChipTitle before="宿泊" chip="選定" after="基準" />
                     </span>
-                    <div data-noscroll="" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', margin: '0 -20px', padding: '4px 20px 8px', scrollPadding: '0 20px' }}>
+                    <div data-noscroll="" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', margin: '0 -16px', padding: '4px 20px 8px', scrollPadding: '0 20px' }}>
                         {STAY_SELECT.map((s, i) => (
                             <div key={i} style={{ flex: '0 0 72%', maxWidth: 300, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', gap: 12, padding: 20, borderRadius: 24, background: '#FFFFFF', border: `1px solid ${C.line}`, boxShadow: '0 6px 18px rgba(18,59,58,0.06)' }}>
                                 <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <span style={{ ...gradNum, fontSize: 44, lineHeight: 0.85, letterSpacing: '-0.05em' }}>0{i + 1}</span>
+                                    <span style={{ ...gradNum, fontSize: 31, lineHeight: 0.85, letterSpacing: '-0.05em' }}>0{i + 1}</span>
                                     <span style={{ width: 40, height: 40, borderRadius: 12, background: C.mintBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Svg d={s.icon} size={20} /></span>
                                 </span>
                                 <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.65 }}>{s.t}</span>
@@ -205,10 +205,10 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
             {/* ─── 08 Team ─── */}
             <section id="q-team" style={{ ...sec, gap: 26 }}>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: '30%' }}>
-                    <span aria-hidden="true" style={{ position: 'absolute', right: -10, top: -18, ...gradNum, fontSize: 'clamp(130px,34cqw,220px)', lineHeight: 0.85, letterSpacing: '-0.06em', pointerEvents: 'none' }}>3+</span>
-                    <span style={{ ...anton, fontSize: 'clamp(40px,12cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>MILKY WAY TEAM</span>
-                    <span style={{ position: 'relative', fontSize: 'clamp(15px,4.2cqw,19px)', fontWeight: 500, letterSpacing: '-0.02em' }}>熟練の <strong style={{ fontWeight: 700 }}>天の川</strong> プロチーム</span>
-                    <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(32px,9.6cqw,52px)', fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}>
+                    <span aria-hidden="true" style={{ position: 'absolute', right: -10, top: -18, ...gradNum, fontSize: 'clamp(91px,23.3cqw,220px)', lineHeight: 0.85, letterSpacing: '-0.06em', pointerEvents: 'none' }}>3+</span>
+                    <span style={{ ...anton, fontSize: 'clamp(28px,7.2cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>MILKY WAY TEAM</span>
+                    <span style={{ position: 'relative', fontSize: 'clamp(14px,3.6cqw,19px)', fontWeight: 500, letterSpacing: '-0.02em' }}>熟練の <strong style={{ fontWeight: 700 }}>天の川</strong> プロチーム</span>
+                    <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(22px,5.6cqw,52px)', fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}>
                         <span>最低</span><span style={{ padding: '2px 12px 6px', borderRadius: 14, background: C.ink, color: C.mintPale }}>3年</span><span>以上</span>
                     </span>
                 </div>
@@ -230,11 +230,11 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     <div key={t.en} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 10, borderBottom: `2px solid ${C.ink}` }}>
                             <span style={{ width: 46, height: 46, borderRadius: '50%', background: t.dark ? C.grad : C.ink, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Svg d={t.icon} size={22} stroke={t.dark ? '#FFFFFF' : C.mintPale} /></span>
-                            <span style={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 'clamp(24px,7cqw,32px)', fontWeight: 700, letterSpacing: '-0.04em' }}>{t.role}<span style={{ ...inter, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: C.mintDeep }}>{t.en}</span></span>
+                            <span style={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 'clamp(17px,4.4cqw,32px)', fontWeight: 700, letterSpacing: '-0.04em' }}>{t.role}<span style={{ ...inter, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: C.mintDeep }}>{t.en}</span></span>
                         </div>
                         {t.lines.map(([a, b], j) => (
                             <div key={j} style={{ display: 'grid', gridTemplateColumns: '56px minmax(0,1fr)', gap: 10, alignItems: 'start', padding: '14px 0', borderBottom: `1px solid ${C.line}` }}>
-                                <span style={{ ...gradNum, fontSize: 34, lineHeight: 0.95, letterSpacing: '-0.04em' }}>{String(j + 1).padStart(2, '0')}</span>
+                                <span style={{ ...gradNum, fontSize: 27, lineHeight: 0.95, letterSpacing: '-0.04em' }}>{String(j + 1).padStart(2, '0')}</span>
                                 <span style={{ fontSize: 14, lineHeight: 1.7, color: C.sub }}>{a} <strong style={{ fontWeight: 700, color: C.ink }}>{b}</strong></span>
                             </div>
                         ))}
@@ -253,14 +253,14 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     <span aria-hidden="true" style={glow(220, -60)} />
                     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 500, color: C.faint }}>無駄のない費用と安全なツアーのための</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(24px,7cqw,32px)', fontWeight: 700, letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(17px,4.4cqw,32px)', fontWeight: 700, letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}>
                             <span>プロ</span><span style={{ padding: '1px 10px 5px', borderRadius: 12, background: C.grad }}>最適な</span><span>配置</span>
                         </span>
                     </div>
                     <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
                         {TEAM_ASSIGN.map((x, i) => (
                             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                <span style={{ ...inter, fontSize: 'clamp(18px,5cqw,24px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: C.mintPale, whiteSpace: 'nowrap' }}>{x.big}</span>
+                                <span style={{ ...inter, fontSize: 'clamp(16px,4.1cqw,24px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: C.mintPale, whiteSpace: 'nowrap' }}>{x.big}</span>
                                 <span style={{ fontSize: 11, fontWeight: 600, color: C.faint }}>{x.area}</span>
                                 <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>{x.who}</span>
                             </div>
@@ -274,15 +274,15 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
 
             {/* ─── 09 Meals ─── */}
             <Band reduce={reduce} />
-            <section id="q-meal" style={{ ...sec, padding: '32px 20px', gap: 22, overflow: 'visible' }}>
+            <section id="q-meal" style={{ ...sec, padding: '28px 16px', gap: 22, overflow: 'visible' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ ...anton, fontSize: 'clamp(40px,12cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>MEALS</span>
-                    <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>天の川だけのグルメツアー！</h2>
+                    <span style={{ ...anton, fontSize: 'clamp(28px,7.2cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>MEALS</span>
+                    <h2 style={{ margin: 0, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em' }}>天の川だけのグルメツアー！</h2>
                 </div>
 
-                <div style={{ position: 'relative', margin: '0 -20px', padding: '0 20px 8px', overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 100%,#E8FAF5 0%,rgba(232,250,245,0) 70%)' }}>
+                <div style={{ position: 'relative', margin: '0 -16px', padding: '0 20px 8px', overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 100%,#E8FAF5 0%,rgba(232,250,245,0) 70%)' }}>
                     <div style={{ position: 'relative', width: '100%', paddingTop: '80%' }}>
-                        <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '22%', transform: 'translateX(-50%)', ...gradNum, fontSize: 'clamp(170px,46cqw,310px)', lineHeight: 0.82, letterSpacing: '-0.06em', pointerEvents: 'none', animation: anim('qNum 6s ease-in-out infinite') }}>{spN || 4}</span>
+                        <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '22%', transform: 'translateX(-50%)', ...gradNum, fontSize: 'clamp(119px,30.5cqw,310px)', lineHeight: 0.82, letterSpacing: '-0.06em', pointerEvents: 'none', animation: anim('qNum 6s ease-in-out infinite') }}>{spN || 4}</span>
                         {orbit.map((o, i) => {
                             const [x, y, s] = ORBIT_POS[i];
                             return (
@@ -297,8 +297,8 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                         })}
                     </div>
                     <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center', marginTop: '-4%' }}>
-                        <span style={{ fontSize: 'clamp(16px,4.6cqw,22px)', fontWeight: 500, letterSpacing: '-0.02em' }}>ガイド調理なしの <strong style={{ fontWeight: 700 }}>天の川</strong>だけの</span>
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8, fontSize: 'clamp(30px,9.5cqw,56px)', fontWeight: 700, lineHeight: 1.05, letterSpacing: '-0.04em' }}>
+                        <span style={{ fontSize: 'clamp(14px,3.6cqw,22px)', fontWeight: 500, letterSpacing: '-0.02em' }}>ガイド調理なしの <strong style={{ fontWeight: 700 }}>天の川</strong>だけの</span>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8, fontSize: 'clamp(21px,5.4cqw,56px)', fontWeight: 700, lineHeight: 1.05, letterSpacing: '-0.04em' }}>
                             <span>特別料理</span><span style={{ color: C.mint }}>{spN || 4}種</span><span>グルメツアー</span>
                         </span>
                         <div style={{ width: '100%', maxWidth: 520, boxSizing: 'border-box', padding: '16px 20px', borderRadius: 999, background: C.ink, color: '#FFFFFF', fontSize: 'clamp(13px,3.6cqw,15px)', lineHeight: 1.55 }}>
@@ -314,7 +314,7 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center', padding: '28px 0 8px' }}>
                     <span style={{ ...inter, fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', color: C.mintDeep }}>OUR PROMISE</span>
                     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 'clamp(16px,4.4cqw,20px)', fontWeight: 500, letterSpacing: '-0.02em' }}>天の川ではガイドが</span>
+                        <span style={{ fontSize: 'clamp(14px,3.6cqw,20px)', fontWeight: 500, letterSpacing: '-0.02em' }}>天の川ではガイドが</span>
                         <BigLine weight={700} parts={[{ a: '調理' }, 'しません']} />
                     </span>
                     <div style={{ position: 'relative', width: '100%', display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10, marginTop: 6 }}>
@@ -336,10 +336,10 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                 </div>
 
                 {spN > 0 && (
-                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center', padding: '28px 0 8px', margin: '0 -20px', overflow: 'hidden' }}>
-                        <span aria-hidden="true" style={{ position: 'absolute', right: -6, top: 18, ...anton, fontSize: 'clamp(44px,13cqw,72px)', lineHeight: 0.95, textAlign: 'right', color: 'transparent', WebkitTextStroke: `1.2px ${C.line}`, pointerEvents: 'none' }}>SPECIAL<br />MENU</span>
-                        <span style={{ position: 'relative', fontSize: 'clamp(16px,4.6cqw,22px)', fontWeight: 500, letterSpacing: '-0.02em' }}>モンゴリア天の川の自慢</span>
-                        <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(34px,10cqw,52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.05em', whiteSpace: 'nowrap' }}><span>天の川</span><span style={{ color: C.mint }}>特別料理</span><span>{spN}種</span></span>
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center', padding: '28px 0 8px', margin: '0 -16px', overflow: 'hidden' }}>
+                        <span aria-hidden="true" style={{ position: 'absolute', right: -6, top: 18, ...anton, fontSize: 'clamp(31px,7.9cqw,72px)', lineHeight: 0.95, textAlign: 'right', color: 'transparent', WebkitTextStroke: `1.2px ${C.line}`, pointerEvents: 'none' }}>SPECIAL<br />MENU</span>
+                        <span style={{ position: 'relative', fontSize: 'clamp(14px,3.6cqw,22px)', fontWeight: 500, letterSpacing: '-0.02em' }}>モンゴリア天の川の自慢</span>
+                        <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(24px,6.2cqw,52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.05em', whiteSpace: 'nowrap' }}><span>天の川</span><span style={{ color: C.mint }}>特別料理</span><span>{spN}種</span></span>
                         <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '4px 20px 0' }}>
                             <span style={{ height: 28, padding: '0 12px', borderRadius: 999, background: C.ink, fontSize: 12, fontWeight: 700, color: '#FFFFFF', display: 'inline-flex', alignItems: 'center' }}>今回の旅程に含まれます</span>
                             <span style={{ fontSize: 12, color: C.sub }}>旅程に合わせてご用意します</span>
@@ -353,10 +353,10 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                                     <div key={c.id} onClick={() => { if (a) setSpIdx(i); }} style={{ position: 'absolute', left: '50%', top: 30, width: 'min(62cqw,300px)', aspectRatio: '10/13', borderRadius: 20, overflow: 'hidden', background: '#1C4A48', color: '#FFFFFF', textAlign: 'left', cursor: a ? 'pointer' : 'default', transform: `translateX(calc(-50% + ${o * 64}%)) translateY(${a ? 26 : 0}px) rotate(${o * 13}deg) scale(${a ? 0.84 : 1})`, opacity: a > 1 ? 0 : 1, zIndex: 3 - a, boxShadow: '0 18px 36px rgba(18,59,58,0.22)', transition: 'transform .55s cubic-bezier(.22,.61,.36,1),opacity .55s cubic-bezier(.22,.61,.36,1)' }}>
                                         <Photo src={c.image} placeholder={`${c.name} 写真`} />
                                         <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(11,38,37,0.15) 0%,rgba(11,38,37,0.35) 40%,rgba(11,38,37,0.82) 100%)', pointerEvents: 'none' }} />
-                                        <span style={{ position: 'absolute', right: 18, top: 14, ...anton, fontSize: 44, lineHeight: 1, pointerEvents: 'none' }}>{String(i + 1).padStart(2, '0')}</span>
+                                        <span style={{ position: 'absolute', right: 18, top: 14, ...anton, fontSize: 31, lineHeight: 1, pointerEvents: 'none' }}>{String(i + 1).padStart(2, '0')}</span>
                                         <div style={{ position: 'absolute', left: 20, right: 20, bottom: 22, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
                                             <span style={{ fontSize: 14, fontWeight: 300, color: C.mintBg }}>{c.sub}</span>
-                                            <span style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.04em' }}>{c.name}</span>
+                                            <span style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.04em' }}>{c.name}</span>
                                             <span style={{ height: 1, margin: '8px 0 6px', background: 'rgba(255,255,255,0.55)' }} />
                                             <span style={{ fontSize: 12, lineHeight: 1.7, color: '#F2F7F6' }}>{c.desc}</span>
                                         </div>
@@ -374,10 +374,10 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     </div>
                 )}
 
-                {images.localFoods.length > 0 && <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 18, padding: '24px 0 8px', margin: '0 -20px', backgroundImage: 'repeating-linear-gradient(180deg,transparent 0,transparent 39px,#EEF3F1 39px,#EEF3F1 40px)' }}>
+                {images.localFoods.length > 0 && <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 18, padding: '24px 0 8px', margin: '0 -16px', backgroundImage: 'repeating-linear-gradient(180deg,transparent 0,transparent 39px,#EEF3F1 39px,#EEF3F1 40px)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 20px' }}>
-                        <span style={{ ...anton, fontSize: 'clamp(34px,10cqw,52px)', lineHeight: 0.95 }}>LOCAL FOOD</span>
-                        <BigLine size="clamp(28px,8.4cqw,42px)" parts={['おすすめ', { a: '現地料理' }]} />
+                        <span style={{ ...anton, fontSize: 'clamp(24px,6.2cqw,52px)', lineHeight: 0.95 }}>LOCAL FOOD</span>
+                        <BigLine size="clamp(20px,5.1cqw,42px)" parts={['おすすめ', { a: '現地料理' }]} />
                         <span style={{ fontSize: 12, lineHeight: 1.6, color: C.sub }}>旅行先・日程により提供される現地料理のメニューは異なる場合があります。</span>
                     </div>
                     <div data-noscroll="" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', padding: '4px 20px 30px', scrollPadding: '0 20px' }}>
@@ -389,7 +389,7 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: full ? 'linear-gradient(180deg,rgba(11,38,37,0) 35%,rgba(11,38,37,0.85) 100%)' : 'none', pointerEvents: 'none' }} />
                                     <div style={{ position: 'absolute', left: 14, right: 16, bottom: 18, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, textAlign: 'right', pointerEvents: 'none' }}>
                                         <span style={{ ...anton, fontSize: 15, letterSpacing: '0.04em', opacity: 0.9 }}>{m.en}</span>
-                                        <span style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.04em' }}>{m.t}</span>
+                                        <span style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.04em' }}>{m.t}</span>
                                         <span style={{ marginTop: 12, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em', opacity: 0.85 }}>{m.s}</span>
                                     </div>
                                 </div>
@@ -427,7 +427,7 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                             <div key={t} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 16, borderRadius: 24, background: C.paper }}>
                                 <span style={{ width: 36, height: 36, borderRadius: 12, background: C.mintBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Svg d={d} /></span>
                                 <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>{t}</span>
-                                <span style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}><span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>お一人様</span><span style={{ ...gradNum, fontSize: 20, letterSpacing: '-0.03em' }}>現地でご案内</span></span>
+                                <span style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}><span style={{ fontSize: 11, fontWeight: 600, color: C.sub }}>お一人様</span><span style={{ ...gradNum, fontSize: 18, letterSpacing: '-0.03em' }}>現地でご案内</span></span>
                             </div>
                         ))}
                     </div>
@@ -441,11 +441,11 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <ChipTitle before="乗馬 · ラクダ" chip="注意事項" size="clamp(20px,5.8cqw,26px)" gradient />
+                    <ChipTitle before="乗馬 · ラクダ" chip="注意事項" size="clamp(18px,4.6cqw,26px)" gradient />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {RIDE_TIPS.map((t, i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '52px minmax(0,1fr)', gap: 10, alignItems: 'start', padding: '14px 0', borderBottom: `1px solid ${C.line}` }}>
-                                <span style={{ ...gradNum, fontSize: 30, lineHeight: 0.95, letterSpacing: '-0.04em' }}>{i + 1}</span>
+                                <span style={{ ...gradNum, fontSize: 24, lineHeight: 0.95, letterSpacing: '-0.04em' }}>{i + 1}</span>
                                 <span style={{ fontSize: 14, lineHeight: 1.7, color: C.body }}>{t}</span>
                             </div>
                         ))}
@@ -476,7 +476,7 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(11,38,37,0) 40%,rgba(11,38,37,0.85) 100%)' }} />
                     <div style={{ position: 'absolute', right: 16, top: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '12px 18px 14px', borderRadius: 16, background: '#FFFFFF', boxShadow: '0 14px 30px rgba(11,38,37,0.35)', transform: 'rotate(-4deg)', pointerEvents: 'none' }}>
                         <span style={{ ...inter, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: C.mintDeep }}>MONGOLIA MILKY WAY</span>
-                        <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em' }}>{doc.customerName} 様</span>
+                        <span style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.03em' }}>{doc.customerName} 様</span>
                         <span style={{ width: '100%', height: 3, borderRadius: 2, background: C.grad, marginTop: 4 }} />
                     </div>
                     <div style={{ position: 'absolute', left: 18, right: 18, bottom: 16, display: 'flex', flexDirection: 'column', gap: 4, pointerEvents: 'none' }}>
@@ -515,11 +515,11 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
             <Gap />
 
             {/* ─── 12 Certificate ─── */}
-            <section id="q-cert" style={{ ...sec, gap: 20, padding: '32px 20px 40px' }}>
+            <section id="q-cert" style={{ ...sec, gap: 20, padding: '28px 16px 34px' }}>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span aria-hidden="true" style={{ position: 'absolute', right: -6, top: -14, ...gradNum, fontSize: 'clamp(110px,30cqw,190px)', lineHeight: 0.85, letterSpacing: '-0.06em', opacity: 0.9, pointerEvents: 'none' }}>{CERTS.length}</span>
-                    <span style={{ ...anton, fontSize: 'clamp(40px,12cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>CERTIFICATE</span>
-                    <span style={{ position: 'relative', fontSize: 'clamp(15px,4.2cqw,19px)', fontWeight: 500, letterSpacing: '-0.02em' }}>モンゴリア天の川 現地旅行会社</span>
+                    <span aria-hidden="true" style={{ position: 'absolute', right: -6, top: -14, ...gradNum, fontSize: 'clamp(77px,19.7cqw,190px)', lineHeight: 0.85, letterSpacing: '-0.06em', opacity: 0.9, pointerEvents: 'none' }}>{CERTS.length}</span>
+                    <span style={{ ...anton, fontSize: 'clamp(28px,7.2cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>CERTIFICATE</span>
+                    <span style={{ position: 'relative', fontSize: 'clamp(14px,3.6cqw,19px)', fontWeight: 500, letterSpacing: '-0.02em' }}>モンゴリア天の川 現地旅行会社</span>
                     <BigLine parts={['公式', { a: '許可証' }]} />
                     <span style={{ position: 'relative', display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                         {['韓国 正式認可', 'モンゴル 正式認可'].map(t => (
@@ -527,13 +527,13 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                         ))}
                     </span>
                 </div>
-                <div data-noscroll="" style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', margin: '0 -20px', padding: '8px 20px 12px', scrollPadding: '0 20px' }}>
+                <div data-noscroll="" style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', margin: '0 -16px', padding: '8px 20px 12px', scrollPadding: '0 20px' }}>
                     {CERTS.map((c, i) => (
                         <div key={c.slot} style={{ flex: '0 0 66%', maxWidth: 260, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', borderRadius: 28, overflow: 'hidden', background: '#FFFFFF', boxShadow: '0 12px 28px rgba(18,59,58,0.12)', border: `1px solid ${C.line}` }}>
                             {/* 허가증 사진은 등록된 자료가 없어 번호·아이콘만 있는 카드로 보여 준다 */}
                             <div style={{ position: 'relative', aspectRatio: img(c.slot) ? '3/4' : '16/9', background: img(c.slot) ? C.paper : `linear-gradient(160deg,${C.mintBg} 0%,${C.paper} 100%)` }}>
                                 {img(c.slot) && <Photo src={img(c.slot)} dark={false} style={{ objectFit: 'contain', background: '#FFFFFF' }} />}
-                                <span style={{ position: 'absolute', left: 14, top: 14, ...gradNum, fontSize: 30, lineHeight: 0.9, letterSpacing: '-0.05em', pointerEvents: 'none' }}>{String(i + 1).padStart(2, '0')}</span>
+                                <span style={{ position: 'absolute', left: 14, top: 14, ...gradNum, fontSize: 24, lineHeight: 0.9, letterSpacing: '-0.05em', pointerEvents: 'none' }}>{String(i + 1).padStart(2, '0')}</span>
                                 <span style={{ position: 'absolute', right: 12, top: 12, width: 34, height: 34, borderRadius: '50%', background: C.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 14px rgba(0,168,139,0.3)', pointerEvents: 'none' }}><Svg d={IC.shield} size={17} stroke="#FFFFFF" sw={2.2} /></span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 16px 16px' }}>
@@ -563,13 +563,13 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
 
             {legal && (
                 <>
-                    <section id="q-legal" style={{ scrollMarginTop: 56 }}>{legal}</section>
+                    <section id="q-legal" style={{ scrollMarginTop: 104 }}>{legal}</section>
                     <Gap />
                 </>
             )}
 
             {/* ─── Contact ─── */}
-            <section style={{ position: 'relative', padding: '36px 20px 44px', display: 'flex', flexDirection: 'column', gap: 18, overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 100%,#E8FAF5 0%,rgba(232,250,245,0) 70%)' }}>
+            <section style={{ position: 'relative', padding: '30px 16px 36px', display: 'flex', flexDirection: 'column', gap: 18, overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 100%,#E8FAF5 0%,rgba(232,250,245,0) 70%)' }}>
                 <SectionHead en="CONTACT" pill={doc.mode === 'quote' ? 'お見積りに関するお問い合わせ' : 'ご旅行に関するお問い合わせ'}>
                     <BigLine parts={['ご不明な点は', { a: 'お気軽に' }, 'ご相談ください']} />
                 </SectionHead>
@@ -585,7 +585,7 @@ export const TripDocCompany: React.FC<Props> = ({ doc, images, reduce, specials,
                             </span>
                             <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                                 <span style={{ fontSize: 12, fontWeight: 600, color: labelFg }}>{label}</span>
-                                <span style={{ ...inter, fontSize: 'clamp(15px,4.2cqw,18px)', fontWeight: 700, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#FFFFFF' }}>{val}</span>
+                                <span style={{ ...inter, fontSize: 'clamp(14px,3.6cqw,18px)', fontWeight: 700, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#FFFFFF' }}>{val}</span>
                                 <span style={{ fontSize: 11, color: fg, marginTop: 2 }}>{sub}</span>
                             </span>
                         </a>

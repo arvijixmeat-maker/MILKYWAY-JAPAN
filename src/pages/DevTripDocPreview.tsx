@@ -45,6 +45,8 @@ export const DevTripDocPreview: React.FC = () => {
                     planName: '冬のプライベートツアー', planSub: 'UBホテル1泊 + 高級ゲル2泊',
                     flightIn: '14:15', flightOut: '00:25', pickup: '11.29 14:15 · 12.02 夜',
                     stayLabel: 'UBホテル1泊 + 高級ゲル2泊', stayLine: 'UBホテル + 高級ゲル',
+                    // 대표 여행지 — 관광지 마스터 샘플에서 사진 있는 곳 4개
+                    spots: SAMPLE_SOURCES.spots.filter(s => s.region !== 'food' && (s.images?.length || 0) > 0).slice(0, 4).map(s => s.id),
                 },
             },
             total: 360000,
@@ -77,7 +79,7 @@ export const DevTripDocPreview: React.FC = () => {
                 key={mode}
                 doc={doc}
                 images={images}
-                bar={mode === 'quote' ? { sub: `お一人様 ¥${yen(doc.price?.perPerson || 0)} × ${doc.people}名`, amount: yen(doc.price?.deposit || 0), amountLabel: '予約金', label: 'この内容で予約する', onClick: () => window.alert('미리보기 — 실제 화면에서는 결제(예약) 페이지로 이동합니다.') } : null}
+                bar={mode === 'quote' ? { sub: `${doc.people}名様`, amount: yen(doc.price?.total || 0), amountLabel: '合計', label: 'この内容で確定する', onClick: () => window.alert('미리보기 — 실제 화면에서는 결제(예약) 페이지로 이동합니다.') } : null}
                 printable={mode === 'confirmed'}
                 legal={mode === 'confirmed' ? <TripDocLegal /> : undefined}
             />

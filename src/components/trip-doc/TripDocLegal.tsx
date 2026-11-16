@@ -47,7 +47,7 @@ export const TripDocLegal: React.FC<{ emergencyPhone?: string; note?: string }> 
     const phone2 = emergencyPhone || COMPANY_INFO.phoneSecondary;
     const prose: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: 1.8, color: C.body };
     return (
-        <div style={{ padding: '32px 20px 36px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ padding: '28px 16px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
             <style>{`@media print{.tdoc-fold-body{display:block!important}.tdoc-fold-btn span:last-child{display:none!important}}`}</style>
             <SectionHead en="SAFETY & EMERGENCY" pill="海外安全情報・ご案内事項">
                 <BigLine parts={['もしもの時も', { a: '安心' }, 'のサポート']} />
@@ -71,7 +71,7 @@ export const TripDocLegal: React.FC<{ emergencyPhone?: string; note?: string }> 
                     {LOCAL_EMERGENCY.map(e => (
                         <a key={e.number} href={tel(e.number)} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 10px', borderRadius: 16, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
                             <span style={{ fontSize: 11, color: C.faint }}>{e.label}</span>
-                            <span style={{ ...inter, fontSize: 22, fontWeight: 700, color: '#FF8A8D' }}>{e.number}</span>
+                            <span style={{ ...inter, fontSize: 19, fontWeight: 700, color: '#FF8A8D' }}>{e.number}</span>
                         </a>
                     ))}
                 </div>

@@ -31,7 +31,7 @@ export interface TripFocus { section: string; day?: number; at: number }
 
 const rowLine: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 14, fontSize: 13, lineHeight: 1.5 };
 const dash: React.CSSProperties = { height: 0, borderTop: '1.5px dashed #C9D3D1', margin: '2px 0' };
-const secPad: React.CSSProperties = { padding: '32px 20px 36px', display: 'flex', flexDirection: 'column', gap: 20, scrollMarginTop: 56 };
+const secPad: React.CSSProperties = { padding: '28px 16px 32px', display: 'flex', flexDirection: 'column', gap: 20, scrollMarginTop: 104 };
 
 export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, notice, legal, printable, focusTarget }) => {
     useTripDocFonts();
@@ -79,7 +79,8 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
             raf = requestAnimationFrame(() => {
                 raf = 0;
                 let cur = NAV[0][0];
-                for (const [id] of NAV) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 120) cur = id; }
+                const lim = (barRef.current?.offsetHeight || 96) + 24;
+                for (const [id] of NAV) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < lim) cur = id; }
                 setSec(s => (s === cur ? s : cur));
             });
         };
@@ -91,7 +92,29 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
         const track = navRef.current;
         if (btn && track) track.scrollTo({ left: btn.offsetLeft - track.clientWidth / 2 + btn.clientWidth / 2, behavior: 'smooth' });
     }, [sec]);
-    const goSec = (id: string) => { const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 56, behavior: 'smooth' }); };
+    // ── 앱 상단바 — 높이만큼 비켜서 스크롤 · 공유 ──
+    const barRef = useRef<HTMLDivElement>(null);
+    /** 이 문서를 담은 스크롤 상자(관리자 미리보기) 또는 창을 el 이 상단바 바로 아래 오도록 굴린다 */
+    const scrollToEl = (el: HTMLElement) => {
+        const off = (barRef.current?.offsetHeight || 96) + 8;
+        let box: HTMLElement | null = el.parentElement;
+        while (box && !(box.scrollHeight > box.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+        if (box && box !== document.documentElement && box !== document.body) {
+            box.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - off), behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - off, behavior: 'smooth' });
+        }
+    };
+    const goSec = (id: string) => { const el = rootRef.current?.querySelector<HTMLElement>(`#${id}`) || document.getElementById(id); if (el) scrollToEl(el); };
+    const [copied, setCopied] = useState(false);
+    const share = async () => {
+        const url = window.location.href;
+        try {
+            if (navigator.share) { await navigator.share({ title: `モンゴリア天の川 ${docLabel}`, url }); return; }
+            await navigator.clipboard.writeText(url);
+            setCopied(true); window.setTimeout(() => setCopied(false), 1800);
+        } catch { /* 공유 취소 */ }
+    };
 
     // ── 일정 경로 캐러셀 ──
     const route = doc.route;
@@ -130,15 +153,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                 || root.querySelector<HTMLElement>(`#${focusTarget.section}`)
                 || root.querySelector<HTMLElement>('#q-info');
             if (!el) return;
-            // scrollIntoView 는 모달·페이지까지 같이 굴려서 부드러운 스크롤이 끊기므로, 미리보기 상자만 움직인다
-            let box: HTMLElement | null = root.parentElement;
-            while (box && !(box.scrollHeight > box.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
-            if (box) {
-                const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 12;
-                box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-            } else {
-                window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 60, behavior: 'smooth' });
-            }
+            scrollToEl(el);
             el.animate?.([{ boxShadow: `0 0 0 3px ${C.mintBright}`, borderRadius: '24px' }, { boxShadow: '0 0 0 3px rgba(6,196,160,0)', borderRadius: '24px' }], { duration: 1400, easing: 'ease-out' });
         }, 60);
         return () => window.clearTimeout(t);
@@ -208,84 +223,92 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
             <style>{TRIP_DOC_CSS}</style>
             <div style={{ maxWidth: 720, width: '100%', boxSizing: 'border-box', margin: '0 auto', background: '#FFFFFF', minHeight: '100vh', boxShadow: '0 0 0 1px rgba(18,59,58,0.04)' }}>
 
-                {/* ─── 01 Cover ─── */}
-                <section style={{ position: 'relative', overflow: 'hidden', background: '#FFFFFF', color: C.ink, padding: '0 0 26px' }}>
-                    <header style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '20px 20px 0' }}>
-                        <span style={{ ...anton, fontSize: 18, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>MONGOLIA MILKY WAY</span>
-                        <span style={{ display: 'flex', alignItems: 'center', height: 30, padding: '0 14px', border: `1.5px solid ${C.ink}`, borderRadius: '50%', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.6)' }}>{docLabel}</span>
-                    </header>
-                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '30px 20px 0', textAlign: 'center' }}>
-                        <span style={{ fontSize: 'clamp(16px,4.6cqw,22px)', fontWeight: 300, letterSpacing: '-0.02em', animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .2s both' }}>人生を見上げる時間</span>
-                        <h1 style={{ margin: 0, fontSize: 'clamp(38px,12.4cqw,84px)', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.06em', whiteSpace: 'nowrap', animation: reduce ? 'none' : 'qUp .9s cubic-bezier(.2,.7,.2,1) .35s both' }}>モンゴリア天の川</h1>
+                {/* ─── 앱 상단바 (로고 · 문서 종류 · 공유) + 섹션 탭 — 스크롤해도 위에 고정 ─── */}
+                <div ref={barRef} className="tdoc-noprint" style={{ position: 'sticky', top: 0, zIndex: 15, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${C.line}` }}>
+                    <div style={{ height: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0 16px' }}>
+                        <span style={{ ...anton, fontSize: 15, letterSpacing: '0.02em', whiteSpace: 'nowrap', color: C.ink }}>MONGOLIA MILKY WAY</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ height: 26, padding: '0 10px', borderRadius: 999, background: C.mintBg, fontSize: 11, fontWeight: 700, color: C.mintDeep, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{docLabel}</span>
+                            <button type="button" aria-label="共有" onClick={share}
+                                style={{ position: 'relative', width: 34, height: 34, border: 0, borderRadius: '50%', background: C.gray, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <Svg d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13" size={16} stroke={C.ink} sw={2} />
+                                {copied && <span style={{ position: 'absolute', right: 0, top: 40, padding: '5px 9px', borderRadius: 8, background: C.ink, color: '#FFFFFF', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>リンクをコピーしました</span>}
+                            </button>
+                        </span>
                     </div>
-                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 18 }}>
-                        <div style={{ position: 'relative', width: 'min(78cqw,420px)', aspectRatio: '1/1' }}>
+                    <div ref={navRef} data-noscroll="" style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', padding: '0 16px 10px' }}>
+                        {NAV.map(([id, label]) => {
+                            const on = sec === id;
+                            return (
+                                <button key={id} data-nav={id} type="button" onClick={() => goSec(id)}
+                                    style={{ flexShrink: 0, height: 30, padding: '0 13px', border: 0, borderRadius: 999, background: on ? C.ink : C.gray, fontSize: 12, fontWeight: on ? 700 : 500, color: on ? '#FFFFFF' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* ─── 01 Cover ─── */}
+                <section style={{ position: 'relative', overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 0%,#E8FAF5 0%,#FFFFFF 70%)', color: C.ink, padding: '22px 0 20px' }}>
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '0 20px', textAlign: 'center' }}>
+                        <span style={{ fontSize: 'clamp(13px,3.3cqw,20px)', fontWeight: 300, letterSpacing: '0.02em', animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .2s both' }}>人生を見上げる時間</span>
+                        <h1 style={{ margin: 0, fontSize: 'clamp(30px,7.7cqw,60px)', fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.05em', whiteSpace: 'nowrap', animation: reduce ? 'none' : 'qUp .9s cubic-bezier(.2,.7,.2,1) .35s both' }}>モンゴリア天の川</h1>
+                    </div>
+                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+                        <div style={{ position: 'relative', width: 'min(58cqw,360px)', aspectRatio: '1/1' }}>
                             <span aria-hidden="true" style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: C.ink }} />
                             <svg aria-hidden="true" viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', animation: reduce ? 'none' : 'qSpin 28s linear infinite', pointerEvents: 'none' }}>
                                 <defs><path id="tdRing" d="M100,100 m-91,0 a91,91 0 1,1 182,0 a91,91 0 1,1 -182,0" /></defs>
                                 <text style={{ ...anton, fontSize: 9.6, letterSpacing: 1.2, fill: C.mintSoft }}><textPath href="#tdRing" textLength={568} lengthAdjust="spacingAndGlyphs">{`MONGOLIA MILKY WAY ✳ ${isQuote ? 'CUSTOM ESTIMATE' : 'CONFIRMED ITINERARY'} ✳ PRIVATE TOUR ✳ MONGOLIA MILKY WAY ✳ ${isQuote ? 'CUSTOM ESTIMATE' : 'CONFIRMED ITINERARY'} ✳ PRIVATE TOUR ✳ `}</textPath></text>
                             </svg>
                             <div style={{ position: 'absolute', inset: '9%', borderRadius: '50%', overflow: 'hidden', background: '#0F2E2D' }}>
-                                <Photo src={img('quote-hero')} placeholder="" eager style={{ animation: reduce ? 'none' : 'qKen 20s ease-in-out infinite alternate' }} />                            </div>
-                            <span aria-hidden="true" style={{ position: 'absolute', left: '-6%', bottom: '6%', fontFamily: "'Mrs Saint Delafield',cursive", fontSize: 'clamp(64px,18cqw,104px)', lineHeight: 1, color: C.mintBright, transform: 'rotate(-10deg)', whiteSpace: 'nowrap', pointerEvents: 'none', textShadow: '0 2px 0 #FFFFFF' }}>Milky way</span>
-                            <span aria-hidden="true" style={{ position: 'absolute', right: '-4%', top: '4%', fontSize: 34, lineHeight: 1, pointerEvents: 'none' }}>✳</span>
+                                <Photo src={img('quote-hero')} placeholder="" eager style={{ animation: reduce ? 'none' : 'qKen 20s ease-in-out infinite alternate' }} />
+                            </div>
+                            <span aria-hidden="true" style={{ position: 'absolute', left: '-10%', bottom: '4%', fontFamily: "'Mrs Saint Delafield',cursive", fontSize: 'clamp(46px,13cqw,90px)', lineHeight: 1, color: C.mintBright, transform: 'rotate(-10deg)', whiteSpace: 'nowrap', pointerEvents: 'none', textShadow: '0 2px 0 #FFFFFF' }}>Milky way</span>
+                            <span aria-hidden="true" style={{ position: 'absolute', right: '-6%', top: '2%', fontSize: 24, lineHeight: 1, pointerEvents: 'none' }}>✳</span>
                         </div>
                     </div>
-                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '22px 20px 0', textAlign: 'center' }}>
-                        <span style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', justifyContent: 'center', gap: 10, fontSize: 'clamp(40px,12cqw,72px)', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.06em', animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .55s both' }}>
-                            {doc.q.coverLead && <span>{doc.q.coverLead}</span>}<span style={{ color: C.mint }}>{docLabel}</span>{isQuote && <span>-!</span>}
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 20px 0', textAlign: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', justifyContent: 'center', gap: 8, fontSize: 'clamp(24px,6.2cqw,48px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.04em', animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .55s both' }}>
+                            {doc.q.coverLead && <span>{doc.q.coverLead}</span>}<span style={{ color: C.mint }}>{docLabel}</span>
                         </span>
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, padding: '4px 26px', border: `1.5px solid ${C.ink}`, borderRadius: '50%', fontSize: 13, whiteSpace: 'nowrap' }}>
-                            日本語ガイドと <strong style={{ fontWeight: 700, marginLeft: 4 }}>{doc.people}名様専用</strong>で設計
+                        <span style={{ fontSize: 12, color: C.sub }}>
+                            日本語ガイドと <strong style={{ fontWeight: 700, color: C.ink }}>{doc.people}名様専用</strong>で設計
                         </span>
-                        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .7s both' }}>
+                        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4, animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .7s both' }}>
                             {[region, dur, `${doc.people}名`].filter(Boolean).map((t, i) => (
-                                <span key={i} style={{ display: 'flex', alignItems: 'center', height: 34, padding: '0 14px', borderRadius: 999, background: C.ink, fontSize: 12, fontWeight: 700, color: '#FFFFFF' }}>{t}</span>
+                                <span key={i} style={{ display: 'flex', alignItems: 'center', height: 28, padding: '0 11px', borderRadius: 999, background: C.ink, fontSize: 11, fontWeight: 700, color: '#FFFFFF' }}>{t}</span>
                             ))}
                             {isQuote ? (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 6px 0 12px', borderRadius: 999, background: C.mintBg, fontSize: 12, fontWeight: 700, color: countdown ? C.mintDeep : C.red }}>
-                                    {countdown ? 'お見積り有効期限まで' : 'お見積り有効期限'}
-                                    <span style={{ height: 24, padding: '0 9px', borderRadius: 999, background: C.mintBright, ...inter, fontSize: 11, fontWeight: 700, color: C.ink, display: 'inline-flex', alignItems: 'center' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 4px 0 10px', borderRadius: 999, background: C.mintBg, fontSize: 11, fontWeight: 700, color: countdown ? C.mintDeep : C.red }}>
+                                    有効期限
+                                    <span style={{ height: 20, padding: '0 7px', borderRadius: 999, background: C.mintBright, ...inter, fontSize: 10, fontWeight: 700, color: C.ink, display: 'inline-flex', alignItems: 'center' }}>
                                         {countdown || `${doc.validUntil.getMonth() + 1}月${doc.validUntil.getDate()}日 終了`}
                                     </span>
                                 </span>
                             ) : (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 14px', borderRadius: 999, background: C.grad, fontSize: 12, fontWeight: 700, color: '#FFFFFF' }}>✓ ご予約確定</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28, padding: '0 11px', borderRadius: 999, background: C.grad, fontSize: 11, fontWeight: 700, color: '#FFFFFF' }}>✓ ご予約確定</span>
                             )}
                         </span>
                     </div>
-                    <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', margin: '24px 20px 0', border: `1.5px solid ${C.ink}`, background: 'rgba(255,255,255,0.7)', animation: reduce ? 'none' : 'qUp .8s cubic-bezier(.2,.7,.2,1) .9s both' }}>
-                        {[['ISSUED', doc.issued, true], ['MANAGER', doc.q.manager || '担当スタッフ', false], ['NO.', doc.docNo, true]].map(([k, v, num], i) => (
-                            <span key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 12px', borderRight: i < 2 ? `1.5px solid ${C.ink}` : 'none', minWidth: 0 }}>
-                                <span style={{ ...anton, fontSize: 12, letterSpacing: '0.04em', color: C.mint }}>{k as string}</span>
-                                <span style={{ ...(num ? inter : {}), fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v as string}</span>
-                            </span>
-                        ))}
-                    </div>
-                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 14, padding: '12px 20px 0', fontSize: 11, color: C.sub }}>
-                        <span>@{COMPANY.instagram}</span><span>{COMPANY.site}</span>
-                    </div>
                 </section>
-
-                {/* ─── 섹션 내비 ─── */}
-                <nav className="tdoc-noprint" style={{ position: 'sticky', top: 0, zIndex: 15, background: '#FFFFFF', borderBottom: `1px solid ${C.line}` }}>
-                    <div ref={navRef} data-noscroll="" style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', padding: '10px 20px' }}>
-                        {NAV.map(([id, label]) => {
-                            const on = sec === id;
-                            return (
-                                <button key={id} data-nav={id} type="button" onClick={() => goSec(id)}
-                                    style={{ flexShrink: 0, height: 34, padding: '0 14px', border: 0, borderRadius: 999, background: on ? C.grad : C.gray, fontSize: 13, fontWeight: on ? 700 : 500, color: on ? '#FFFFFF' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    {label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </nav>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', margin: '0 16px', padding: '10px 0', borderRadius: 14, background: C.paper }}>
+                    {[['ISSUED', doc.issued, true], ['MANAGER', doc.q.manager || '担当スタッフ', false], ['NO.', doc.docNo, true]].map(([k, v, num], i) => (
+                        <span key={i} style={{ display: 'flex', flexDirection: 'column', gap: 1, padding: '0 12px', borderRight: i < 2 ? `1px solid ${C.line}` : 'none', minWidth: 0 }}>
+                            <span style={{ ...anton, fontSize: 10, letterSpacing: '0.06em', color: C.mint }}>{k as string}</span>
+                            <span style={{ ...(num ? inter : {}), fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v as string}</span>
+                        </span>
+                    ))}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 14, padding: '10px 20px 0', fontSize: 11, color: C.sub }}>
+                    <span>@{COMPANY.instagram}</span><span>{COMPANY.site}</span>
+                </div>
 
                 {notice}
 
                 {/* ─── 02 Estimate / Trip info ─── */}
-                <section id="q-info" style={{ padding: '32px 20px', display: 'flex', flexDirection: 'column', gap: 24, scrollMarginTop: 56 }}>
+                <section id="q-info" style={{ padding: '28px 16px', display: 'flex', flexDirection: 'column', gap: 24, scrollMarginTop: 104 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             <span style={{ fontSize: 13, fontWeight: 500, color: C.sub }}>モンゴル現地で直接運営する</span>
@@ -304,8 +327,8 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <span style={{ ...anton, fontSize: 'clamp(40px,12cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>TRIP INFO</span>
-                            <BigLine size="clamp(28px,8.4cqw,42px)" parts={[`${doc.customerName} 様の`, { a: 'ご旅行' }]} />
+                            <span style={{ ...anton, fontSize: 'clamp(28px,7.2cqw,60px)', lineHeight: 0.95, marginBottom: 6 }}>TRIP INFO</span>
+                            <BigLine size="clamp(20px,5.1cqw,42px)" parts={[`${doc.customerName} 様の`, { a: 'ご旅行' }]} />
                         </div>
                         {/* 영수증 */}
                         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '30px 18px 40px', borderRadius: 24, background: 'linear-gradient(180deg,#E9EEED 0%,#F4F7F6 100%)', overflow: 'hidden' }}>
@@ -316,12 +339,12 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                 <div style={{ position: 'relative', animation: reduce ? 'none' : 'qPrint 2.4s cubic-bezier(.45,.05,.3,1) .4s both' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '40px 26px 28px', background: 'linear-gradient(90deg,#F3F5F5 0%,#FFFFFF 18%,#FFFFFF 82%,#F3F5F5 100%)', boxShadow: '0 10px 24px rgba(18,59,58,0.12)' }}>
                                         <span style={dash} />
-                                        <span style={{ textAlign: 'center', ...anton, fontSize: 24, letterSpacing: '0.08em' }}>TRIP RECEIPT</span>
+                                        <span style={{ textAlign: 'center', ...anton, fontSize: 21, letterSpacing: '0.08em' }}>TRIP RECEIPT</span>
                                         <span style={dash} />
                                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', alignItems: 'center', gap: 8, padding: '8px 0' }}>
                                             <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                                 <span style={{ ...inter, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: C.mintDeep }}>DEPART</span>
-                                                <span style={{ ...inter, fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em' }}>{start ? `${p2(start.getMonth() + 1)}.${p2(start.getDate())}` : '—'}</span>
+                                                <span style={{ ...inter, fontSize: 21, fontWeight: 700, letterSpacing: '-0.03em' }}>{start ? `${p2(start.getMonth() + 1)}.${p2(start.getDate())}` : '—'}</span>
                                                 <span style={{ fontSize: 11, color: C.sub }}>{start ? `${start.getFullYear()} · ${fmtWeekday(start)}` : '日程調整中'}</span>
                                             </span>
                                             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -330,7 +353,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                             </span>
                                             <span style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
                                                 <span style={{ ...inter, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: C.mintDeep }}>RETURN</span>
-                                                <span style={{ ...inter, fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em' }}>{end ? `${p2(end.getMonth() + 1)}.${p2(end.getDate())}` : '—'}</span>
+                                                <span style={{ ...inter, fontSize: 21, fontWeight: 700, letterSpacing: '-0.03em' }}>{end ? `${p2(end.getMonth() + 1)}.${p2(end.getDate())}` : '—'}</span>
                                                 <span style={{ fontSize: 11, color: C.sub }}>{end ? `${end.getFullYear()} · ${fmtWeekday(end)}` : ''}</span>
                                             </span>
                                         </div>
@@ -346,7 +369,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                             <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.03em', color: C.mintDeep }}>{[dur, `${doc.people}名`].filter(Boolean).join(' · ')}</span>
                                         </div>
                                         <span style={dash} />
-                                        <span style={{ marginTop: 4, textAlign: 'center', ...anton, fontSize: 26, letterSpacing: '0.08em' }}>THANK YOU</span>
+                                        <span style={{ marginTop: 4, textAlign: 'center', ...anton, fontSize: 21, letterSpacing: '0.08em' }}>THANK YOU</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginTop: 2 }}>
                                             <span aria-hidden="true" style={{ width: '86%', height: 36, background: `repeating-linear-gradient(90deg,${C.ink} 0 2px,transparent 2px 4px,${C.ink} 4px 5px,transparent 5px 8px,${C.ink} 8px 11px,transparent 11px 12px,${C.ink} 12px 13px,transparent 13px 16px)` }} />
                                             <span style={{ ...inter, fontSize: 10, letterSpacing: '0.24em', color: C.sub }}>NO. {doc.docNo}</span>
@@ -371,11 +394,11 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                         <span style={{ width: 24, height: 24, borderRadius: '50%', boxSizing: 'border-box', border: `2px solid ${C.mintPale}`, background: C.mintPale, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: C.ink }}>✓</span>
                                     </span>
                                     <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em' }}>{doc.q.planName || doc.title || 'プライベートツアー'}</span>
+                                        <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em' }}>{doc.q.planName || doc.title || 'プライベートツアー'}</span>
                                         {(doc.q.planSub || doc.q.stayLabel) && <span style={{ fontSize: 12, lineHeight: 1.5, color: C.faint }}>{doc.q.planSub || doc.q.stayLabel}</span>}
                                     </span>
                                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                                        <span style={{ ...inter, fontSize: 'clamp(30px,8.4cqw,40px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.04em', color: C.mintPale }}>{yen(price.perPerson)}</span>
+                                        <span style={{ ...inter, fontSize: 'clamp(21px,5.4cqw,40px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.04em', color: C.mintPale }}>{yen(price.perPerson)}</span>
                                         <span style={{ fontSize: 14, fontWeight: 700 }}>円</span>
                                     </span>
                                 </div>
@@ -404,7 +427,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                         <span style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap' }}>ご旅行代金 合計</span>
                                         <span style={{ fontSize: 11, color: C.mintBg, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{barSub}</span>
                                     </span>
-                                    <span style={{ position: 'relative', ...inter, fontSize: 'clamp(26px,7.6cqw,40px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1, whiteSpace: 'nowrap' }}>¥{yen(price.total)}</span>
+                                    <span style={{ position: 'relative', ...inter, fontSize: 'clamp(18px,4.6cqw,40px)', fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1, whiteSpace: 'nowrap' }}>¥{yen(price.total)}</span>
                                 </div>
                             </div>
                             <div style={{ marginTop: -12, display: 'flex', gap: 8, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 16, background: C.paper }}>
@@ -436,7 +459,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 20, borderRadius: 24, background: C.paper }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
                                     <span style={{ fontSize: 14, fontWeight: 700, color: C.body }}>ご旅行代金 <span style={{ fontSize: 12, fontWeight: 500, color: C.mute }}>· {doc.people}名</span></span>
-                                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ ...inter, fontSize: 30, fontWeight: 700, letterSpacing: '-0.04em' }}>{yen(price.total)}</span><span style={{ fontSize: 15, fontWeight: 700 }}>円</span></span>
+                                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}><span style={{ ...inter, fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em' }}>{yen(price.total)}</span><span style={{ fontSize: 15, fontWeight: 700 }}>円</span></span>
                                 </div>
                                 <div style={{ display: 'flex', height: 12, borderRadius: 999, overflow: 'hidden', background: C.ink }}><span style={{ width: depPct, minWidth: 14, background: C.mintBright }} /></div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontSize: 12, fontWeight: 600 }}>
@@ -456,8 +479,8 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <span style={{ fontSize: 17, fontWeight: 700 }}>予約金</span>
                                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                                        <span style={{ ...inter, fontSize: 'clamp(40px,12cqw,56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.05em', color: C.mintSoft }}>{yen(price.deposit)}</span>
-                                        <span style={{ fontSize: 20, fontWeight: 700 }}>円</span>
+                                        <span style={{ ...inter, fontSize: 'clamp(28px,7.2cqw,56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.05em', color: C.mintSoft }}>{yen(price.deposit)}</span>
+                                        <span style={{ fontSize: 18, fontWeight: 700 }}>円</span>
                                         <span style={{ marginLeft: 'auto', fontSize: 12, color: C.faint }}>¥{yen(price.depositPer)} × {doc.people}名</span>
                                     </span>
                                 </div>
@@ -469,7 +492,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                             <span style={{ fontSize: 12, color: C.sub }}>クレジットカード払いにも対応</span>
                                         </span>
                                     </span>
-                                    <span style={{ ...inter, fontSize: 'clamp(24px,7cqw,32px)', fontWeight: 700, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>PayPal 請求書</span>
+                                    <span style={{ ...inter, fontSize: 'clamp(17px,4.4cqw,32px)', fontWeight: 700, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>PayPal 請求書</span>
                                     {doc.payUrl ? (
                                         // 청구서가 발행돼 있으면 메일을 찾지 않아도 여기서 바로 결제
                                         <a href={doc.payUrl} target="_blank" rel="noopener noreferrer" className="tdoc-noprint"
@@ -501,8 +524,8 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <span style={{ fontSize: 17, fontWeight: 700 }}>残金</span>
                                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                                        <span style={{ ...inter, fontSize: 'clamp(40px,12cqw,56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.05em', color: C.mintDeep }}>{yen(price.balance)}</span>
-                                        <span style={{ fontSize: 20, fontWeight: 700 }}>円</span>
+                                        <span style={{ ...inter, fontSize: 'clamp(28px,7.2cqw,56px)', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.05em', color: C.mintDeep }}>{yen(price.balance)}</span>
+                                        <span style={{ fontSize: 18, fontWeight: 700 }}>円</span>
                                         <span style={{ marginLeft: 'auto', fontSize: 12, color: C.mute, textAlign: 'right' }}>¥{yen(price.balancePer)} × {doc.people}名</span>
                                     </span>
                                 </div>
@@ -522,21 +545,21 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                 )}
 
                 {/* ─── 03 Included ─── */}
-                <section id="q-inc" style={{ padding: '48px 24px 56px', display: 'flex', flexDirection: 'column', gap: 36, scrollMarginTop: 56 }}>
+                <section id="q-inc" style={{ padding: '30px 16px 36px', display: 'flex', flexDirection: 'column', gap: 24, scrollMarginTop: 104 }}>
                     <SectionHead en="ALL INCLUSIVE" pill="ツアーに含まれるもの・含まれないもの">
                         <BigLine parts={['現地での追加費用', { a: '¥0' }]} />
                         <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.7, color: C.sub }}>旅に必要なサービスをすべて含み、快適で安全な旅をご提供します。 <strong style={{ color: C.ink }}>現地での追加費用は一切ありません。</strong></p>
                     </SectionHead>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10, padding: '0 2px' }}>
-                            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.03em' }}>含まれるもの</span>
-                            <span style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}><span style={{ ...inter, fontSize: 34, fontWeight: 700, lineHeight: 0.9, letterSpacing: '-0.05em', color: C.mint }}>{doc.included.length}</span><span style={{ ...inter, fontSize: 11, fontWeight: 700, color: C.mintDeep }}>ITEMS</span></span>
+                            <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.03em' }}>含まれるもの</span>
+                            <span style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}><span style={{ ...inter, fontSize: 27, fontWeight: 700, lineHeight: 0.9, letterSpacing: '-0.05em', color: C.mint }}>{doc.included.length}</span><span style={{ ...inter, fontSize: 11, fontWeight: 700, color: C.mintDeep }}>ITEMS</span></span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '34px 14px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '22px 8px' }}>
                             {doc.included.map((t, i) => (
                                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center', minWidth: 0 }}>
-                                    <span style={{ width: 58, height: 58, borderRadius: '50%', border: '1.5px solid #9DB0AC', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}><Svg d={incIcon(t)} size={26} stroke={C.body} sw={1.5} /></span>
-                                    <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.45, color: C.body }}>{t}</span>
+                                    <span style={{ width: 50, height: 50, borderRadius: '50%', border: '1.5px solid #9DB0AC', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}><Svg d={incIcon(t)} size={22} stroke={C.body} sw={1.5} /></span>
+                                    <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.4, color: C.body }}>{t}</span>
                                 </div>
                             ))}
                         </div>
@@ -544,11 +567,11 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                     <span style={{ height: 1, background: '#E3ECE9', margin: '4px 0' }} />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '0 2px' }}><span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.03em', color: C.sub }}>含まれないもの</span><span style={{ fontSize: 12, color: C.mute }}>各自でご用意ください</span></div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '34px 14px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '22px 8px' }}>
                             {doc.excluded.map((t, i) => (
                                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center', minWidth: 0 }}>
-                                    <span style={{ width: 58, height: 58, borderRadius: '50%', border: '1.5px dashed #B9C6C3', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}><Svg d={IC.x} size={18} stroke={C.mute} sw={1.6} /></span>
-                                    <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.45, color: C.sub }}>{t}</span>
+                                    <span style={{ width: 50, height: 50, borderRadius: '50%', border: '1.5px dashed #B9C6C3', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}><Svg d={IC.x} size={18} stroke={C.mute} sw={1.6} /></span>
+                                    <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.4, color: C.sub }}>{t}</span>
                                 </div>
                             ))}
                         </div>
@@ -571,10 +594,10 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                             </SectionHead>
 
                             {rtCur && (
-                                <div style={{ position: 'relative', margin: '0 -20px', padding: '8px 0 4px', overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 100%,#E8FAF5 0%,rgba(232,250,245,0) 70%)' }}>
+                                <div style={{ position: 'relative', margin: '0 -16px', padding: '8px 0 4px', overflow: 'hidden', background: 'radial-gradient(120% 70% at 50% 100%,#E8FAF5 0%,rgba(232,250,245,0) 70%)' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textAlign: 'center', padding: '0 20px' }}>
-                                        <span style={{ ...anton, fontSize: 'clamp(84px,26cqw,140px)', lineHeight: 0.9, color: C.mint, letterSpacing: '0.01em' }}>DAY {rtCur.day}</span>
-                                        <span style={{ fontSize: 'clamp(20px,5.8cqw,26px)', fontWeight: 800, letterSpacing: '-0.04em' }}>{rtCur.name}</span>
+                                        <span style={{ ...anton, fontSize: 'clamp(59px,15.1cqw,140px)', lineHeight: 0.9, color: C.mint, letterSpacing: '0.01em' }}>DAY {rtCur.day}</span>
+                                        <span style={{ fontSize: 'clamp(18px,4.6cqw,26px)', fontWeight: 800, letterSpacing: '-0.04em' }}>{rtCur.name}</span>
                                         {rtCur.sub && <span style={{ fontSize: 14, color: C.sub }}>[{rtCur.sub}]</span>}
                                     </div>
                                     <div style={{ position: 'relative', height: 'calc(min(34cqw,170px) + 40px)', marginTop: 18 }} onMouseEnter={() => { rtPause.current = Date.now() + 20000; }} onMouseLeave={() => { rtPause.current = Date.now(); }}>
@@ -600,8 +623,8 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                     <div style={{ marginTop: 6 }}><Dots count={rtN} idx={rti} label="DAY" onGo={i => { rtPause.current = Date.now(); setRtIdx(i); }} /></div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', margin: '16px 20px 4px', borderRadius: 20, overflow: 'hidden', background: C.ink, color: '#FFFFFF' }}>
                                         <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 12px' }}><span style={{ ...anton, fontSize: 11, letterSpacing: '0.06em', color: C.mintSoft }}>ROUTE</span><span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>{rti === 0 ? `空港 → ${rtCur.short}` : `${rtPrev?.short} → ${rtCur.short}`}</span></span>
-                                        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 12px', borderLeft: '1px solid rgba(255,255,255,0.14)' }}><span style={{ ...anton, fontSize: 11, letterSpacing: '0.06em', color: C.mintSoft }}>所要時間（目安）</span><span style={{ fontSize: 'clamp(15px,4.2cqw,20px)', fontWeight: 800, letterSpacing: '-0.03em', wordBreak: 'keep-all' }}>{rtCur.time ? `約 ${rtCur.time.replace(/^約\s*/, '')}` : '—'}</span></span>
-                                        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 12px', borderLeft: '1px solid rgba(255,255,255,0.14)' }}><span style={{ ...anton, fontSize: 11, letterSpacing: '0.06em', color: C.mintSoft }}>移動</span><span style={{ fontSize: 'clamp(15px,4.2cqw,20px)', fontWeight: 800, letterSpacing: '-0.03em', wordBreak: 'keep-all' }}>全日程 専用車</span></span>
+                                        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 12px', borderLeft: '1px solid rgba(255,255,255,0.14)' }}><span style={{ ...anton, fontSize: 11, letterSpacing: '0.06em', color: C.mintSoft }}>所要時間（目安）</span><span style={{ fontSize: 'clamp(14px,3.6cqw,20px)', fontWeight: 800, letterSpacing: '-0.03em', wordBreak: 'keep-all' }}>{rtCur.time ? `約 ${rtCur.time.replace(/^約\s*/, '')}` : '—'}</span></span>
+                                        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '14px 12px', borderLeft: '1px solid rgba(255,255,255,0.14)' }}><span style={{ ...anton, fontSize: 11, letterSpacing: '0.06em', color: C.mintSoft }}>移動</span><span style={{ fontSize: 'clamp(14px,3.6cqw,20px)', fontWeight: 800, letterSpacing: '-0.03em', wordBreak: 'keep-all' }}>全日程 専用車</span></span>
                                     </div>
                                 </div>
                             )}
@@ -613,7 +636,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                             )}
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 4 }}>
-                                <ChipTitle before="日別" chip="スケジュール" size="clamp(20px,5.8cqw,26px)" />
+                                <ChipTitle before="日別" chip="スケジュール" size="clamp(18px,4.6cqw,26px)" />
                                 <button type="button" className="td-hov tdoc-noprint" onClick={() => setOpen(allOpen ? [] : doc.days.map(d => d.n))}
                                     style={{ height: 34, padding: '0 14px', border: `1px solid ${C.line}`, borderRadius: 999, background: '#FFFFFF', fontSize: 12, fontWeight: 700, color: C.ink, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                     {allOpen ? 'すべて閉じる' : 'すべて開く'}
@@ -621,21 +644,21 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                             </div>
 
                             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <span aria-hidden="true" style={{ position: 'absolute', left: 27, top: 28, bottom: 28, borderLeft: `2px dashed ${C.mintLine}` }} />
+                                <span aria-hidden="true" style={{ position: 'absolute', left: 21, top: 22, bottom: 22, borderLeft: `2px dashed ${C.mintLine}` }} />
                                 {doc.days.map(d => {
                                     const o = open.includes(d.n);
                                     return (
-                                        <div key={d.n} data-day={d.n} style={{ position: 'relative', display: 'grid', gridTemplateColumns: '56px minmax(0,1fr)', gap: 12, alignItems: 'start', scrollMarginTop: 60 }}>
-                                            <span style={{ position: 'relative', zIndex: 1, width: 56, height: 56, borderRadius: '50%', background: o ? C.grad : C.ink, boxShadow: '0 0 0 5px #FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div key={d.n} data-day={d.n} style={{ position: 'relative', display: 'grid', gridTemplateColumns: '44px minmax(0,1fr)', gap: 10, alignItems: 'start', scrollMarginTop: 60 }}>
+                                            <span style={{ position: 'relative', zIndex: 1, width: 44, height: 44, borderRadius: '50%', background: o ? C.grad : C.ink, boxShadow: '0 0 0 4px #FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                                 <span style={{ ...inter, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: o ? C.mintBg : C.faint }}>DAY</span>
-                                                <span style={{ ...inter, fontSize: 20, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: o ? '#FFFFFF' : C.mintPale }}>{d.n}</span>
+                                                <span style={{ ...inter, fontSize: 18, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: o ? '#FFFFFF' : C.mintPale }}>{d.n}</span>
                                             </span>
                                             <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 24, background: o ? C.mintBg : '#FFFFFF', border: `1.5px solid ${o ? C.mintPale : C.line}`, overflow: 'hidden', transition: 'background .25s,border-color .25s' }}>
                                                 <button type="button" aria-expanded={o} onClick={() => setOpen(cur => (cur.includes(d.n) ? cur.filter(x => x !== d.n) : [...cur, d.n]))}
-                                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: C.ink }}>
+                                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: C.ink }}>
                                                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                                                         {d.dateLabel && <span style={{ ...inter, fontSize: 11, fontWeight: 600, color: C.mintDeep }}>{d.dateLabel}</span>}
-                                                        <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em' }}>{d.title}</span>
+                                                        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.03em' }}>{d.title}</span>
                                                         {d.move && <span style={{ fontSize: 12, color: C.sub }}>移動 {d.move}</span>}
                                                     </span>
                                                     <span style={{ width: 32, height: 32, borderRadius: '50%', background: o ? C.ink : C.gray, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -646,7 +669,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px 16px' }}>
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                             {d.items.map((t, i) => (
-                                                                <div key={i} style={{ display: 'flex', gap: 10, fontSize: 14, lineHeight: 1.6, color: /^[（(]/.test(t) ? C.mute : C.body }}>
+                                                                <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, lineHeight: 1.6, color: /^[（(]/.test(t) ? C.mute : C.body }}>
                                                                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.mintBright, flexShrink: 0, marginTop: 8 }} />{t}
                                                                 </div>
                                                             ))}
@@ -682,7 +705,7 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                 {/* ─── 05 Highlights ─── */}
                 {doc.highlights.length > 0 && (
                     <>
-                        <section id="q-spot" style={{ padding: '32px 0', display: 'flex', flexDirection: 'column', gap: 16, scrollMarginTop: 56 }}>
+                        <section id="q-spot" style={{ padding: '32px 0', display: 'flex', flexDirection: 'column', gap: 16, scrollMarginTop: 104 }}>
                             <div style={{ padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
                                 <SectionHead en="TOUR HIGHLIGHTS" pill="今回の旅の見どころ">
                                     <BigLine parts={['必見スポット', { a: `${doc.highlights.length}か所` }]} />
@@ -701,21 +724,21 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                 onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); spotGo(spotIdx + 1); } if (e.key === 'ArrowLeft') { e.preventDefault(); spotGo(spotIdx - 1); } }}
                                 style={{ cursor: dragging ? 'grabbing' : 'grab', userSelect: 'none', display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: dragging ? 'none' : 'x mandatory', scrollbarWidth: 'none', padding: '0 20px 4px', scrollPadding: '0 20px' }}>
                                 {doc.highlights.map((s, i) => (
-                                    <article key={i} style={{ flex: '0 0 84%', maxWidth: 420, alignSelf: 'stretch', scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', borderRadius: 28, overflow: 'hidden', background: C.ink, color: '#FFFFFF', boxShadow: '0 12px 28px rgba(18,59,58,0.16)' }}>
-                                        <div style={{ position: 'relative', aspectRatio: '4/5', background: 'rgba(255,255,255,0.06)' }}>
+                                    <article key={i} style={{ flex: '0 0 72%', maxWidth: 320, alignSelf: 'stretch', scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', borderRadius: 28, overflow: 'hidden', background: C.ink, color: '#FFFFFF', boxShadow: '0 12px 28px rgba(18,59,58,0.16)' }}>
+                                        <div style={{ position: 'relative', aspectRatio: '5/6', background: 'rgba(255,255,255,0.06)' }}>
                                             <Photo src={s.img} placeholder={s.name} style={{ pointerEvents: 'none' }} />
                                             <span aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(11,38,37,0.45) 0%,rgba(11,38,37,0) 28%,rgba(11,38,37,0) 52%,rgba(18,59,58,1) 100%)' }} />
                                             <div style={{ position: 'absolute', left: 18, top: 16, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
-                                                <span style={{ ...inter, fontSize: 40, fontWeight: 700, lineHeight: 0.9, letterSpacing: '-0.05em' }}>{String(i + 1).padStart(2, '0')}</span>
+                                                <span style={{ ...inter, fontSize: 28, fontWeight: 700, lineHeight: 0.9, letterSpacing: '-0.05em' }}>{String(i + 1).padStart(2, '0')}</span>
                                                 <span style={{ width: 34, height: 2, background: C.mintPale }} />
                                             </div>
                                             <div style={{ position: 'absolute', left: 18, right: 18, bottom: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, pointerEvents: 'none' }}>
                                                 {s.en && <span style={{ height: 24, padding: '0 10px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(16px)', ...inter, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Svg d={IC.pin} size={11} stroke={C.mintPale} sw={2.2} />{s.en}</span>}
-                                                <h3 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: '#FFFFFF' }}>{s.name}</h3>
+                                                <h3 style={{ margin: 0, fontSize: 21, fontWeight: 700, letterSpacing: '-0.03em', color: '#FFFFFF' }}>{s.name}</h3>
                                             </div>
                                         </div>
                                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 18px 18px' }}>
-                                            <p style={{ margin: 0, minHeight: 49, fontSize: 14, lineHeight: 1.75, color: C.line, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{s.desc}</p>
+                                            <p style={{ margin: 0, minHeight: 42, fontSize: 12.5, lineHeight: 1.7, color: C.line, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{s.desc}</p>
                                             {s.thumbs.length > 0 && (
                                                 <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
                                                     {s.thumbs.map((t, k) => <span key={k} style={{ position: 'relative', display: 'block', aspectRatio: '1/1', borderRadius: 16, overflow: 'hidden', background: 'rgba(255,255,255,0.08)' }}><Photo src={t} style={{ pointerEvents: 'none' }} /></span>)}
@@ -734,21 +757,18 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                 <TripDocCompany doc={doc} images={images} reduce={reduce} specials={specialsOn} legal={legal} />
 
                 {bar && (
-                    <div className="tdoc-noprint" style={{ position: 'sticky', bottom: 0, zIndex: 20, padding: '10px 12px calc(10px + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.92) 40%)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 8px 8px 22px', borderRadius: 999, background: 'rgba(18,59,58,0.94)', backdropFilter: 'blur(16px)', boxShadow: '0 14px 32px rgba(18,59,58,0.28)' }}>
-                            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {bar.sub && <span style={{ fontSize: 10, color: C.faint, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bar.sub}</span>}
-                                {bar.amount && <span style={{ display: 'flex', alignItems: 'baseline', gap: 4, whiteSpace: 'nowrap' }}>
-                                    <span style={{ fontSize: 12, fontWeight: 600, color: C.line }}>{bar.amountLabel || '予約金'}</span>
-                                    <span style={{ ...inter, fontSize: 22, fontWeight: 700, lineHeight: 1.05, letterSpacing: '-0.03em', color: C.mintPale }}>{bar.amount}</span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>円</span>
-                                </span>}
+                    // 하단 고정 바 — 왼쪽 금액, 오른쪽 확정 버튼 (앱 하단 버튼 형태)
+                    <div className="tdoc-noprint" data-mw-actionbar="" style={{ position: 'sticky', bottom: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px calc(12px + env(safe-area-inset-bottom))', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: `1px solid ${C.line}`, boxShadow: '0 -8px 24px rgba(18,59,58,0.08)' }}>
+                        {(bar.amount || bar.sub) && (
+                            <span style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 1, maxWidth: '42%' }}>
+                                <span style={{ fontSize: 10, color: C.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bar.amount ? (bar.amountLabel || '予約金') + (bar.sub ? ` · ${bar.sub}` : '') : bar.sub}</span>
+                                {bar.amount && <span style={{ ...inter, fontSize: 18, fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em', color: C.ink, whiteSpace: 'nowrap' }}>¥{bar.amount}</span>}
                             </span>
-                            <button type="button" onClick={bar.onClick} disabled={bar.disabled}
-                                style={{ height: 52, padding: '0 22px', border: 0, borderRadius: 999, background: bar.disabled ? C.gray : C.grad, fontSize: 15, fontWeight: 700, color: bar.disabled ? C.sub : '#FFFFFF', cursor: bar.disabled ? 'default' : 'pointer', whiteSpace: 'nowrap', boxShadow: bar.disabled ? 'none' : '0 6px 16px rgba(6,196,160,0.35)' }}>
-                                {bar.label}
-                            </button>
-                        </div>
+                        )}
+                        <button type="button" onClick={bar.onClick} disabled={bar.disabled}
+                            style={{ flex: 1, minWidth: 0, height: 48, padding: '0 14px', border: 0, borderRadius: 14, background: bar.disabled ? C.gray : C.mintBright, fontSize: 15, fontWeight: 800, color: bar.disabled ? C.sub : C.ink, cursor: bar.disabled ? 'default' : 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {bar.label}
+                        </button>
                     </div>
                 )}
 
