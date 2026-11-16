@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { readInvoice } from '../lib/reservationInvoice';
 
 type Env = {
     DB: any;
@@ -46,6 +47,55 @@ const loadProductIncExc = async (db: any, productName?: string | null): Promise<
         return { included: arr(prod.included), excluded: arr(prod.excluded) };
     } catch {
         return empty;
+    }
+};
+
+// 상품의 일정 블록(dayInfo/timeline) → 문서 DAY 배열.
+// 사이트에서 상품을 예약한 고객은 관리자가 문서를 편집하지 않아도 상품 일정·사진으로
+// 새 디자인 확정일정표가 바로 나오도록 한다 (편집기 productBlocksToDays 와 같은 규칙).
+const productBlocksToDays = (blocks: any[]): any[] => {
+    const days: any[] = [];
+    let cur: any = null;
+    const parse = (v: any) => { if (typeof v !== 'string') return v || {}; try { return JSON.parse(v); } catch { return {}; } };
+    for (const block of Array.isArray(blocks) ? blocks : []) {
+        if (block?.type === 'dayInfo') {
+            const info = parse(block.content);
+            cur = {
+                day: days.length + 1,
+                date: '',
+                title: info.title || '',
+                region: '',
+                summary: info.description || '',
+                activities: [],
+                meals: info.meals || {},
+                accommodation: info.accommodation ? {
+                    id: info.accommodationHotelId,
+                    name: info.accommodation,
+                    location: info.accommodationAddress,
+                    images: info.accommodationImages || [],
+                    description: info.accommodationDescription,
+                } : null,
+            };
+            days.push(cur);
+        } else if (block?.type === 'timeline') {
+            if (!cur) { cur = { day: 1, title: '', region: '', summary: '', activities: [], meals: {}, accommodation: null }; days.push(cur); }
+            const t = parse(block.content);
+            cur.activities.push({ time: '', type: 'sightseeing', title: t.title || '', description: t.description || '', images: t.images || [] });
+        }
+    }
+    return days.filter(d => d.title || d.activities.length);
+};
+
+const loadProductDays = async (db: any, productId?: string | null, productName?: string | null): Promise<{ name: string; days: any[] } | null> => {
+    try {
+        const prod: any = productId
+            ? await db.prepare('SELECT name, itinerary_blocks FROM products WHERE id = ? LIMIT 1').bind(productId).first()
+            : productName ? await db.prepare('SELECT name, itinerary_blocks FROM products WHERE name = ? LIMIT 1').bind(productName).first() : null;
+        if (!prod?.itinerary_blocks) return null;
+        const days = productBlocksToDays(parseNestedJson(prod.itinerary_blocks, []));
+        return days.length ? { name: prod.name, days } : null;
+    } catch {
+        return null;
     }
 };
 
@@ -107,6 +157,20 @@ app.get('/itinerary/:reservationId', async (c) => {
         };
     }
 
+    // 저장된 문서·템플릿 일정이 없으면 예약한 상품의 일정으로 채운다
+    if (!template || !Array.isArray(template.days) || template.days.length === 0) {
+        const fromProduct = await loadProductDays(db, reservation.product_id, reservation.product_name);
+        if (fromProduct) {
+            template = {
+                id: template?.id || 'product',
+                name: template?.name || fromProduct.name,
+                description: template?.description || '',
+                documentSettings: template?.documentSettings || null,
+                days: fromProduct.days,
+            };
+        }
+    }
+
     // Compute day-by-day merged view
     const mergedDays = (template?.days || []).map((tday: any, idx: number) => {
         const dayNumber = tday.day || idx + 1;
@@ -147,6 +211,15 @@ app.get('/itinerary/:reservationId', async (c) => {
             startDate: reservation.start_date,
             endDate: reservation.end_date,
             status: reservation.status,
+            // 새 확정일정표 디자인의 요금·결제 섹션용 (예약자 본인에게 보내는 링크라 금액 노출 OK)
+            totalPrice: reservation.total_price,
+            depositAmount: reservation.deposit_amount,
+            balanceAmount: reservation.balance_amount,
+            depositStatus: reservation.deposit_status,
+            createdAt: reservation.created_at,
+            updatedAt: reservation.updated_at,
+            // 예약금 PayPal 결제 링크 — 미입금일 때만 확정일정표에 「PayPalで支払う」 버튼으로 노출
+            paypalPayUrl: reservation.deposit_status === 'paid' ? null : (readInvoice(reservation)?.payUrl || null),
         },
         template,
         guide: assignedGuide,

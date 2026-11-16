@@ -7,6 +7,7 @@ import { Icon } from '../components/admin/console/Icon';
 import { sendNotificationEmail } from '../lib/email';
 import type { QuoteRequest } from '../components/admin/QuoteModals';
 import { QuoteDetailModal, ConvertSelectionModal } from '../components/admin/QuoteModals';
+import { buildReservationFromQuote } from '../components/admin/quoteConvert';
 
 
 
@@ -109,29 +110,9 @@ export const AdminQuoteManage: React.FC = () => {
             const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
             const durationText = `${diffDays}박 ${diffDays + 1}일`;
 
-            // 1. 예약 생성 (예약금은 PayPal로만 받으므로 계좌 정보는 넣지 않는다)
-            const newReservation = await api.reservations.create({
-                user_id: selectedRequest.userId || null,
-                type: 'quote',
-                product_name: `${selectedRequest.destination} 맞춤견적`,
-                customer_name: selectedRequest.name,
-                customer_phone: selectedRequest.phone,
-                customer_email: selectedRequest.email,
-                total_people: selectedRequest.headcount,
-                start_date: data.startDate,
-                end_date: data.endDate,
-                duration: durationText,
-                status: 'pending_payment',
-                price_breakdown: {
-                    total: data.totalAmount,
-                    deposit: data.deposit,
-                    local: data.totalAmount - data.deposit
-                },
-                itinerary_template_id: selectedRequest.itineraryTemplateId || selectedRequest.itinerary_template_id || null,
-                document_content: selectedRequest.documentContent
-                    ? (typeof selectedRequest.documentContent === 'string' ? selectedRequest.documentContent : JSON.stringify(selectedRequest.documentContent))
-                    : (selectedRequest.document_content || null),
-            });
+            // 1. 예약 생성 — 견적 문서(일정·사진·새 견적서 항목)를 그대로 확정일정표로 넘긴다
+            //    (예약금은 PayPal로만 받으므로 계좌 정보는 넣지 않는다)
+            const newReservation = await api.reservations.create(buildReservationFromQuote(selectedRequest, data));
 
             const reservationNumber = newReservation.reservationNumber || newReservation.id?.slice(0, 8);
 
@@ -170,8 +151,8 @@ export const AdminQuoteManage: React.FC = () => {
             setIsConvertModalOpen(false);
             setSelectedRequest(null);
 
-            if (confirm(`예약 ${reservationNumber} 생성 완료!\n고객에게 확인 이메일을 발송했습니다.\n[예약 관리] 페이지로 이동하시겠습니까?`)) {
-                navigate('/admin/reservations');
+            if (confirm(`예약 ${reservationNumber} 생성 완료!\n고객에게 예약 접수 메일을 보냈습니다.\n\n견적서 일정·사진이 확정일정표로 그대로 옮겨졌습니다.\n지금 예약을 열어 확정일정표를 확인·발송할까요?`)) {
+                navigate(newReservation?.id ? `/admin/reservations?open=${encodeURIComponent(newReservation.id)}` : '/admin/reservations');
             }
 
         } catch (error: any) {

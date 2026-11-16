@@ -86,6 +86,8 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         }),
+        /** 예약금 PayPal 결제 링크 (관리자) — 있으면 그대로, 없으면 청구서를 만든다 */
+        paypalInvoice: async (id: string) => request(`${API_BASE}/reservations/${id}/paypal-invoice`, { method: 'POST' }),
         update: async (id: string, data: any) => request(`${API_BASE}/reservations/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -96,6 +98,12 @@ export const api = {
     quotes: {
         list: async () => request(`${API_BASE}/quotes`),
         get: async (id: string) => request(`${API_BASE}/quotes/${id}`),
+        /** 고객이 견적서에서 확정 요청 (로그인 불필요, 견적 링크 기준) */
+        requestBooking: async (id: string, message?: string) => request(`${API_BASE}/quotes/${id}/request-booking`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message || '' }),
+        }),
         create: async (data: any) => request(`${API_BASE}/quotes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -4,7 +4,8 @@ import { reservations } from '../../src/db/schema/reservations';
 import { eq, desc, or } from 'drizzle-orm';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
-import { sendPayPalInvoice } from '../lib/paypal';
+import { issueReservationInvoice, missingPayPalEnv, readInvoice } from '../lib/reservationInvoice';
+import { requireAdmin } from '../lib/adminAuth';
 import { getSessionUser } from '../lib/userAuth';
 
 // Define Env locally if global scope is not picked up
@@ -269,6 +270,16 @@ app.post('/', async (c) => {
         return c.json({ error: 'Missing required fields' }, 400);
     }
 
+    // 견적에서 만드는 예약 — 같은 견적으로 예약(과 PayPal 청구서)이 두 번 만들어지지 않게 막는다.
+    // (예전엔 고객이 결제 페이지에서 예약 → 견적 상태 변경이 권한 부족으로 실패 → 관리자가 또 전환 → 청구서 2장)
+    const quoteId = body.quote_id || body.quoteId ? String(body.quote_id || body.quoteId) : '';
+    if (quoteId) {
+        const q: any = await c.env.DB.prepare('SELECT id, status, user_id FROM quotes WHERE id = ?').bind(quoteId).first();
+        if (!q) return c.json({ error: 'Quote not found' }, 404);
+        if (q.status === 'converted') return c.json({ error: 'この見積はすでに予約に変換されています。(이미 예약으로 전환된 견적입니다 — 통합 예약관리에서 해당 예약을 확인하세요)', code: 'already_converted' }, 409);
+        if (!isAdmin && q.user_id && q.user_id !== user.id) return c.json({ error: 'Forbidden' }, 403);
+    }
+
     // Customers book for themselves as a new, unpaid request; only admins choose these fields.
     const id = (isAdmin && body.id) || crypto.randomUUID();
     const rawDocumentContent = body.document_content || body.documentContent;
@@ -322,32 +333,27 @@ app.post('/', async (c) => {
             reservationNumber,
         }).run();
 
-        const missingPayPalEnv = [
-            !c.env.PAYPAL_CLIENT_ID && 'PAYPAL_CLIENT_ID',
-            !c.env.PAYPAL_SECRET_KEY && 'PAYPAL_SECRET_KEY',
-            !c.env.PAYPAL_BUSINESS_EMAIL && 'PAYPAL_BUSINESS_EMAIL',
-        ].filter(Boolean);
+        // 견적 → 예약 전환 완료 표시 (서버에서 처리 — 고객 계정으로는 견적을 수정할 수 없으므로)
+        if (quoteId) {
+            try {
+                await c.env.DB.prepare("UPDATE quotes SET status = 'converted', updated_at = ? WHERE id = ?").bind(new Date().toISOString(), quoteId).run();
+            } catch (quoteErr) {
+                console.error('[Reservation] quote status update failed', quoteErr);
+            }
+        }
+
+        // 예약금 PayPal 청구서 — 예약당 한 장. 메일이 없는 고객은 결제 링크만 만든다.
+        const missingPayPal = missingPayPalEnv(c.env);
         const depositAmt = Number(body.price_breakdown?.deposit ?? body.deposit ?? 0);
 
-        if (missingPayPalEnv.length > 0) {
-            console.warn(`[PayPal Invoice] skipped: missing ${missingPayPalEnv.join(', ')}`);
-        } else if (!customerEmail) {
-            console.warn(`[PayPal Invoice] skipped: customer email is missing (${reservationNumber})`);
+        if (missingPayPal.length > 0) {
+            console.warn(`[PayPal Invoice] skipped: missing ${missingPayPal.join(', ')}`);
         } else if (!Number.isFinite(depositAmt) || depositAmt <= 0) {
             console.warn(`[PayPal Invoice] skipped: deposit amount is ${depositAmt || 0} (${reservationNumber})`);
         } else {
-            const invoicePromise = sendPayPalInvoice({
-                clientId: c.env.PAYPAL_CLIENT_ID,
-                secret: c.env.PAYPAL_SECRET_KEY,
-                businessEmail: c.env.PAYPAL_BUSINESS_EMAIL,
-                customerEmail: String(customerEmail),
-                customerName: String(customerName),
-                reservationNumber,
-                productName: String(productName),
-                depositAmount: depositAmt,
-                environment: c.env.PAYPAL_ENVIRONMENT,
-            }).then(({ invoiceId, invoiceNumber }) => {
-                console.log(`[PayPal Invoice] sent: ${invoiceNumber} (${invoiceId})`);
+            const invoicePromise = issueReservationInvoice(c.env, c.env.DB, id).then(({ invoice, reason }) => {
+                if (invoice) console.log(`[PayPal Invoice] sent: ${invoice.invoiceNumber} (${invoice.invoiceId})${customerEmail ? '' : ' — link only (no email)'}`);
+                else console.warn(`[PayPal Invoice] skipped: ${reason} (${reservationNumber})`);
             }).catch((paypalErr: any) => {
                 console.error(`[PayPal Invoice] failed: ${reservationNumber}`, paypalErr);
             });
@@ -371,6 +377,33 @@ app.post('/', async (c) => {
 });
 
 // DELETE /api/reservations/:id
+// POST /api/reservations/:id/paypal-invoice (관리자) — 예약금 결제 링크를 돌려준다.
+// 이미 청구서가 있으면 그 링크를 그대로(새로 만들지 않음), 없으면 그때 만든다.
+// 인스타·페이스북 고객에게 DM 으로 결제 링크를 보내거나, 예전에 메일이 없어 청구서가 빠진 예약을 보완할 때 쓴다.
+app.post('/:id/paypal-invoice', requireAdmin, async (c) => {
+    const id = c.req.param('id');
+    try {
+        const { invoice, created, reason } = await issueReservationInvoice(c.env, c.env.DB, id);
+        if (!invoice) {
+            const msg = reason === 'no_deposit' ? '예약금이 0원이라 청구서를 만들 수 없습니다.'
+                : reason === 'not_found' ? '예약을 찾을 수 없습니다.'
+                    : `PayPal 설정이 없어 청구서를 만들 수 없습니다 (${reason}).`;
+            return c.json({ error: msg, reason }, reason === 'not_found' ? 404 : 400);
+        }
+        return c.json({ ...invoice, created });
+    } catch (e: any) {
+        console.error('[PayPal Invoice] admin issue failed', e);
+        return c.json({ error: e?.message || 'PayPal 청구서 생성 실패' }, 500);
+    }
+});
+
+// GET /api/reservations/:id/paypal-invoice (관리자) — 저장된 청구서 정보만 조회 (만들지 않음)
+app.get('/:id/paypal-invoice', requireAdmin, async (c) => {
+    const row: any = await c.env.DB.prepare('SELECT * FROM reservations WHERE id = ?').bind(c.req.param('id')).first();
+    if (!row) return c.json({ error: 'Not found' }, 404);
+    return c.json({ invoice: readInvoice(row) });
+});
+
 app.delete('/:id', async (c) => {
     const id = c.req.param('id');
     const lucia = initializeLucia(c.env.DB);

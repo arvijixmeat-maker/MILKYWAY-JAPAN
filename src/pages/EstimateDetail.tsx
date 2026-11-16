@@ -8,6 +8,10 @@ import {
     type DayData, type HeroBadge,
     useIsMobile, DayTimelineBlock, IncludedListsBlock, HeroMobile, HeroPC, InfoBlock, eyebrowStyle, h2Style,
 } from '../components/document/ItineraryDocParts';
+import { TripDocument } from '../components/trip-doc/TripDocument';
+import { buildTripDoc, yen as yenNum } from '../components/trip-doc/tripDocModel';
+import { useTripSources, resolveTripImages, fallbackSpots } from '../components/trip-doc/tripDocSources';
+import { C as TD } from '../components/trip-doc/tripDocContent';
 
 /**
  * お見積り（맞춤 견적 고객 페이지）— 확정 일정표(DocumentItinerary)와 같은
@@ -23,6 +27,7 @@ export const EstimateDetail: React.FC = () => {
     const [estimate, setEstimate] = useState<any>(null);
     const { showToast, showConfirm } = useToast();
     const m = useIsMobile();
+    const { sources: tripSources } = useTripSources();
     const parseMoney = (value: any) => {
         if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
         const n = Number(String(value || '').replace(/[^\d]/g, ''));
@@ -56,9 +61,9 @@ export const EstimateDetail: React.FC = () => {
 
     const handleReservationRequest = async () => {
         const confirmed = await showConfirm({
-            title: '予約相談の申し込み',
-            message: '予約相談を申し込みますか？\nお申し込み後、担当者が確認してご案内いたします。',
-            confirmText: '申し込む',
+            title: 'ご予約の確定',
+            message: 'この内容でご予約を確定しますか？\n担当者が確認後、予約金のPayPal請求書をメールまたはメッセージでお送りします。',
+            confirmText: '確定する',
             cancelText: 'キャンセル',
             type: 'info'
         });
@@ -66,11 +71,11 @@ export const EstimateDetail: React.FC = () => {
         if (!confirmed) return;
 
         try {
-            const { error } = await (api.quotes as any).update(id, { status: 'reservation_requested' });
-            if (error) throw error;
+            // 로그인 없이 견적 링크만으로 확정 요청 (인스타·페이스북·메일 고객은 계정이 없다)
+            await api.quotes.requestBooking(id as string);
 
             setEstimate((prev: any) => ({ ...prev, adminStatus: 'reservation_requested', statusLabel: '予約リクエスト済' }));
-            showToast('success', '予約相談のお申し込みを受け付けました。担当者が確認後、すぐにご連絡いたします。');
+            showToast('success', 'ご予約の確定リクエストを受け付けました。担当者が確認後、すぐにご連絡いたします。');
         } catch (error) {
             console.error("Failed to update status:", error);
             showToast('error', 'エラーが発生しました。もう一度お試しください。');
@@ -177,19 +182,22 @@ export const EstimateDetail: React.FC = () => {
                     type: data.trip_type || 'オーダーメイド',
                     people: data.travelers || data.headcount,
                     requestDate: createdAtStr,
+                    createdAt: createdAtRaw || null,
+                    updatedAt: data.updatedAt || data.updated_at || null,
                     destinations: asArr(data.destination),
                     themes: asArr(data.travel_types ?? data.travelTypes),
                     accommodations: asArr(data.accommodations),
                     vehicle: data.vehicle,
                     priceRange: data.budget,
-                    additionalRequest: data.additional_request,
+                    additionalRequest: data.additional_request ?? data.additionalRequest,
                     contact: { name: data.name, phone: data.phone, email: data.email },
-                    estimateUrl: data.estimate_url,
-                    adminNote: data.admin_note,
-                    confirmedPrice: data.confirmed_price,
+                    estimateUrl: data.estimate_url ?? data.estimateUrl,
+                    adminNote: data.admin_note ?? data.adminNote,
+                    // API 는 camelCase(drizzle)로 내려준다 — 둘 다 읽는다
+                    confirmedPrice: data.confirmed_price ?? data.confirmedPrice,
                     deposit: data.deposit,
-                    confirmedStartDate: data.confirmed_start_date,
-                    confirmedEndDate: data.confirmed_end_date,
+                    confirmedStartDate: data.confirmed_start_date ?? data.confirmedStartDate,
+                    confirmedEndDate: data.confirmed_end_date ?? data.confirmedEndDate,
                     itinerary: data.itinerary || null,
                     documentContent: data.documentContent || null,
                 });
@@ -225,8 +233,71 @@ export const EstimateDetail: React.FC = () => {
         );
     }
 
+    // ── 새 디자인(디자인 시안 「Japan version」) — 관리자가 문서를 작성해 저장했으면 이걸로 보여 준다 ──
+    const savedDoc = estimate.documentContent;
+    const hasDocDays = Array.isArray(estimate.itinerary?.days) && estimate.itinerary.days.length > 0;
+    if (savedDoc && (hasDocDays || savedDoc.documentSettings)) {
+        const pricing = getEstimatePricing(estimate);
+        const tripDoc = buildTripDoc({
+            mode: 'quote',
+            id: String(estimate.id || ''),
+            issuedAt: estimate.updatedAt || estimate.createdAt,
+            customerName: estimate.contact?.name,
+            people: estimate.people,
+            startDate: estimate.confirmedStartDate,
+            endDate: estimate.confirmedEndDate,
+            title: savedDoc.name || estimate.itinerary?.name || estimate.title,
+            days: hasDocDays ? estimate.itinerary.days : savedDoc.days,
+            documentSettings: savedDoc.documentSettings,
+            total: pricing.total,
+            deposit: pricing.deposit,
+            adminNote: estimate.adminNote,
+            designSpots: fallbackSpots(tripSources),
+        });
+        const quoteImages = resolveTripImages(tripDoc, tripSources);
+        // 「개산(확정 전)」 표시는 기존 견적 화면과 같은 기준 — 확정가 없이 상품 기준가로 계산한 경우
+        if (tripDoc.price) tripDoc.price.estimated = pricing.isProductEstimate;
+
+        const status = estimate.adminStatus;
+        const converted = status === 'converted';
+        const requestedNow = status === 'reservation_requested';
+        // 확정 버튼은 로그인 없이 동작한다 — 관리자가 확인 후 「예약으로 전환」하고 PayPal 청구서를 보낸다
+        const bar = converted ? null
+            : requestedNow
+                ? { sub: '担当者が確認後、ご連絡いたします', label: '確定リクエスト済み ✓', disabled: true }
+                : pricing.total > 0
+                    ? { sub: `お一人様 ¥${yenNum(tripDoc.price?.perPerson || 0)} × ${tripDoc.people}名`, amount: yenNum(pricing.deposit), amountLabel: '予約金', label: 'この内容で確定する', onClick: handleReservationRequest }
+                    : { sub: 'お見積り内容のご相談', label: '予約を相談する', onClick: handleReservationRequest };
+
+        const notice = (converted || estimate.adminNote) ? (
+            <div style={{ padding: '20px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {converted && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '18px 20px', borderRadius: 24, background: TD.ink, color: '#fff' }}>
+                        <span style={{ fontSize: 16, fontWeight: 700 }}>🎉 ご予約を承りました！</span>
+                        <span style={{ fontSize: 12.5, lineHeight: 1.7, color: TD.line }}>ご予約金のご入金後に最終確定となります。最新の確定日程表はマイページでご確認ください。</span>
+                        <button type="button" onClick={() => navigate('/mypage/reservations')} style={{ height: 44, border: 0, borderRadius: 999, background: TD.grad, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>マイ予約で確認する →</button>
+                    </div>
+                )}
+                {estimate.adminNote && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '18px 20px', borderRadius: 24, background: TD.mintBg, border: `1.5px solid ${TD.mintLine}` }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: TD.mintDeep, fontFamily: "'Inter',sans-serif" }}>MESSAGE</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: TD.ink }}>担当者からのメッセージ</span>
+                        <span style={{ fontSize: 13, lineHeight: 1.8, color: TD.body, whiteSpace: 'pre-wrap' }}>{estimate.adminNote}</span>
+                    </div>
+                )}
+            </div>
+        ) : null;
+
+        return (
+            <>
+                <SEO title="お見積書" description="お客様専用のお見積書です。" robots="noindex, nofollow" />
+                <TripDocument doc={tripDoc} images={quoteImages} bar={bar} notice={notice} />
+            </>
+        );
+    }
+
     // ── 발송 여부/표시용 파생값 ──
-    const isSent = estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested';
+    const isSent =estimate.adminStatus === 'answered' || estimate.adminStatus === 'converted' || estimate.status === 'answered' || estimate.adminStatus === 'reservation_requested';
     const isWriting = estimate.adminStatus === 'processing';
     const isConverted = estimate.status === 'converted';
     const quoteNumber = String(estimate.id || '').slice(0, 8).toUpperCase();
