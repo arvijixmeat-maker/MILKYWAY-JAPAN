@@ -42,6 +42,11 @@ export interface QuoteDocSettings {
     meetingPoint: string;
     /** 포함할 特別料理 = 관광지 마스터 「음식」 분류의 관광지 id. 빈 배열이면 자동(앞 4개), ['none'] 이면 섹션 숨김 */
     specials: string[];
+    /** 포함 / 불포함 — 편집기에서 체크한 항목. 빈 배열이면 상품 → 문서 기본 문구 순으로 자동 */
+    included: string[];
+    excluded: string[];
+    /** 見どころ(대표 여행지) — 일정 항목 이름. 빈 배열이면 사진 있는 관광 항목 자동(최대 9) */
+    spots: string[];
     /** 일정 하단 주의사항 (줄바꿈 구분) */
     planNotes: string;
 }
@@ -74,6 +79,9 @@ export const defaultQuoteDocSettings = (): QuoteDocSettings => ({
     intensity: 0,
     meetingPoint: 'Tom N Toms カフェ前のベンチ',
     specials: [],
+    included: [],
+    excluded: [],
+    spots: [],
     planNotes: DEFAULT_PLAN_NOTES,
 });
 
@@ -84,7 +92,7 @@ export const mergeQuoteDocSettings = (value: any): QuoteDocSettings => {
     for (const k of Object.keys(base) as Array<keyof QuoteDocSettings>) {
         const v = value[k];
         if (v === undefined || v === null) continue;
-        if (k === 'specials') { if (Array.isArray(v)) out.specials = v.filter((x: any) => typeof x === 'string'); continue; }
+        if (Array.isArray((base as any)[k])) { if (Array.isArray(v)) out[k] = v.filter((x: any) => typeof x === 'string' && x.trim()); continue; }
         if (k === 'intensity') { const n = Number(v); if (Number.isFinite(n)) out.intensity = Math.max(0, Math.min(5, Math.round(n))); continue; }
         if (k === 'stayGrade') { out.stayGrade = v === 'standard' ? 'standard' : 'premium'; continue; }
         out[k] = String(v);
@@ -254,7 +262,7 @@ const mealText = (meals: any): string => {
     return parts.length ? parts.join(' · ') : '—';
 };
 
-const SKIP_HIGHLIGHT = new Set(['pickup', 'transport', 'meal', 'checkin', 'free']);
+export const SKIP_HIGHLIGHT = new Set(['pickup', 'transport', 'meal', 'checkin', 'free']);
 
 const toEn = (name: string): string => {
     const n = name.replace(/\s/g, '');
@@ -262,7 +270,7 @@ const toEn = (name: string): string => {
     return hit ? hit.en.replace(/\s*\(.*\)\s*/, '') : '';
 };
 
-const matchSpot = (spots: DesignSpotLite[] | undefined, ...names: string[]): string => {
+export const matchSpot = (spots: DesignSpotLite[] | undefined, ...names: string[]): string => {
     if (!spots?.length) return '';
     for (const raw of names) {
         const n = (raw || '').replace(/\s/g, '');
@@ -382,8 +390,9 @@ export function buildTripDoc(input: BuildInput): TripDoc {
     // ── 포함 / 불포함 ──
     const incText = lines(ds?.overview?.includedText);
     const excText = lines(ds?.overview?.excludedText);
-    const included = (input.included && input.included.length ? input.included : incText.length ? incText : DEFAULT_INCLUDED).slice(0, 16);
-    const excluded = (input.excluded && input.excluded.length ? input.excluded : excText.length ? excText : DEFAULT_EXCLUDED).slice(0, 12);
+    // 편집기에서 체크한 항목이 우선 → 상품 → 문서 기본 문구 → 공통 기본값
+    const included = (q.included.length ? q.included : input.included && input.included.length ? input.included : incText.length ? incText : DEFAULT_INCLUDED).slice(0, 16);
+    const excluded = (q.excluded.length ? q.excluded : input.excluded && input.excluded.length ? input.excluded : excText.length ? excText : DEFAULT_EXCLUDED).slice(0, 12);
 
     // ── 경로 (일자별 1 정거장) ──
     const route: RouteStop[] = days.map(d => {
@@ -406,7 +415,19 @@ export function buildTripDoc(input: BuildInput): TripDoc {
     // ── 見どころ ──
     const seen = new Set<string>();
     const highlights: Highlight[] = [];
-    for (const d of days) {
+    const picked = q.spots.map(t => t.replace(/\s/g, ''));
+    // 편집기에서 고른 대표 여행지 — 고른 순서대로. 사진은 그 항목 사진, 없으면 관광지 디자인 사진
+    const allActs = days.flatMap(d => d.activities).filter(a => a.title);
+    for (const key of picked) {
+        if (seen.has(key)) continue;
+        const a = allActs.find(x => x.title.replace(/\s/g, '') === key);
+        if (!a) continue;
+        const imgs = a.images.length ? a.images : [matchSpot(input.designSpots, a.title)].filter(Boolean);
+        if (!imgs.length) continue;
+        seen.add(key);
+        highlights.push({ img: imgs[0], thumbs: imgs.slice(1, 4), en: toEn(a.title), name: a.title, desc: firstParagraph(a.desc) });
+    }
+    for (const d of picked.length ? [] : days) {
         for (const a of d.activities) {
             if (highlights.length >= 9) break;
             if (!a.title || SKIP_HIGHLIGHT.has(String(a.type))) continue;
