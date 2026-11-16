@@ -28,7 +28,7 @@ export const COMPANY = {
     mnRegNo: '9011640064',
     mnRegName: 'SUUNZAM',
     krRegNo: '730-54-00614',
-    krRegName: 'HELLO BOLA',
+    krRegName: 'HELLO BOLOR',
     instagram: 'mongolia_inhasu',
     site: 'mongolryokou.com',
 };
