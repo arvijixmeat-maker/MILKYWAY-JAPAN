@@ -723,17 +723,20 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                     );
                                                 })}
                                             </div>
-                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+                                            {/* 동그란 사진 + 아래 이름 — 누르면 초록 테두리와 순서 번호 */}
+                                            <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-x-2 gap-y-4 pt-1">
                                                 {list.map(s => {
                                                     const order = spotsPicked.indexOf(s.id);
                                                     const on = order >= 0;
                                                     return (
                                                         <button key={s.id} type="button" title={`고객 화면: ${cleanSpotName(s.name_kr)}`}
                                                             onClick={() => { setFocus({ section: 'q-spot', at: Date.now() }); toggleSpot(s.id); }}
-                                                            className={`relative overflow-hidden rounded-xl border text-left transition ${on ? 'border-[#06C4A0] ring-2 ring-[#06C4A0]/30' : 'border-slate-200 hover:border-slate-300'}`}>
-                                                            <img src={s.images![0]} alt="" loading="lazy" className="h-20 w-full object-cover" />
-                                                            <span className={`absolute right-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[11px] font-black ${on ? 'bg-[#06C4A0] text-white' : 'bg-white/80 text-slate-400'}`}>{on ? order + 1 : '+'}</span>
-                                                            <span className="block truncate px-2 pb-1.5 pt-1 text-[11px] font-bold text-slate-700">{koSpotName(s.name_kr)}</span>
+                                                            className="group flex flex-col items-center gap-1.5 text-center">
+                                                            <span className={`relative block h-[72px] w-[72px] rounded-full p-[3px] transition ${on ? 'bg-[#06C4A0]' : 'bg-transparent group-hover:bg-slate-200'}`}>
+                                                                <img src={s.images![0]} alt="" loading="lazy" className={`h-full w-full rounded-full border-2 border-white object-cover transition ${on ? '' : 'group-hover:scale-[1.03]'}`} />
+                                                                {on && <span className="absolute -right-0.5 -top-0.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-[#123B3A] px-1 text-[11px] font-black text-white">{order + 1}</span>}
+                                                            </span>
+                                                            <span className={`line-clamp-2 w-full text-[12px] leading-tight ${on ? 'font-black text-[#007F75]' : 'font-semibold text-slate-700'}`}>{koSpotName(s.name_kr)}</span>
                                                         </button>
                                                     );
                                                 })}
