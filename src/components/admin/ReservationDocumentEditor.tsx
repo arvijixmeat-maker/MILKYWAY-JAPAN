@@ -205,6 +205,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const [people, setPeople] = useState(1);
     const [deposit, setDeposit] = useState(0);
     const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [undoDays, setUndoDays] = useState<TemplateDay[] | null>(null);
+    const [delDay, setDelDay] = useState<number | null>(null);
+    /** 식사 「직접 입력」 중인 칸 — `DAY번호-slot` */
+    const [mealEdit, setMealEdit] = useState<string | null>(null);
     const [openDay, setOpenDay] = useState(0);
     const [showMore, setShowMore] = useState(false);
     const [descOpen, setDescOpen] = useState<string | null>(null);
@@ -242,6 +247,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setDeposit(customer?.deposit || 0);
         setOpenDay(0);
         setNotice(null);
+        setSaveError(null);
+        setUndoDays(null);
+        setDelDay(null);
+        setMealEdit(null);
         resetDrafts();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialContent, tourStartDate, tourEndDate]);
@@ -274,8 +283,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
 
     const applyProduct = (p: TourProduct, auto = false) => {
         const imported = blocksToDays(p.itineraryBlocks || []);
-        if (!imported.length) { if (!auto) alert('이 상품에는 DAY 일정이 등록되어 있지 않습니다.'); return; }
-        if (!auto && days.length > 0 && !window.confirm('지금 일정표를 이 상품 일정으로 바꿀까요?')) return;
+        if (!imported.length) { if (!auto) setSaveError('이 상품에는 DAY 일정이 등록되어 있지 않습니다.'); return; }
+        // 확인창 대신 — 바꾸기 전 일정을 남겨 두고 안내줄에서 되돌릴 수 있게
+        setUndoDays(!auto && days.length > 0 ? days : null);
         const pricing = p.pricingOptions?.find(o => o.people === people) || p.pricingOptions?.[0];
         const included = (p.included || []).map(textOf).map((s: string) => s.trim()).filter(Boolean);
         const excluded = (p.excluded || []).map(textOf).map((s: string) => s.trim()).filter(Boolean);
@@ -306,7 +316,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const patchDay = (i: number, patch: Partial<TemplateDay>) => setDays(d => d.map((x, k) => (k === i ? { ...x, ...patch } : x)));
     const renumber = (list: TemplateDay[]) => list.map((x, k) => ({ ...x, day: k + 1 }));
     const addDay = () => setDays(d => { setOpenDay(d.length); return [...d, { day: d.length + 1, title: '', region: '', summary: '', move: '', activities: [], meals: {}, accommodation: null }]; });
-    const removeDay = (i: number) => { if (window.confirm(`DAY ${i + 1}을(를) 삭제할까요?`)) { resetDrafts(); setDays(d => renumber(d.filter((_, k) => k !== i))); } };
+    // 삭제는 두 번 눌러야 — 첫 번째 누르면 「삭제?」로 바뀌고 3초 안에 다시 누르면 지운다
+    const removeDay = (i: number) => {
+        if (delDay !== i) { setDelDay(i); window.setTimeout(() => setDelDay(v => (v === i ? null : v)), 3000); return; }
+        setDelDay(null); resetDrafts(); setDays(d => renumber(d.filter((_, k) => k !== i)));
+    };
     const moveDay = (i: number, to: number) => { resetDrafts(); moveDayInner(i, to); };
     const moveDayInner = (i: number, to: number) => setDays(d => { if (to < 0 || to >= d.length) return d; const a = [...d]; const [m] = a.splice(i, 1); a.splice(to, 0, m); setOpenDay(to); return renumber(a); });
     const patchAct = (i: number, a: number, patch: Record<string, unknown>) => setDays(d => d.map((x, k) => (k === i ? { ...x, activities: x.activities.map((y, j) => (j === a ? { ...y, ...patch } : y)) } : x)));
@@ -356,7 +370,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         // 한국어가 목록에 있는 이름이면 그 일본어를 쓰고, 아니면 일본어 칸이 필요하다
         const known = [...KO_OF.entries()].find(([, v]) => v === k)?.[0];
         const value = j || known;
-        if (!value) { alert('고객 화면에는 일본어로 나갑니다. 일본어 칸도 채워 주세요 (번역기에서 옮겨 붙여도 됩니다).'); return; }
+        if (!value) { setSaveError('고객 화면에는 일본어로 나갑니다. 일본어 칸도 채워 주세요 (번역기에서 옮겨 붙여도 됩니다).'); return; }
         if (k && !KO_OF.has(value)) setQ({ labels: [...ds.quoteDoc.labels.filter(l => !l.startsWith(`${value}\t`)), `${value}\t${k}`] });
         if (!(kind === 'inc' ? incNow : excNow).includes(value)) toggleInc(kind, value);
         setCustom(c => ({ ...c, [kind]: { ko: '', ja: '' } }));
@@ -417,10 +431,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     }, [previewInput, previewMode, customer, templateMode, assignedGuide, sources, designSpots, matchedProduct]);
 
 
+    // 확인창(confirm/alert)은 앱 안 브라우저 등에서 막혀 아무 반응이 없어 보일 수 있으므로, 편집기 안에 안내를 띄운다
     const handleSave = async () => {
-        if (!templateMode && days.length === 0 && !window.confirm('일정표가 비어 있습니다. 이대로 저장할까요?')) return;
-        if ((startDate && !endDate) || (!startDate && endDate)) { alert('출발일과 도착일을 모두 입력해 주세요.'); return; }
-        if (startDate && endDate && endDate < startDate) { alert('도착일이 출발일보다 빠릅니다.'); return; }
+        setSaveError(null);
+        if ((startDate && !endDate) || (!startDate && endDate)) { setSaveError('출발일과 도착일을 모두 입력해 주세요.'); return; }
+        if (startDate && endDate && endDate < startDate) { setSaveError('도착일이 출발일보다 빠릅니다.'); return; }
         setSaving(true);
         try {
             await onSave(
@@ -430,7 +445,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
             );
             onClose();
         } catch (e: any) {
-            alert('저장 실패: ' + (e?.message || e));
+            setSaveError('저장하지 못했습니다: ' + (e?.message || e));
         } finally {
             setSaving(false);
         }
@@ -469,10 +484,25 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                         </button>
                     </div>
                 </div>
+                {saveError && (
+                    <div role="alert" className="flex flex-shrink-0 items-center gap-2 border-b border-red-200 bg-red-50 px-5 py-2 text-xs font-bold text-red-600">
+                        <span className="material-symbols-outlined text-[16px]">error</span><span>{saveError}</span>
+                        <button onClick={() => setSaveError(null)} className="ml-auto text-red-300 hover:text-red-500"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+                )}
+                {!templateMode && days.length === 0 && (
+                    <div className="flex flex-shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs font-bold text-amber-700">
+                        <span className="material-symbols-outlined text-[16px]">info</span><span>일정표가 비어 있습니다 — 그대로 저장할 수 있지만, 고객 화면에 일정이 나오지 않습니다. 「상품에서 불러오기」로 채울 수 있습니다.</span>
+                    </div>
+                )}
                 {notice && (
                     <div className="flex flex-shrink-0 items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-xs font-bold text-emerald-700">
                         <span className="material-symbols-outlined text-[16px]">auto_awesome</span><span>{notice}</span>
-                        <button onClick={() => setNotice(null)} className="ml-auto text-emerald-400 hover:text-emerald-600"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                        {undoDays && (
+                            <button type="button" onClick={() => { setDays(undoDays); setUndoDays(null); resetDrafts(); setNotice('불러오기 전 일정으로 되돌렸습니다.'); }}
+                                className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100">일정 되돌리기</button>
+                        )}
+                        <button onClick={() => { setNotice(null); setUndoDays(null); }} className="ml-auto text-emerald-400 hover:text-emerald-600"><span className="material-symbols-outlined text-[16px]">close</span></button>
                     </div>
                 )}
 
@@ -556,7 +586,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                 <span className="hidden text-[11px] font-semibold text-slate-400 sm:inline">{d.activities.length}개 · {stayName || '숙소 미정'}</span>
                                                 <button type="button" title="위로" onClick={e => { e.stopPropagation(); moveDay(i, i - 1); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><span className="material-symbols-outlined text-[16px]">arrow_upward</span></button>
                                                 <button type="button" title="아래로" onClick={e => { e.stopPropagation(); moveDay(i, i + 1); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><span className="material-symbols-outlined text-[16px]">arrow_downward</span></button>
-                                                <button type="button" title="DAY 삭제" onClick={e => { e.stopPropagation(); removeDay(i); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-300 hover:bg-red-50 hover:text-red-500"><span className="material-symbols-outlined text-[16px]">delete</span></button>
+                                                {delDay === i
+                                                    ? <button type="button" onClick={e => { e.stopPropagation(); removeDay(i); }} className="h-7 rounded-md bg-red-500 px-2 text-[11px] font-black text-white">삭제?</button>
+                                                    : <button type="button" title="DAY 삭제 (두 번 누르기)" onClick={e => { e.stopPropagation(); removeDay(i); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-300 hover:bg-red-50 hover:text-red-500"><span className="material-symbols-outlined text-[16px]">delete</span></button>}
                                                 <span className="material-symbols-outlined text-[18px] text-slate-400">{isOpen ? 'expand_less' : 'expand_more'}</span>
                                             </div>
                                             {isOpen && (
@@ -640,20 +672,24 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                     return (
                                                                         <label key={k} className="block">
                                                                             <span className="mb-0.5 block text-[10px] font-black text-[#00A88B]">{label}</span>
-                                                                            <select className={`${inp} px-1.5 text-xs`} value={/^(o|○|◯)$/i.test(v) ? 'O' : v}
-                                                                                onChange={e => {
-                                                                                    let next = e.target.value;
-                                                                                    if (next === '__custom') {
-                                                                                        next = (window.prompt('고객 화면에 나갈 식사 이름 (일본어로 — 번역기에서 옮겨 붙여도 됩니다)', known ? '' : v) || '').trim();
-                                                                                        if (!next) return;
-                                                                                    }
-                                                                                    patchDay(i, { meals: { ...(d.meals || {}), [k]: next } });
-                                                                                }}>
-                                                                                <option value="">없음</option>
-                                                                                {MEAL_KO.map(([ja, ko]) => <option key={ja} value={ja}>{ko}</option>)}
-                                                                                {!known && <option value={v}>{KO_OF.get(v) || `${v} (일본어)`}</option>}
-                                                                                <option value="__custom">직접 입력…</option>
-                                                                            </select>
+                                                                            {mealEdit === `${d.day}-${k}` ? (
+                                                                                // 직접 입력 — 고객 화면에 그대로 나가므로 일본어. Enter·칸 밖 클릭으로 확정
+                                                                                <input autoFocus className={`${inp} px-1.5 text-xs`} defaultValue={known ? '' : v} placeholder="일본어로 입력"
+                                                                                    onBlur={e => { const t = e.target.value.trim(); if (t) patchDay(i, { meals: { ...(d.meals || {}), [k]: t } }); setMealEdit(null); }}
+                                                                                    onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setMealEdit(null); }} />
+                                                                            ) : (
+                                                                                <select className={`${inp} px-1.5 text-xs`} value={/^(o|○|◯)$/i.test(v) ? 'O' : v}
+                                                                                    onChange={e => {
+                                                                                        const next = e.target.value;
+                                                                                        if (next === '__custom') { setMealEdit(`${d.day}-${k}`); return; }
+                                                                                        patchDay(i, { meals: { ...(d.meals || {}), [k]: next } });
+                                                                                    }}>
+                                                                                    <option value="">없음</option>
+                                                                                    {MEAL_KO.map(([ja, ko]) => <option key={ja} value={ja}>{ko}</option>)}
+                                                                                    {!known && <option value={v}>{KO_OF.get(v) || `${v} (일본어)`}</option>}
+                                                                                    <option value="__custom">직접 입력…</option>
+                                                                                </select>
+                                                                            )}
                                                                         </label>
                                                                     );
                                                                 })}
