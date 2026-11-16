@@ -139,6 +139,7 @@ export const DocumentItinerary: React.FC = () => {
             payUrl: r.paypalPayUrl,
             guideName: guide?.name,
             designSpots: fallbackSpots(sources),
+            spotMaster: sources.spots,
         });
     }, [data, sources]);
     const images = useMemo(() => resolveTripImages(doc, sources), [doc, sources]);

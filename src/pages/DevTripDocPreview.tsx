@@ -54,6 +54,7 @@ export const DevTripDocPreview: React.FC = () => {
             guideName: mode === 'confirmed' ? 'ボラ' : null,
             adminNote: null,
             designSpots: fallbackSpots(SAMPLE_SOURCES),
+            spotMaster: SAMPLE_SOURCES.spots,
         });
     }, [mode]);
     const images = useMemo(() => resolveTripImages(doc, SAMPLE_SOURCES), [doc]);

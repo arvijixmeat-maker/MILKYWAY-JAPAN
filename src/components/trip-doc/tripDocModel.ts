@@ -45,8 +45,10 @@ export interface QuoteDocSettings {
     /** 포함 / 불포함 — 편집기에서 체크한 항목. 빈 배열이면 상품 → 문서 기본 문구 순으로 자동 */
     included: string[];
     excluded: string[];
-    /** 見どころ(대표 여행지) — 일정 항목 이름. 빈 배열이면 사진 있는 관광 항목 자동(최대 9) */
+    /** 見どころ(대표 여행지) — 관광지 마스터 id. 고른 것만 표시, 비우면 섹션 숨김 */
     spots: string[];
+    /** 편집기에서 직접 추가한 항목의 한국어 이름 — 「일본어\t한국어」 (관리자 화면 표시용) */
+    labels: string[];
     /** 일정 하단 주의사항 (줄바꿈 구분) */
     planNotes: string;
 }
@@ -82,6 +84,7 @@ export const defaultQuoteDocSettings = (): QuoteDocSettings => ({
     included: [],
     excluded: [],
     spots: [],
+    labels: [],
     planNotes: DEFAULT_PLAN_NOTES,
 });
 
@@ -188,6 +191,8 @@ export interface BuildInput {
     guideName?: string | null;
     adminNote?: string | null;
     designSpots?: DesignSpotLite[];
+    /** 관광지 마스터 — 見どころ(q.spots) 사진·설명 */
+    spotMaster?: Array<{ id: string; name_kr: string; description?: string; images?: any }>;
 }
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────
@@ -413,31 +418,15 @@ export function buildTripDoc(input: BuildInput): TripDoc {
     });
 
     // ── 見どころ ──
-    const seen = new Set<string>();
+    // 편집기에서 관광지 마스터로 고른 곳만, 고른 순서대로 (일정 항목에서 자동으로 뽑지 않는다)
     const highlights: Highlight[] = [];
-    const picked = q.spots.map(t => t.replace(/\s/g, ''));
-    // 편집기에서 고른 대표 여행지 — 고른 순서대로. 사진은 그 항목 사진, 없으면 관광지 디자인 사진
-    const allActs = days.flatMap(d => d.activities).filter(a => a.title);
-    for (const key of picked) {
-        if (seen.has(key)) continue;
-        const a = allActs.find(x => x.title.replace(/\s/g, '') === key);
-        if (!a) continue;
-        const imgs = a.images.length ? a.images : [matchSpot(input.designSpots, a.title)].filter(Boolean);
-        if (!imgs.length) continue;
-        seen.add(key);
-        highlights.push({ img: imgs[0], thumbs: imgs.slice(1, 4), en: toEn(a.title), name: a.title, desc: firstParagraph(a.desc) });
-    }
-    for (const d of picked.length ? [] : days) {
-        for (const a of d.activities) {
-            if (highlights.length >= 9) break;
-            if (!a.title || SKIP_HIGHLIGHT.has(String(a.type))) continue;
-            const key = a.title.replace(/\s/g, '');
-            if (seen.has(key)) continue;
-            const imgs = a.images.length ? a.images : [matchSpot(input.designSpots, a.title)].filter(Boolean);
-            if (!imgs.length) continue;
-            seen.add(key);
-            highlights.push({ img: imgs[0], thumbs: imgs.slice(1, 4), en: toEn(a.title), name: a.title, desc: firstParagraph(a.desc) });
-        }
+    for (const id of q.spots) {
+        const s = (input.spotMaster || []).find(x => x.id === id);
+        const imgs = toImages(s?.images);
+        if (!s || !imgs.length) continue;
+        const name = String(s.name_kr || '').replace(/[（(].*?[）)]/g, '').replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu, '').replace(/️/g, '').trim();
+        const en = (String(s.name_kr || '').match(/[（(]([A-Za-z][^）)]*)[）)]/)?.[1] || '').trim() || toEn(name);
+        highlights.push({ img: imgs[0], thumbs: imgs.slice(1, 4), en, name, desc: firstParagraph(String(s.description || '')) });
     }
 
     // ── 자동으로 정하는 공통 항목 ──

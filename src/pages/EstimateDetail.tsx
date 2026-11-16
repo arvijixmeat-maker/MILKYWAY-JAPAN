@@ -253,6 +253,7 @@ export const EstimateDetail: React.FC = () => {
             deposit: pricing.deposit,
             adminNote: estimate.adminNote,
             designSpots: fallbackSpots(tripSources),
+            spotMaster: tripSources.spots,
         });
         const quoteImages = resolveTripImages(tripDoc, tripSources);
         // 「개산(확정 전)」 표시는 기존 견적 화면과 같은 기준 — 확정가 없이 상품 기준가로 계산한 경우
