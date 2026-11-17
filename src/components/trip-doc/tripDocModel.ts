@@ -110,6 +110,8 @@ export interface TripDay {
     /** 「11.29(日)」 또는 관리자가 직접 쓴 날짜 */
     dateLabel: string;
     title: string;
+    /** 편집기에서 DAY 제목으로 고른 관광지 사진 */
+    titleImage: string;
     region: string;
     move: string;
     items: string[];
@@ -289,35 +291,6 @@ export const matchSpot = (spots: DesignSpotLite[] | undefined, ...names: string[
     return '';
 };
 
-// ─── 포함 항목 아이콘 ──────────────────────────────────────────────────
-export const INC_ICONS: Record<string, string> = {
-    home: 'M4 20V10l8-6 8 6v10H4zM10 20v-6h4v6',
-    dish: 'M3 17h18M5 17a7 7 0 0114 0M12 7V5M10 5h4',
-    star: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z',
-    plane: 'M3 14l18-7-6 13-3-5zM12 15l3-3',
-    car: 'M4 16V11l2-5h12l2 5v5M4 16h16M7 16v2M17 16v2M4 11h16',
-    guide: 'M12 11a4 4 0 100-8 4 4 0 000 8zM4 21c0-4.4 3.6-8 8-8s8 3.6 8 8',
-    ticket: 'M3 8V6h18v2a2 2 0 000 4v2a2 2 0 000 4v2H3v-2a2 2 0 000-4v-2a2 2 0 000-4zM10 6v14',
-    water: 'M10 3h4v3l2 3v12H8V9l2-3z',
-    camel: 'M4 20v-6c0-3 2-5 4-5l2-4 3 4c2 0 3-2 5-2l2 2-2 2v9M8 20v-5M16 20v-5',
-    clip: 'M8 4h8v3H8zM6 6h12v15H6zM9 12h6M9 16h4',
-    moon: 'M20 14A8 8 0 1110 4a6 6 0 0010 10zM17 3v3M15.5 4.5h3',
-};
-export const incIcon = (t: string): string => {
-    if (/特別|スペシャル/.test(t)) return INC_ICONS.star;
-    if (/宿泊|ホテル|ゲル|숙박/.test(t)) return INC_ICONS.home;
-    if (/食事|朝食|昼食|夕食|식사/.test(t)) return INC_ICONS.dish;
-    if (/空港|送迎|픽업|공항/.test(t)) return INC_ICONS.plane;
-    if (/車|ドライバー|차량/.test(t)) return INC_ICONS.car;
-    if (/ガイド|가이드/.test(t)) return INC_ICONS.guide;
-    if (/入場|公演|チケット|입장/.test(t)) return INC_ICONS.ticket;
-    if (/水|ウォーター|생수/.test(t)) return INC_ICONS.water;
-    if (/ラクダ|乗馬|体験|アクティビティ|체험/.test(t)) return INC_ICONS.camel;
-    if (/プライベート|貸切|전용/.test(t)) return INC_ICONS.clip;
-    if (/星|天の川|별/.test(t)) return INC_ICONS.moon;
-    return INC_ICONS.star;
-};
-
 export const DEFAULT_INCLUDED = ['全日程の宿泊', '全日程のお食事', '空港送迎', '全日程 専用車両', '日本語専門ガイド', '観光地・公演入場料', '1日1本 ミネラルウォーター', 'アクティビティ費用', 'プライベートツアー', '星空・天の川観賞'];
 export const DEFAULT_EXCLUDED = ['往復航空券', '個人的な費用', 'オプション費用', '海外旅行保険', 'SIMカード代'];
 
@@ -356,6 +329,7 @@ export function buildTripDoc(input: BuildInput): TripDoc {
             n,
             dateLabel,
             title: String(d?.title || '').trim() || String(d?.region || '').trim() || `DAY ${n}`,
+            titleImage: typeof d?.titleImage === 'string' ? d.titleImage.trim() : '',
             region: String(d?.region || '').trim(),
             move: String(d?.move || '').trim(),
             items: items.length ? items : (d?.summary ? lines(d.summary) : []),
@@ -403,7 +377,8 @@ export function buildTripDoc(input: BuildInput): TripDoc {
     const route: RouteStop[] = days.map(d => {
         const actImg = d.activities.find(a => a.images.length && !SKIP_HIGHLIGHT.has(String(a.type)))?.images[0]
             || d.activities.find(a => a.images.length)?.images[0] || '';
-        const img = actImg || d.stayImages[0] || matchSpot(input.designSpots, d.title, d.region, ...d.items);
+        // DAY 제목으로 고른 관광지 사진 → 일정 항목 사진 → 숙소 사진 → 이름이 맞는 여행지 사진
+        const img = d.titleImage || actImg || d.stayImages[0] || matchSpot(input.designSpots, d.title, d.region, ...d.items);
         const firstSight = d.activities.find(a => !SKIP_HIGHLIGHT.has(String(a.type)) && a.title)?.title || d.items[0] || '';
         const ll = lookupFirst(d.region, d.title, ...d.activities.map(a => a.title), d.stay);
         return {

@@ -39,7 +39,7 @@ app.get('/', async (c) => {
         if (region === 'uncat') {
             // Sentinel — admin picked "미분류" tab. Match rows with no region.
             where.push("(region IS NULL OR region = '')");
-        } else if (region && ['central', 'gobi', 'hovsgol', 'ulaanbaatar', 'experience', 'food'].includes(region)) {
+        } else if (region && VALID_REGIONS.includes(region)) {
             where.push('region = ?');
             bind.push(region);
         }
@@ -64,7 +64,7 @@ app.get('/:id', async (c) => {
 });
 
 // Normalize region input — only allow the known values, fall back to ''.
-const VALID_REGIONS = ['central', 'gobi', 'hovsgol', 'ulaanbaatar', 'experience', 'food'];
+const VALID_REGIONS = ['central', 'gobi', 'hovsgol', 'ulaanbaatar', 'experience', 'food', 'vehicle'];
 const validRegion = (r: unknown): string => {
     if (typeof r !== 'string') return '';
     return VALID_REGIONS.includes(r) ? r : '';

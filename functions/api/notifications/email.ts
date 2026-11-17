@@ -485,12 +485,19 @@ app.post('/', async (c) => {
                 return c.json({ error: `Unknown email type: ${type}` }, 400);
         }
 
+        // 메일이 실제로 나갔는지 — 실패해도 인앱 알림은 만들고, 결과만 정확히 알려 준다
+        let emailed = false;
+        let emailError = '';
         if (apiKey) {
             try {
                 await sendEmail(apiKey, to, subject, html);
-            } catch (mailErr) {
+                emailed = true;
+            } catch (mailErr: any) {
+                emailError = String(mailErr?.message || mailErr).slice(0, 300);
                 console.error('Email send failed (continuing to create in-app notification):', mailErr);
             }
+        } else {
+            emailError = 'RESEND_API_KEY not set';
         }
 
         const targetUserId = data.userId || data.user_id;
@@ -520,11 +527,15 @@ app.post('/', async (c) => {
             });
         }
 
-        if (adminSubject && adminHtml) {
-            await sendEmail(apiKey, adminEmail, adminSubject, adminHtml);
+        if (adminSubject && adminHtml && apiKey) {
+            try {
+                await sendEmail(apiKey, adminEmail, adminSubject, adminHtml);
+            } catch (adminErr) {
+                console.error('Admin copy email failed:', adminErr);
+            }
         }
 
-        return c.json({ success: true });
+        return c.json({ success: true, emailed, emailError: emailError || undefined });
     } catch (e: any) {
         console.error('Email send error:', e);
         return c.json({ error: e.message || 'Failed to send email' }, 500);

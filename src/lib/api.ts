@@ -98,6 +98,12 @@ export const api = {
     quotes: {
         list: async () => request(`${API_BASE}/quotes`),
         get: async (id: string) => request(`${API_BASE}/quotes/${id}`),
+        /** AI 견적 초안 (관리자 전용) — 저장하지 않고 편집기에 넣을 일정 초안을 돌려준다 */
+        aiDraft: async (id: string, body: { people?: number; startDate?: string; endDate?: string }) => request(`${API_BASE}/quotes/${id}/ai-draft`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        }),
         /** 고객이 견적서에서 확정 요청 (로그인 불필요, 견적 링크 기준) */
         requestBooking: async (id: string, message?: string) => request(`${API_BASE}/quotes/${id}/request-booking`, {
             method: 'POST',

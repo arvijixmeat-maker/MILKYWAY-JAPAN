@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState, useRef } from 'react';
 import {
     mergeDocumentSettings,
     defaultDocumentSettings,
@@ -16,6 +16,7 @@ import { TripDocument, type TripFocus } from '../trip-doc/TripDocument';
 import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
 import { buildTripDoc, yen, DEFAULT_INCLUDED, DEFAULT_EXCLUDED } from '../trip-doc/tripDocModel';
+import { MEAL_KO, INC_OPTS, EXC_OPTS, inferActivityType } from '../../constants/quoteOptions';
 import { useTripSources, resolveTripImages, fallbackSpots, cleanSpotName } from '../trip-doc/tripDocSources';
 
 /**
@@ -66,6 +67,8 @@ interface Props {
     onAssignAccommodation?: (day: number) => void;
     onUnassignAccommodation?: (day: number) => void;
     previewUrl?: string;
+    /** 견적이면 그 견적 ID — 일정이 비어 있으면 AI 초안을 자동으로 만들고, 「AI 초안」 버튼도 보인다 */
+    aiDraftQuoteId?: string;
 }
 
 const parseBlock = <T,>(content: T | string): T => {
@@ -103,15 +106,7 @@ const blocksToDays = (blocks: DetailContentBlock[] = []): TemplateDay[] => {
 
 // ── 한 번에 입력 (텍스트 → 일정 항목 · 식사) ──────────────────────────────
 /** 항목 종류 추정 — 이동·식사·체크인은 볼거리/경로 사진 후보에서 빠진다 */
-const inferType = (t: string): ActivityType => {
-    if (/(공항|픽업|미팅|도착|入国|空港|到着|ミーティング|お迎え)/.test(t)) return 'pickup';
-    if (/(이동|출발|移動|出発|専用車で)/.test(t)) return 'transport';
-    if (/(식사|조식|중식|석식|점심|저녁|食事|朝食|昼食|夕食|ランチ|ディナー)/.test(t)) return 'meal';
-    if (/(체크인|숙박|チェックイン)/.test(t)) return 'checkin';
-    if (/(자유|휴식|쇼핑|장보기|自由|ショッピング)/.test(t)) return 'free';
-    if (/(체험|승마|낙타|공연|트레킹|体験|乗馬|ラクダ|公演|トレッキング)/.test(t)) return 'activity';
-    return 'sightseeing';
-};
+const inferType = (t: string): ActivityType => inferActivityType(t) as ActivityType;
 /** 줄마다 항목 하나. 이미 있던 같은 이름 항목은 사진·설명을 그대로 유지한다 */
 const linesToActivities = (text: string, prev: TemplateDay['activities']): TemplateDay['activities'] => {
     const pool = [...prev];
@@ -125,23 +120,9 @@ const linesToActivities = (text: string, prev: TemplateDay['activities']): Templ
 
 // ── 식사 — 朝·昼·夕 칸마다 목록에서 고른다 ──
 const MEAL_SLOTS = [['breakfast', '조식'], ['lunch', '중식'], ['dinner', '석식']] as const;
-const MEAL_KO: Array<[string, string]> = [
-    ['O', '포함'], ['ホテル食', '호텔식'], ['ゲル食', '게르식'], ['キャンプ食', '캠프식'], ['現地食', '현지식'], ['レストラン', '레스토랑'],
-    ['特別料理', '특식'], ['ホルホグ', '허르헉'], ['しゃぶしゃぶ', '샤브샤브'], ['モンゴル料理', '몽골 요리'], ['韓国料理', '한식'],
-    ['バーベキュー', '바비큐'], ['お弁当', '도시락'], ['機内食', '기내식'], ['各自', '자유식(각자)'],
-];
+
 
 // ── 포함 / 불포함 — 체크만 하면 고객 화면에 나간다 ──
-const INC_OPTS: Array<[string, string]> = [
-    ['全日程の宿泊', '전 일정 숙박'], ['全日程のお食事', '전 일정 식사'], ['空港送迎', '공항 픽업·샌딩'], ['全日程 専用車両', '전 일정 전용 차량'],
-    ['専用ドライバー', '전용 기사'], ['日本語専門ガイド', '일본어 가이드'], ['観光地・公演入場料', '관광지·공연 입장료'], ['アクティビティ費用', '체험 비용'],
-    ['乗馬・ラクダ体験', '승마·낙타 체험'], ['伝統衣装体験', '전통의상 체험'], ['特別料理', '특식'], ['1日1本 ミネラルウォーター', '생수 1일 1병'],
-    ['燃料費', '유류비'], ['キャンプチェア＆テーブルセット', '캠핑 의자·테이블'], ['プライベートツアー', '프라이빗 투어'], ['星空・天の川観賞', '별·은하수 관측'],
-];
-const EXC_OPTS: Array<[string, string]> = [
-    ['往復航空券', '왕복 항공권'], ['海外旅行保険', '해외 여행자 보험'], ['個人的な費用', '개인 경비'], ['オプション費用', '선택 옵션 비용'],
-    ['SIMカード代', '유심 비용'], ['日程表に記載のない食事', '일정에 없는 식사'], ['ガイド・ドライバーへのチップ', '가이드·기사 팁'], ['一人部屋追加料金', '1인실 추가 요금'],
-];
 /** 상품·옛 문서에서 들어온 일본어 문구의 한국어 (목록에 없는 것) */
 const KO_EXTRA: Record<string, string> = {
     '専用車・ドライバー': '전용 차량·기사', '宿泊（ホテル・ゲル）': '숙박(호텔·게르)', '食事付き': '식사 포함', '日本語ガイド': '일본어 가이드',
@@ -172,7 +153,7 @@ const koSpotName = (name = '') => {
     const hit = ja ? MAP_DESTINATIONS.find(d => { const k = d.ja.replace(/[\s・]/g, ''); return ja.includes(k) || k.includes(ja); }) : undefined;
     return hit?.ko || (name.match(/[（(]([A-Za-z][^）)]*)[）)]/)?.[1] || '').trim() || cleanSpotName(name);
 };
-const SPOT_REGIONS: Array<[string, string]> = [...SPOT_REGION_OPTIONS.filter(o => o.value !== 'food').map(o => [o.value, o.label] as [string, string]), ['', '기타']];
+const SPOT_REGIONS: Array<[string, string]> = [...SPOT_REGION_OPTIONS.filter(o => o.value !== 'food' && o.value !== 'vehicle').map(o => [o.value, o.label] as [string, string]), ['', '기타']];
 /** 저장된 「일본어\t한국어」 직접 추가 항목 */
 const customKo = (labels: string[]) => new Map(labels.map(l => l.split('\t')).filter(p => p.length === 2) as Array<[string, string]>);
 const splitLines = (t?: string) => String(t || '').split(/\r?\n/).map(x => x.replace(/^[・•\-*]\s*/, '').trim()).filter(Boolean);
@@ -195,6 +176,7 @@ const Section: React.FC<{ n: number; title: string; hint?: string; right?: React
 export const ReservationDocumentEditor: React.FC<Props> = ({
     open, onClose, title, templateMode = false, previewMode = 'quote', customer, initialContent, onSave,
     tourStartDate, tourEndDate, assignedGuide, dailyAccommodations, onAssignGuide, onAssignAccommodation, onUnassignAccommodation, previewUrl,
+    aiDraftQuoteId,
 }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -219,6 +201,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     // 직접 추가 — 한국어(관리자용) + 일본어(고객용)
     const [custom, setCustom] = useState<Record<'inc' | 'exc', { ko: string; ja: string }>>({ inc: { ko: '', ja: '' }, exc: { ko: '', ja: '' } });
     const [spotRegion, setSpotRegion] = useState<string>('all');
+    /** DAY 제목 「여행지에서 고르기」 패널이 열린 DAY (index) */
+    const [titlePick, setTitlePick] = useState<number | null>(null);
+    /** 숙소 입력칸 아래 호텔 목록이 열린 DAY (index) */
+    const [hotelDrop, setHotelDrop] = useState<number | null>(null);
     // 미리보기 — 지금 고치는 곳(섹션·DAY)으로 따라간다 / 휴대폰 크기에서 보이는 칸
     const [focus, setFocus] = useState<TripFocus | null>(null);
     const [pane, setPane] = useState<'form' | 'preview'>('form');
@@ -229,6 +215,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const [spotTarget, setSpotTarget] = useState<{ d: number; a: number } | null>(null);
     const [hotelDayIdx, setHotelDayIdx] = useState<number | null>(null);
     const { sources } = useTripSources();
+    // ── AI 견적 초안 ──
+    const [aiBusy, setAiBusy] = useState(false);
+    const aiAutoTried = useRef(false);
 
     // ── 열릴 때 초기값 ──
     useEffect(() => {
@@ -252,6 +241,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setDelDay(null);
         setMealEdit(null);
         resetDrafts();
+        aiAutoTried.current = false;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialContent, tourStartDate, tourEndDate]);
 
@@ -311,6 +301,61 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         if (pricing?.depositPerPerson) setDeposit(pricing.depositPerPerson * people);
         setNotice(`「${p.name}」 일정·요금을 불러왔습니다 — 고객 요청에 맞게 DAY만 고치세요.`);
     };
+
+    // ── AI 견적 초안 ──
+    // 받은 초안은 이 브라우저에 보관 — 저장 전에 닫았다 다시 열어도 AI 를 다시 부르지 않는다 (비용 절약)
+    const aiCacheKey = aiDraftQuoteId ? `mw-ai-draft:${aiDraftQuoteId}` : '';
+    type AiDraft = { title?: string; titleKo?: string; days: TemplateDay[]; included?: string[]; excluded?: string[]; noteKo?: string };
+    const applyAiDraft = (draft: AiDraft, fromCache: boolean) => {
+        if (!Array.isArray(draft?.days) || draft.days.length === 0) return;
+        setUndoDays(days.length > 0 ? days : null);
+        setDays(draft.days);
+        if (draft.title) setName(draft.title);
+        setOpenDay(0);
+        resetDrafts();
+        setDs(cur => ({
+            ...cur,
+            quoteDoc: {
+                ...cur.quoteDoc,
+                included: draft.included?.length ? draft.included : cur.quoteDoc.included,
+                excluded: draft.excluded?.length ? draft.excluded : cur.quoteDoc.excluded,
+            },
+        }));
+        setNotice(`AI 초안을 넣었습니다${fromCache ? ' (앞서 만든 초안)' : ''} — 내용을 확인하고 금액을 넣은 뒤 저장하세요.${draft.noteKo ? ` 메모: ${draft.noteKo.replace(/\s*\n\s*/g, ' / ')}` : ''}`);
+    };
+    const runAiDraft = async (force: boolean) => {
+        if (!aiDraftQuoteId || aiBusy) return;
+        if (!force) {
+            try {
+                const cached = localStorage.getItem(aiCacheKey);
+                if (cached) { applyAiDraft(JSON.parse(cached), true); return; }
+            } catch { /* 보관함을 못 쓰면 새로 만든다 */ }
+        }
+        setAiBusy(true);
+        setSaveError(null);
+        setNotice('AI 가 고객 요청으로 일정 초안을 만드는 중입니다… (30초~1분)');
+        try {
+            const res = await api.quotes.aiDraft(aiDraftQuoteId, { people, startDate: startDate || undefined, endDate: endDate || undefined });
+            const draft = res?.draft as AiDraft | undefined;
+            if (!draft?.days?.length) throw new Error('AI 가 일정을 만들지 못했습니다.');
+            try { localStorage.setItem(aiCacheKey, JSON.stringify(draft)); } catch { /* 보관 실패는 무시 */ }
+            applyAiDraft(draft, false);
+        } catch (e) {
+            setNotice(null);
+            setSaveError(e instanceof Error ? e.message : 'AI 초안 만들기에 실패했습니다.');
+        } finally {
+            setAiBusy(false);
+        }
+    };
+    // 견적을 열었는데 일정이 비어 있고 상품 일정도 불러오지 않았으면 — 자동으로 초안
+    useEffect(() => {
+        if (!open || !aiDraftQuoteId || templateMode || aiAutoTried.current) return;
+        if (loadingProducts || products.length === 0) return; // 상품 일정 자동 불러오기가 먼저
+        if (days.length > 0) { aiAutoTried.current = true; return; }
+        aiAutoTried.current = true;
+        void runAiDraft(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, aiDraftQuoteId, loadingProducts, products.length, days.length]);
 
     // ── 일정 편집 ──
     const patchDay = (i: number, patch: Partial<TemplateDay>) => setDays(d => d.map((x, k) => (k === i ? { ...x, ...patch } : x)));
@@ -387,7 +432,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
 
     // ── 대표 여행지 (見どころ) — 관광지 마스터에서 지역별로 고른 곳만 고객 화면에 나간다 ──
     const designSpots = useMemo(() => fallbackSpots(sources), [sources]);
-    const spotPool = useMemo(() => sources.spots.filter(s => s.region !== 'food' && (s.images?.length || 0) > 0), [sources]);
+    const spotPool = useMemo(() => sources.spots.filter(s => s.region !== 'food' && s.region !== 'vehicle' && (s.images?.length || 0) > 0), [sources]);
     const spotsPicked = ds.quoteDoc.spots.filter(id => spotPool.some(s => s.id === id));
     const toggleSpot = (id: string) => setQ({ spots: spotsPicked.includes(id) ? spotsPicked.filter(x => x !== id) : [...spotsPicked, id] });
 
@@ -513,18 +558,19 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                             className={`flex-1 rounded-lg py-2 text-sm font-black ${pane === k ? 'bg-[#123B3A] text-white' : 'bg-slate-100 text-slate-500'}`}>{label}</button>
                     ))}
                 </div>
-                <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1fr)_340px] lg:grid-cols-[minmax(0,1fr)_400px]">
+                <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1fr)_340px] lg:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_440px]">
                     {/* 입력 */}
-                    <div className={`min-h-0 space-y-3 overflow-y-auto p-4 ${pane === 'preview' ? 'max-md:hidden' : ''}`}>
+                    {/* 입력 — 폭은 최대 960px (넓은 화면에서는 가운데) */}
+                    <div className={`min-h-0 overflow-y-auto p-4 ${pane === 'preview' ? 'max-md:hidden' : ''}`}>
+                    <div className="mx-auto max-w-[960px] space-y-3">
                         {!templateMode && (
                             <Section onFocusArea={() => setFocus({ section: 'q-info', at: Date.now() })} n={1} title="고객정보" hint="견적 요청·예약에서 자동">
-                                <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="grid gap-3 sm:grid-cols-4">
                                     <div><span className={lab}>고객 이름</span><div className={`${inp} flex items-center bg-slate-50`}>{customer?.name || '-'}</div></div>
                                     <div><span className={lab}>인원</span><input type="number" min={1} className={inp} value={people} onChange={e => setPeople(Math.max(1, parseInt(e.target.value, 10) || 1))} /></div>
-                                    <div><span className={lab}>기간</span><div className={`${inp} flex items-center bg-slate-50`}>{nights != null && nights >= 0 ? `${nights}泊${nights + 1}日` : '날짜를 입력하세요'}</div></div>
                                     <div><span className={lab}>출발일</span><input type="date" className={inp} value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
                                     <div><span className={lab}>도착일</span><input type="date" className={inp} min={startDate || undefined} value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-                                    <div />
+                                    <div><span className={lab}>기간</span><div className={`${inp} flex items-center bg-slate-50`}>{nights != null && nights >= 0 ? `${nights}泊${nights + 1}日` : '날짜를 입력하세요'}</div></div>
                                     <div><span className={lab}>항공편 도착 (IN · 선택)</span><input className={inp} placeholder="14:15" value={ds.quoteDoc.flightIn} onChange={e => setQ({ flightIn: e.target.value })} /></div>
                                     <div><span className={lab}>항공편 출발 (OUT · 선택)</span><input className={inp} placeholder="00:25" value={ds.quoteDoc.flightOut} onChange={e => setQ({ flightOut: e.target.value })} /></div>
                                 </div>
@@ -559,6 +605,14 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                         <Section n={templateMode ? 2 : 3} title="일정표" hint={`${days.length}일`}
                             right={
                                 <div className="flex items-center gap-2">
+                                    {aiDraftQuoteId && !templateMode && (
+                                        <button type="button" disabled={aiBusy} onClick={() => void runAiDraft(true)}
+                                            title="고객 견적 요청 내용으로 일정 초안을 새로 만듭니다 (지금 일정은 「일정 되돌리기」로 되돌릴 수 있음)"
+                                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#123B3A] px-2.5 text-xs font-black text-white hover:bg-[#0B2625] disabled:opacity-60">
+                                            <span className={`material-symbols-outlined text-[16px] ${aiBusy ? 'animate-spin' : ''}`}>{aiBusy ? 'progress_activity' : 'auto_awesome'}</span>
+                                            {aiBusy ? '만드는 중…' : days.length ? 'AI로 다시 만들기' : 'AI 초안'}
+                                        </button>
+                                    )}
                                     <select value={productId} disabled={loadingProducts} onChange={e => {
                                         const v = e.target.value; setProductId(v);
                                         const p = products.find(x => x.id === v);
@@ -577,8 +631,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     return (
                                         <div key={i}
                                             // 이 DAY 를 고치면 미리보기가 같은 DAY 로 이동해 펼쳐진다
-                                            onFocusCapture={() => setFocus({ section: 'q-plan', day: d.day, at: Date.now() })}
-                                            onClick={() => setFocus({ section: 'q-plan', day: d.day, at: Date.now() })}
+                                            // (DAY 제목·여행지 고르기는 data-film-focus — 미리보기를 일정 사진 카드로 보낸다)
+                                            onFocusCapture={e => { if (!(e.target as HTMLElement).closest('[data-film-focus]')) setFocus({ section: 'q-plan', day: d.day, at: Date.now() }); }}
+                                            onClick={e => { if (!(e.target as HTMLElement).closest('[data-film-focus]')) setFocus({ section: 'q-plan', day: d.day, at: Date.now() }); }}
                                             className={`rounded-xl border ${isOpen ? 'border-[#06C4A0] bg-[#F4FCFA]' : 'border-slate-200 bg-white'} dark:border-slate-700 dark:bg-slate-900`}>
                                             <div className="flex cursor-pointer items-center gap-2 px-3 py-2.5" onClick={() => setOpenDay(isOpen ? -1 : i)}>
                                                 <span className="rounded-md bg-[#123B3A] px-2 py-0.5 text-[11px] font-black text-[#8CE9D8]">DAY {d.day}</span>
@@ -594,10 +649,53 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                             {isOpen && (
                                                 <div className="space-y-3 border-t border-slate-200 px-3 pb-3 pt-3 dark:border-slate-700">
                                                     <div className="grid gap-2 sm:grid-cols-[1fr_160px_140px]">
-                                                        <div><span className={lab}>DAY 제목 (일본어)</span><input className={inp} value={d.title} placeholder="ウランバートル" onChange={e => patchDay(i, { title: e.target.value })} /></div>
+                                                        <div>
+                                                            <span className="mb-1 flex items-center justify-between gap-2 text-[11px] font-black text-slate-500">
+                                                                DAY 제목 (일본어)
+                                                                {spotPool.length > 0 && (
+                                                                    <button type="button" data-film-focus="" onClick={() => { setTitlePick(p => (p === i ? null : i)); setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() }); }}
+                                                                        className={`rounded-full px-2 py-0.5 text-[11px] font-black ${titlePick === i ? 'bg-[#123B3A] text-white' : 'bg-[#E8FAF5] text-[#007F75] hover:bg-[#BFF1E7]'}`}>
+                                                                        {titlePick === i ? '닫기' : '여행지에서 고르기'}
+                                                                    </button>
+                                                                )}
+                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                {d.titleImage && (
+                                                                    <span className="relative shrink-0">
+                                                                        <img src={d.titleImage} alt="" className="h-9 w-9 rounded-full object-cover" />
+                                                                        <button type="button" data-film-focus="" title="사진 빼기" onClick={() => { patchDay(i, { titleImage: undefined }); setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() }); }}
+                                                                            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-[10px] font-black leading-none text-white">×</button>
+                                                                    </span>
+                                                                )}
+                                                                <input data-film-focus="" className={inp} value={d.title} placeholder="ウランバートル" onChange={e => patchDay(i, { title: e.target.value })}
+                                                                    onFocus={() => setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() })} />
+                                                            </div>
+                                                            {d.titleKo && <p className="mt-1 text-[11px] font-semibold text-slate-400">뜻: {d.titleKo}</p>}
+                                                        </div>
                                                         <div><span className={lab}>지역 (지도용)</span><input className={inp} value={d.region || ''} placeholder="テレルジ" onChange={e => patchDay(i, { region: e.target.value })} /></div>
                                                         <div><span className={lab}>이동 시간</span><input className={inp} value={d.move || ''} placeholder="約4時間" onChange={e => patchDay(i, { move: e.target.value })} /></div>
                                                     </div>
+                                                    {titlePick === i && (
+                                                        // 관광지 마스터에서 고르면 DAY 제목(일본어)과 사진이 함께 들어간다
+                                                        <div data-film-focus="" className="rounded-xl border border-[#BFF1E7] bg-[#F7FAF9] p-3">
+                                                            <p className="mb-2 text-[11px] font-semibold text-slate-400">고르면 DAY 제목과 견적서 일정 카드 사진이 함께 바뀝니다</p>
+                                                            <div className="grid max-h-64 grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-x-2 gap-y-3 overflow-y-auto pt-1">
+                                                                {spotPool.map(s => {
+                                                                    const on = d.titleImage === s.images![0];
+                                                                    return (
+                                                                        <button key={s.id} type="button" title={`고객 화면: ${cleanSpotName(s.name_kr)}`}
+                                                                            onClick={() => { patchDay(i, { title: cleanSpotName(s.name_kr), titleImage: s.images![0] }); setTitlePick(null); setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() }); }}
+                                                                            className="group flex flex-col items-center gap-1 text-center">
+                                                                            <span className={`block h-14 w-14 rounded-full p-[3px] transition ${on ? 'bg-[#06C4A0]' : 'bg-transparent group-hover:bg-slate-200'}`}>
+                                                                                <img src={s.images![0]} alt="" loading="lazy" className="h-full w-full rounded-full border-2 border-white object-cover" />
+                                                                            </span>
+                                                                            <span className={`line-clamp-2 w-full text-[11px] leading-tight ${on ? 'font-black text-[#007F75]' : 'font-semibold text-slate-700'}`}>{koSpotName(s.name_kr)}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <span className={lab}>일정 (한 줄에 하나 — 붙여 넣으면 됩니다)</span>
                                                         <textarea
@@ -610,6 +708,20 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                 patchDay(i, { activities: linesToActivities(text, d.activities) });
                                                             }}
                                                         />
+                                                        {d.activities.some(a => a.ko) && (
+                                                            // AI 초안의 한국어 뜻 — 일본어 줄을 고치면 그 줄의 뜻은 사라진다 (고객 화면에는 일본어만 나감)
+                                                            <div className="mt-1.5 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                                                                <span className="mb-1 block text-[10px] font-black text-slate-400">한국어 뜻 (관리자만 보임)</span>
+                                                                <ol className="space-y-0.5">
+                                                                    {d.activities.map((a, j) => (
+                                                                        <li key={j} className="flex gap-1.5 text-[12px] leading-snug">
+                                                                            <span className="w-4 flex-none text-right font-black text-slate-300">{j + 1}</span>
+                                                                            {a.ko ? <span className="font-semibold text-slate-600 dark:text-slate-300">{a.ko}</span> : <span className="text-slate-300">(직접 고친 줄 — 뜻 없음)</span>}
+                                                                        </li>
+                                                                    ))}
+                                                                </ol>
+                                                            </div>
+                                                        )}
                                                         {d.activities.length > 0 && (
                                                             <div className="mt-2">
                                                                 <span className="mb-1 block text-[10px] font-bold text-slate-400">사진 넣기 (선택) — 「관광지」를 누르면 관광지 마스터의 사진·설명이 붙습니다. 이름은 위 칸 그대로 둡니다.</span>
@@ -641,7 +753,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                             <span className={lab}>숙소</span>
                                                             <div className="flex items-center gap-1.5">
                                                                 {d.accommodation?.images?.[0] && <img src={d.accommodation.images[0]} alt="" className="h-9 w-9 flex-none rounded-lg object-cover" />}
-                                                                <input className={inp} list="mw-hotel-master" value={d.accommodation?.name || ''} placeholder={assigned?.name ? `배정: ${assigned.name}` : '호텔 마스터에서 선택 또는 직접 입력'}
+                                                                <div className="relative min-w-0 flex-1">
+                                                                <input className={inp} value={d.accommodation?.name || ''}
+                                                                    onFocus={() => setHotelDrop(i)} onBlur={() => setHotelDrop(null)}
+                                                                    onKeyDown={e => { if (e.key === 'Escape') setHotelDrop(null); }} placeholder={assigned?.name ? `배정: ${assigned.name}` : '호텔 마스터에서 선택 또는 직접 입력'}
                                                                     onChange={e => {
                                                                         const name = e.target.value;
                                                                         // 호텔 마스터 목록에서 고르면 사진·설명까지 붙인다
@@ -650,7 +765,39 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                         const acc = d.accommodation;
                                                                         // 마스터에서 고른 호텔 이름을 바꾸면 그 호텔 사진은 떼어 낸다
                                                                         patchDay(i, { accommodation: name ? (acc && acc.name === name ? acc : { name, images: acc?.id ? [] : (acc?.images || []) }) : null });
+                                                                        setHotelDrop(i);
                                                                     }} />
+                                                                {hotelDrop === i && hotels.length > 0 && (() => {
+                                                                    // 입력한 글자로 거르기 — 이미 고른 호텔이면 전체 목록
+                                                                    const q = (d.accommodation?.name || '').trim().toLowerCase();
+                                                                    const picked = !!(q && hotelByName(d.accommodation?.name || ''));
+                                                                    const list = !q || picked ? hotels : hotels.filter(h => `${h.name_kr} ${h.name_local || ''} ${h.city || ''}`.toLowerCase().includes(q));
+                                                                    return (
+                                                                        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                                                                            {list.length === 0 ? (
+                                                                                <p className="px-3 py-2.5 text-xs font-semibold text-slate-400">호텔 마스터에 없는 이름입니다 — 이대로 두면 직접 입력한 숙소로 나갑니다</p>
+                                                                            ) : list.map(h => {
+                                                                                const on = d.accommodation?.name === h.name_kr;
+                                                                                return (
+                                                                                    <button key={h.id} type="button"
+                                                                                        // 입력칸이 포커스를 잃기 전에 고른다
+                                                                                        onMouseDown={e => { e.preventDefault(); fillFromHotel(i, h); setHotelDrop(null); }}
+                                                                                        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left ${on ? 'bg-[#E8FAF5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                                                                        {h.images?.[0]
+                                                                                            ? <img src={h.images[0]} alt="" loading="lazy" className="h-10 w-10 flex-none rounded-lg object-cover" />
+                                                                                            : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black text-slate-400">사진 없음</span>}
+                                                                                        <span className="min-w-0 flex-1">
+                                                                                            <span className={`block truncate text-[13px] font-black ${on ? 'text-[#007F75]' : 'text-slate-800 dark:text-slate-100'}`}>{h.name_kr}</span>
+                                                                                            <span className="block truncate text-[11px] font-semibold text-slate-400">{[h.name_local, h.city, h.star_rating ? `${h.star_rating}★` : ''].filter(Boolean).join(' · ') || '\u00a0'}</span>
+                                                                                        </span>
+                                                                                        {on && <span className="flex-none text-[11px] font-black text-[#007F75]">선택됨</span>}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                                </div>
                                                                 <button type="button" title="호텔 마스터에서 사진으로 찾기" onClick={() => setHotelDayIdx(i)}
                                                                     className="h-9 flex-none rounded-lg border border-[#9FE1CB] px-3 text-xs font-black text-[#007F75] hover:bg-[#E8FAF5]">호텔</button>
                                                                 {!templateMode && onAssignAccommodation && (
@@ -782,15 +929,12 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                 })()}
                         </Section>
 
-                        {/* 숙소 칸의 호텔 마스터 목록 */}
-                        <datalist id="mw-hotel-master">
-                            {hotels.map(h => <option key={h.id} value={h.name_kr}>{[h.name_local, h.city, h.star_rating ? `${h.star_rating}★` : ''].filter(Boolean).join(' · ')}</option>)}
-                        </datalist>
 
                         <p className="px-1 pb-2 text-[11px] font-semibold leading-relaxed text-slate-400">
                             표지 문구·숙소 소개·팀·식사 안내·안전·공항·허가증·약관은 모든 고객 공통으로 자동 들어갑니다.
                             {onAssignAccommodation && !templateMode ? ' 숙소 배정은 예약의 숙소 배정과 연결됩니다.' : ''}
                         </p>
+                    </div>
                     </div>
 
                     {/* 미리보기 */}

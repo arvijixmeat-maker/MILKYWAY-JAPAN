@@ -211,6 +211,8 @@ Zen Kaku Gothic New / Unbounded, 인라인 SVG 아이콘, 인라인 `style` + `M
 - 동행 참가 요청(2026-10-12): `travel_mate_requests` 테이블·`/api/travel-mates/:id/requests`(GET/POST/DELETE). 요청은 호스트에게 알림만 보내고 모집 인원·상태는 바꾸지 않음(수락/거절 기능 없음). 테이블은 배포 후 `/api/migrate-db` 한 번 필요.
 - 계좌 정보(2026-10-12 오너 방침): 예약금은 PayPal 전용이라 계좌 등록·안내 기능을 모두 제거함. 계약서 템플릿의 계좌 안내 칸, `bank_account` 설정, 가짜 계좌가 나오던 `/reservation-status` 화면 삭제(→ `/mypage/reservations`로 이동). 옛 기본값 「銀行振込」가 저장된 템플릿은 `resolveDepositMethod`(`constants/company.ts`)가 PayPal로 바꿔 보여 줌. 계좌·은행 송금 문구를 다시 넣지 말 것.
 - 최근 본 상품은 `DELETE /api/recently-viewed/:id`·`DELETE /api/recently-viewed`로 본인 것만 삭제(마이그레이션 불필요).
+- AI 견적 초안(2026-11-17): `POST /api/quotes/:id/ai-draft`(관리자 전용, `functions/lib/aiQuoteDraft.ts`, Claude Opus 5.5 · 구조화 출력). 견적 편집기를 열었을 때 일정이 비어 있으면 자동 실행, 「AI 초안 / AI로 다시 만들기」 버튼. 관광지·호텔은 마스터 ID만, 포함·불포함·식사는 `src/constants/quoteOptions.ts` 선택지만 고르게 하고 금액·날짜는 만들지 않음. 결과는 저장하지 않고 편집기에 넣음(관리자 브라우저 localStorage `mw-ai-draft:<견적ID>`에 보관). 일정 줄마다 한국어 뜻(`activity.ko`, `day.titleKo`)을 관리자에게만 보여 줌. Cloudflare 환경 변수 `ANTHROPIC_API_KEY` 필요(없으면 503 안내).
+- 견적서·확정일정표(`trip-doc/TripDocument.tsx` + `TripDocSections.tsx`)는 Claude Design 「Japan version Mobile / PC」 시안. 문서 폭 1040px 이상이면 왼쪽 목차 + 720px 본문(PC), 아니면 휴대폰 배치. 사진 출처: 고급·일반 게르 = 호텔 마스터(이름에 高級/一般), 차량 = 관광지 마스터 「차량(vehicle)」 분류(2026-11-17 추가, 일정 선택 목록에서는 제외), 음식 = 「음식」 분류, 허가증 = `src/assets/certs/cert-1*.png`…`cert-5*.png`(넣으면 자동 표시, 없으면 번호 카드).
 
 ## 10. 다른 환경에서 작업 이어가는 법
 

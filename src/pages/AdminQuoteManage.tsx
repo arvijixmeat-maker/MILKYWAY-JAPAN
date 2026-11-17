@@ -181,7 +181,7 @@ export const AdminQuoteManage: React.FC = () => {
 
             // 2. Send email notification via Gmail SMTP
             try {
-                await sendNotificationEmail(
+                const mail = await sendNotificationEmail(
                     selectedRequest.email,
                     'ESTIMATE_COMPLETED',
                     {
@@ -194,7 +194,7 @@ export const AdminQuoteManage: React.FC = () => {
                         userId: selectedRequest.userId,
                     }
                 );
-                console.log('Notification email sent successfully');
+                if (!mail.success) alert('견적은 저장했지만 메일은 발송되지 않았습니다. 고객 이메일 주소를 확인하거나 견적 링크를 직접 보내 주세요.');
             } catch (emailError) {
                 console.error('Failed to send notification email:', emailError);
             }
