@@ -230,6 +230,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const [openDay, setOpenDay] = useState(0);
     const [showMore, setShowMore] = useState(false);
     const [descOpen, setDescOpen] = useState<string | null>(null);
+    /** DAY별 「사진·설명」 칸 펼침 (기본 접힘) */
+    const [photoOpen, setPhotoOpen] = useState<Record<number, boolean>>({});
     // 텍스트 칸 입력 중 상태 (빈 줄·쉼표를 치는 동안 칸이 정리되지 않게) — DAY 순서가 바뀌면 비운다
     const [itemDraft, setItemDraft] = useState<Record<number, string>>({});
     const resetDrafts = () => { setItemDraft({}); };
@@ -281,6 +283,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setUndoRest(null);
         setReviseText('');
         setDelDay(null);
+        setPhotoOpen({});
         setMealEdit(null);
         resetDrafts();
         aiAutoTried.current = false;
@@ -887,9 +890,27 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                 </ol>
                                                             </div>
                                                         )}
-                                                        {d.activities.length > 0 && (
+                                                        {d.activities.length > 0 && (() => {
+                                                            // 사진·설명 칸 — 평소에는 접어 두고 요약만 (AI 초안이 사진을 자동으로 붙인다). 고칠 때만 펼친다
+                                                            const withImg = d.activities.filter(a => a.images?.length);
+                                                            const withDesc = d.activities.filter(a => a.description?.trim()).length;
+                                                            const opened = !!photoOpen[i];
+                                                            return (
                                                             <div className="mt-2">
-                                                                <span className="mb-1 block text-[10px] font-bold text-slate-400">사진 넣기 (선택) — 「관광지」를 누르면 관광지 마스터의 사진·설명이 붙습니다. 이름은 위 칸 그대로 둡니다.</span>
+                                                                <button type="button" onClick={() => setPhotoOpen(m => ({ ...m, [i]: !opened }))}
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                                                                    <span className="material-symbols-outlined text-[16px] text-slate-400">{opened ? 'expand_less' : 'expand_more'}</span>
+                                                                    <span className="text-[11px] font-black text-slate-500">사진·설명</span>
+                                                                    <span className="text-[11px] font-bold text-slate-400">사진 {withImg.length}/{d.activities.length}줄{withDesc ? ` · 설명 ${withDesc}줄` : ''}</span>
+                                                                    {!opened && (
+                                                                        <span className="flex -space-x-1.5">
+                                                                            {withImg.slice(0, 4).map((a, k) => <img key={k} src={a.images![0]} alt="" className="h-5 w-5 rounded border border-white object-cover dark:border-slate-800" />)}
+                                                                        </span>
+                                                                    )}
+                                                                    {!opened && <span className="ml-auto text-[10px] font-bold text-slate-400">고객 견적서의 루트·見どころ 사진 — 바꿀 때만 펼치세요</span>}
+                                                                </button>
+                                                                {opened && <>
+                                                                <span className="mb-1 mt-1 block text-[10px] font-bold text-slate-400">「관광지」를 누르면 관광지 마스터의 사진·설명이 붙습니다. 이름은 위 칸 그대로 둡니다.</span>
                                                                 <div className="flex flex-wrap gap-1.5">
                                                                     {d.activities.map((a, j) => {
                                                                         const key = `${i}-${j}`;
@@ -910,8 +931,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                     <textarea key={j} className="mt-1.5 min-h-[64px] w-full rounded-md border border-slate-200 p-2 text-xs leading-relaxed text-slate-700 outline-none focus:border-[#06C4A0] dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                                                         value={a.description} placeholder={`「${a.title}」 설명 (볼거리 카드에 표시)`} onChange={e => patchAct(i, j, { description: e.target.value })} />
                                                                 ))}
+                                                                </>}
                                                             </div>
-                                                        )}
+                                                            );
+                                                        })()}
                                                     </div>
                                                     <div className="grid gap-2 sm:grid-cols-2">
                                                         <div>
