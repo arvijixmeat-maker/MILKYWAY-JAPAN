@@ -9,7 +9,6 @@ import {
 import { api } from '../../lib/api';
 import type { DayInfoContent, DetailContentBlock, TimelineContent, TourProduct } from '../../types/product';
 import { TouristSpotPickerModal } from './TouristSpotPickerModal';
-import { HotelPickerModal } from './HotelPickerModal';
 import type { TouristSpot } from '../../types/touristSpot';
 import type { Hotel } from '../../types/hotel';
 import { TripDocument, type TripFocus } from '../trip-doc/TripDocument';
@@ -191,20 +190,87 @@ const SPOT_REGIONS: Array<[string, string]> = [...SPOT_REGION_OPTIONS.filter(o =
 const customKo = (labels: string[]) => new Map(labels.map(l => l.split('\t')).filter(p => p.length === 2) as Array<[string, string]>);
 const splitLines = (t?: string) => String(t || '').split(/\r?\n/).map(x => x.replace(/^[・•\-*]\s*/, '').trim()).filter(Boolean);
 
-const inp = 'h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-[#06C4A0] dark:border-slate-700 dark:bg-slate-800 dark:text-white';
-const lab = 'mb-1 block text-[11px] font-black text-slate-500';
-
-const Section: React.FC<{ n: number; title: string; hint?: string; right?: React.ReactNode; children: React.ReactNode; onFocusArea?: () => void }> = ({ n, title, hint, right, children, onFocusArea }) => (
-    <section onFocusCapture={onFocusArea} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8FAF5] text-xs font-black text-[#007F75]">{n}</span>
-            <span className="text-sm font-black text-slate-900 dark:text-white">{title}</span>
-            {hint && <span className="text-[11px] font-semibold text-slate-400">{hint}</span>}
-            <span className="ml-auto">{right}</span>
-        </div>
-        {children}
-    </section>
+// ── 디자인 토큰 — Claude Design 「Quote Editor」 시안 (민트 · 네이비) ──
+const C = {
+    ink: '#123B3A', sub: '#5F7674', mute: '#8A9E9B', body: '#3F5856', faint: '#B6C7C3',
+    line: '#DDEBE7', line2: '#EEF3F1', cardLine: '#E6EFEC', bg: '#F7FAF9',
+    mint: '#00A88B', mintDeep: '#007F75', mintHi: '#06C4A0', mintBg: '#E8FAF5', mintBg2: '#F1FCF8', mintLine: '#9FE3D2', glow: '#6CE3CC',
+    amberBg: '#FFF4D6', amberFg: '#8A5A00', grayBg: '#F3F6F5',
+};
+const EN = "'Inter',sans-serif";
+const JP = "'Noto Sans JP',sans-serif";
+const EDITOR_CSS = `
+.qe{font-family:'Pretendard Variable',Pretendard,'Noto Sans JP',sans-serif;color:${C.ink};-webkit-font-smoothing:antialiased;word-break:keep-all}
+.qe input,.qe select,.qe textarea,.qe button{font-family:inherit}
+.qe input:focus,.qe select:focus,.qe textarea:focus{outline:none;border-color:${C.mintHi} !important;box-shadow:0 0 0 3px rgba(6,196,160,0.25)}
+.qe .qe-bare:focus{box-shadow:none !important}
+.qe-noscroll{scrollbar-width:none}.qe-noscroll::-webkit-scrollbar{display:none}
+.qe-hbd:hover{border-color:${C.mintHi} !important}
+.qe-hbg:hover{background:${C.bg} !important}
+.qe-hmint:hover{background:${C.mintBg2} !important}
+.qe-hred:hover{background:#FFF1F0 !important}
+.qe-hdark:hover{background:#0C2B2A !important}
+`;
+const fieldStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
+    height: 46, padding: '0 14px', border: `1px solid ${C.line}`, borderRadius: 12, background: '#FFFFFF',
+    fontSize: 15, color: C.ink, boxSizing: 'border-box', width: '100%', ...extra,
+});
+const Lbl: React.FC<{ children: React.ReactNode; note?: string }> = ({ children, note }) => (
+    <span style={{ fontSize: 12, fontWeight: 600, color: C.sub, whiteSpace: 'nowrap' }}>{children}{note && <span style={{ fontWeight: 500, color: C.mute }}> · {note}</span>}</span>
 );
+const Chevron: React.FC<{ open: boolean; size?: number; color?: string }> = ({ open, size = 14, color = 'currentColor' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+        style={{ transform: `rotate(${open ? 180 : 0}deg)`, transition: 'transform .2s', flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
+);
+const Sparkle: React.FC<{ size?: number; color?: string }> = ({ size = 15, color = C.glow }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
+);
+const Check: React.FC<{ size?: number; color?: string; w?: number }> = ({ size = 10, color = '#FFFFFF', w = 3.2 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
+);
+/** 동그란(또는 둥근 네모) 사진 — 사진이 없으면 연한 민트 */
+const Thumb: React.FC<{ src?: string; size: number; round?: boolean; radius?: number }> = ({ src, size, round = true, radius = 10 }) => (
+    <span style={{ position: 'relative', flex: 'none', width: size, height: size, borderRadius: round ? '50%' : radius, overflow: 'hidden', background: C.mintBg, display: 'block' }}>
+        {src && <img src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+    </span>
+);
+const SecHead: React.FC<{ n: string; title: React.ReactNode; hint?: string; right?: React.ReactNode }> = ({ n, title, hint, right }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 10, flex: 1, minWidth: 160 }}>
+            <span style={{ flex: 'none', fontFamily: EN, fontSize: 12, fontWeight: 700, color: C.mint }}>{n}</span>
+            <h2 style={{ flex: 'none', whiteSpace: 'nowrap', margin: 0, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: C.ink }}>{title}</h2>
+            {hint && <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: C.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hint}</span>}
+        </span>
+        {right}
+    </div>
+);
+const sectionStyle: React.CSSProperties = { scrollMarginTop: 12, padding: 24, borderRadius: 20, background: '#FFFFFF', border: `1px solid ${C.cardLine}`, display: 'flex', flexDirection: 'column', gap: 18 };
+
+/** 숙소 종류 — 호텔 마스터에 종류 칸이 없어 이름으로 나눈다 */
+type HotelKind = 'ger' | 'premium' | 'hotel';
+const hotelKindOf = (h: Hotel): HotelKind => {
+    const t = `${h.name_kr || ''} ${h.name_local || ''}`;
+    if (/高級|고급|premium|deluxe|デラックス|디럭스|luxury|럭셔리/i.test(t)) return 'premium';
+    if (/ゲル|게르|\bger\b|camp|キャンプ|캠프|lodge|ロッジ/i.test(t)) return 'ger';
+    return 'hotel';
+};
+const HOTEL_KIND: Record<HotelKind | 'self', [string, string, string]> = {
+    ger: ['게르 캠프', C.mintBg, C.mintDeep], premium: ['고급 게르', C.ink, C.glow], hotel: ['호텔', C.grayBg, C.body], self: ['숙박 없음', C.amberBg, C.amberFg],
+};
+/** 마스터에 없는 숙박 표기 — 기내박 · 고객이 직접 잡은 호텔 */
+const SELF_STAYS = ['— (機内泊)', '— (お客様手配のホテル)'];
+const MEMO_TAG_COLOR: Record<string, [string, string]> = {
+    '일정': [C.mintBg, C.mintDeep], '숙소 확인': [C.amberBg, C.amberFg], '날짜': [C.amberBg, C.amberFg], '금액': [C.amberBg, C.amberFg], '요청': [C.grayBg, C.sub], '기타': [C.grayBg, C.sub],
+};
+interface AiInfo {
+    base: { id: string; name: string; price: number; duration: string } | null;
+    summary: string;
+    memos: Array<{ tag: string; text: string }>;
+    budget: string;
+    budgetNote: string;
+    fromCache: boolean;
+}
+const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
 export const ReservationDocumentEditor: React.FC<Props> = ({
     open, onClose, title, templateMode = false, previewMode = 'quote', customer, initialContent, onSave,
@@ -240,17 +306,23 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const [spotRegion, setSpotRegion] = useState<string>('all');
     /** DAY 제목 「여행지에서 고르기」 패널이 열린 DAY (index) */
     const [titlePick, setTitlePick] = useState<number | null>(null);
-    /** 숙소 입력칸 아래 호텔 목록이 열린 DAY (index) */
-    const [hotelDrop, setHotelDrop] = useState<number | null>(null);
-    // 미리보기 — 지금 고치는 곳(섹션·DAY)으로 따라간다 / 휴대폰 크기에서 보이는 칸
+    /** 「숙소에서 고르기」 칸이 열린 DAY (index) + 종류 탭 */
+    const [hotelPick, setHotelPick] = useState<number | null>(null);
+    const [hotelKindTab, setHotelKindTab] = useState<'all' | HotelKind>('all');
+    // 미리보기 — 「고객 화면 보기」로 여는 오른쪽 칸. 지금 고치는 곳(섹션·DAY)으로 따라간다
     const [focus, setFocus] = useState<TripFocus | null>(null);
-    const [pane, setPane] = useState<'form' | 'preview'>('form');
+    const [previewOpen, setPreviewOpen] = useState(false);
+    /** AI 초안 안내 카드 — 참고 상품 · 예산 · 확인 메모 */
+    const [aiInfo, setAiInfo] = useState<AiInfo | null>(null);
+    const [aiInfoOpen, setAiInfoOpen] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    /** 열었을 때의 내용 — 바뀌었는지(작성 중) 표시용 */
+    const baseSnap = useRef<string | null>(null);
     const [products, setProducts] = useState<TourProduct[]>([]);
     const [productId, setProductId] = useState('');
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
     const [spotTarget, setSpotTarget] = useState<{ d: number; a: number } | null>(null);
-    const [hotelDayIdx, setHotelDayIdx] = useState<number | null>(null);
     const { sources } = useTripSources();
     // ── AI 견적 초안 ──
     const [aiBusy, setAiBusy] = useState(false);
@@ -272,6 +344,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setDescription(initialContent?.description || '');
         setDays(Array.isArray(initialContent?.days) ? initialContent!.days : []);
         setDs(merged);
+        baseSnap.current = JSON.stringify([initialContent?.name || customer?.tripType || '', Array.isArray(initialContent?.days) ? initialContent!.days : [], merged, tourStartDate || '', tourEndDate || '', ppl, customer?.deposit || 0]);
         setStartDate(tourStartDate || '');
         setEndDate(tourEndDate || '');
         setPeople(ppl);
@@ -285,6 +358,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setDelDay(null);
         setPhotoOpen({});
         setMealEdit(null);
+        setHotelPick(null);
+        setTitlePick(null);
+        setAiInfo(null);
+        setAiInfoOpen(false);
         resetDrafts();
         aiAutoTried.current = false;
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -352,7 +429,11 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     // ── AI 견적 초안 ──
     // 받은 초안은 이 브라우저에 보관 — 저장 전에 닫았다 다시 열어도 AI 를 다시 부르지 않는다 (비용 절약)
     const aiCacheKey = aiDraftQuoteId ? `mw-ai-draft:${aiDraftQuoteId}` : '';
-    type AiDraft = { title?: string; titleKo?: string; days: TemplateDay[]; included?: string[]; excluded?: string[]; noteKo?: string; baseProduct?: { id: string; name: string; price: number; duration: string } | null };
+    type AiDraft = {
+        title?: string; titleKo?: string; days: TemplateDay[]; included?: string[]; excluded?: string[]; noteKo?: string;
+        baseProduct?: { id: string; name: string; price: number; duration: string } | null;
+        memos?: Array<{ tag: string; text: string }>; budgetNote?: string; budget?: string;
+    };
     const applyAiDraft = (draft: AiDraft, fromCache: boolean) => {
         if (!Array.isArray(draft?.days) || draft.days.length === 0) return;
         setUndoDays(days.length > 0 ? days : null);
@@ -370,8 +451,12 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                 excluded: draft.excluded?.length ? draft.excluded : cur.quoteDoc.excluded,
             },
         }));
-        const base = draft.baseProduct;
-        setNotice(`AI 초안을 넣었습니다${fromCache ? ' (앞서 만든 초안)' : ''}${base ? ` — 참고 상품: 「${base.name}」${base.duration ? ` ${base.duration}` : ''}${base.price ? ` · 1인 ¥${base.price.toLocaleString()}` : ''}` : ''} — 내용을 확인하고 금액을 넣은 뒤 저장하세요.${draft.noteKo ? ` 메모: ${draft.noteKo.replace(/\s*\n\s*/g, ' / ')}` : ''}`);
+        // 안내는 카드로 (예전 보관본은 메모가 한 줄 글이라 나눠서 보여 준다)
+        const memos = draft.memos?.length
+            ? draft.memos
+            : String(draft.noteKo || '').split(/\s*\n\s*|\s+\/\s+/).map(t => t.trim()).filter(Boolean).map(text => ({ tag: '기타', text }));
+        setAiInfo({ base: draft.baseProduct || null, summary: draft.memos?.length ? draft.noteKo || '' : '', memos, budget: draft.budget || '', budgetNote: draft.budgetNote || '', fromCache });
+        setNotice(null);
     };
     const runAiDraft = async (force: boolean) => {
         if (!aiDraftQuoteId || aiBusy) return;
@@ -383,6 +468,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         }
         setAiBusy(true);
         setSaveError(null);
+        setAiInfo(null);
         setNotice('AI 가 고객 요청으로 일정 초안을 만드는 중입니다… (30초~1분)');
         try {
             const res = await api.quotes.aiDraft(aiDraftQuoteId, { people, startDate: startDate || undefined, endDate: endDate || undefined });
@@ -579,6 +665,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         }
     };
 
+    // 열었을 때와 내용이 달라졌는지 — 머리의 「작성 중 / 저장됨」
+    const snap = useMemo(() => (open ? JSON.stringify([name, days, ds, startDate, endDate, people, deposit]) : ''), [open, name, days, ds, startDate, endDate, people, deposit]);
+    const dirty = baseSnap.current !== null && snap !== baseSnap.current;
+
     if (!open) return null;
     const nights = startDate && endDate ? Math.round((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000) : null;
 
@@ -628,520 +718,772 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         }
     };
 
+    // ── 진행도 · 섹션 탭 ──
+    const done = {
+        customer: !!customer?.name && !!startDate && !!endDate,
+        price: perPerson > 0,
+        plan: days.length > 0,
+        inc: incNow.length > 0,
+        spot: spotsPicked.length > 0,
+    };
+    const steps = ([
+        ...(templateMode ? [] : [['customer', '고객 정보', '']]),
+        ['price', '여행 금액', perPerson ? `¥${yen(perPerson)}` : ''],
+        ['plan', '일정표', `${days.length}일`],
+        ['inc', '포함·불포함', ''],
+        ['spot', '대표 여행지', `${spotsPicked.length}개`],
+    ] as Array<[keyof typeof done, string, string]>).map(([id, label, meta], k) => ({ id, label, meta, n: k + 1, ok: done[id] }));
+    const nDone = steps.filter(s => s.ok).length;
+    const goTo = (id: string) => scrollRef.current?.querySelector(`#qe-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const status = dirty
+        ? { label: '작성 중', bg: C.amberBg, fg: C.amberFg }
+        : initialContent ? { label: '저장됨', bg: C.mintBg, fg: C.mintDeep } : { label: '새 문서', bg: C.grayBg, fg: C.sub };
+    const kicker = templateMode ? 'PRESET' : previewMode === 'confirmed' ? 'ITINERARY' : 'QUOTATION';
+    const depPer = people > 0 ? Math.round(deposit / people) : deposit;
+    const dateLabel = (i: number) => {
+        if (!startDate) return '';
+        const d = new Date(`${startDate}T00:00:00`);
+        if (Number.isNaN(d.getTime())) return '';
+        d.setDate(d.getDate() + i);
+        return `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAY_KO[d.getDay()]})`;
+    };
+    const focusDay = (dayNo: number, film = false) => setFocus({ section: 'q-plan', day: dayNo, film, at: Date.now() });
+    const undoAll = () => {
+        if (!undoDays) return;
+        setDays(undoDays); setUndoDays(null); resetDrafts();
+        if (undoRest) {
+            setName(undoRest.name);
+            setDs(cur => ({ ...cur, quoteDoc: { ...cur.quoteDoc, included: undoRest.included, excluded: undoRest.excluded } }));
+            setUndoRest(null);
+        }
+        setAiInfo(null);
+        setNotice('바꾸기 전 일정으로 되돌렸습니다.');
+    };
+    const isTimeLike = (v: string) => !v || /^\d{1,2}:\d{2}$/.test(v.trim());
+    const smallBtn: React.CSSProperties = { height: 38, padding: '0 12px', border: `1px solid ${C.line}`, borderRadius: 10, background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: C.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
+    const iconBtn: React.CSSProperties = { width: 32, height: 32, border: 0, borderRadius: 8, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' };
+
     return (
-        <div className="fixed inset-0 z-[210] bg-slate-900/50 p-3 backdrop-blur-sm sm:p-6">
-            <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[#F5F7FA] shadow-2xl dark:bg-slate-900">
-                {/* 상단 */}
-                <div className="flex flex-shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 py-3 dark:border-slate-800 dark:bg-slate-900">
-                    <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-                        <span className="material-symbols-outlined">arrow_back</span>
+        <div className="qe" data-mw-overlay="" style={{ position: 'fixed', inset: 0, zIndex: 210, background: C.bg, display: 'flex', flexDirection: 'column' }}>
+            <style>{EDITOR_CSS}</style>
+
+            {/* ── 머리 (고정) ── */}
+            <header style={{ flex: 'none', background: 'rgba(255,255,255,0.96)', borderBottom: `1px solid ${C.line}` }}>
+                <div style={{ padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button type="button" aria-label="뒤로" onClick={onClose} className="qe-hbg" style={{ ...iconBtn, width: 40, height: 40, borderRadius: 12 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>
                     </button>
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#00A88B]">{templateMode ? '일정 프리셋' : previewMode === 'confirmed' ? '확정일정표' : '견적서'}</p>
-                        <p className="truncate text-base font-black text-slate-900 dark:text-white">{title}</p>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                            <span style={{ fontFamily: EN, fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: C.mintDeep }}>{kicker}</span>
+                            <span style={{ height: 20, padding: '0 8px', borderRadius: 6, background: status.bg, fontSize: 11, fontWeight: 700, color: status.fg, display: 'inline-flex', alignItems: 'center' }}>{status.label}</span>
+                            <span style={{ fontSize: 11, color: C.mute }}>{nDone} / {steps.length} 입력됨</span>
+                        </span>
+                        <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
                     </div>
-                    <div className="ml-auto flex flex-shrink-0 items-center gap-2">
-                        {onAssignGuide && (
-                            <button onClick={onAssignGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                <span className="material-symbols-outlined text-base">badge</span>{assignedGuide?.name || '가이드 배정'}
-                            </button>
-                        )}
-                        {previewUrl && (
-                            <a href={previewUrl} target="_blank" rel="noreferrer" title="저장된 내용으로 고객 화면을 엽니다 — 고친 내용은 먼저 저장하세요"
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                <span className="material-symbols-outlined text-base">open_in_new</span>고객 화면 보기
-                            </a>
-                        )}
-                        <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">취소</button>
-                        <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-[#123B3A] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
-                            <span className="material-symbols-outlined text-base">check</span>{saving ? '저장 중' : '저장'}
+                    {onAssignGuide && (
+                        <button type="button" onClick={onAssignGuide} className="qe-hbd" style={{ ...smallBtn, height: 40, borderRadius: 12, fontSize: 13 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+                            {assignedGuide?.name || '가이드 배정'}
                         </button>
-                    </div>
+                    )}
+                    <button type="button" onClick={() => setPreviewOpen(v => !v)} aria-pressed={previewOpen} className="qe-hbd"
+                        style={{ ...smallBtn, height: 40, borderRadius: 12, fontSize: 13, fontWeight: 700, ...(previewOpen ? { background: C.ink, color: '#FFFFFF', borderColor: C.ink } : {}) }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>
+                        {previewOpen ? '미리보기 닫기' : '고객 화면 보기'}
+                    </button>
+                    <button type="button" onClick={onClose} className="qe-hbg" style={{ flex: 'none', height: 40, padding: '0 12px', border: 0, borderRadius: 12, background: 'transparent', fontSize: 13, fontWeight: 600, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>취소</button>
+                    <button type="button" onClick={handleSave} disabled={saving} className="qe-hdark"
+                        style={{ flex: 'none', height: 40, padding: '0 18px', border: 0, borderRadius: 12, background: C.ink, fontSize: 13, fontWeight: 700, color: '#FFFFFF', cursor: saving ? 'wait' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+                        <Check size={16} w={2.4} />{saving ? '저장 중…' : '저장'}
+                    </button>
                 </div>
-                {saveError && (
-                    <div role="alert" className="flex flex-shrink-0 items-center gap-2 border-b border-red-200 bg-red-50 px-5 py-2 text-xs font-bold text-red-600">
-                        <span className="material-symbols-outlined text-[16px]">error</span><span>{saveError}</span>
-                        <button onClick={() => setSaveError(null)} className="ml-auto text-red-300 hover:text-red-500"><span className="material-symbols-outlined text-[16px]">close</span></button>
-                    </div>
-                )}
-                {!templateMode && days.length === 0 && (
-                    <div className="flex flex-shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs font-bold text-amber-700">
-                        <span className="material-symbols-outlined text-[16px]">info</span><span>일정표가 비어 있습니다 — 그대로 저장할 수 있지만, 고객 화면에 일정이 나오지 않습니다. 「상품에서 불러오기」로 채울 수 있습니다.</span>
-                    </div>
-                )}
-                {notice && (
-                    <div className="flex flex-shrink-0 items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-xs font-bold text-emerald-700">
-                        <span className="material-symbols-outlined text-[16px]">auto_awesome</span><span>{notice}</span>
-                        {undoDays && (
-                            <button type="button" onClick={() => {
-                                setDays(undoDays); setUndoDays(null); resetDrafts();
-                                if (undoRest) {
-                                    setName(undoRest.name);
-                                    setDs(cur => ({ ...cur, quoteDoc: { ...cur.quoteDoc, included: undoRest.included, excluded: undoRest.excluded } }));
-                                    setUndoRest(null);
-                                }
-                                setNotice('바꾸기 전 일정으로 되돌렸습니다.');
-                            }}
-                                className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100">일정 되돌리기</button>
-                        )}
-                        <button onClick={() => { setNotice(null); setUndoDays(null); setUndoRest(null); }} className="ml-auto text-emerald-400 hover:text-emerald-600"><span className="material-symbols-outlined text-[16px]">close</span></button>
-                    </div>
-                )}
-
-                {/* 휴대폰 크기에서만 입력 / 미리보기 전환 — 그보다 넓으면 항상 나란히 보인다 */}
-                <div className="flex flex-shrink-0 gap-1 border-b border-slate-200 bg-white p-2 md:hidden">
-                    {([['form', '입력'], ['preview', '미리보기']] as const).map(([k, label]) => (
-                        <button key={k} type="button" onClick={() => setPane(k)}
-                            className={`flex-1 rounded-lg py-2 text-sm font-black ${pane === k ? 'bg-[#123B3A] text-white' : 'bg-slate-100 text-slate-500'}`}>{label}</button>
+                <nav className="qe-noscroll" style={{ display: 'flex', gap: 4, overflowX: 'auto', padding: '0 20px 10px' }}>
+                    {steps.map(s => (
+                        <button key={s.id} type="button" onClick={() => goTo(s.id)} className="qe-hbd"
+                            style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 14px 0 8px', borderRadius: 999, background: '#FFFFFF', border: `1px solid ${C.line}`, color: C.ink, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                            <span style={{ width: 20, height: 20, borderRadius: '50%', background: s.ok ? C.mint : C.line2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: EN, fontSize: 10, fontWeight: 700, color: s.ok ? '#FFFFFF' : C.sub }}>
+                                {s.ok ? <Check size={10} /> : s.n}
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{s.label}</span>
+                            {s.meta && <span style={{ fontSize: 11, color: C.mute }}>{s.meta}</span>}
+                        </button>
                     ))}
+                </nav>
+            </header>
+
+            {/* ── 알림 줄 ── */}
+            {saveError && (
+                <div role="alert" style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: '#FFF1F0', borderBottom: '1px solid #F8D3CF', fontSize: 12, fontWeight: 700, color: '#B42318' }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>{saveError}</span>
+                    <button type="button" aria-label="닫기" onClick={() => setSaveError(null)} style={{ ...iconBtn, width: 26, height: 26, color: '#B42318' }}>✕</button>
                 </div>
-                <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1fr)_340px] lg:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_440px]">
-                    {/* 입력 */}
-                    {/* 입력 — 폭은 최대 960px (넓은 화면에서는 가운데) */}
-                    <div className={`min-h-0 overflow-y-auto p-4 ${pane === 'preview' ? 'max-md:hidden' : ''}`}>
-                    <div className="mx-auto max-w-[960px] space-y-3">
-                        {!templateMode && (
-                            <Section onFocusArea={() => setFocus({ section: 'q-info', at: Date.now() })} n={1} title="고객정보" hint="견적 요청·예약에서 자동">
-                                <div className="grid gap-3 sm:grid-cols-4">
-                                    <div><span className={lab}>고객 이름</span><div className={`${inp} flex items-center bg-slate-50`}>{customer?.name || '-'}</div></div>
-                                    <div><span className={lab}>인원</span><input type="number" min={1} className={inp} value={people} onChange={e => setPeople(Math.max(1, parseInt(e.target.value, 10) || 1))} /></div>
-                                    <div><span className={lab}>출발일</span><input type="date" className={inp} value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
-                                    <div><span className={lab}>도착일</span><input type="date" className={inp} min={startDate || undefined} value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-                                    <div><span className={lab}>기간</span><div className={`${inp} flex items-center bg-slate-50`}>{nights != null && nights >= 0 ? `${nights}泊${nights + 1}日` : '날짜를 입력하세요'}</div></div>
-                                    <div><span className={lab}>항공편 도착 (IN · 선택)</span><input className={inp} placeholder="14:15" value={ds.quoteDoc.flightIn} onChange={e => setQ({ flightIn: e.target.value })} /></div>
-                                    <div><span className={lab}>항공편 출발 (OUT · 선택)</span><input className={inp} placeholder="00:25" value={ds.quoteDoc.flightOut} onChange={e => setQ({ flightOut: e.target.value })} /></div>
+            )}
+            {notice && (
+                <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: C.mintBg2, borderBottom: `1px solid #CFF3E9`, fontSize: 12, fontWeight: 700, color: C.mintDeep }}>
+                    <Sparkle size={14} color={C.mint} />
+                    <span style={{ flex: 1, minWidth: 0 }}>{notice}</span>
+                    {undoDays && (
+                        <button type="button" onClick={undoAll} style={{ flex: 'none', height: 28, padding: '0 10px', border: `1px solid ${C.mintLine}`, borderRadius: 8, background: '#FFFFFF', fontSize: 11, fontWeight: 700, color: C.mintDeep, cursor: 'pointer' }}>일정 되돌리기</button>
+                    )}
+                    <button type="button" aria-label="닫기" onClick={() => { setNotice(null); if (!aiInfo) { setUndoDays(null); setUndoRest(null); } }} style={{ ...iconBtn, width: 26, height: 26, color: C.mint }}>✕</button>
+                </div>
+            )}
+
+            {/* 본문 + 미리보기 칸 (미리보기는 머리 아래에서만 겹친다) */}
+            <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
+            <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+                {/* ── AI 초안 안내 카드 ── */}
+                {aiInfo && (
+                    <div style={{ background: '#FFFFFF', borderBottom: `1px solid ${C.line}` }}>
+                        <div style={{ maxWidth: 880, margin: '0 auto', padding: '14px 24px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg,${C.mint} 0%,${C.mintHi} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={12} /></span>
+                                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>AI 초안을 넣었어요{aiInfo.fromCache ? ' (앞서 만든 초안)' : ''}</span>
+                                    <span style={{ fontSize: 12, color: C.sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{aiInfo.summary || '내용을 확인하고 금액을 넣은 뒤 저장해 주세요'}</span>
+                                </span>
+                                {undoDays && (
+                                    <button type="button" onClick={undoAll} className="qe-hbg" style={{ flex: 'none', height: 32, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, background: '#FFFFFF', fontSize: 12, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>되돌리기</button>
+                                )}
+                                {(aiInfo.base || aiInfo.memos.length > 0 || aiInfo.budget || aiInfo.budgetNote) && (
+                                    <button type="button" onClick={() => setAiInfoOpen(v => !v)} style={{ flex: 'none', height: 32, padding: '0 10px', border: 0, borderRadius: 8, background: C.mintBg2, fontSize: 12, fontWeight: 700, color: C.mintDeep, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        {aiInfoOpen ? '접기' : `메모 보기${aiInfo.memos.length ? ` ${aiInfo.memos.length}` : ''}`}<Chevron open={aiInfoOpen} size={13} />
+                                    </button>
+                                )}
+                                <button type="button" aria-label="닫기" onClick={() => { setAiInfo(null); setUndoDays(null); setUndoRest(null); }} className="qe-hbg" style={iconBtn}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                </button>
+                            </div>
+                            {aiInfoOpen && (
+                                <>
+                                    {(aiInfo.base || aiInfo.budget || aiInfo.budgetNote) && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,240px),1fr))', gap: 8, paddingLeft: 38 }}>
+                                            {aiInfo.base && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', borderRadius: 12, background: C.bg }}>
+                                                    <span style={{ fontSize: 11, fontWeight: 700, color: C.mute }}>참고 상품</span>
+                                                    <span style={{ fontFamily: JP, fontSize: 13, fontWeight: 700 }}>{aiInfo.base.name}</span>
+                                                    <span style={{ fontSize: 12, color: C.sub }}>
+                                                        {aiInfo.base.duration && <span style={{ fontFamily: JP }}>{aiInfo.base.duration}</span>}
+                                                        {aiInfo.base.price ? <> · 1인 <span style={{ fontFamily: EN, fontWeight: 600, color: C.ink }}>¥{yen(aiInfo.base.price)}</span></> : null}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {(aiInfo.budget || aiInfo.budgetNote) && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', borderRadius: 12, background: C.bg }}>
+                                                    <span style={{ fontSize: 11, fontWeight: 700, color: C.mute }}>예산</span>
+                                                    <span style={{ fontSize: 13, fontWeight: 700 }}>{aiInfo.budgetNote || aiInfo.budget}</span>
+                                                    {aiInfo.budget && aiInfo.budgetNote && <span style={{ fontSize: 12, color: C.sub }}>고객이 적은 예산: {aiInfo.budget}</span>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {aiInfo.memos.length > 0 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 38 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: C.mute, marginBottom: 4 }}>확인이 필요한 메모</span>
+                                            {aiInfo.memos.map((m, k) => {
+                                                const [tb, tf] = MEMO_TAG_COLOR[m.tag] || MEMO_TAG_COLOR['기타'];
+                                                return (
+                                                    <div key={k} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderTop: k ? `1px solid ${C.line2}` : 0 }}>
+                                                        <span style={{ flex: 'none', height: 20, padding: '0 7px', borderRadius: 6, background: tb, fontSize: 10, fontWeight: 700, color: tf, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{m.tag}</span>
+                                                        <span style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.65, color: C.body }}>{m.text}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ maxWidth: 880, width: '100%', margin: '0 auto', padding: '16px 24px 48px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {!templateMode && days.length === 0 && !aiBusy && (
+                        <div style={{ padding: '12px 16px', borderRadius: 14, background: C.amberBg, fontSize: 12, fontWeight: 600, color: C.amberFg }}>
+                            일정표가 비어 있어요 — 그대로 저장할 수 있지만 고객 화면에 일정이 나오지 않아요. 「상품에서 불러오기」{aiDraftQuoteId ? '나 「AI 초안 만들기」' : ''}로 채울 수 있어요.
+                        </div>
+                    )}
+
+                    {/* 01 고객 정보 */}
+                    {!templateMode && (
+                        <section id="qe-customer" style={sectionStyle} onFocusCapture={() => setFocus({ section: 'q-info', at: Date.now() })}>
+                            <SecHead n="01" title="고객 정보" hint="견적 요청·예약에서 자동으로 채워져요" />
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,160px),1fr))', gap: 14 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: 'span 2' }}>
+                                    <Lbl>고객 이름</Lbl>
+                                    <span style={{ ...fieldStyle(), display: 'flex', alignItems: 'center', background: C.bg, fontWeight: 600 }}>{customer?.name || '—'}</span>
                                 </div>
-                            </Section>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <Lbl>인원</Lbl>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 46, padding: '0 6px', border: `1px solid ${C.line}`, borderRadius: 12, boxSizing: 'border-box' }}>
+                                        <button type="button" aria-label="인원 줄이기" onClick={() => { const n = Math.max(1, people - 1); setDeposit(depPer * n); setPeople(n); }}
+                                            style={{ width: 34, height: 34, border: 0, borderRadius: 10, background: C.bg, fontSize: 18, color: C.ink, cursor: 'pointer' }}>−</button>
+                                        <span style={{ fontFamily: EN, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap' }}>{people}<span style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: C.sub }}> 명</span></span>
+                                        <button type="button" aria-label="인원 늘리기" onClick={() => { const n = Math.min(60, people + 1); setDeposit(depPer * n); setPeople(n); }}
+                                            style={{ width: 34, height: 34, border: 0, borderRadius: 10, background: C.mintBg, fontSize: 18, color: C.mintDeep, cursor: 'pointer' }}>+</button>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <Lbl note="자동">기간</Lbl>
+                                    <span style={{ height: 46, padding: '0 14px', borderRadius: 12, background: C.mintBg2, display: 'flex', alignItems: 'center', fontFamily: nights != null && nights >= 0 ? JP : 'inherit', fontSize: nights != null && nights >= 0 ? 15 : 13, fontWeight: 700, color: C.mintDeep, whiteSpace: 'nowrap' }}>
+                                        {nights != null && nights >= 0 ? `${nights}泊${nights + 1}日` : '날짜를 넣으면 자동'}
+                                    </span>
+                                </div>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl>출발일</Lbl>
+                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={fieldStyle({ padding: '0 12px', fontSize: 14 })} /></label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl>도착일</Lbl>
+                                    <input type="date" min={startDate || undefined} value={endDate} onChange={e => setEndDate(e.target.value)} style={fieldStyle({ padding: '0 12px', fontSize: 14 })} /></label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl note="선택">항공편 IN</Lbl>
+                                    <input type={isTimeLike(ds.quoteDoc.flightIn) ? 'time' : 'text'} value={ds.quoteDoc.flightIn} placeholder="14:15" onChange={e => setQ({ flightIn: e.target.value })} style={fieldStyle({ padding: '0 12px', fontSize: 14 })} /></label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl note="선택">항공편 OUT</Lbl>
+                                    <input type={isTimeLike(ds.quoteDoc.flightOut) ? 'time' : 'text'} value={ds.quoteDoc.flightOut} placeholder="00:25" onChange={e => setQ({ flightOut: e.target.value })} style={fieldStyle({ padding: '0 12px', fontSize: 14 })} /></label>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* 02 여행 금액 */}
+                    <section id="qe-price" style={sectionStyle} onFocusCapture={() => setFocus({ section: 'q-price', at: Date.now() })}>
+                        <SecHead n={templateMode ? '01' : '02'} title="여행 금액" hint={templateMode ? '프리셋 기본 1인 요금' : '총액·잔금은 자동 계산돼요'} />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 14 }}>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl>1인 요금</Lbl>
+                                <span style={{ position: 'relative', display: 'block' }}>
+                                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontFamily: EN, fontSize: 15, fontWeight: 600, color: C.mute }}>¥</span>
+                                    <input inputMode="numeric" value={perPerson ? perPerson.toLocaleString('ja-JP') : ''} placeholder="128,000"
+                                        onChange={e => setDs(s => ({ ...s, overview: { ...s.overview, pricePerPerson: String(num(e.target.value)) } }))}
+                                        style={fieldStyle({ padding: '0 14px 0 30px', fontFamily: EN, fontWeight: 600 })} />
+                                </span></label>
+                            {!templateMode && (
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl note="PayPal">1인 예약금</Lbl>
+                                    <span style={{ position: 'relative', display: 'block' }}>
+                                        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontFamily: EN, fontSize: 15, fontWeight: 600, color: C.mute }}>¥</span>
+                                        <input inputMode="numeric" value={depPer ? depPer.toLocaleString('ja-JP') : ''} placeholder={perPerson ? Math.round(perPerson * 0.1).toLocaleString('ja-JP') : '20,000'}
+                                            onChange={e => setDeposit(num(e.target.value) * people)}
+                                            style={fieldStyle({ padding: '0 14px 0 30px', fontFamily: EN, fontWeight: 600 })} />
+                                    </span></label>
+                            )}
+                        </div>
+                        {!templateMode && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,180px),1fr))', borderRadius: 16, overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 18px', background: C.ink, color: '#FFFFFF' }}>
+                                    <span style={{ fontSize: 12, color: C.faint, whiteSpace: 'nowrap' }}>총액 · {people}명</span>
+                                    <span style={{ fontFamily: EN, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}>¥{yen(total)}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 18px', background: C.mintBg2 }}>
+                                    <span style={{ fontSize: 12, color: C.sub, whiteSpace: 'nowrap' }}>예약금 합계 · PayPal</span>
+                                    <span style={{ fontFamily: EN, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: C.mintDeep }}>¥{yen(deposit)}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 18px', background: C.bg }}>
+                                    <span style={{ fontSize: 12, color: C.sub, whiteSpace: 'nowrap' }}>잔금 · 현지 현금</span>
+                                    <span style={{ fontFamily: EN, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>¥{yen(balance)}</span>
+                                </div>
+                            </div>
+                        )}
+                        <button type="button" onClick={() => setShowMore(v => !v)}
+                            style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 4px', border: 0, background: 'transparent', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <Chevron open={showMore} />추가·할인 · 비고 · 숙박 등급 (선택)
+                        </button>
+                        {showMore && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,200px),1fr))', gap: 14, marginTop: -6 }}>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl note="고객 화면에 그대로">추가·할인</Lbl>
+                                    <input value={ds.quoteDoc.adjustment} placeholder="-¥10,000 (イベント割引)" onChange={e => setQ({ adjustment: e.target.value })} style={fieldStyle({ fontSize: 14 })} /></label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl>비고</Lbl>
+                                    <input value={ds.quoteDoc.remark} onChange={e => setQ({ remark: e.target.value })} style={fieldStyle({ fontSize: 14 })} /></label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl>숙박 등급</Lbl>
+                                    <select value={ds.quoteDoc.stayGrade} onChange={e => setQ({ stayGrade: e.target.value === 'standard' ? 'standard' : 'premium' })} style={fieldStyle({ padding: '0 12px', fontSize: 14 })}>
+                                        <option value="premium">고급 게르 (프리미엄)</option><option value="standard">일반 게르 (스탠다드)</option>
+                                    </select></label>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* 03 일정표 */}
+                    <section id="qe-plan" style={{ ...sectionStyle, gap: 16 }}>
+                        <SecHead n={templateMode ? '02' : '03'} title="일정표" hint={`${days.length}일`} right={
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                {!templateMode && days.length > 0 && (
+                                    <button type="button" onClick={() => void downloadKoImage()} className="qe-hbd" style={smallBtn}
+                                        title="견적 담당자용 — DAY별 일정·숙소·식사를 한국어로 정리한 이미지(PNG) (고객에게는 나가지 않음)">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>한국어 일정표
+                                    </button>
+                                )}
+                                {aiDraftQuoteId && !templateMode && (
+                                    <button type="button" disabled={aiBusy} onClick={() => void runAiDraft(true)} className="qe-hdark"
+                                        title="고객 견적 요청 내용으로 일정 초안을 새로 만듭니다 (지금 일정은 「되돌리기」로 되돌릴 수 있음)"
+                                        style={{ ...smallBtn, border: 0, background: C.ink, color: '#FFFFFF', fontWeight: 700, padding: '0 14px', opacity: aiBusy ? 0.6 : 1, cursor: aiBusy ? 'wait' : 'pointer' }}>
+                                        <Sparkle />{aiBusy ? '만드는 중…' : days.length ? 'AI로 다시 만들기' : 'AI 초안 만들기'}
+                                    </button>
+                                )}
+                                <select value={productId} disabled={loadingProducts} aria-label="상품에서 불러오기" onChange={e => {
+                                    const v = e.target.value; setProductId(v);
+                                    const p = products.find(x => x.id === v);
+                                    if (p) applyProduct(p);
+                                }} style={{ height: 38, maxWidth: 240, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 10, background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: C.ink }}>
+                                    <option value="">{loadingProducts ? '상품 불러오는 중…' : '상품에서 불러오기'}</option>
+                                    {products.map(p => { const st = productStats(p); return <option key={p.id} value={p.id}>{p.name} ({st.days}일)</option>; })}
+                                </select>
+                            </div>
+                        } />
+
+                        {aiDraftQuoteId && !templateMode && days.length > 0 && (
+                            // 「AI로 수정」 — 한국어로 적으면 AI 가 그 부분만 고친다 (사진·설명은 바뀌지 않은 줄 그대로)
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, borderRadius: 16, background: `linear-gradient(165deg,${C.mintBg2} 0%,#FFFFFF 100%)`, border: '1px solid #CFF3E9' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                    <span style={{ flex: 'none', width: 26, height: 26, borderRadius: 8, background: C.ink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkle size={14} /></span>
+                                    <span style={{ flex: 'none', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700 }}>AI로 일정 수정</span>
+                                    <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: C.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>한국어로 적으면 일본어 일정에 반영돼요</span>
+                                </span>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                                    <textarea rows={2} value={reviseText} disabled={aiBusy} onChange={e => setReviseText(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void runAiRevise(); } }}
+                                        placeholder="예: 2일차 테를지 대신 엘승타사르해로 바꾸고, 마지막 날 국영백화점 쇼핑 넣어 줘."
+                                        style={{ flex: 1, minWidth: 0, minHeight: 68, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 12, background: '#FFFFFF', fontSize: 13, lineHeight: 1.6, color: C.ink, resize: 'vertical', boxSizing: 'border-box' }} />
+                                    {(() => {
+                                        const on = !!reviseText.trim() && !aiBusy;
+                                        return (
+                                            <button type="button" onClick={() => void runAiRevise()} disabled={!on} title="적은 부분만 고칩니다 (Ctrl+Enter)"
+                                                style={{ flex: 'none', width: 96, height: 68, border: 0, borderRadius: 12, background: on ? `linear-gradient(135deg,${C.mint} 0%,${C.mintHi} 100%)` : C.line, fontSize: 13, fontWeight: 700, color: on ? '#FFFFFF' : C.mute, cursor: on ? 'pointer' : 'not-allowed' }}>
+                                                {aiBusy ? '수정 중…' : 'AI로 수정'}
+                                            </button>
+                                        );
+                                    })()}
+                                </div>
+                                <span style={{ fontSize: 11, color: C.mute }}>금액·날짜는 AI가 바꾸지 않아요 · 저장 전까지 고객에게 보내지 않아요 · Ctrl+Enter로 보내기</span>
+                            </div>
                         )}
 
-                        <Section onFocusArea={() => setFocus({ section: 'q-price', at: Date.now() })} n={templateMode ? 1 : 2} title="여행 금액" hint={templateMode ? '프리셋 기본 1인 요금' : '총액·잔금은 자동 계산'}>
-                            <div className="grid gap-3 sm:grid-cols-4">
-                                <div><span className={lab}>1인 요금 (엔)</span><input inputMode="numeric" className={inp} value={perPerson ? perPerson.toLocaleString() : ''} placeholder="128,000" onChange={e => setDs(s => ({ ...s, overview: { ...s.overview, pricePerPerson: String(num(e.target.value)) } }))} /></div>
-                                {!templateMode && <>
-                                    <div><span className={lab}>예약금 (엔)</span><input inputMode="numeric" className={inp} value={deposit ? deposit.toLocaleString() : ''} placeholder={total ? Math.round(total * 0.1).toLocaleString() : '20,000'} onChange={e => setDeposit(num(e.target.value))} /></div>
-                                    <div><span className={lab}>총액</span><div className={`${inp} flex items-center bg-slate-50 font-black text-[#007F75]`}>¥{yen(total)}</div></div>
-                                    <div><span className={lab}>잔금 (현지)</span><div className={`${inp} flex items-center bg-slate-50`}>¥{yen(balance)}</div></div>
-                                </>}
-                            </div>
-                            <button type="button" onClick={() => setShowMore(v => !v)} className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-slate-400 hover:text-[#00A88B]">
-                                <span className="material-symbols-outlined text-[16px]">{showMore ? 'expand_less' : 'expand_more'}</span>추가·할인 · 비고 · 숙박 등급 (선택)
-                            </button>
-                            {showMore && (
-                                <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                                    <div><span className={lab}>추가·할인</span><input className={inp} placeholder="-¥10,000 (イベント割引)" value={ds.quoteDoc.adjustment} onChange={e => setQ({ adjustment: e.target.value })} /></div>
-                                    <div><span className={lab}>비고</span><input className={inp} value={ds.quoteDoc.remark} onChange={e => setQ({ remark: e.target.value })} /></div>
-                                    <div><span className={lab}>숙박 등급</span>
-                                        <select className={inp} value={ds.quoteDoc.stayGrade} onChange={e => setQ({ stayGrade: e.target.value === 'standard' ? 'standard' : 'premium' })}>
-                                            <option value="premium">프리미엄 (고급 게르)</option><option value="standard">스탠다드</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            )}
-                        </Section>
-
-                        <Section n={templateMode ? 2 : 3} title="일정표" hint={`${days.length}일`}
-                            right={
-                                <div className="flex items-center gap-2">
-                                    {!templateMode && days.length > 0 && (
-                                        <button type="button" onClick={() => void downloadKoImage()}
-                                            title="견적 담당자용 — DAY별 일정·숙소·식사를 한국어로 정리한 이미지(PNG)를 내려받습니다 (고객에게는 나가지 않음)"
-                                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-700 hover:border-[#06C4A0] hover:text-[#007F75]">
-                                            <span className="material-symbols-outlined text-[16px]">download</span>한국어 일정표
-                                        </button>
-                                    )}
-                                    {aiDraftQuoteId && !templateMode && (
-                                        <button type="button" disabled={aiBusy} onClick={() => void runAiDraft(true)}
-                                            title="고객 견적 요청 내용으로 일정 초안을 새로 만듭니다 (지금 일정은 「일정 되돌리기」로 되돌릴 수 있음)"
-                                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#123B3A] px-2.5 text-xs font-black text-white hover:bg-[#0B2625] disabled:opacity-60">
-                                            <span className={`material-symbols-outlined text-[16px] ${aiBusy ? 'animate-spin' : ''}`}>{aiBusy ? 'progress_activity' : 'auto_awesome'}</span>
-                                            {aiBusy ? '만드는 중…' : days.length ? 'AI로 다시 만들기' : 'AI 초안'}
-                                        </button>
-                                    )}
-                                    <select value={productId} disabled={loadingProducts} onChange={e => {
-                                        const v = e.target.value; setProductId(v);
-                                        const p = products.find(x => x.id === v);
-                                        if (p) applyProduct(p);
-                                    }} className="h-8 max-w-[260px] rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 outline-none focus:border-[#06C4A0]">
-                                        <option value="">{loadingProducts ? '상품 불러오는 중…' : '상품에서 불러오기 ▾'}</option>
-                                        {products.map(p => { const s = productStats(p); return <option key={p.id} value={p.id}>{p.name} ({s.days}일)</option>; })}
-                                    </select>
-                                </div>
-                            }>
-                            {aiDraftQuoteId && !templateMode && days.length > 0 && (
-                                // 「AI로 수정」 — 한국어로 적으면 AI 가 그 부분만 고친다 (사진·설명은 바뀌지 않은 줄 그대로)
-                                <div className="mb-3 rounded-xl border border-[#123B3A]/15 bg-[#F3F8F7] p-2.5 dark:border-slate-700 dark:bg-slate-800/60">
-                                    <span className="mb-1 block text-[11px] font-black text-[#123B3A] dark:text-slate-200">AI로 수정 — 고칠 내용을 한국어로 적어 주세요</span>
-                                    <div className="flex items-stretch gap-2">
-                                        <textarea
-                                            rows={2}
-                                            value={reviseText}
-                                            disabled={aiBusy}
-                                            onChange={e => setReviseText(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void runAiRevise(); } }}
-                                            placeholder={'예: 2일차 테를지 대신 엘승타사르해로 바꾸고, 마지막 날 국영백화점 쇼핑 넣어 줘. 3일차 숙소는 고급 게르로.'}
-                                            className="min-h-[52px] flex-1 resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-[#06C4A0] disabled:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                        />
-                                        <button type="button" disabled={aiBusy || !reviseText.trim()} onClick={() => void runAiRevise()}
-                                            title="지금 일정에서 적은 부분만 고칩니다 (Ctrl+Enter) — 「일정 되돌리기」로 되돌릴 수 있음"
-                                            className="inline-flex w-[92px] flex-none flex-col items-center justify-center gap-0.5 rounded-lg bg-[#123B3A] px-2 text-xs font-black text-white hover:bg-[#0B2625] disabled:opacity-50">
-                                            <span className={`material-symbols-outlined text-[18px] ${aiBusy ? 'animate-spin' : ''}`}>{aiBusy ? 'progress_activity' : 'auto_awesome'}</span>
-                                            {aiBusy ? '고치는 중…' : 'AI로 수정'}
-                                        </button>
-                                    </div>
-                                    <span className="mt-1 block text-[10px] font-bold text-slate-400">금액·날짜는 AI 가 바꾸지 않습니다 · 결과는 저장 전까지 고객에게 나가지 않습니다 · Ctrl+Enter 로 보내기</span>
-                                </div>
-                            )}
-                            <div className="space-y-2">
-                                {days.map((d, i) => {
-                                    const isOpen = openDay === i;
-                                    const assigned = assignedOf(d.day);
-                                    const stayName = assigned?.name || d.accommodation?.name || '';
-                                    return (
-                                        <div key={i}
-                                            // 이 DAY 를 고치면 미리보기가 같은 DAY 로 이동해 펼쳐진다
-                                            // (DAY 제목·여행지 고르기는 data-film-focus — 미리보기를 일정 사진 카드로 보낸다)
-                                            onFocusCapture={e => { if (!(e.target as HTMLElement).closest('[data-film-focus]')) setFocus({ section: 'q-plan', day: d.day, at: Date.now() }); }}
-                                            onClick={e => { if (!(e.target as HTMLElement).closest('[data-film-focus]')) setFocus({ section: 'q-plan', day: d.day, at: Date.now() }); }}
-                                            className={`rounded-xl border ${isOpen ? 'border-[#06C4A0] bg-[#F4FCFA]' : 'border-slate-200 bg-white'} dark:border-slate-700 dark:bg-slate-900`}>
-                                            <div className="flex cursor-pointer items-center gap-2 px-3 py-2.5" onClick={() => setOpenDay(isOpen ? -1 : i)}>
-                                                <span className="rounded-md bg-[#123B3A] px-2 py-0.5 text-[11px] font-black text-[#8CE9D8]">DAY {d.day}</span>
-                                                <span className="min-w-0 flex-1 truncate text-sm font-black text-slate-800 dark:text-white">{d.title || '제목 없음'}</span>
-                                                <span className="hidden text-[11px] font-semibold text-slate-400 sm:inline">{d.activities.length}개 · {stayName || '숙소 미정'}</span>
-                                                <button type="button" title="위로" onClick={e => { e.stopPropagation(); moveDay(i, i - 1); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><span className="material-symbols-outlined text-[16px]">arrow_upward</span></button>
-                                                <button type="button" title="아래로" onClick={e => { e.stopPropagation(); moveDay(i, i + 1); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><span className="material-symbols-outlined text-[16px]">arrow_downward</span></button>
-                                                {delDay === i
-                                                    ? <button type="button" onClick={e => { e.stopPropagation(); removeDay(i); }} className="h-7 rounded-md bg-red-500 px-2 text-[11px] font-black text-white">삭제?</button>
-                                                    : <button type="button" title="DAY 삭제 (두 번 누르기)" onClick={e => { e.stopPropagation(); removeDay(i); }} className="flex h-7 w-7 items-center justify-center rounded-md text-slate-300 hover:bg-red-50 hover:text-red-500"><span className="material-symbols-outlined text-[16px]">delete</span></button>}
-                                                <span className="material-symbols-outlined text-[18px] text-slate-400">{isOpen ? 'expand_less' : 'expand_more'}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {days.map((d, i) => {
+                                const isOpen = openDay === i;
+                                const assigned = assignedOf(d.day);
+                                const stayName = assigned?.name || d.accommodation?.name || '';
+                                const withImg = d.activities.filter(a => a.images?.length);
+                                const linesOpen = !!photoOpen[i];
+                                const picking = titlePick === i;
+                                const hpicking = hotelPick === i;
+                                const stayImg = (assigned?.images || d.accommodation?.images || [])[0];
+                                return (
+                                    <div key={i}
+                                        // 이 DAY 를 고치면 미리보기가 같은 DAY 로 이동해 펼쳐진다 (제목·여행지 고르기는 일정 사진 카드로)
+                                        onFocusCapture={e => { if (!(e.target as HTMLElement).closest('[data-film-focus]')) focusDay(d.day); }}
+                                        style={{ borderRadius: 16, border: `1.5px solid ${isOpen ? C.mintHi : C.cardLine}`, background: '#FFFFFF', overflow: 'hidden', transition: 'border-color .2s' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px 10px 12px' }}>
+                                            <button type="button" onClick={() => { setOpenDay(isOpen ? -1 : i); setTitlePick(null); setHotelPick(null); if (!isOpen) focusDay(d.day); }}
+                                                style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: C.ink }}>
+                                                <span style={{ flex: 'none', width: 44, height: 44, borderRadius: 12, background: isOpen ? C.ink : C.mintBg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <span style={{ fontFamily: EN, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: isOpen ? C.glow : C.mintDeep }}>DAY</span>
+                                                    <span style={{ fontFamily: EN, fontSize: 16, fontWeight: 700, lineHeight: 1, color: isOpen ? '#FFFFFF' : C.ink }}>{d.day}</span>
+                                                </span>
+                                                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                                    <span style={{ fontFamily: JP, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: d.title ? C.ink : C.mute }}>{d.title || '제목 없음'}</span>
+                                                    <span style={{ display: 'flex', gap: 10, fontSize: 11, color: C.mute, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                                        {dateLabel(i) && <span>{dateLabel(i)}</span>}
+                                                        <span>일정 {d.activities.length}개</span>
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{stayName || '숙소 미정'}</span>
+                                                    </span>
+                                                </span>
+                                            </button>
+                                            <div style={{ flex: 'none', display: 'flex', gap: 2 }}>
+                                                <button type="button" aria-label="위로" onClick={() => moveDay(i, i - 1)} className="qe-hbg" style={{ ...iconBtn, opacity: i === 0 ? 0.3 : 1 }} disabled={i === 0}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+                                                </button>
+                                                <button type="button" aria-label="아래로" onClick={() => moveDay(i, i + 1)} className="qe-hbg" style={{ ...iconBtn, opacity: i === days.length - 1 ? 0.3 : 1 }} disabled={i === days.length - 1}>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+                                                </button>
+                                                {delDay === i ? (
+                                                    <button type="button" onClick={() => removeDay(i)} style={{ height: 32, padding: '0 10px', border: 0, borderRadius: 8, background: '#E5484D', fontSize: 11, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap' }}>삭제?</button>
+                                                ) : (
+                                                    <button type="button" aria-label="DAY 삭제 (두 번 누르기)" title="DAY 삭제 (두 번 누르기)" onClick={() => removeDay(i)} className="qe-hred" style={iconBtn}>
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.mute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
+                                                    </button>
+                                                )}
+                                                <button type="button" aria-label={isOpen ? '접기' : '펼치기'} onClick={() => { setOpenDay(isOpen ? -1 : i); setTitlePick(null); setHotelPick(null); }} style={iconBtn}>
+                                                    <Chevron open={isOpen} size={16} color={C.ink} />
+                                                </button>
                                             </div>
-                                            {isOpen && (
-                                                <div className="space-y-3 border-t border-slate-200 px-3 pb-3 pt-3 dark:border-slate-700">
-                                                    <div className="grid gap-2 sm:grid-cols-[1fr_160px_140px]">
-                                                        <div>
-                                                            <span className="mb-1 flex items-center justify-between gap-2 text-[11px] font-black text-slate-500">
-                                                                DAY 제목 (일본어)
-                                                                {spotPool.length > 0 && (
-                                                                    <button type="button" data-film-focus="" onClick={() => { setTitlePick(p => (p === i ? null : i)); setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() }); }}
-                                                                        className={`rounded-full px-2 py-0.5 text-[11px] font-black ${titlePick === i ? 'bg-[#123B3A] text-white' : 'bg-[#E8FAF5] text-[#007F75] hover:bg-[#BFF1E7]'}`}>
-                                                                        {titlePick === i ? '닫기' : '여행지에서 고르기'}
-                                                                    </button>
-                                                                )}
-                                                            </span>
-                                                            <div className="flex items-center gap-2">
-                                                                {d.titleImage && (
-                                                                    <span className="relative shrink-0">
-                                                                        <img src={d.titleImage} alt="" className="h-9 w-9 rounded-full object-cover" />
-                                                                        <button type="button" data-film-focus="" title="사진 빼기" onClick={() => { patchDay(i, { titleImage: undefined }); setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() }); }}
-                                                                            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-[10px] font-black leading-none text-white">×</button>
-                                                                    </span>
-                                                                )}
-                                                                <input data-film-focus="" className={inp} value={d.title} placeholder="ウランバートル" onChange={e => patchDay(i, { title: e.target.value })}
-                                                                    onFocus={() => setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() })} />
-                                                            </div>
-                                                            {d.titleKo && <p className="mt-1 text-[11px] font-semibold text-slate-400">뜻: {d.titleKo}</p>}
-                                                        </div>
-                                                        <div><span className={lab}>지역 (지도용)</span><input className={inp} value={d.region || ''} placeholder="テレルジ" onChange={e => patchDay(i, { region: e.target.value })} /></div>
-                                                        <div><span className={lab}>이동 시간</span><input className={inp} value={d.move || ''} placeholder="約4時間" onChange={e => patchDay(i, { move: e.target.value })} /></div>
+                                        </div>
+
+                                        {isOpen && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '4px 16px 18px', borderTop: `1px solid ${C.line2}` }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,150px),1fr))', gap: 12, paddingTop: 12 }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: 'span 2', minWidth: 0 }}>
+                                                        <Lbl note={spotPool.length ? '▾ 를 눌러 여행지에서 고르기' : undefined}>DAY 제목</Lbl>
+                                                        <span data-film-focus="" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, padding: '0 6px', border: `1px solid ${C.line}`, borderRadius: 12, boxSizing: 'border-box' }}>
+                                                            <button type="button" aria-label="여행지에서 고르기" disabled={!spotPool.length}
+                                                                onClick={() => { setTitlePick(picking ? null : i); focusDay(d.day, true); }}
+                                                                style={{ flex: 'none', padding: 0, border: 0, borderRadius: '50%', background: 'transparent', cursor: spotPool.length ? 'pointer' : 'default' }}>
+                                                                <Thumb src={d.titleImage} size={34} />
+                                                            </button>
+                                                            <input className="qe-bare" value={d.title} placeholder="ウランバートル" onChange={e => patchDay(i, { title: e.target.value })} onFocus={() => focusDay(d.day, true)}
+                                                                style={{ flex: 1, minWidth: 0, height: 40, border: 0, padding: '0 4px', fontFamily: JP, fontSize: 14, fontWeight: 600, color: C.ink, background: 'transparent' }} />
+                                                            {spotPool.length > 0 && (
+                                                                <button type="button" aria-label="여행지 목록 열기" onClick={() => { setTitlePick(picking ? null : i); focusDay(d.day, true); }}
+                                                                    style={{ flex: 'none', width: 34, height: 34, border: 0, borderRadius: 10, background: picking ? C.ink : C.mintBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <Chevron open={picking} size={16} color={picking ? '#FFFFFF' : C.mintDeep} />
+                                                                </button>
+                                                            )}
+                                                        </span>
+                                                        {d.titleKo && <span style={{ fontSize: 11, color: C.mute }}>뜻: {d.titleKo}</span>}
                                                     </div>
-                                                    {titlePick === i && (
-                                                        // 관광지 마스터에서 고르면 DAY 제목(일본어)과 사진이 함께 들어간다
-                                                        <div data-film-focus="" className="rounded-xl border border-[#BFF1E7] bg-[#F7FAF9] p-3">
-                                                            <p className="mb-2 text-[11px] font-semibold text-slate-400">고르면 DAY 제목과 견적서 일정 카드 사진이 함께 바뀝니다</p>
-                                                            <div className="grid max-h-64 grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-x-2 gap-y-3 overflow-y-auto pt-1">
-                                                                {spotPool.map(s => {
-                                                                    const on = d.titleImage === s.images![0];
-                                                                    return (
-                                                                        <button key={s.id} type="button" title={`고객 화면: ${cleanSpotName(s.name_kr)}`}
-                                                                            onClick={() => { patchDay(i, { title: cleanSpotName(s.name_kr), titleImage: s.images![0] }); setTitlePick(null); setFocus({ section: 'q-plan', day: d.day, film: true, at: Date.now() }); }}
-                                                                            className="group flex flex-col items-center gap-1 text-center">
-                                                                            <span className={`block h-14 w-14 rounded-full p-[3px] transition ${on ? 'bg-[#06C4A0]' : 'bg-transparent group-hover:bg-slate-200'}`}>
-                                                                                <img src={s.images![0]} alt="" loading="lazy" className="h-full w-full rounded-full border-2 border-white object-cover" />
-                                                                            </span>
-                                                                            <span className={`line-clamp-2 w-full text-[11px] leading-tight ${on ? 'font-black text-[#007F75]' : 'font-semibold text-slate-700'}`}>{koSpotName(s.name_kr)}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
+                                                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}><Lbl>지역 (지도용)</Lbl>
+                                                        <input value={d.region || ''} placeholder="テレルジ" onChange={e => patchDay(i, { region: e.target.value })} style={fieldStyle({ padding: '0 12px', fontFamily: JP, fontSize: 13 })} /></label>
+                                                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}><Lbl>이동 시간</Lbl>
+                                                        <input value={d.move || ''} placeholder="約4時間" onChange={e => patchDay(i, { move: e.target.value })} style={fieldStyle({ padding: '0 12px', fontFamily: JP, fontSize: 13 })} /></label>
+                                                </div>
+
+                                                {picking && (
+                                                    // 관광지 마스터에서 고르면 DAY 제목(일본어)과 사진이 함께 들어간다
+                                                    <div data-film-focus="" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, borderRadius: 14, background: C.bg }}>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                            <span style={{ flex: 1, fontSize: 11, color: C.sub }}>고르면 DAY 제목과 견적서 일정 카드 사진이 함께 바뀌어요</span>
+                                                            {d.titleImage && <button type="button" onClick={() => { patchDay(i, { titleImage: undefined }); focusDay(d.day, true); }} style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: '#FFFFFF', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer' }}>사진 빼기</button>}
+                                                        </span>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(76px,1fr))', gap: '12px 6px', maxHeight: 212, overflowY: 'auto', paddingTop: 2 }}>
+                                                            {spotPool.map(sp => {
+                                                                const on = d.titleImage === sp.images![0];
+                                                                return (
+                                                                    <button key={sp.id} type="button" title={`고객 화면: ${cleanSpotName(sp.name_kr)}`}
+                                                                        onClick={() => { patchDay(i, { title: cleanSpotName(sp.name_kr), titleImage: sp.images![0] }); setTitlePick(null); focusDay(d.day, true); }}
+                                                                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 0 0', border: 0, background: 'transparent', cursor: 'pointer' }}>
+                                                                        <span style={{ borderRadius: '50%', boxShadow: on ? `0 0 0 3px #FFFFFF,0 0 0 5px ${C.mintHi}` : 'none' }}><Thumb src={sp.images![0]} size={52} /></span>
+                                                                        <span style={{ fontSize: 11, fontWeight: on ? 700 : 500, lineHeight: 1.3, color: on ? C.mintDeep : C.body, textAlign: 'center' }}>{koSpotName(sp.name_kr)}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
                                                         </div>
-                                                    )}
-                                                    <div>
-                                                        <span className={lab}>일정 (한 줄에 하나 — 붙여 넣으면 됩니다)</span>
-                                                        <textarea
-                                                            className="min-h-[132px] w-full resize-y rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold leading-relaxed text-slate-800 outline-none focus:border-[#06C4A0] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                            placeholder={'空港でガイドとミーティング後、ウランバートルへ移動\nSIMカード購入・両替・買い物\nチンギスハーン広場・ザイサン展望台 観光\n(+国営百貨店ショッピング 選択)'}
+                                                    </div>
+                                                )}
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 12 }}>
+                                                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl note="한 줄에 하나">일정 · 일본어</Lbl>
+                                                        <textarea rows={6}
+                                                            placeholder={'空港でガイドとミーティング後、ウランバートルへ移動\nSIMカード購入・両替・買い物\nチンギスハーン広場・ザイサン展望台 観光'}
                                                             value={itemDraft[i] ?? d.activities.map(a => a.title).join('\n')}
                                                             onChange={e => {
                                                                 const text = e.target.value;
                                                                 setItemDraft(m => ({ ...m, [i]: text }));
                                                                 patchDay(i, { activities: linesToActivities(text, d.activities) });
                                                             }}
-                                                        />
-                                                        {d.activities.some(a => a.ko) && (
-                                                            // AI 초안의 한국어 뜻 — 일본어 줄을 고치면 그 줄의 뜻은 사라진다 (고객 화면에는 일본어만 나감)
-                                                            <div className="mt-1.5 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-                                                                <span className="mb-1 block text-[10px] font-black text-slate-400">한국어 뜻 (관리자만 보임)</span>
-                                                                <ol className="space-y-0.5">
-                                                                    {d.activities.map((a, j) => (
-                                                                        <li key={j} className="flex gap-1.5 text-[12px] leading-snug">
-                                                                            <span className="w-4 flex-none text-right font-black text-slate-300">{j + 1}</span>
-                                                                            {a.ko ? <span className="font-semibold text-slate-600 dark:text-slate-300">{a.ko}</span> : <span className="text-slate-300">(직접 고친 줄 — 뜻 없음)</span>}
-                                                                        </li>
-                                                                    ))}
-                                                                </ol>
-                                                            </div>
-                                                        )}
-                                                        {d.activities.length > 0 && (() => {
-                                                            // 사진·설명 칸 — 평소에는 접어 두고 요약만 (AI 초안이 사진을 자동으로 붙인다). 고칠 때만 펼친다
-                                                            const withImg = d.activities.filter(a => a.images?.length);
-                                                            const withDesc = d.activities.filter(a => a.description?.trim()).length;
-                                                            const opened = !!photoOpen[i];
-                                                            return (
-                                                            <div className="mt-2">
-                                                                <button type="button" onClick={() => setPhotoOpen(m => ({ ...m, [i]: !opened }))}
-                                                                    className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                                                                    <span className="material-symbols-outlined text-[16px] text-slate-400">{opened ? 'expand_less' : 'expand_more'}</span>
-                                                                    <span className="text-[11px] font-black text-slate-500">사진·설명</span>
-                                                                    <span className="text-[11px] font-bold text-slate-400">사진 {withImg.length}/{d.activities.length}줄{withDesc ? ` · 설명 ${withDesc}줄` : ''}</span>
-                                                                    {!opened && (
-                                                                        <span className="flex -space-x-1.5">
-                                                                            {withImg.slice(0, 4).map((a, k) => <img key={k} src={a.images![0]} alt="" className="h-5 w-5 rounded border border-white object-cover dark:border-slate-800" />)}
-                                                                        </span>
-                                                                    )}
-                                                                    {!opened && <span className="ml-auto text-[10px] font-bold text-slate-400">고객 견적서의 루트·見どころ 사진 — 바꿀 때만 펼치세요</span>}
-                                                                </button>
-                                                                {opened && <>
-                                                                <span className="mb-1 mt-1 block text-[10px] font-bold text-slate-400">「관광지」를 누르면 관광지 마스터의 사진·설명이 붙습니다. 이름은 위 칸 그대로 둡니다.</span>
-                                                                <div className="flex flex-wrap gap-1.5">
+                                                            style={{ flex: 1, minHeight: 150, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 12, fontFamily: JP, fontSize: 13, lineHeight: 1.85, color: C.ink, resize: 'vertical', boxSizing: 'border-box' }} />
+                                                    </label>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Lbl note="관리자만 보여요">한국어 뜻</Lbl>
+                                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 14px', borderRadius: 12, background: C.bg, minHeight: 60 }}>
+                                                            {d.activities.length === 0 && <span style={{ fontSize: 12, color: C.mute }}>일정을 적으면 여기에 줄 번호가 나와요</span>}
+                                                            {d.activities.map((a, j) => (
+                                                                <span key={j} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 12, lineHeight: 1.6, color: a.ko ? C.body : C.faint }}>
+                                                                    <span style={{ flex: 'none', width: 14, fontFamily: EN, fontSize: 11, fontWeight: 700, color: C.mint }}>{j + 1}</span>
+                                                                    <span style={{ flex: 1, minWidth: 0 }}>{a.ko || '(직접 고친 줄 — 뜻 없음)'}</span>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {d.activities.length > 0 && (
+                                                    // 줄별 사진 — 평소에는 접어 둔다 (AI 초안이 사진을 자동으로 붙인다). 고칠 때만 펼친다
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                        <button type="button" onClick={() => setPhotoOpen(m => ({ ...m, [i]: !linesOpen }))} aria-expanded={linesOpen}
+                                                            style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 4px', border: 0, background: 'transparent', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                            <Chevron open={linesOpen} color={C.sub} />
+                                                            <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>줄별 사진</span>
+                                                            <span style={{ fontSize: 12, fontWeight: 500, color: C.mute }}>· 선택</span>
+                                                            <span style={{ height: 20, padding: '0 7px', borderRadius: 999, background: withImg.length ? C.mintBg : C.grayBg, fontSize: 11, fontWeight: 700, color: withImg.length ? C.mintDeep : C.mute, display: 'inline-flex', alignItems: 'center' }}>관광지 {withImg.length}개</span>
+                                                        </button>
+                                                        {linesOpen && (
+                                                            <>
+                                                                <span style={{ marginTop: -4, fontSize: 11, color: C.mute }}>누르면 관광지 마스터에서 골라 사진과 설명이 붙어요 (고객 견적서의 루트·見どころ 사진) · 이름은 위 칸 그대로</span>
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                                                     {d.activities.map((a, j) => {
-                                                                        const key = `${i}-${j}`;
                                                                         const img = (a.images || [])[0];
+                                                                        const key = `${i}-${j}`;
                                                                         return (
-                                                                            <div key={j} className="flex max-w-full items-center gap-1 rounded-lg border border-slate-200 bg-white py-1 pl-1 pr-1.5 dark:border-slate-700 dark:bg-slate-800">
-                                                                                {img
-                                                                                    ? <img src={img} alt="" className="h-6 w-6 flex-none rounded object-cover" />
-                                                                                    : <span className="flex h-6 w-6 flex-none items-center justify-center rounded bg-slate-100 text-slate-300"><span className="material-symbols-outlined text-[14px]">image</span></span>}
-                                                                                <span className="max-w-[180px] truncate text-[11px] font-semibold text-slate-600 dark:text-slate-300">{a.title}</span>
-                                                                                <button type="button" onClick={() => setSpotTarget({ d: i, a: j })} className="h-6 flex-none rounded-md border border-[#9FE1CB] px-1.5 text-[10px] font-black text-[#007F75] hover:bg-[#E8FAF5]">관광지</button>
-                                                                                <button type="button" title="설명" onClick={() => setDescOpen(descOpen === key ? null : key)} className={`flex h-6 w-6 flex-none items-center justify-center rounded ${a.description ? 'text-[#007F75]' : 'text-slate-300'} hover:bg-slate-100`}><span className="material-symbols-outlined text-[14px]">notes</span></button>
-                                                                            </div>
+                                                                            <span key={j} style={{ display: 'flex', alignItems: 'center', maxWidth: '100%', height: 38, border: `1px solid ${img ? C.mintHi : C.line}`, borderRadius: 999, background: img ? C.mintBg2 : '#FFFFFF' }}>
+                                                                                <button type="button" onClick={() => setSpotTarget({ d: i, a: j })}
+                                                                                    style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, height: '100%', padding: `0 ${img ? 6 : 12}px 0 4px`, border: 0, background: 'transparent', cursor: 'pointer' }}>
+                                                                                    <Thumb src={img} size={30} />
+                                                                                    <span style={{ minWidth: 0, maxWidth: 200, fontFamily: JP, fontSize: 12, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</span>
+                                                                                    <span style={{ flex: 'none', fontSize: 10, fontWeight: 700, color: img ? C.mintDeep : C.mute }}>{img ? '관광지 ✓' : '관광지'}</span>
+                                                                                </button>
+                                                                                {img && (
+                                                                                    <button type="button" title="설명 고치기 (볼거리 카드에 표시)" onClick={() => setDescOpen(descOpen === key ? null : key)}
+                                                                                        style={{ flex: 'none', height: '100%', padding: '0 10px 0 4px', border: 0, background: 'transparent', fontSize: 11, fontWeight: 700, color: a.description ? C.mintDeep : C.mute, cursor: 'pointer' }}>설명</button>
+                                                                                )}
+                                                                            </span>
                                                                         );
                                                                     })}
                                                                 </div>
                                                                 {d.activities.map((a, j) => descOpen === `${i}-${j}` && (
-                                                                    <textarea key={j} className="mt-1.5 min-h-[64px] w-full rounded-md border border-slate-200 p-2 text-xs leading-relaxed text-slate-700 outline-none focus:border-[#06C4A0] dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                                                                        value={a.description} placeholder={`「${a.title}」 설명 (볼거리 카드에 표시)`} onChange={e => patchAct(i, j, { description: e.target.value })} />
+                                                                    <textarea key={j} value={a.description} placeholder={`「${a.title}」 설명 (볼거리 카드에 표시)`} onChange={e => patchAct(i, j, { description: e.target.value })}
+                                                                        style={{ minHeight: 64, padding: '10px 12px', border: `1px solid ${C.line}`, borderRadius: 12, fontSize: 12, lineHeight: 1.6, color: C.body, resize: 'vertical', boxSizing: 'border-box' }} />
                                                                 ))}
-                                                                </>}
-                                                            </div>
-                                                            );
-                                                        })()}
+                                                            </>
+                                                        )}
                                                     </div>
-                                                    <div className="grid gap-2 sm:grid-cols-2">
-                                                        <div>
-                                                            <span className={lab}>숙소</span>
-                                                            <div className="flex items-center gap-1.5">
-                                                                {d.accommodation?.images?.[0] && <img src={d.accommodation.images[0]} alt="" className="h-9 w-9 flex-none rounded-lg object-cover" />}
-                                                                <div className="relative min-w-0 flex-1">
-                                                                <input className={inp} value={d.accommodation?.name || ''}
-                                                                    onFocus={() => setHotelDrop(i)} onBlur={() => setHotelDrop(null)}
-                                                                    onKeyDown={e => { if (e.key === 'Escape') setHotelDrop(null); }} placeholder={assigned?.name ? `배정: ${assigned.name}` : '호텔 마스터에서 선택 또는 직접 입력'}
-                                                                    onChange={e => {
-                                                                        const name = e.target.value;
-                                                                        // 호텔 마스터 목록에서 고르면 사진·설명까지 붙인다
-                                                                        const hit = hotelByName(name);
-                                                                        if (hit) { fillFromHotel(i, hit); return; }
-                                                                        const acc = d.accommodation;
-                                                                        // 마스터에서 고른 호텔 이름을 바꾸면 그 호텔 사진은 떼어 낸다
-                                                                        patchDay(i, { accommodation: name ? (acc && acc.name === name ? acc : { name, images: acc?.id ? [] : (acc?.images || []) }) : null });
-                                                                        setHotelDrop(i);
-                                                                    }} />
-                                                                {hotelDrop === i && hotels.length > 0 && (() => {
-                                                                    // 입력한 글자로 거르기 — 이미 고른 호텔이면 전체 목록
-                                                                    const q = (d.accommodation?.name || '').trim().toLowerCase();
-                                                                    const picked = !!(q && hotelByName(d.accommodation?.name || ''));
-                                                                    const list = !q || picked ? hotels : hotels.filter(h => `${h.name_kr} ${h.name_local || ''} ${h.city || ''}`.toLowerCase().includes(q));
-                                                                    return (
-                                                                        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-800">
-                                                                            {list.length === 0 ? (
-                                                                                <p className="px-3 py-2.5 text-xs font-semibold text-slate-400">호텔 마스터에 없는 이름입니다 — 이대로 두면 직접 입력한 숙소로 나갑니다</p>
-                                                                            ) : list.map(h => {
-                                                                                const on = d.accommodation?.name === h.name_kr;
-                                                                                return (
-                                                                                    <button key={h.id} type="button"
-                                                                                        // 입력칸이 포커스를 잃기 전에 고른다
-                                                                                        onMouseDown={e => { e.preventDefault(); fillFromHotel(i, h); setHotelDrop(null); }}
-                                                                                        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left ${on ? 'bg-[#E8FAF5]' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                                                                                        {h.images?.[0]
-                                                                                            ? <img src={h.images[0]} alt="" loading="lazy" className="h-10 w-10 flex-none rounded-lg object-cover" />
-                                                                                            : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black text-slate-400">사진 없음</span>}
-                                                                                        <span className="min-w-0 flex-1">
-                                                                                            <span className={`block truncate text-[13px] font-black ${on ? 'text-[#007F75]' : 'text-slate-800 dark:text-slate-100'}`}>{h.name_kr}</span>
-                                                                                            <span className="block truncate text-[11px] font-semibold text-slate-400">{[h.name_local, h.city, h.star_rating ? `${h.star_rating}★` : ''].filter(Boolean).join(' · ') || '\u00a0'}</span>
-                                                                                        </span>
-                                                                                        {on && <span className="flex-none text-[11px] font-black text-[#007F75]">선택됨</span>}
-                                                                                    </button>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    );
-                                                                })()}
-                                                                </div>
-                                                                <button type="button" title="호텔 마스터에서 사진으로 찾기" onClick={() => setHotelDayIdx(i)}
-                                                                    className="h-9 flex-none rounded-lg border border-[#9FE1CB] px-3 text-xs font-black text-[#007F75] hover:bg-[#E8FAF5]">호텔</button>
+                                                )}
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap: 12, paddingTop: 14, borderTop: `1px solid ${C.line2}` }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                                            <Lbl>숙소</Lbl>
+                                                            <span style={{ display: 'flex', gap: 4 }}>
                                                                 {!templateMode && onAssignAccommodation && (
                                                                     <button type="button" title="예약의 숙소 배정 (가이드·숙소 관리와 연결)" onClick={() => onAssignAccommodation(d.day)}
-                                                                        className="h-9 flex-none rounded-lg border border-slate-200 px-2.5 text-xs font-black text-slate-500 hover:bg-slate-50">배정</button>
+                                                                        style={{ flex: 'none', height: 26, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 999, background: '#FFFFFF', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>배정</button>
                                                                 )}
                                                                 {assigned && !templateMode && onUnassignAccommodation && (
                                                                     <button type="button" title="숙소 배정 해제" onClick={() => onUnassignAccommodation(d.day)}
-                                                                        className="flex h-9 w-9 flex-none items-center justify-center rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                                                                        style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: '#FFF1F0', fontSize: 11, fontWeight: 700, color: '#B42318', cursor: 'pointer', whiteSpace: 'nowrap' }}>배정 해제</button>
                                                                 )}
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <span className={lab}>식사 (고객 화면에는 일본어로 나갑니다)</span>
-                                                            <div className="grid grid-cols-3 gap-1.5">
-                                                                {MEAL_SLOTS.map(([k, label]) => {
-                                                                    const v = String((d.meals as any)?.[k] || '').trim();
-                                                                    const known = !v || /^(o|○|◯)$/i.test(v) || MEAL_KO.some(([ja]) => ja === v);
+                                                                <button type="button" onClick={() => setHotelPick(hpicking ? null : i)}
+                                                                    style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: hpicking ? C.ink : C.mintBg, fontSize: 11, fontWeight: 700, color: hpicking ? '#FFFFFF' : C.mintDeep, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                                    {hpicking ? '닫기' : '숙소에서 고르기'}
+                                                                </button>
+                                                            </span>
+                                                        </span>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, height: 46, padding: '0 6px', border: `1px solid ${C.line}`, borderRadius: 12, boxSizing: 'border-box' }}>
+                                                            <Thumb src={stayImg} size={34} round={false} radius={10} />
+                                                            <input className="qe-bare" value={d.accommodation?.name || ''} placeholder={assigned?.name ? `배정: ${assigned.name}` : '고르거나 직접 입력'}
+                                                                onChange={e => {
+                                                                    const nm = e.target.value;
+                                                                    // 호텔 마스터 이름과 같으면 사진·설명까지 붙인다
+                                                                    const hit = hotelByName(nm);
+                                                                    if (hit) { fillFromHotel(i, hit); return; }
+                                                                    const acc = d.accommodation;
+                                                                    // 마스터에서 고른 호텔 이름을 바꾸면 그 호텔 사진은 떼어 낸다
+                                                                    patchDay(i, { accommodation: nm ? (acc && acc.name === nm ? acc : { name: nm, images: acc?.id ? [] : (acc?.images || []) }) : null });
+                                                                }}
+                                                                style={{ flex: 1, minWidth: 0, height: 40, border: 0, padding: '0 4px', fontFamily: `${EN},'Noto Sans JP',sans-serif`, fontSize: 13, fontWeight: 600, color: C.ink, background: 'transparent' }} />
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                        <Lbl note="고객 화면엔 일본어로">식사</Lbl>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 6 }}>
+                                                            {MEAL_SLOTS.map(([k, label]) => {
+                                                                const v = String((d.meals as any)?.[k] || '').trim();
+                                                                const isO = /^(o|○|◯)$/i.test(v);
+                                                                const known = !v || isO || MEAL_KO.some(([ja]) => ja === v);
+                                                                const shown = !v ? '없음' : isO ? '포함' : (KO_OF.get(v) || v);
+                                                                const editing = mealEdit === `${d.day}-${k}`;
+                                                                const tile: React.CSSProperties = { position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, height: 46, padding: '0 10px', border: `1px solid ${v ? C.mintLine : C.line}`, borderRadius: 12, background: v ? C.mintBg2 : '#FFFFFF', boxSizing: 'border-box', cursor: 'pointer', minWidth: 0 };
+                                                                if (editing) {
                                                                     return (
-                                                                        <label key={k} className="block">
-                                                                            <span className="mb-0.5 block text-[10px] font-black text-[#00A88B]">{label}</span>
-                                                                            {mealEdit === `${d.day}-${k}` ? (
-                                                                                // 직접 입력 — 고객 화면에 그대로 나가므로 일본어. Enter·칸 밖 클릭으로 확정
-                                                                                <input autoFocus className={`${inp} px-1.5 text-xs`} defaultValue={known ? '' : v} placeholder="일본어로 입력"
-                                                                                    onBlur={e => { const t = e.target.value.trim(); if (t) patchDay(i, { meals: { ...(d.meals || {}), [k]: t } }); setMealEdit(null); }}
-                                                                                    onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setMealEdit(null); }} />
-                                                                            ) : (
-                                                                                <select className={`${inp} px-1.5 text-xs`} value={/^(o|○|◯)$/i.test(v) ? 'O' : v}
-                                                                                    onChange={e => {
-                                                                                        const next = e.target.value;
-                                                                                        if (next === '__custom') { setMealEdit(`${d.day}-${k}`); return; }
-                                                                                        patchDay(i, { meals: { ...(d.meals || {}), [k]: next } });
-                                                                                    }}>
-                                                                                    <option value="">없음</option>
-                                                                                    {MEAL_KO.map(([ja, ko]) => <option key={ja} value={ja}>{ko}</option>)}
-                                                                                    {!known && <option value={v}>{KO_OF.get(v) || `${v} (일본어)`}</option>}
-                                                                                    <option value="__custom">직접 입력…</option>
-                                                                                </select>
-                                                                            )}
-                                                                        </label>
+                                                                        // 직접 입력 — 고객 화면에 그대로 나가므로 일본어. Enter·칸 밖 클릭으로 확정
+                                                                        <input key={k} autoFocus defaultValue={known ? '' : v} placeholder={`${label} (일본어)`}
+                                                                            onBlur={e => { const t = e.target.value.trim(); if (t) patchDay(i, { meals: { ...(d.meals || {}), [k]: t } }); setMealEdit(null); }}
+                                                                            onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setMealEdit(null); }}
+                                                                            style={fieldStyle({ padding: '0 10px', fontSize: 12, fontFamily: JP })} />
                                                                     );
-                                                                })}
-                                                            </div>
+                                                                }
+                                                                return (
+                                                                    <label key={k} style={tile}>
+                                                                        <span style={{ fontSize: 10, fontWeight: 700, color: C.mute }}>{label}</span>
+                                                                        <span style={{ fontSize: 13, fontWeight: 700, color: v ? C.mintDeep : C.mute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shown}</span>
+                                                                        <select aria-label={label} value={isO ? 'O' : v}
+                                                                            onChange={e => {
+                                                                                const next = e.target.value;
+                                                                                if (next === '__custom') { setMealEdit(`${d.day}-${k}`); return; }
+                                                                                patchDay(i, { meals: { ...(d.meals || {}), [k]: next } });
+                                                                            }}
+                                                                            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%' }}>
+                                                                            <option value="">없음</option>
+                                                                            {MEAL_KO.map(([ja, ko]) => <option key={ja} value={ja}>{ko}</option>)}
+                                                                            {!known && <option value={v}>{KO_OF.get(v) || `${v} (일본어)`}</option>}
+                                                                            <option value="__custom">직접 입력…</option>
+                                                                        </select>
+                                                                    </label>
+                                                                );
+                                                            })}
                                                         </div>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                <button type="button" onClick={addDay} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#9FE1CB] py-3 text-xs font-black text-[#007F75] hover:bg-[#E8FAF5]">
-                                    <span className="material-symbols-outlined text-[16px]">add</span>{days.length ? 'DAY 추가' : '첫 DAY 추가 (또는 위에서 상품 불러오기)'}
-                                </button>
-                            </div>
-                        </Section>
 
-                        <Section onFocusArea={() => setFocus({ section: 'q-inc', at: Date.now() })} n={templateMode ? 3 : 4} title="포함 · 불포함" hint="누르면 바로 반영 · 고객 화면에는 일본어로">
-                            {([['inc', '포함', INC_OPTS, incNow, excNow], ['exc', '불포함', EXC_OPTS, excNow, incNow]] as const).map(([kind, label, opts, cur, other]) => (
-                                <div key={kind} className={kind === 'exc' ? 'mt-4' : ''}>
-                                    <span className={lab}>{label} · {cur.length}개</span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {optionsOf(opts as Array<[string, string]>, cur as string[], other as string[]).map(t => {
-                                            const on = (cur as string[]).includes(t);
-                                            const ko = koOf(t);
+                                                {hpicking && (() => {
+                                                    const list = hotels.filter(h => hotelKindTab === 'all' || hotelKindOf(h) === hotelKindTab);
+                                                    const pickSelf = (nm: string) => { patchDay(i, { accommodation: { name: nm, images: [] } }); setHotelPick(null); };
+                                                    return (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, borderRadius: 14, background: C.bg, marginTop: -6 }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: C.sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>고르면 숙소 이름과 사진이 함께 바뀌어요 · 다음 날 조식이 비어 있으면 호텔식으로</span>
+                                                                <div style={{ display: 'flex', gap: 4 }}>
+                                                                    {([['all', '전체'], ['ger', '게르'], ['premium', '고급 게르'], ['hotel', '호텔']] as const).map(([k, label]) => {
+                                                                        const on = hotelKindTab === k;
+                                                                        return <button key={k} type="button" onClick={() => setHotelKindTab(k)} style={{ height: 28, padding: '0 10px', border: 0, borderRadius: 999, background: on ? C.ink : '#FFFFFF', fontSize: 11, fontWeight: 700, color: on ? '#FFFFFF' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>{label}</button>;
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,200px),1fr))', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+                                                                {list.map(h => {
+                                                                    const on = d.accommodation?.name === h.name_kr;
+                                                                    const [tl, tb, tf] = HOTEL_KIND[hotelKindOf(h)];
+                                                                    return (
+                                                                        <button key={h.id} type="button" onClick={() => { fillFromHotel(i, h); setHotelPick(null); focusDay(d.day); }}
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, border: `1.5px solid ${on ? C.mintHi : '#FFFFFF'}`, borderRadius: 14, background: on ? C.mintBg2 : '#FFFFFF', textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
+                                                                            <Thumb src={h.images?.[0]} size={52} round={false} radius={10} />
+                                                                            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                                                                <span style={{ fontFamily: `${EN},'Noto Sans JP',sans-serif`, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.name_kr}</span>
+                                                                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', minWidth: 0 }}>
+                                                                                    <span style={{ flex: 'none', height: 18, padding: '0 6px', borderRadius: 5, background: tb, fontSize: 10, fontWeight: 700, color: tf, display: 'inline-flex', alignItems: 'center' }}>{tl}</span>
+                                                                                    <span style={{ fontSize: 11, color: C.mute, overflow: 'hidden', textOverflow: 'ellipsis' }}>{[h.city, h.star_rating ? `${h.star_rating}★` : ''].filter(Boolean).join(' · ')}</span>
+                                                                                </span>
+                                                                            </span>
+                                                                            {on && <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: C.mint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={10} w={3.4} /></span>}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                                {hotelKindTab === 'all' && SELF_STAYS.map(nm => {
+                                                                    const on = d.accommodation?.name === nm;
+                                                                    const [tl, tb, tf] = HOTEL_KIND.self;
+                                                                    return (
+                                                                        <button key={nm} type="button" onClick={() => pickSelf(nm)}
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, border: `1.5px solid ${on ? C.mintHi : '#FFFFFF'}`, borderRadius: 14, background: on ? C.mintBg2 : '#FFFFFF', textAlign: 'left', cursor: 'pointer' }}>
+                                                                            <span style={{ flex: 'none', width: 52, height: 52, borderRadius: 10, background: C.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.amberFg }}>—</span>
+                                                                            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                                                                <span style={{ fontFamily: JP, fontSize: 13, fontWeight: 700, color: C.ink }}>{nm}</span>
+                                                                                <span style={{ alignSelf: 'flex-start', height: 18, padding: '0 6px', borderRadius: 5, background: tb, fontSize: 10, fontWeight: 700, color: tf, display: 'inline-flex', alignItems: 'center' }}>{tl}</span>
+                                                                            </span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {hotels.length === 0 && <span style={{ fontSize: 12, color: C.mute }}>호텔 마스터에 등록된 숙소가 없어요 — 위 칸에 직접 입력할 수 있어요.</span>}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            <button type="button" onClick={addDay} className="qe-hmint"
+                                style={{ height: 52, border: `1.5px dashed ${C.mintLine}`, borderRadius: 16, background: 'transparent', fontSize: 13, fontWeight: 700, color: C.mintDeep, cursor: 'pointer' }}>
+                                ＋ {days.length ? 'DAY 추가' : '첫 DAY 추가 (또는 위에서 상품 불러오기)'}
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* 04 포함 · 불포함 */}
+                    <section id="qe-inc" style={{ ...sectionStyle, gap: 20 }} onFocusCapture={() => setFocus({ section: 'q-inc', at: Date.now() })}>
+                        <SecHead n={templateMode ? '03' : '04'} title="포함 · 불포함" hint="누르면 바로 반영돼요 · 고객 화면엔 일본어로" />
+                        {([['inc', '포함', INC_OPTS, incNow, excNow, C.mint, C.mintDeep], ['exc', '불포함', EXC_OPTS, excNow, incNow, C.ink, C.sub]] as const).map(([kind, label, opts, cur, other, dot, cntFg]) => (
+                            <div key={kind} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot }} />
+                                    <span style={{ fontSize: 13, fontWeight: 700 }}>{label}</span>
+                                    <span style={{ fontFamily: EN, fontSize: 12, fontWeight: 700, color: cntFg }}>{(cur as string[]).length}개</span>
+                                </span>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {optionsOf(opts as Array<[string, string]>, cur as string[], other as string[]).map(t => {
+                                        const on = (cur as string[]).includes(t);
+                                        const ko = koOf(t);
+                                        const isInc = kind === 'inc';
+                                        return (
+                                            <button key={t} type="button" title={`고객 화면: ${t}`} aria-pressed={on} onClick={() => { setFocus({ section: 'q-inc', at: Date.now() }); toggleInc(kind, t); }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 6, height: 36, padding: '0 12px 0 8px', border: `1px solid ${on ? (isInc ? C.mintHi : C.ink) : C.line}`, borderRadius: 999, background: on ? (isInc ? C.mintBg2 : C.grayBg) : '#FFFFFF', fontSize: 12, fontWeight: on ? 700 : 500, color: on ? C.ink : C.mute, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+                                                <span style={{ width: 18, height: 18, borderRadius: '50%', background: on ? (isInc ? C.mint : C.ink) : C.line2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: on ? '#FFFFFF' : C.mute }}>{on ? (isInc ? '✓' : '✕') : '+'}</span>
+                                                {ko || t}
+                                                {!ko && <span style={{ height: 16, padding: '0 5px', borderRadius: 4, background: C.amberBg, fontSize: 9, fontWeight: 700, color: C.amberFg, display: 'inline-flex', alignItems: 'center' }}>일본어</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                    <input value={custom[kind].ko} placeholder="직접 추가 — 한국어 (관리자용)"
+                                        onChange={e => { const v = e.target.value; setCustom(c => ({ ...c, [kind]: { ...c[kind], ko: v } })); }}
+                                        style={{ flex: '1 1 180px', minWidth: 0, height: 38, padding: '0 12px', border: `1px solid ${C.line}`, borderRadius: 10, fontSize: 12, color: C.ink }} />
+                                    <input value={custom[kind].ja} placeholder="日本語（お客様画面）"
+                                        onChange={e => { const v = e.target.value; setCustom(c => ({ ...c, [kind]: { ...c[kind], ja: v } })); }}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); addCustom(kind); } }}
+                                        style={{ flex: '1 1 180px', minWidth: 0, height: 38, padding: '0 12px', border: `1px solid ${C.line}`, borderRadius: 10, fontFamily: JP, fontSize: 12, color: C.ink }} />
+                                    <button type="button" onClick={() => addCustom(kind)} style={{ flex: 'none', height: 38, padding: '0 14px', border: 0, borderRadius: 10, background: C.mintBg, fontSize: 12, fontWeight: 700, color: C.mintDeep, cursor: 'pointer' }}>추가</button>
+                                </div>
+                            </div>
+                        ))}
+                    </section>
+
+                    {/* 05 대표 여행지 (見どころ) */}
+                    <section id="qe-spot" style={{ ...sectionStyle, gap: 16 }} onFocusCapture={() => setFocus({ section: 'q-spot', at: Date.now() })}>
+                        <SecHead n={templateMode ? '04' : '05'}
+                            title={<>대표 여행지 <span style={{ fontFamily: JP, fontWeight: 500, color: C.mute }}>見どころ</span></>}
+                            hint={spotsPicked.length ? '고른 순서대로 고객 화면에 나가요' : '고르지 않으면 고객 화면에 나오지 않아요'}
+                            right={
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {spotsPicked.length > 0 && <button type="button" onClick={() => setQ({ spots: [] })} style={{ height: 26, padding: '0 8px', border: 0, background: 'transparent', fontSize: 11, fontWeight: 700, color: C.mute, cursor: 'pointer' }}>모두 해제</button>}
+                                    <span style={{ height: 26, padding: '0 10px', borderRadius: 999, background: C.ink, fontSize: 12, fontWeight: 700, color: C.glow, display: 'inline-flex', alignItems: 'center' }}>{spotsPicked.length}개 선택</span>
+                                </span>
+                            } />
+                        {spotPool.length === 0 ? (
+                            <span style={{ fontSize: 12, color: C.mute }}>관광지 마스터에 사진이 있는 관광지를 등록하면 여기서 고를 수 있어요.</span>
+                        ) : (() => {
+                            const regions = SPOT_REGIONS.filter(([r]) => spotPool.some(sp => (sp.region || '') === r));
+                            const list = spotPool.filter(sp => spotRegion === 'all' || (sp.region || '') === spotRegion);
+                            return (
+                                <>
+                                    <div className="qe-noscroll" style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+                                        {[['all', '전체'] as [string, string], ...regions].map(([r, label]) => {
+                                            const on = spotRegion === r;
+                                            const n = r === 'all' ? spotsPicked.length : spotPool.filter(sp => (sp.region || '') === r && spotsPicked.includes(sp.id)).length;
                                             return (
-                                                <button key={t} type="button" title={`고객 화면: ${t}`} onClick={() => { setFocus({ section: 'q-inc', at: Date.now() }); toggleInc(kind, t); }}
-                                                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold transition ${on
-                                                        ? (kind === 'inc' ? 'border-[#06C4A0] bg-[#E8FAF5] text-[#007F75]' : 'border-slate-400 bg-slate-100 text-slate-700')
-                                                        : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`}>
-                                                    <span className="material-symbols-outlined text-[14px]">{on ? 'check_circle' : 'add'}</span>
-                                                    {ko || t}{!ko && <span className="rounded bg-amber-100 px-1 text-[9px] font-black text-amber-700">일본어</span>}
+                                                <button key={r} type="button" onClick={() => setSpotRegion(r)}
+                                                    style={{ flex: 'none', height: 34, padding: '0 14px', border: 0, borderRadius: 999, background: on ? C.ink : C.grayBg, fontSize: 12, fontWeight: 700, color: on ? '#FFFFFF' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                    {label}{n > 0 && <span style={{ marginLeft: 5, color: on ? C.glow : C.mint }}>{n}</span>}
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                    <div className="mt-2 flex max-w-lg gap-1.5">
-                                        <input className={`${inp} h-8 text-xs`} value={custom[kind].ko} placeholder="직접 추가 — 한국어 (관리자용)"
-                                            onChange={e => { const v = e.target.value; setCustom(c => ({ ...c, [kind]: { ...c[kind], ko: v } })); }} />
-                                        <input className={`${inp} h-8 text-xs`} value={custom[kind].ja} placeholder="일본어 (고객 화면용)"
-                                            onChange={e => { const v = e.target.value; setCustom(c => ({ ...c, [kind]: { ...c[kind], ja: v } })); }}
-                                            onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); addCustom(kind); } }} />
-                                        <button type="button" onClick={() => addCustom(kind)} className="h-8 flex-none rounded-lg border border-[#9FE1CB] px-3 text-xs font-black text-[#007F75] hover:bg-[#E8FAF5]">추가</button>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(92px,1fr))', gap: '18px 8px' }}>
+                                        {list.map(sp => {
+                                            const order = spotsPicked.indexOf(sp.id);
+                                            const on = order >= 0;
+                                            return (
+                                                <button key={sp.id} type="button" aria-pressed={on} title={`고객 화면: ${cleanSpotName(sp.name_kr)}`}
+                                                    onClick={() => { setFocus({ section: 'q-spot', at: Date.now() }); toggleSpot(sp.id); }}
+                                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '4px 0 0', border: 0, background: 'transparent', cursor: 'pointer' }}>
+                                                    <span style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', boxShadow: on ? `0 0 0 3px #FFFFFF,0 0 0 5px ${C.mintHi}` : 'none', transition: 'box-shadow .2s' }}>
+                                                        <Thumb src={sp.images![0]} size={64} />
+                                                        {on && <span style={{ position: 'absolute', right: -3, top: -3, minWidth: 22, height: 22, padding: '0 4px', boxSizing: 'border-box', borderRadius: 999, background: C.mint, border: '2px solid #FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: EN, fontSize: 11, fontWeight: 700, color: '#FFFFFF' }}>{order + 1}</span>}
+                                                    </span>
+                                                    <span style={{ fontSize: 12, fontWeight: on ? 700 : 500, lineHeight: 1.35, color: on ? C.mintDeep : C.body, textAlign: 'center' }}>{koSpotName(sp.name_kr)}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                </div>
-                            ))}
-                        </Section>
-
-                        <Section onFocusArea={() => setFocus({ section: 'q-spot', at: Date.now() })} n={templateMode ? 4 : 5} title="대표 여행지 (見どころ)"
-                            hint={spotsPicked.length ? `${spotsPicked.length}곳 선택 — 고른 순서대로 나갑니다` : '고르지 않으면 고객 화면에 나오지 않습니다'}
-                            right={spotsPicked.length > 0 && <button type="button" onClick={() => setQ({ spots: [] })} className="text-[11px] font-black text-slate-400 hover:text-red-500">모두 해제</button>}>
-                            {spotPool.length === 0
-                                ? <p className="text-xs font-semibold text-slate-400">관광지 마스터에 사진이 있는 관광지를 등록하면 여기서 고를 수 있습니다.</p>
-                                : (() => {
-                                    const regions = [...SPOT_REGIONS.filter(([r]) => spotPool.some(s => (s.region || '') === r))];
-                                    const list = spotPool.filter(s => spotRegion === 'all' || (s.region || '') === spotRegion);
-                                    return (
-                                        <>
-                                            <div className="mb-2 flex flex-wrap gap-1">
-                                                {[['all', '전체'] as [string, string], ...regions].map(([r, label]) => {
-                                                    const n = r === 'all' ? spotsPicked.length : spotPool.filter(s => (s.region || '') === r && spotsPicked.includes(s.id)).length;
-                                                    return (
-                                                        <button key={r} type="button" onClick={() => setSpotRegion(r)}
-                                                            className={`rounded-full px-3 py-1 text-xs font-black ${spotRegion === r ? 'bg-[#123B3A] text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                                            {label}{n > 0 && <span className="ml-1 text-[#8CE9D8]">{n}</span>}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            {/* 동그란 사진 + 아래 이름 — 누르면 초록 테두리와 순서 번호 */}
-                                            <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-x-2 gap-y-4 pt-1">
-                                                {list.map(s => {
-                                                    const order = spotsPicked.indexOf(s.id);
-                                                    const on = order >= 0;
-                                                    return (
-                                                        <button key={s.id} type="button" title={`고객 화면: ${cleanSpotName(s.name_kr)}`}
-                                                            onClick={() => { setFocus({ section: 'q-spot', at: Date.now() }); toggleSpot(s.id); }}
-                                                            className="group flex flex-col items-center gap-1.5 text-center">
-                                                            <span className={`relative block h-[72px] w-[72px] rounded-full p-[3px] transition ${on ? 'bg-[#06C4A0]' : 'bg-transparent group-hover:bg-slate-200'}`}>
-                                                                <img src={s.images![0]} alt="" loading="lazy" className={`h-full w-full rounded-full border-2 border-white object-cover transition ${on ? '' : 'group-hover:scale-[1.03]'}`} />
-                                                                {on && <span className="absolute -right-0.5 -top-0.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-[#123B3A] px-1 text-[11px] font-black text-white">{order + 1}</span>}
-                                                            </span>
-                                                            <span className={`line-clamp-2 w-full text-[12px] leading-tight ${on ? 'font-black text-[#007F75]' : 'font-semibold text-slate-700'}`}>{koSpotName(s.name_kr)}</span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                        </Section>
-
-
-                        <p className="px-1 pb-2 text-[11px] font-semibold leading-relaxed text-slate-400">
-                            표지 문구·숙소 소개·팀·식사 안내·안전·공항·허가증·약관은 모든 고객 공통으로 자동 들어갑니다.
-                            {onAssignAccommodation && !templateMode ? ' 숙소 배정은 예약의 숙소 배정과 연결됩니다.' : ''}
-                        </p>
-                    </div>
-                    </div>
-
-                    {/* 미리보기 */}
-                    <div className={`flex min-h-0 flex-col border-l border-slate-200 bg-[#E9EEED] dark:border-slate-800 dark:bg-slate-950 ${pane === 'form' ? 'max-md:hidden' : ''}`}>
-                        <div className="flex flex-shrink-0 items-center justify-between px-4 py-2 text-[11px] font-black text-slate-500">
-                            <span>고객이 받는 화면 (미리보기)</span>
-                            <span className="text-slate-400">입력하면 바로 반영</span>
-                        </div>
-                        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-                            <div className="mx-auto w-full max-w-[390px] overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-lg">
-                                <TripDocument doc={preview.doc} images={preview.images} focusTarget={focus} />
-                            </div>
-                        </div>
-                    </div>
+                                </>
+                            );
+                        })()}
+                        <span style={{ paddingTop: 14, borderTop: `1px solid ${C.line2}`, fontSize: 11, color: C.mute }}>
+                            표지 문구 · 숙소 소개 · 팀 · 식사 안내 · 안전 · 공항 · 허가증 · 약관은 모든 고객에게 공통으로 자동 들어가요.{onAssignAccommodation && !templateMode ? ' 숙소 배정은 예약의 숙소 배정과 연결돼요.' : ''}
+                        </span>
+                    </section>
                 </div>
             </div>
 
+            {/* ── 미리보기 (「고객 화면 보기」) ── */}
+            {previewOpen && (
+                <aside style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 'min(440px,100%)', zIndex: 5, display: 'flex', flexDirection: 'column', background: '#E9EEED', borderLeft: `1px solid ${C.line}`, boxShadow: '-12px 0 32px rgba(18,59,58,0.12)' }}>
+                    <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, height: 56, padding: '0 12px 0 16px', background: '#FFFFFF', borderBottom: `1px solid ${C.line}` }}>
+                        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>고객이 받는 화면</span>
+                            <span style={{ fontSize: 11, color: C.mute }}>입력하면 바로 반영 · 저장 전 내용</span>
+                        </span>
+                        {previewUrl && (
+                            <a href={previewUrl} target="_blank" rel="noreferrer" title="저장된 내용으로 고객 화면을 새 탭에서 엽니다"
+                                style={{ flex: 'none', height: 32, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 11, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>저장본 새 탭</a>
+                        )}
+                        <button type="button" aria-label="미리보기 닫기" onClick={() => setPreviewOpen(false)} className="qe-hbg" style={iconBtn}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                    </div>
+                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 12px 20px' }}>
+                        <div style={{ margin: '0 auto', width: '100%', maxWidth: 390, overflow: 'hidden', borderRadius: 22, border: '1px solid #CBD5D3', background: '#FFFFFF', boxShadow: '0 10px 30px rgba(18,59,58,0.12)' }}>
+                            <TripDocument doc={preview.doc} images={preview.images} focusTarget={focus} />
+                        </div>
+                    </div>
+                </aside>
+            )}
+
+            </div>
+
             <TouristSpotPickerModal open={spotTarget !== null} onClose={() => setSpotTarget(null)} onPick={spot => { if (spotTarget) fillFromSpot(spotTarget.d, spotTarget.a, spot); setSpotTarget(null); }} />
-            <HotelPickerModal open={hotelDayIdx !== null} onClose={() => setHotelDayIdx(null)} onPick={hotel => { if (hotelDayIdx !== null) fillFromHotel(hotelDayIdx, hotel); setHotelDayIdx(null); }} />
         </div>
     );
 };
