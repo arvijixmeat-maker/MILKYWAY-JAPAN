@@ -997,6 +997,7 @@ export const QuoteDetailModal: React.FC<{
                 tourStartDate={confirmedStartDate || ''}
                 tourEndDate={confirmedEndDate || ''}
                 previewUrl={estimatePageUrl}
+                aiDraftQuoteId={request.id}
             />
 
     </>
