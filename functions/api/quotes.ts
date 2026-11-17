@@ -297,8 +297,10 @@ app.delete('/:id', async (c) => {
 // POST /api/quotes/:id/ai-draft — AI 견적 초안 (관리자 전용). 저장하지 않고 편집기에 돌려준다.
 // body: { people?, startDate?, endDate? } — 편집기에서 관리자가 고친 값이 있으면 그걸 우선
 app.post('/:id/ai-draft', requireAdmin, async (c) => {
-    const apiKey = c.env.ANTHROPIC_API_KEY;
+    // 키를 붙여 넣을 때 섞인 줄바꿈·공백 제거 (키 안에는 원래 공백이 없다 — 줄바꿈이 섞이면 「Invalid header value」로 실패)
+    const apiKey = String(c.env.ANTHROPIC_API_KEY || '').replace(/\s+/g, '');
     if (!apiKey) return c.json({ error: 'AI 키(ANTHROPIC_API_KEY)가 아직 설정되지 않았습니다. Cloudflare 환경 변수에 등록해 주세요.' }, 503);
+    if (!apiKey.startsWith('sk-ant-')) return c.json({ error: 'Cloudflare 에 저장된 AI 키가 올바른 형식이 아닙니다(sk-ant- 로 시작해야 함). Console 에서 키를 다시 복사해 ANTHROPIC_API_KEY 에 넣어 주세요.' }, 503);
 
     const id = c.req.param('id');
     const row: any = await c.env.DB.prepare('SELECT * FROM quotes WHERE id = ?').bind(id).first();
