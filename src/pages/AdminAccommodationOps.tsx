@@ -53,7 +53,7 @@ interface Reservation {
         region?: string; category?: string;
         travelers?: Traveler[];
         arrival?: Flight; departure?: Flight;
-        agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+        agreement?: { agreed?: boolean; name?: string; agreedAt?: string; signature?: string };
         vehicle?: { type?: string; phone?: string };
     };
 }
@@ -539,7 +539,7 @@ export const AdminAccommodationOps: React.FC = () => {
                                                                         </table>
                                                                     </div>
                                                                 ) : <div className="cell-muted" style={{ fontSize: 12, marginTop: 10 }}>Аялагчийн мэдээлэл алга (гэрээ ирээгүй).</div>}
-                                                                {cd.agreement?.name && <div style={{ marginTop: 10, fontSize: 12 }}><span className="cell-muted">Цахим гарын үсэг:</span> <b>{cd.agreement.name}</b></div>}
+                                                                {cd.agreement?.name && <div style={{ marginTop: 10, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><span className="cell-muted">Цахим гарын үсэг:</span> <b>{cd.agreement.name}</b>{cd.agreement.signature && <img src={cd.agreement.signature} alt="" style={{ height: 40, maxWidth: 180, objectFit: 'contain' }} />}</div>}
                                                             </div>
 
                                                             {/* ── Өдөр тутмын байр ── */}

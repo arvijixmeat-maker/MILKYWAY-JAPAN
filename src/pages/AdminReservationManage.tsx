@@ -47,7 +47,8 @@ interface Reservation {
         region?: string;
         category?: string;
         issuedDate?: string;
-        agreement?: { agreed?: boolean; name?: string; agreedAt?: string };
+        /** signature — 고객 계약서의 손글씨 전자서명 PNG (data URL) */
+        agreement?: { agreed?: boolean; name?: string; agreedAt?: string; signature?: string };
         customerSubmittedAt?: string;
     };
 
@@ -802,6 +803,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
           <table><thead><tr><th style="width:36px">№</th><th>Паспортын нэр</th><th>Нэр</th><th style="width:120px">Төрсөн огноо</th><th style="width:70px">Хүйс</th><th style="width:150px">Холбоо барих</th></tr></thead>
           <tbody>${travelerRows}</tbody></table>
           ${memoBlock}
+          ${contractAgreement?.signature && contractAgreement.signature.startsWith('data:image/png;base64,') ? `<p style="margin:14px 0 0"><img src="${contractAgreement.signature}" alt="" style="height:60px;max-width:260px;object-fit:contain"></p>` : ''}
           <p class="foot">Цахим гарын үсэг: ${esc(signedMn)} · Хэвлэсэн өдрийн байдлаарх мэдээлэл. Хувийн мэдээлэл агуулсан тул анхааралтай хадгална уу.</p>
         </body></html>`;
         const w = window.open('', '_blank', 'width=920,height=1000');
@@ -1563,7 +1565,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
 
                                     {contractAgreement?.agreed && (
                                         <div className="kv" style={{ borderBottom: 'none', borderTop: '1px solid var(--mrt-gray-100)', marginTop: 10, paddingTop: 10 }}>
-                                            <span>전자 서명</span><b style={{ textAlign: 'right' }}>{contractAgreement.name || '—'}</b>
+                                            <span>전자 서명</span>
+                                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                                                <b style={{ textAlign: 'right' }}>{contractAgreement.name || '—'}</b>
+                                                {contractAgreement.signature && (
+                                                    <img src={contractAgreement.signature} alt="고객 전자서명" style={{ height: 56, maxWidth: 220, objectFit: 'contain', border: '1px solid var(--mrt-gray-100)', borderRadius: 8, background: '#fff' }} />
+                                                )}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
