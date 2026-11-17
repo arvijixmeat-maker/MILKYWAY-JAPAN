@@ -116,6 +116,38 @@ const linesToActivities = (text: string, prev: TemplateDay['activities']): Templ
         return { time: '', type: inferType(title), title, description: '', images: [] };
     });
 };
+/**
+ * 「AI로 수정」 결과를 지금 일정에 합친다 — AI 는 글자만 다루므로,
+ * 글자가 그대로인 줄·DAY·숙소는 지금 편집기에 있던 사진·설명·시간을 그대로 이어 쓴다.
+ */
+const mergeRevisedDays = (oldDays: TemplateDay[], newDays: TemplateDay[]): TemplateDay[] => {
+    const same = (a?: string, b?: string) => (a || '').trim() === (b || '').trim();
+    const pool = oldDays.flatMap(d => d.activities);
+    return newDays.map((nd, i) => {
+        const od = oldDays.find(d => same(d.title, nd.title)) || (oldDays[i] && same(oldDays[i].region, nd.region) ? oldDays[i] : undefined);
+        const activities = nd.activities.map(na => {
+            const k = pool.findIndex(a => same(a.title, na.title));
+            if (k < 0) return na;
+            const oa = pool.splice(k, 1)[0];
+            return { ...oa, ko: na.ko || oa.ko, images: oa.images?.length ? oa.images : na.images };
+        });
+        // 숙소 — 같은 DAY(제목이 같거나 같은 순서)의 숙소와 같으면 지금 것(사진·설명)을 그대로
+        const na = nd.accommodation;
+        const sameAcc = (oa?: TemplateDay['accommodation']) => !!(na && oa && (na.id ? na.id === oa.id : same(na.name, oa.name)));
+        const accommodation = sameAcc(od?.accommodation) ? od!.accommodation : sameAcc(oldDays[i]?.accommodation) ? oldDays[i].accommodation : na;
+        return {
+            ...(od || {}),
+            ...nd,
+            day: i + 1,
+            date: oldDays[i]?.date ?? nd.date, // 날짜는 DAY 순서를 따른다
+            titleImage: nd.titleImage || (od && same(od.title, nd.title) ? od.titleImage : undefined),
+            summary: od && same(od.title, nd.title) ? od.summary : nd.summary,
+            activities,
+            accommodation,
+        };
+    });
+};
+
 // 관리자 화면은 한국어, 고객 화면에는 일본어가 나간다 — [고객용 일본어, 관리자용 한국어]
 
 // ── 식사 — 朝·昼·夕 칸마다 목록에서 고른다 ──
@@ -218,6 +250,10 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     // ── AI 견적 초안 ──
     const [aiBusy, setAiBusy] = useState(false);
     const aiAutoTried = useRef(false);
+    /** 「AI로 수정」 — 관리자가 한국어로 적는 수정 요청 */
+    const [reviseText, setReviseText] = useState('');
+    /** AI 수정 전 제목·포함·불포함 — 「일정 되돌리기」 때 일정과 함께 되돌린다 */
+    const [undoRest, setUndoRest] = useState<{ name: string; included: string[]; excluded: string[] } | null>(null);
 
     // ── 열릴 때 초기값 ──
     useEffect(() => {
@@ -238,6 +274,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setNotice(null);
         setSaveError(null);
         setUndoDays(null);
+        setUndoRest(null);
+        setReviseText('');
         setDelDay(null);
         setMealEdit(null);
         resetDrafts();
@@ -276,6 +314,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         if (!imported.length) { if (!auto) setSaveError('이 상품에는 DAY 일정이 등록되어 있지 않습니다.'); return; }
         // 확인창 대신 — 바꾸기 전 일정을 남겨 두고 안내줄에서 되돌릴 수 있게
         setUndoDays(!auto && days.length > 0 ? days : null);
+        setUndoRest(null);
         const pricing = p.pricingOptions?.find(o => o.people === people) || p.pricingOptions?.[0];
         const included = (p.included || []).map(textOf).map((s: string) => s.trim()).filter(Boolean);
         const excluded = (p.excluded || []).map(textOf).map((s: string) => s.trim()).filter(Boolean);
@@ -309,6 +348,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const applyAiDraft = (draft: AiDraft, fromCache: boolean) => {
         if (!Array.isArray(draft?.days) || draft.days.length === 0) return;
         setUndoDays(days.length > 0 ? days : null);
+        setUndoRest(null);
         setDays(draft.days);
         if (draft.title) setName(draft.title);
         setOpenDay(0);
@@ -344,6 +384,38 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         } catch (e) {
             setNotice(null);
             setSaveError(e instanceof Error ? e.message : 'AI 초안 만들기에 실패했습니다.');
+        } finally {
+            setAiBusy(false);
+        }
+    };
+    // 「AI로 수정」 — 지금 일정 + 한국어 수정 요청 → AI 가 시킨 곳만 고친 일정
+    const runAiRevise = async () => {
+        const instruction = reviseText.trim();
+        if (!aiDraftQuoteId || aiBusy || !instruction || days.length === 0) return;
+        setAiBusy(true);
+        setSaveError(null);
+        setNotice('AI 가 수정 요청대로 일정을 고치는 중입니다… (30초~1분)');
+        try {
+            const res = await api.quotes.aiDraft(aiDraftQuoteId, {
+                people, startDate: startDate || undefined, endDate: endDate || undefined,
+                revise: { instruction, current: { title: name, days, included: ds.quoteDoc.included, excluded: ds.quoteDoc.excluded } },
+            });
+            const draft = res?.draft as AiDraft | undefined;
+            if (!draft?.days?.length) throw new Error('AI 가 일정을 고치지 못했습니다.');
+            const merged = mergeRevisedDays(days, draft.days);
+            setUndoDays(days);
+            setUndoRest({ name, included: ds.quoteDoc.included, excluded: ds.quoteDoc.excluded });
+            setDays(merged);
+            if (draft.title) setName(draft.title);
+            setDs(cur => ({ ...cur, quoteDoc: { ...cur.quoteDoc, included: draft.included || cur.quoteDoc.included, excluded: draft.excluded || cur.quoteDoc.excluded } }));
+            resetDrafts();
+            setReviseText('');
+            // 닫았다 다시 열어도 고친 일정이 나오게 보관본도 바꾼다
+            try { localStorage.setItem(aiCacheKey, JSON.stringify({ ...draft, days: merged, noteKo: '' })); } catch { /* 보관 실패는 무시 */ }
+            setNotice(`AI 가 일정을 고쳤습니다 — 「${instruction.length > 40 ? `${instruction.slice(0, 40)}…` : instruction}」${draft.noteKo ? ` · 바꾼 점: ${draft.noteKo.replace(/\s*\n\s*/g, ' / ')}` : ''} — 확인 후 저장하세요.`);
+        } catch (e) {
+            setNotice(null);
+            setSaveError(e instanceof Error ? e.message : 'AI 수정에 실패했습니다.');
         } finally {
             setAiBusy(false);
         }
@@ -545,10 +617,18 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                     <div className="flex flex-shrink-0 items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-xs font-bold text-emerald-700">
                         <span className="material-symbols-outlined text-[16px]">auto_awesome</span><span>{notice}</span>
                         {undoDays && (
-                            <button type="button" onClick={() => { setDays(undoDays); setUndoDays(null); resetDrafts(); setNotice('불러오기 전 일정으로 되돌렸습니다.'); }}
+                            <button type="button" onClick={() => {
+                                setDays(undoDays); setUndoDays(null); resetDrafts();
+                                if (undoRest) {
+                                    setName(undoRest.name);
+                                    setDs(cur => ({ ...cur, quoteDoc: { ...cur.quoteDoc, included: undoRest.included, excluded: undoRest.excluded } }));
+                                    setUndoRest(null);
+                                }
+                                setNotice('바꾸기 전 일정으로 되돌렸습니다.');
+                            }}
                                 className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100">일정 되돌리기</button>
                         )}
-                        <button onClick={() => { setNotice(null); setUndoDays(null); }} className="ml-auto text-emerald-400 hover:text-emerald-600"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                        <button onClick={() => { setNotice(null); setUndoDays(null); setUndoRest(null); }} className="ml-auto text-emerald-400 hover:text-emerald-600"><span className="material-symbols-outlined text-[16px]">close</span></button>
                     </div>
                 )}
 
@@ -624,6 +704,30 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     </select>
                                 </div>
                             }>
+                            {aiDraftQuoteId && !templateMode && days.length > 0 && (
+                                // 「AI로 수정」 — 한국어로 적으면 AI 가 그 부분만 고친다 (사진·설명은 바뀌지 않은 줄 그대로)
+                                <div className="mb-3 rounded-xl border border-[#123B3A]/15 bg-[#F3F8F7] p-2.5 dark:border-slate-700 dark:bg-slate-800/60">
+                                    <span className="mb-1 block text-[11px] font-black text-[#123B3A] dark:text-slate-200">AI로 수정 — 고칠 내용을 한국어로 적어 주세요</span>
+                                    <div className="flex items-stretch gap-2">
+                                        <textarea
+                                            rows={2}
+                                            value={reviseText}
+                                            disabled={aiBusy}
+                                            onChange={e => setReviseText(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void runAiRevise(); } }}
+                                            placeholder={'예: 2일차 테를지 대신 엘승타사르해로 바꾸고, 마지막 날 국영백화점 쇼핑 넣어 줘. 3일차 숙소는 고급 게르로.'}
+                                            className="min-h-[52px] flex-1 resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-[#06C4A0] disabled:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                        />
+                                        <button type="button" disabled={aiBusy || !reviseText.trim()} onClick={() => void runAiRevise()}
+                                            title="지금 일정에서 적은 부분만 고칩니다 (Ctrl+Enter) — 「일정 되돌리기」로 되돌릴 수 있음"
+                                            className="inline-flex w-[92px] flex-none flex-col items-center justify-center gap-0.5 rounded-lg bg-[#123B3A] px-2 text-xs font-black text-white hover:bg-[#0B2625] disabled:opacity-50">
+                                            <span className={`material-symbols-outlined text-[18px] ${aiBusy ? 'animate-spin' : ''}`}>{aiBusy ? 'progress_activity' : 'auto_awesome'}</span>
+                                            {aiBusy ? '고치는 중…' : 'AI로 수정'}
+                                        </button>
+                                    </div>
+                                    <span className="mt-1 block text-[10px] font-bold text-slate-400">금액·날짜는 AI 가 바꾸지 않습니다 · 결과는 저장 전까지 고객에게 나가지 않습니다 · Ctrl+Enter 로 보내기</span>
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 {days.map((d, i) => {
                                     const isOpen = openDay === i;
