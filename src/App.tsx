@@ -71,6 +71,8 @@ const AdminHotelManage = lazy(() => import('./pages/AdminHotelManage').then(modu
 const AdminAccommodationOps = lazy(() => import('./pages/AdminAccommodationOps').then(module => ({ default: module.AdminAccommodationOps })))
 const AdminTouristSpotManage = lazy(() => import('./pages/AdminTouristSpotManage').then(module => ({ default: module.AdminTouristSpotManage })))
 const AdminDesignSpotManage = lazy(() => import('./pages/AdminDesignSpotManage').then(module => ({ default: module.AdminDesignSpotManage })))
+// 개발 서버 전용 — 견적서·확정일정표 새 디자인 미리보기 (운영 빌드에서는 제거됨)
+const DevTripDocPreview = import.meta.env.DEV ? lazy(() => import('./pages/DevTripDocPreview').then(module => ({ default: module.DevTripDocPreview }))) : null
 const AdminTemplateManage = lazy(() => import('./pages/AdminTemplateManage').then(module => ({ default: module.AdminTemplateManage })))
 const AdminReviewManage = lazy(() => import('./pages/AdminReviewManage').then(module => ({ default: module.AdminReviewManage })))
 const AdminFAQManage = lazy(() => import('./pages/AdminFAQManage').then(module => ({ default: module.AdminFAQManage })))
@@ -172,6 +174,7 @@ function App() {
             <Route path="/admin/hotels" element={<AdminGuard><AdminHotelManage /></AdminGuard>} />
             <Route path="/admin/tourist-spots" element={<AdminGuard><AdminTouristSpotManage /></AdminGuard>} />
             <Route path="/admin/design-spots" element={<AdminGuard><AdminDesignSpotManage /></AdminGuard>} />
+            {DevTripDocPreview && <Route path="/dev/trip-doc" element={<DevTripDocPreview />} />}
             <Route path="/admin/accommodations" element={<AdminGuard><AdminAccommodationManage /></AdminGuard>} />
             <Route path="/admin/templates" element={<AdminGuard><AdminTemplateManage /></AdminGuard>} />
             <Route path="/admin/reviews" element={<AdminGuard><AdminReviewManage /></AdminGuard>} />

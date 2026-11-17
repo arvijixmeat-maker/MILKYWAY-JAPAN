@@ -3,9 +3,10 @@ import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { type QuoteRequest, ConvertSelectionModal, QuoteDetailModal } from '../components/admin/QuoteModals';
+import { buildReservationFromQuote } from '../components/admin/quoteConvert';
 import { sendNotificationEmail } from '../lib/email';
 import { sendNotification } from '../utils/notification';
-import { ReservationDocumentEditor, type ReservationDocContent } from '../components/admin/ReservationDocumentEditor';
+import { ReservationDocumentEditor, type ReservationDocContent, type DocPricing } from '../components/admin/ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplateManage';
 import { toTourDateKey } from '../utils/formatDate';
 
@@ -13,7 +14,8 @@ import { toTourDateKey } from '../utils/formatDate';
 interface Reservation {
     id: string;
     reservationNumber?: string;
-    type: 'product' | 'quote';
+    /** product=상품 예약, custom=맞춤견적에서 전환된 예약, quote=아직 견적 단계(견적 테이블 행) */
+    type: 'product' | 'quote' | 'custom';
     productName: string;
     productId?: string; // 예약한 상품 ID (신규 예약부터 저장 — 동명 상품 혼동 방지)
     customerName: string;
@@ -95,6 +97,8 @@ interface Reservation {
 }
 
 const SOURCE_OPTIONS: Array<{ v: string; l: string }> = [
+    { v: 'instagram', l: '인스타그램' },
+    { v: 'facebook', l: '페이스북' },
     { v: 'line', l: 'LINE' },
     { v: 'email', l: '메일' },
     { v: 'phone', l: '전화' },
@@ -102,8 +106,11 @@ const SOURCE_OPTIONS: Array<{ v: string; l: string }> = [
     { v: 'visit', l: '직접방문' },
     { v: 'other', l: '기타' },
 ];
-const sourceLabel = (s?: string) => SOURCE_OPTIONS.find(o => o.v === s)?.l || (s || '');
+const sourceLabel = (s?: string) => SOURCE_OPTIONS.find(o => o.v === s)?.l || (s === 'quote' ? '견적 전환' : (s || ''));
 const sourceColor = (s?: string): { bg: string; fg: string } => ({
+    instagram: { bg: '#FBEAF0', fg: '#993556' },
+    facebook: { bg: '#E6F1FB', fg: '#185FA5' },
+    quote: { bg: '#E8FAF5', fg: '#007F75' },
     line: { bg: '#E4F7EC', fg: '#0F7A43' },
     email: { bg: '#E8F2FF', fg: '#0B6FE0' },
     phone: { bg: '#FEF6E7', fg: '#B45309' },
@@ -112,6 +119,8 @@ const sourceColor = (s?: string): { bg: string; fg: string } => ({
     other: { bg: '#F1F2F4', fg: '#8A8F99' },
 }[s || ''] || { bg: '#F1F2F4', fg: '#8A8F99' });
 const BLANK_ADD = { customerName: '', phone: '', email: '', source: 'line', productName: '', startDate: '', endDate: '', people: '1', totalAmount: '', deposit: '', status: 'pending_payment', notes: '' };
+// 견적 직접 만들기 (인스타·페이스북·메일 문의)
+const BLANK_QUOTE = { name: '', source: 'instagram', contact: '', email: '', destination: '', people: '2', startDate: '', endDate: '', memo: '' };
 
 interface ProductSummary {
     id?: string;
@@ -350,6 +359,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
     const [activeDocument, setActiveDocument] = useState<'itinerary' | 'contract'>('itinerary');
     // Trip.com식 원페이지: 탭 대신 섹션 앵커 스크롤
     const [activeSec, setActiveSec] = useState<'info' | 'pay' | 'assign' | 'log'>('info');
+    const [paypalBusy, setPaypalBusy] = useState(false);
     const bodyRef = useRef<HTMLDivElement | null>(null);
     const scrollToSec = (id: 'info' | 'pay' | 'assign' | 'log') => {
         setActiveSec(id);
@@ -409,6 +419,23 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
 
         setEditForm(updated);
         if (!isEditing) onUpdate(updated);
+    };
+
+    // 예약금 PayPal 결제 링크 — 이미 있는 청구서 링크를 복사하고, 없으면 이때 한 번만 만든다
+    const copyPayPalLink = async () => {
+        setPaypalBusy(true);
+        try {
+            const res: any = await api.reservations.paypalInvoice(reservation.id);
+            if (!res?.payUrl) { alert('청구서는 있지만 결제 링크를 받지 못했습니다. PayPal 관리 화면에서 확인해 주세요.'); return; }
+            await navigator.clipboard.writeText(res.payUrl);
+            alert(res.created
+                ? `PayPal 청구서를 새로 만들고 결제 링크를 복사했습니다.\n(${res.invoiceNumber}${reservation.email ? ' · 고객 메일로도 발송됨' : ' · 메일 없이 링크만'})\n\nDM 에 붙여 넣어 보내 주세요.`
+                : `기존 청구서(${res.invoiceNumber})의 결제 링크를 복사했습니다.\nDM 에 붙여 넣어 보내 주세요.`);
+        } catch (e: any) {
+            alert(`결제 링크를 가져오지 못했습니다: ${e?.message || e}`);
+        } finally {
+            setPaypalBusy(false);
+        }
     };
 
     const toggleDepositStatus = () => {
@@ -629,7 +656,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             images: Array.isArray(acc.images) ? acc.images : (acc.images ? [acc.images] : []),
         };
     };
-    const saveDocContent = async (content: ReservationDocContent, tourDates?: { startDate: string; endDate: string }) => {
+    const saveDocContent = async (content: ReservationDocContent, tourDates?: { startDate: string; endDate: string }, pricing?: DocPricing) => {
         const payload = {
             document_content: JSON.stringify(content),
             ...(tourDates ? { start_date: tourDates.startDate || null, end_date: tourDates.endDate || null } : {}),
@@ -643,6 +670,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                 startDate: tourDates.startDate,
                 endDate: tourDates.endDate,
                 date: tourDates.startDate && tourDates.endDate ? `${tourDates.startDate} ~ ${tourDates.endDate}` : '날짜 미정',
+            } : {}),
+            // 간단 편집기에서 입력한 인원·금액 — handleUpdateReservation 이 바뀐 값만 저장한다
+            ...(pricing ? {
+                totalPeople: pricing.people,
+                totalAmount: pricing.total,
+                deposit: pricing.deposit,
+                balance: Math.max(0, pricing.total - pricing.deposit),
             } : {}),
         });
     };
@@ -1608,6 +1642,12 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                                 <Icon name="check" />입금 확인
                                             </button>
                                         )}
+                                        {editForm.depositStatus !== 'paid' && (
+                                            <button onClick={copyPayPalLink} disabled={paypalBusy} className="btn btn-sm btn-ghost" style={{ width: '100%', marginTop: 6 }}
+                                                title="예약금 PayPal 결제 링크를 복사합니다 — 인스타·페이스북 DM 으로 보낼 때. 청구서가 없으면 이때 만듭니다.">
+                                                <Icon name="content_copy" />{paypalBusy ? '준비 중…' : 'PayPal 결제 링크 복사'}
+                                            </button>
+                                        )}
                                         {editForm.depositStatus === 'paid' && (
                                             <button onClick={toggleDepositStatus} className="btn btn-sm btn-ghost" style={{ width: '100%', marginTop: 10 }}>
                                                 입금 취소
@@ -2160,6 +2200,8 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             onAssignGuide={() => setShowGuideModal(true)}
             onAssignAccommodation={(day) => { setSelectedDay(day); setShowAccommodationModal(true); }}
             onUnassignAccommodation={handleAccommodationUnassign}
+            previewMode={isQuoteRes ? 'quote' : 'confirmed'}
+            previewUrl={isQuoteRes ? `${window.location.origin}/estimate/${reservation.id}` : itineraryUrl}
         />
     </>);
 };
@@ -2180,6 +2222,11 @@ export const AdminReservationManage: React.FC = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [creating, setCreating] = useState(false);
     const [addForm, setAddForm] = useState({ ...BLANK_ADD });
+    // 견적 직접 만들기 — 인스타·페이스북·메일로 온 문의를 플랫폼 견적으로 등록
+    const [showQuoteModal, setShowQuoteModal] = useState(false);
+    const [quoteForm, setQuoteForm] = useState({ ...BLANK_QUOTE });
+    // 방금 만든 견적은 상세를 열면서 문서 편집기까지 바로 연다
+    const [autoEditQuoteId, setAutoEditQuoteId] = useState<string | null>(null);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -2242,7 +2289,9 @@ export const AdminReservationManage: React.FC = () => {
                     return {
                     id: r.id,
                     reservationNumber: r.reservationNumber || r.reservation_number || null,
-                    type: r.type || 'product',
+                    // 예전에 견적에서 전환되며 type 'quote' 로 저장된 예약도 「예약」으로 다룬다
+                    // ('quote' 는 견적 테이블 행 표시용 — 그대로 두면 문서가 견적 테이블로 저장된다)
+                    type: (r.type === 'quote' ? 'custom' : r.type) || 'product',
                     productName: r.productName || r.product_name,
                     productId: r.productId || r.product_id,
                     customerName: r.customerName || r.customer_name || r.customer_info?.name || 'Unknown',
@@ -2381,8 +2430,16 @@ export const AdminReservationManage: React.FC = () => {
     // ?open=<reservationId> — 숙소 보드(Байр захиалга)의 「Захиалгын дэлгэрэнгүй」 링크로
     // 진입 시 해당 예약 상세를 자동으로 연다.
     const openedFromUrl = React.useRef(false);
+    // 견적 → 예약 전환 직후 새 예약을 자동으로 열기 위한 대기 id
+    const pendingOpenId = React.useRef<string | null>(null);
     useEffect(() => {
-        if (openedFromUrl.current || reservations.length === 0) return;
+        if (reservations.length === 0) return;
+        if (pendingOpenId.current) {
+            const created = reservations.find(r => r.id === pendingOpenId.current);
+            if (created) { pendingOpenId.current = null; openReservation(created); }
+            return;
+        }
+        if (openedFromUrl.current) return;
         const openId = new URLSearchParams(window.location.search).get('open');
         if (!openId) return;
         const target = reservations.find(r => r.id === openId);
@@ -2612,6 +2669,43 @@ export const AdminReservationManage: React.FC = () => {
     }, []);
 
     // Filter Logic
+    // 견적 직접 만들기 → 견적 생성 후 상세 + 문서 편집기를 바로 연다
+    const handleCreateQuote = async () => {
+        const f = quoteForm;
+        if (!f.name.trim()) { alert('고객 이름을 입력해 주세요.'); return; }
+        if (f.startDate && f.endDate && f.endDate < f.startDate) { alert('도착일이 출발일보다 빠릅니다.'); return; }
+        const people = Math.max(1, parseInt(f.people, 10) || 1);
+        const channel = SOURCE_OPTIONS.find(o => o.v === f.source)?.l || f.source;
+        setCreating(true);
+        try {
+            const res: any = await api.quotes.create({
+                type: 'custom',
+                name: f.name.trim(),
+                email: f.email.trim() || null,
+                phone: f.contact.trim() || null,
+                destination: f.destination.trim() || null,
+                headcount: `大人${people}名`,
+                period: f.startDate && f.endDate ? `${f.startDate} 〜 ${f.endDate}` : (f.startDate || null),
+                // 문의 경로는 예약 전환 때 예약의 「주문 경로」로 이어진다 (quoteConvert 참고)
+                additional_request: [`[문의 경로: ${channel}]`, f.memo.trim()].filter(Boolean).join('\n'),
+                status: 'processing',
+            });
+            const id = res?.id;
+            if (id && (f.startDate || f.endDate)) {
+                await api.quotes.update(id, { confirmed_start_date: f.startDate || null, confirmed_end_date: f.endDate || null });
+            }
+            setShowQuoteModal(false);
+            setQuoteForm({ ...BLANK_QUOTE });
+            if (id) { pendingOpenId.current = id; setAutoEditQuoteId(id); }
+            fetchReservations();
+        } catch (e: any) {
+            console.error(e);
+            alert(`견적 생성 실패: ${e?.message || e}`);
+        } finally {
+            setCreating(false);
+        }
+    };
+
     const handleCreateReservation = async () => {
         if (!addForm.customerName.trim()) { alert('고객명을 입력해 주세요.'); return; }
         setCreating(true);
@@ -2665,8 +2759,8 @@ export const AdminReservationManage: React.FC = () => {
                 (filterStatus === '견적 발송 완료' && res.status === 'answered') ||
                 (filterStatus === '예약 요청' && res.status === 'reservation_requested');
             const matchesType = filterType === '전체 유형' ||
-                (filterType === '맞춤 견적' && res.type === 'quote') ||
-                (filterType === '일반 상품' && res.type !== 'quote');
+                (filterType === '맞춤 견적' && (res.type === 'quote' || res.type === 'custom')) ||
+                (filterType === '일반 상품' && res.type !== 'quote' && res.type !== 'custom');
             const matchesPayment = filterPayment === '전체 결제' ||
                 (filterPayment === '예약금 미입금' && res.depositStatus !== 'paid') ||
                 (filterPayment === '예약금 입금' && res.depositStatus === 'paid') ||
@@ -2958,6 +3052,15 @@ export const AdminReservationManage: React.FC = () => {
                     <>
                         <button
                             type="button"
+                            onClick={() => { setQuoteForm({ ...BLANK_QUOTE }); setShowQuoteModal(true); }}
+                            className="btn btn-blue"
+                            title="인스타·페이스북·메일 등으로 온 견적 문의를 등록하고 새 디자인 견적서를 바로 작성"
+                        >
+                            <Icon name="request_quote" />
+                            견적 직접 만들기
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => { setAddForm({ ...BLANK_ADD }); setShowAddModal(true); }}
                             className="btn btn-ink"
                             title="LINE·메일·전화 등 사이트 외 주문을 수동으로 예약에 추가"
@@ -3155,8 +3258,8 @@ export const AdminReservationManage: React.FC = () => {
                                                 <td>
                                                     <div className="cell-mono">#{reservationNo}</div>
                                                     <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                                        <span className={`tag-type ${res.type === 'quote' ? 'quote' : 'reservation'}`}>
-                                                            {res.type === 'quote' ? '맞춤견적' : '일반상품'}
+                                                        <span className={`tag-type ${res.type === 'quote' || res.type === 'custom' ? 'quote' : 'reservation'}`}>
+                                                            {res.type === 'quote' ? '맞춤견적' : res.type === 'custom' ? '맞춤예약' : '일반상품'}
                                                         </span>
                                                         {res.source && (
                                                             <span style={{ display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 10, fontWeight: 800, background: sourceColor(res.source).bg, color: sourceColor(res.source).fg }}>
@@ -3275,6 +3378,40 @@ export const AdminReservationManage: React.FC = () => {
                 </div>
             )}
 
+            {showQuoteModal && (
+                <div onClick={() => !creating && setShowQuoteModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 20px 60px rgba(0,0,0,.25)', fontFamily: 'var(--font-sans)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--text-strong)' }}>견적 직접 만들기</h2>
+                            <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setShowQuoteModal(false)}><Icon name="close" /></button>
+                        </div>
+                        <p className="cell-muted" style={{ fontSize: 12, margin: '0 0 16px' }}>인스타·페이스북·메일로 온 문의를 등록합니다. 만들면 바로 견적서 편집기가 열립니다.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            {[
+                                { k: 'name', label: '고객 이름 *', el: <input className="inp" style={{ width: '100%' }} value={quoteForm.name} onChange={e => setQuoteForm(f => ({ ...f, name: e.target.value }))} placeholder="山田 太郎" autoFocus /> },
+                                { k: 'source', label: '문의 경로', el: <select className="select" style={{ width: '100%' }} value={quoteForm.source} onChange={e => setQuoteForm(f => ({ ...f, source: e.target.value }))}>{SOURCE_OPTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}</select> },
+                                { k: 'contact', label: '연락처 (SNS 계정·전화)', el: <input className="inp" style={{ width: '100%' }} value={quoteForm.contact} onChange={e => setQuoteForm(f => ({ ...f, contact: e.target.value }))} placeholder="@instagram_id / 090-…" /> },
+                                { k: 'email', label: '이메일 (있으면 메일 발송 가능)', el: <input className="inp" style={{ width: '100%' }} value={quoteForm.email} onChange={e => setQuoteForm(f => ({ ...f, email: e.target.value }))} placeholder="example@mail.com" /> },
+                                { k: 'destination', label: '행선지', el: <input className="inp" style={{ width: '100%' }} value={quoteForm.destination} onChange={e => setQuoteForm(f => ({ ...f, destination: e.target.value }))} placeholder="中央モンゴル / ゴビ砂漠" /> },
+                                { k: 'people', label: '인원', el: <input type="number" min={1} className="inp" style={{ width: '100%' }} value={quoteForm.people} onChange={e => setQuoteForm(f => ({ ...f, people: e.target.value }))} /> },
+                                { k: 'startDate', label: '출발일', el: <input type="date" className="inp" style={{ width: '100%' }} value={quoteForm.startDate} onChange={e => setQuoteForm(f => ({ ...f, startDate: e.target.value }))} /> },
+                                { k: 'endDate', label: '도착일', el: <input type="date" className="inp" style={{ width: '100%' }} min={quoteForm.startDate || undefined} value={quoteForm.endDate} onChange={e => setQuoteForm(f => ({ ...f, endDate: e.target.value }))} /> },
+                                { k: 'memo', label: '요청 메모', full: true, el: <textarea className="inp" style={{ width: '100%', minHeight: 60, resize: 'vertical' }} value={quoteForm.memo} onChange={e => setQuoteForm(f => ({ ...f, memo: e.target.value }))} placeholder="DM에서 받은 요청 내용 (乗馬したい、高級ゲル希望 등)" /> },
+                            ].map(field => (
+                                <div key={field.k} style={field.full ? { gridColumn: '1 / -1' } : undefined}>
+                                    <label className="cell-muted" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 5 }}>{field.label}</label>
+                                    {field.el}
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                            <button className="btn btn-ghost" onClick={() => setShowQuoteModal(false)} disabled={creating}>취소</button>
+                            <button className="btn btn-ink" onClick={handleCreateQuote} disabled={creating}><Icon name="edit_document" />{creating ? '만드는 중…' : '만들고 견적서 작성'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {selectedReservation && selectedReservation.type !== 'quote' && (
                 <ReservationDetailModal
                     reservation={selectedReservation}
@@ -3289,7 +3426,8 @@ export const AdminReservationManage: React.FC = () => {
             {selectedReservation && selectedReservation.type === 'quote' && selectedReservation.quoteDetail && (
                 <QuoteDetailModal
                     request={selectedReservation.quoteDetail}
-                    onClose={() => setSelectedReservation(null)}
+                    initialEditorOpen={autoEditQuoteId === selectedReservation.id}
+                    onClose={() => { setSelectedReservation(null); setAutoEditQuoteId(null); }}
                     onUpdateQuote={async (id, updates) => {
                         try {
                             await api.quotes.update(id, {
@@ -3380,40 +3518,24 @@ export const AdminReservationManage: React.FC = () => {
                     onClose={() => setConvertTarget(null)}
                     onConvert={async (data) => {
                         try {
-                            // 1. Create Reservation
-                            const reservationPayload = {
-                                type: 'quote',
-                                product_name: `${convertTarget.destination} 맞춤 견적`,
-                                customer_name: convertTarget.name,
-                                customer_phone: convertTarget.phone,
-                                customer_email: convertTarget.email,
-                                total_people: parseInt(convertTarget.headcount.replace(/[^0-9]/g, '')) || 0,
-                                start_date: data.startDate,
-                                end_date: data.endDate,
-                                status: 'pending_payment',
-                                price_breakdown: {
-                                    total: data.totalAmount,
-                                    deposit: data.deposit,
-                                    local: data.totalAmount - data.deposit
-                                },
-                                user_id: convertTarget.userId
-                            };
+                            // 1. 예약 생성 — 견적 문서(일정·사진·새 견적서 항목)를 그대로 확정일정표로 넘긴다
+                            const created: any = await api.reservations.create(buildReservationFromQuote(convertTarget, data));
 
-                            await api.reservations.create(reservationPayload);
-
-                            // 2. Update Quote Status
+                            // 2. 견적 상태 → converted (확정 금액·날짜도 함께 기록)
                             await api.quotes.update(convertTarget.id, {
                                 status: 'converted',
+                                confirmed_price: data.totalAmount,
+                                deposit: data.deposit,
+                                confirmed_start_date: data.startDate,
+                                confirmed_end_date: data.endDate,
                                 updated_at: new Date().toISOString()
                             });
 
-                            alert('예약이 성공적으로 생성되었습니다.');
-
-                            // Optionally send email here too?
-                            // await sendNotificationEmail(...)
+                            alert(`예약 ${created?.reservationNumber || ''} 생성 완료!\n견적서 일정·사진이 확정일정표로 그대로 옮겨졌습니다.\n새 예약을 열어 드릴게요 — 「문서와 고객 발송」에서 확인 후 보내면 됩니다.`);
 
                             setConvertTarget(null);
                             setSelectedReservation(null);
+                            if (created?.id) pendingOpenId.current = created.id;
                             fetchReservations();
 
                         } catch (e: any) {

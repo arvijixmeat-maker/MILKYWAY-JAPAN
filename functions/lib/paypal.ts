@@ -28,7 +28,7 @@ async function getAccessToken(apiBase: string, clientId: string, secret: string)
 
 function buildInvoiceBody(opts: {
     businessEmail: string;
-    customerEmail: string;
+    customerEmail?: string;
     customerName: string;
     reservationNumber: string;
     productName: string;
@@ -46,9 +46,10 @@ function buildInvoiceBody(opts: {
         invoicer: {
             email_address: opts.businessEmail,
         },
+        // 메일 주소가 없는 고객(인스타·페이스북 문의)도 결제 링크로 결제할 수 있게 이름만 넣는다
         primary_recipients: [{
             billing_info: {
-                email_address: opts.customerEmail,
+                ...(opts.customerEmail ? { email_address: opts.customerEmail } : {}),
                 name: { given_name: opts.customerName },
             },
         }],
@@ -71,17 +72,26 @@ function isDuplicateInvoiceNumber(errorBody: string): boolean {
     return errorBody.includes('DUPLICATE_INVOICE_NUMBER');
 }
 
+export interface PayPalInvoiceResult { invoiceId: string; invoiceNumber: string; payUrl: string }
+
+/**
+ * 예약금 PayPal 청구서를 만들어 보낸다.
+ * - 고객 메일이 있으면 PayPal 이 고객에게 메일을 보내고, 없으면 메일 없이 결제 링크만 만든다.
+ * - 판매자 사본 메일(send_to_invoicer)은 보내지 않는다 — 같은 청구서 메일이 두 통 오는 것처럼 보였다.
+ *   청구서는 PayPal 관리 화면에서 그대로 확인할 수 있다.
+ * - 반환하는 payUrl(고객 결제 페이지)은 예약에 저장해 확정일정표의 결제 버튼·관리자 링크 복사에 쓴다.
+ */
 export async function sendPayPalInvoice(opts: {
     clientId: string;
     secret: string;
     businessEmail: string;
-    customerEmail: string;
+    customerEmail?: string;
     customerName: string;
     reservationNumber: string;
     productName: string;
     depositAmount: number;
     environment?: string;
-}): Promise<{ invoiceId: string; invoiceNumber: string }> {
+}): Promise<PayPalInvoiceResult> {
     const apiBase = getPayPalApi(opts.environment);
     const token = await getAccessToken(apiBase, opts.clientId, opts.secret);
 
@@ -133,12 +143,29 @@ export async function sendPayPalInvoice(opts: {
     const sendRes = await fetch(`${apiBase}/v2/invoicing/invoices/${invoiceId}/send`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ send_to_recipient: true, send_to_invoicer: true }),
+        body: JSON.stringify({ send_to_recipient: !!opts.customerEmail, send_to_invoicer: false }),
     });
 
     if (!sendRes.ok) {
         throw new Error(`[PayPal Invoice][send] ${sendRes.status}: ${await sendRes.text()}`);
     }
 
-    return { invoiceId, invoiceNumber };
+    // 고객 결제 페이지 링크 — send 응답의 payer-view, 없으면 청구서 상세의 recipient_view_url
+    let payUrl = '';
+    try {
+        const sent: any = await sendRes.json();
+        payUrl = sent?.href && /payer|invoice\/p/i.test(sent.href) ? sent.href
+            : sent?.links?.find((l: any) => l.rel === 'payer-view')?.href || '';
+    } catch { /* 본문 없음 */ }
+    if (!payUrl) {
+        try {
+            const detailRes = await fetch(`${apiBase}/v2/invoicing/invoices/${invoiceId}`, { headers });
+            if (detailRes.ok) {
+                const inv: any = await detailRes.json();
+                payUrl = inv?.detail?.metadata?.recipient_view_url || inv?.links?.find((l: any) => l.rel === 'payer-view')?.href || '';
+            }
+        } catch { /* 링크 없이도 청구서는 발송됨 */ }
+    }
+
+    return { invoiceId, invoiceNumber, payUrl };
 }

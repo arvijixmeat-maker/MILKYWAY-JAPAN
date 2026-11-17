@@ -12,6 +12,13 @@ export default defineConfig({
       webp: { quality: 80 },
     }),
   ],
+  // 로컬 개발: /api 요청을 로컬 Cloudflare Functions(wrangler pages dev, 8788)로 넘긴다.
+  // 로컬 D1·R2(.wrangler/state)만 쓰므로 운영 데이터에는 영향이 없다.
+  server: {
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8788', changeOrigin: false },
+    },
+  },
   build: {
     emptyOutDir: true,
     chunkSizeWarningLimit: 1600,

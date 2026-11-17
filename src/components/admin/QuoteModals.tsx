@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { api } from '../../lib/api';
-import { ReservationDocumentEditor, type ReservationDocContent } from './ReservationDocumentEditor';
+import { ReservationDocumentEditor, type ReservationDocContent, type DocPricing } from './ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from '../../pages/AdminTemplateManage';
+import { parseQuoteDoc } from './quoteConvert';
 
 export interface QuoteRequest {
     id: string;
@@ -99,8 +100,11 @@ export const ConvertSelectionModal: React.FC<{
         if (!request) return;
 
         // 1순위: 이미 견적서에서 확정된 금액/날짜가 있으면 우선 사용
-        if (request.confirmed_start_date) setStartDate(request.confirmed_start_date.substring(0, 10));
-        if (request.confirmed_end_date) setEndDate(request.confirmed_end_date.substring(0, 10));
+        // (견적 관리 화면은 camelCase, 통합 예약관리는 snake_case 로 넘겨준다)
+        const confirmedStart = request.confirmed_start_date || (request as any).confirmedStartDate || '';
+        const confirmedEnd = request.confirmed_end_date || (request as any).confirmedEndDate || '';
+        if (confirmedStart) setStartDate(String(confirmedStart).substring(0, 10));
+        if (confirmedEnd) setEndDate(String(confirmedEnd).substring(0, 10));
         if (request.confirmed_price) {
             setTotalAmount(request.confirmed_price);
             setDeposit(request.deposit || Math.floor(request.confirmed_price * 0.1));
@@ -108,8 +112,8 @@ export const ConvertSelectionModal: React.FC<{
         }
 
         // 2순위: 확정 데이터 없으면 period 문자열 파싱
-        if (!request.confirmed_start_date && request.period && request.period.includes('~')) {
-            const parts = request.period.split('~').map(p => p.trim());
+        if (!confirmedStart && request.period && /[~〜～]/.test(request.period)) {
+            const parts = request.period.split(/[~〜～]/).map(p => p.trim());
             if (parts.length === 2) {
                 if (parts[0].includes('-') && parts[0].length >= 10) {
                     setStartDate(parts[0].substring(0, 10));
@@ -124,7 +128,17 @@ export const ConvertSelectionModal: React.FC<{
             }
         }
 
-        // 3순위: 금액은 예산 문자열에서 파싱
+        // 3순위: 견적 문서의 1인 요금 × 인원
+        const docForPrice = parseQuoteDoc(request.documentContent ?? request.document_content);
+        const perPerson = parseDocumentPricePerPerson(docForPrice);
+        if (!request.confirmed_price && perPerson > 0) {
+            const total = perPerson * parsePeopleCount(request.headcount);
+            setTotalAmount(total);
+            setDeposit(request.deposit || Math.floor(total * 0.1));
+            return;
+        }
+
+        // 4순위: 금액은 예산 문자열에서 파싱
         if (!request.confirmed_price && request.budget) {
             const budgetMatch = request.budget.match(/(\d+)/);
             if (budgetMatch) {
@@ -136,6 +150,8 @@ export const ConvertSelectionModal: React.FC<{
     }, [request]);
 
     if (!request) return null;
+    const convertDoc = parseQuoteDoc(request.documentContent ?? request.document_content);
+    const convertDays = Array.isArray(convertDoc?.days) ? convertDoc.days.length : 0;
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -153,8 +169,19 @@ export const ConvertSelectionModal: React.FC<{
                 <div className="p-6 space-y-4">
                     <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-800 dark:text-teal-200 text-sm rounded-lg mb-4">
                         <b>{request.name}</b>님의 견적 요청을 정식 예약으로 전환합니다.<br />
-                        확정된 일정과 금액을 입력해주세요.
+                        견적 값이 미리 채워져 있으니 날짜·금액만 확인해 주세요.
                     </div>
+                    {convertDays > 0 ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
+                            <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                            <span>고객정보·인원·금액과 견적서 일정 <b>{convertDays}일</b>(관광지·숙소 사진 포함)이 <b>확정일정표로 그대로</b> 옮겨집니다. 전환 후 새 예약이 열리면 바로 발송할 수 있습니다.</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                            <span className="material-symbols-outlined text-[16px]">warning</span>
+                            <span>아직 견적서 일정이 없습니다. 전환은 되지만 확정일정표는 예약 화면에서 새로 작성해야 합니다. 먼저 「견적 제안서 작성」을 하는 것을 권장합니다.</span>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -267,7 +294,8 @@ export const QuoteDetailModal: React.FC<{
     onSendEstimate: (url: string, note: string, priceDetail: any, startDate: string, endDate: string, itineraryTemplateId?: string) => void;
     onOpenConvert: () => void;
     onUpdateQuote: (id: string, updates: Partial<QuoteRequest>) => Promise<boolean | void>;
-}> = ({ request, onClose, onSendEstimate, onOpenConvert, onUpdateQuote }) => {
+    initialEditorOpen?: boolean;
+}> = ({ request, onClose, onSendEstimate, onOpenConvert, onUpdateQuote, initialEditorOpen }) => {
     const [estimateUrl, setEstimateUrl] = useState(request?.estimateUrl || '');
     const [adminNote, setAdminNote] = useState(request?.adminNote || '');
     const [copiedEstimateUrl, setCopiedEstimateUrl] = useState(false);
@@ -279,7 +307,8 @@ export const QuoteDetailModal: React.FC<{
     const [quoteDocumentContent, setQuoteDocumentContent] = useState<ReservationDocContent | null>(
         normalizeDocumentContent(request?.documentContent || request?.document_content)
     );
-    const [docEditorOpen, setDocEditorOpen] = useState(false);
+    // 「견적 직접 만들기」로 방금 만든 견적이면 편집기를 바로 연다
+    const [docEditorOpen, setDocEditorOpen] = useState(!!initialEditorOpen);
     const [activeSec, setActiveSec] = useState<'info' | 'quote'>('info');
     const bodyRef = useRef<HTMLDivElement | null>(null);
     const scrollToSec = (id: 'info' | 'quote') => {
@@ -302,8 +331,9 @@ export const QuoteDetailModal: React.FC<{
     });
 
     // Confirmed Dates
-    const [confirmedStartDate, setConfirmedStartDate] = useState(request?.confirmed_start_date || '');
-    const [confirmedEndDate, setConfirmedEndDate] = useState(request?.confirmed_end_date || '');
+    // 견적 관리 화면은 camelCase, 통합 예약관리는 snake_case 로 넘겨준다
+    const [confirmedStartDate, setConfirmedStartDate] = useState(String(request?.confirmed_start_date || (request as any)?.confirmedStartDate || '').slice(0, 10));
+    const [confirmedEndDate, setConfirmedEndDate] = useState(String(request?.confirmed_end_date || (request as any)?.confirmedEndDate || '').slice(0, 10));
 
     // Edit Mode State
     const [isEditing, setIsEditing] = useState(false);
@@ -443,7 +473,24 @@ export const QuoteDetailModal: React.FC<{
         }
         return syncDocumentPrice(templateToDocumentContent(itineraryTemplateId), priceDetail.pricePerPerson);
     })();
-    const saveQuoteDoc = async (content: ReservationDocContent) => {
+    const saveQuoteDoc = async (content: ReservationDocContent, dates?: { startDate: string; endDate: string }, pricing?: DocPricing) => {
+        // 간단 편집기 — 고객정보(인원·날짜)·금액을 편집기에서 바로 받아 견적에 그대로 저장
+        if (pricing) {
+            const headcount = pricing.people === parsePeopleCount(request.headcount) ? request.headcount : `大人${pricing.people}名`;
+            setPriceDetail(prev => ({ ...prev, pricePerPerson: pricing.pricePerPerson, peopleCount: pricing.people, totalAmount: pricing.total, deposit: pricing.deposit, manualTotal: false }));
+            if (dates) { setConfirmedStartDate(dates.startDate); setConfirmedEndDate(dates.endDate); }
+            setQuoteDocumentContent(content);
+            const saved = await onUpdateQuote(request.id, {
+                itineraryTemplateId,
+                documentContent: content,
+                headcount,
+                confirmed_price: pricing.total,
+                deposit: pricing.deposit,
+                ...(dates ? { confirmed_start_date: dates.startDate || null, confirmed_end_date: dates.endDate || null } : {}),
+            } as any);
+            if (saved === false) throw new Error('견적 저장에 실패했습니다.');
+            return;
+        }
         const incomingPricePerPerson = parseDocumentPricePerPerson(content);
         const syncedPricePerPerson = incomingPricePerPerson || priceDetail.pricePerPerson;
         const syncedContent = syncDocumentPrice(content, syncedPricePerPerson) || content;
@@ -739,8 +786,8 @@ export const QuoteDetailModal: React.FC<{
                             <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>format_list_bulleted</span><h2>상세 요청</h2></div>
                             <div className="card-pad" style={{ paddingTop: 12 }}>
                                 <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                                    {request.travelTypes.map(t => <span key={t} className="badge b-blue">{t}</span>)}
-                                    {request.accommodations.map(t => <span key={t} className="badge b-gray">{t}</span>)}
+                                    {(request.travelTypes || []).map(t => <span key={t} className="badge b-blue">{t}</span>)}
+                                    {(request.accommodations || []).map(t => <span key={t} className="badge b-gray">{t}</span>)}
                                 </div>
                                 <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{request.additionalRequest || '추가 요청사항이 없습니다.'}</p>
                             </div>
@@ -880,8 +927,9 @@ export const QuoteDetailModal: React.FC<{
                             </div>
                         </section>
 
-                        {request.status === 'reservation_requested' && (
-                            <button className="btn btn-blue action-send-all" onClick={onOpenConvert}>
+                        {/* 사이트 예약 요청뿐 아니라 LINE·메일로 확정한 경우에도 바로 전환할 수 있게 발송된 견적에도 표시 */}
+                        {(request.status === 'reservation_requested' || request.status === 'answered') && (
+                            <button className="btn btn-blue action-send-all" onClick={onOpenConvert} title="견적서 일정·사진·금액을 그대로 옮겨 예약과 확정일정표를 만듭니다">
                                 <span className="material-symbols-outlined" style={{ fontSize: 17 }}>sync_alt</span>예약으로 전환
                             </button>
                         )}
@@ -945,6 +993,10 @@ export const QuoteDetailModal: React.FC<{
                 customer={docCustomer}
                 initialContent={docInitialContent}
                 onSave={saveQuoteDoc}
+                previewMode="quote"
+                tourStartDate={confirmedStartDate || ''}
+                tourEndDate={confirmedEndDate || ''}
+                previewUrl={estimatePageUrl}
             />
 
     </>

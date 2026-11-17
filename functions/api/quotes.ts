@@ -5,11 +5,14 @@ import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
 import { eq, desc } from 'drizzle-orm';
 import { getSessionUser } from '../lib/userAuth';
+import { sendEmail, baseLayout } from '../lib/mailer';
 
 // Define Env locally if global scope is not picked up
 interface Env {
     DB: D1Database;
     BUCKET: R2Bucket;
+    RESEND_API_KEY?: string;
+    ADMIN_EMAIL?: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
     ENVIRONMENT: string;
@@ -116,6 +119,45 @@ app.get('/:id', async (c) => {
     }
 
     return c.json(parsed);
+});
+
+// POST /api/quotes/:id/request-booking — 고객이 견적서에서 「この内容で確定する」를 눌렀을 때 (로그인 불필요)
+// 인스타·페이스북·메일로 문의한 고객은 계정이 없으므로, 견적 링크(추측 불가한 UUID)만으로
+// 「예약 요청」 상태로 바꾸고 관리자에게 메일을 보낸다. 금액·일정 등 다른 값은 바꾸지 못한다.
+app.post('/:id/request-booking', async (c) => {
+    const id = c.req.param('id');
+    const row: any = await c.env.DB.prepare('SELECT id, name, email, phone, destination, headcount, status, confirmed_price FROM quotes WHERE id = ?').bind(id).first();
+    if (!row) return c.json({ error: 'Not found' }, 404);
+    if (row.status === 'reservation_requested') return c.json({ success: true, already: true });
+    if (row.status === 'converted') return c.json({ error: 'Already converted' }, 409);
+    if (!['answered', 'processing', 'new'].includes(String(row.status))) return c.json({ error: 'Not available' }, 409);
+
+    let message = '';
+    try { const body: any = await c.req.json(); message = String(body?.message || '').slice(0, 500); } catch { /* 본문 없음 */ }
+
+    await c.env.DB.prepare("UPDATE quotes SET status = 'reservation_requested', updated_at = ? WHERE id = ?")
+        .bind(new Date().toISOString(), id).run();
+
+    // 관리자 알림 메일 (키가 없으면 건너뛴다 — 상태 변경은 이미 저장됨)
+    const apiKey = c.env.RESEND_API_KEY;
+    if (apiKey) {
+        try {
+            const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
+            const html = baseLayout(`
+                <div class="greeting">견적 확정 요청이 들어왔습니다</div>
+                <div class="card">
+                    <p><b>${esc(row.name)}</b> · ${esc(row.headcount)} · ${esc(row.destination)}</p>
+                    <p>연락처: ${esc(row.email)} ${esc(row.phone)}</p>
+                    ${row.confirmed_price ? `<p>견적 금액: ¥${Number(row.confirmed_price).toLocaleString()}</p>` : ''}
+                    ${message ? `<p>고객 메시지: ${esc(message)}</p>` : ''}
+                </div>
+                <p>관리자 「통합 예약 관리」에서 이 견적을 열어 「예약으로 전환」을 눌러 주세요.</p>`);
+            await sendEmail(apiKey, c.env.ADMIN_EMAIL || 'agape_ibeel@hanpass.com', `[견적 확정 요청] ${row.name}`, html);
+        } catch (e) {
+            console.error('[Quotes request-booking] admin mail failed', e);
+        }
+    }
+    return c.json({ success: true });
 });
 
 // POST /api/quotes (Create new quote — no auth required, guests can submit)

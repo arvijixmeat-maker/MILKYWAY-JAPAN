@@ -200,21 +200,15 @@ export const Payment: React.FC = () => {
                 newReservation.duration = product.duration || null;
             }
 
+            // 견적 예약은 견적 id 를 함께 보내 서버가 「전환 완료」 표시와 중복 방지를 맡는다.
+            // (고객 계정으로 견적을 직접 수정하던 예전 방식은 권한 부족으로 실패해,
+            //  관리자가 다시 전환하면서 예약·PayPal 청구서가 두 번 만들어졌다)
+            if (isQuote && quoteId) newReservation.quote_id = quoteId;
             const data = await api.reservations.create(newReservation);
             const reservationId = data.id;
             const reservationNumber = data.reservationNumber
                 ? String(data.reservationNumber)
                 : `MN-${data.id.slice(0, 8).toUpperCase()}`;
-
-            // Update quote status if this is a quote reservation
-            if (isQuote && quoteId) {
-                try {
-                    await (api.quotes as any).update(quoteId, { status: 'converted' });
-                } catch (quoteUpdateError) {
-                    console.error('Failed to update quote status:', quoteUpdateError);
-                    // We don't block the reservation flow, but log it
-                }
-            }
 
             // The reservation is already persisted at this point. Notification
             // failures must not turn a successful booking into a customer-facing error.
