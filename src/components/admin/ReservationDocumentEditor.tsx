@@ -305,7 +305,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     // ── AI 견적 초안 ──
     // 받은 초안은 이 브라우저에 보관 — 저장 전에 닫았다 다시 열어도 AI 를 다시 부르지 않는다 (비용 절약)
     const aiCacheKey = aiDraftQuoteId ? `mw-ai-draft:${aiDraftQuoteId}` : '';
-    type AiDraft = { title?: string; titleKo?: string; days: TemplateDay[]; included?: string[]; excluded?: string[]; noteKo?: string };
+    type AiDraft = { title?: string; titleKo?: string; days: TemplateDay[]; included?: string[]; excluded?: string[]; noteKo?: string; baseProduct?: { id: string; name: string; price: number; duration: string } | null };
     const applyAiDraft = (draft: AiDraft, fromCache: boolean) => {
         if (!Array.isArray(draft?.days) || draft.days.length === 0) return;
         setUndoDays(days.length > 0 ? days : null);
@@ -321,7 +321,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                 excluded: draft.excluded?.length ? draft.excluded : cur.quoteDoc.excluded,
             },
         }));
-        setNotice(`AI 초안을 넣었습니다${fromCache ? ' (앞서 만든 초안)' : ''} — 내용을 확인하고 금액을 넣은 뒤 저장하세요.${draft.noteKo ? ` 메모: ${draft.noteKo.replace(/\s*\n\s*/g, ' / ')}` : ''}`);
+        const base = draft.baseProduct;
+        setNotice(`AI 초안을 넣었습니다${fromCache ? ' (앞서 만든 초안)' : ''}${base ? ` — 참고 상품: 「${base.name}」${base.duration ? ` ${base.duration}` : ''}${base.price ? ` · 1인 ¥${base.price.toLocaleString()}` : ''}` : ''} — 내용을 확인하고 금액을 넣은 뒤 저장하세요.${draft.noteKo ? ` 메모: ${draft.noteKo.replace(/\s*\n\s*/g, ' / ')}` : ''}`);
     };
     const runAiDraft = async (force: boolean) => {
         if (!aiDraftQuoteId || aiBusy) return;

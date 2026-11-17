@@ -3,6 +3,12 @@ import { handle } from 'hono/cloudflare-pages';
 
 const app = new Hono().basePath('/api');
 
+// 처리하지 못한 오류도 JSON 으로 돌려준다 — 화면에 「Request failed」 대신 실제 원인이 보이게
+app.onError((err, c) => {
+    console.error('[API] unhandled error', c.req.method, c.req.path, err);
+    return c.json({ error: `서버 오류: ${String(err?.message || err).slice(0, 300)}` }, 500);
+});
+
 app.get('/', (c) => {
     return c.json({ message: 'Milkyway Japan API' });
 });
