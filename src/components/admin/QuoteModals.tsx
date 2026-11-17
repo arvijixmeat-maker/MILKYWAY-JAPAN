@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { api } from '../../lib/api';
 import { ReservationDocumentEditor, type ReservationDocContent, type DocPricing } from './ReservationDocumentEditor';
+import { periodDates } from '../../constants/quoteOptions';
 import { decodeTemplateDescription, mergeDocumentSettings } from '../../pages/AdminTemplateManage';
 import { parseQuoteDoc } from './quoteConvert';
 
@@ -994,8 +995,9 @@ export const QuoteDetailModal: React.FC<{
                 initialContent={docInitialContent}
                 onSave={saveQuoteDoc}
                 previewMode="quote"
-                tourStartDate={confirmedStartDate || ''}
-                tourEndDate={confirmedEndDate || ''}
+                // 확정 날짜가 없으면 고객이 적은 희망 일정(예: 2027-08-01 ~ 2027-08-04)으로
+                tourStartDate={confirmedStartDate || periodDates(request.period).start}
+                tourEndDate={confirmedEndDate || (confirmedStartDate ? '' : periodDates(request.period).end)}
                 previewUrl={estimatePageUrl}
                 aiDraftQuoteId={request.id}
             />

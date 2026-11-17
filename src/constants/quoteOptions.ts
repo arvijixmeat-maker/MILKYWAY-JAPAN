@@ -34,3 +34,16 @@ export const inferActivityType = (t: string): ActivityKind => {
     if (/(체험|승마|낙타|공연|트레킹|体験|乗馬|ラクダ|公演|トレッキング)/.test(t)) return 'activity';
     return 'sightseeing';
 };
+
+/**
+ * 고객이 견적 요청에 적은 희망 일정 글(예: 「2027-08-01 ~ 2027-08-04」, 「2027/8/1〜2027/8/4」)에서 날짜 두 개를 읽는다.
+ * 확정 날짜가 아직 없을 때 견적 편집기의 출발일·도착일과 AI 초안의 일수에 쓴다 (편집기·서버 공용).
+ */
+export const periodDates = (period: unknown): { start: string; end: string } => {
+    const found = [...String(period || '').matchAll(/(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})/g)]
+        .map(m => `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`)
+        .filter(d => !Number.isNaN(Date.parse(d)));
+    const start = found[0] || '';
+    const end = found[1] && found[1] >= start ? found[1] : '';
+    return { start, end };
+};
