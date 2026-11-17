@@ -1,6 +1,6 @@
 /**
  * 견적서·확정일정표 공통 문구 (디자인 시안 「Japan version」 그대로) — 모든 고객 문서에 같은 내용.
- * 회사 소개·숙소 기준·팀·식사 약속·안전 수칙·공항 미팅·인허가처럼 고객마다 바뀌지 않는 부분.
+ * 회사 소개·숙소·차량·식사 안내·안전 수칙·인허가처럼 고객마다 바뀌지 않는 부분.
  */
 
 export const C = {
@@ -33,36 +33,6 @@ export const COMPANY = {
     site: 'mongolryokou.com',
 };
 
-/** 숙소 비교 — [항목, [텐트, 유목민 게르, 스탠다드 게르, 고급 게르]] */
-export const STAY_ROWS: Array<[string, [string, string, string, string]]> = [
-    ['電気', ['電気使用不可', '電気使用に制限あり', '電気使用可', '電気使用可']],
-    ['トイレ', ['汲み取り式トイレ', '共用トイレ', '共用トイレ', 'ゲル内にトイレ完備']],
-    ['洗面・シャワー', ['洗面・シャワー設備なし', '洗面・シャワー設備なし', '共用シャワー・洗面台', 'ゲル内に完備']],
-    ['Wi-Fi', ['使用不可', '使用不可', 'キャンプ内で使用可', 'キャンプ内で使用可']],
-    ['暖房', ['ストーブ暖房なし', 'ゲル内の薪ストーブ', 'ゲル内の薪ストーブ', '床暖房 or 電気ストーブ']],
-];
-export const BAD_STAY = /不可|なし|制限|汲み取り/;
-
-const I_ELEC = 'M13 2L4 14h7l-1 8 9-12h-7z';
-const I_TOILET = 'M6 3h8v6H6zM4 9h12v4a5 5 0 01-5 5H9a5 5 0 01-5-5zM9 18v3';
-const I_SHOWER = 'M12 3c3 4 6 7.5 6 11a6 6 0 01-12 0c0-3.5 3-7 6-11z';
-const I_HEAT = 'M12 22c4 0 7-2.7 7-6.5 0-3-2-5-3-7-1 2-2 3-3 3 0-3-1-6-4-9 0 4-4 7-4 13 0 3.8 3 6.5 7 6.5z';
-
-/** 숙소 슬라이드 (스탠다드 / 고급) */
-export const STAY_FILM: Array<{ slot: string; name: string; en: string; sub: string; items: Array<[string, string, string]> }> = [
-    { slot: 'quote-stay-ger', name: 'スタンダードゲル', en: 'Standard Ger', sub: 'スタンダード', items: [[I_ELEC, '電気', '使用可'], [I_TOILET, 'トイレ', '共用'], [I_SHOWER, 'シャワー', '共用 · 洗面台'], [I_HEAT, '暖房', '薪ストーブ']] },
-    { slot: 'quote-stay-lux', name: '高級ゲル', en: 'Premium Ger', sub: '今回のご宿泊', items: [[I_ELEC, '電気', '使用可'], [I_TOILET, 'トイレ', 'ゲル内'], [I_SHOWER, 'シャワー', 'ゲル内'], [I_HEAT, '暖房', '床暖房 · 電気ストーブ']] },
-];
-
-export const STAY_SELECT = [
-    { t: 'モンゴル現地のチームが直接キャンプを訪れ、下見をしたうえで選定します。', icon: 'M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
-    { t: '清潔さ・設備の状態・運営状況を社内基準に沿って確認します。', icon: 'M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9' },
-    { t: '毎年の下見と旅行者の満足度を反映し、新しいキャンプを中心に厳選します。', icon: 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z' },
-];
-
-export const STAY_TILES_TOP = [['stay-tile-1', 200], ['stay-tile-2', 120], ['stay-tile-3', 220], ['stay-tile-8', 140]] as const;
-export const STAY_TILES_BOTTOM = [['stay-tile-4', 120], ['stay-tile-5', 240], ['stay-tile-6', 130], ['stay-tile-7', 170]] as const;
-
 export const TEAM = [
     {
         role: 'ガイド', en: 'GUIDE', dark: true,
@@ -82,9 +52,6 @@ export const TEAM_ASSIGN = [
     { big: '人数問わず', area: 'ゴビ · フブスグル', who: 'ガイド + ドライバー (2名1組)' },
 ];
 
-/** 원형 7개 배치 [x%, y%, size%] */
-export const ORBIT_POS: Array<[number, number, number]> = [[12, 80, 18], [13, 47, 18], [26, 20, 18], [50, 14, 19], [74, 20, 18], [87, 47, 18], [88, 80, 18]];
-
 export const ACT_RULES: Array<[string, boolean]> = [
     ['アクティビティへの参加は自由にお決めいただけます。ご希望でない場合は事前にガイドへお伝えください。', false],
     ['ガイドの案内に従わずに発生した事故については、旅行会社は責任を負いかねます。', true],
@@ -97,13 +64,13 @@ export const RIDE_TIPS = [
     '馬の後ろから近づいたり後ろに立ったりしないでください。常に2m以上離れてください。後ろから近づくと脅威と感じて蹴ることがあります。',
 ];
 
+/** 인허가 — 사진은 src/assets/certs/cert-1*.png … cert-5*.png 를 넣으면 자동으로 표시 */
 export const CERTS = [
-    { slot: 'quote-cert-1', t: '現地旅行業許可証', d: 'モンゴル政府に正式登録された現地旅行会社' },
-    { slot: 'quote-cert-2', t: '現地旅行業許可証', d: 'モンゴル旅行協会（MATA）正式登録' },
-    { slot: 'quote-cert-3', t: '現地旅行業許可証', d: 'モンゴル現地法人 設立済み' },
-    { slot: 'quote-cert-4', t: '韓国 事業者登録証', d: '韓国にて正式に事業者登録' },
-    { slot: 'quote-cert-5', t: '韓国 通信販売業申告証', d: 'オンライン販売の正式申告済み' },
-    { slot: 'quote-cert-6', t: '中小企業確認書', d: '中小ベンチャー企業部の確認企業' },
+    { t: '法人登録証明書', d: 'モンゴル政府に正式登録された現地法人' },
+    { t: '旅行業登録証', d: 'モンゴル観光協会（MTO）正式登録' },
+    { t: '旅行業保証保険', d: '旅行者保護のための賠償責任保険に加入' },
+    { t: '韓国 事業者登録証', d: '韓国にて正式に事業者登録' },
+    { t: '韓国 通信販売業申告証', d: 'オンライン販売の正式申告済み' },
 ];
 export const CERT_TAGS = ['事業者登録', '観光事業登録', '旅行業保証保険', '現地法人設立', 'MATA 正式登録'];
 

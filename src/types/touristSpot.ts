@@ -16,6 +16,7 @@ export type SpotRegion =
     | 'ulaanbaatar'  // 울란바타르 (수도, 도시 명소)
     | 'experience'   // 체험 (액티비티, 문화 체험)
     | 'food'         // 음식 (현지 음식, 레스토랑)
+    | 'vehicle'      // 차량 (견적서·일정표 「専用車両」 사진 — 일정 선택 목록에는 안 나옴)
     | '';
 
 export const SPOT_REGION_OPTIONS: { value: SpotRegion; label: string }[] = [
@@ -25,6 +26,7 @@ export const SPOT_REGION_OPTIONS: { value: SpotRegion; label: string }[] = [
     { value: 'ulaanbaatar', label: '울란바타르' },
     { value: 'experience', label: '체험' },
     { value: 'food', label: '음식' },
+    { value: 'vehicle', label: '차량' },
 ];
 
 export interface TouristSpot {

@@ -27,6 +27,7 @@ const REGION_FILTER_TABS: { value: RegionFilter; label: string }[] = [
     { value: 'ulaanbaatar', label: '울란바타르' },
     { value: 'experience', label: '체험' },
     { value: 'food', label: '음식' },
+    { value: 'vehicle', label: '차량' },
     { value: 'uncat', label: '미분류' },
 ];
 

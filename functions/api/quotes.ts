@@ -3,15 +3,19 @@ import { drizzle } from 'drizzle-orm/d1';
 import { quotes } from '../../src/db/schema';
 import { initializeLucia } from '../lib/auth';
 import { getCookie } from 'hono/cookie';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, or, sql } from 'drizzle-orm';
 import { getSessionUser } from '../lib/userAuth';
 import { sendEmail, baseLayout } from '../lib/mailer';
+import { requireAdmin } from '../lib/adminAuth';
+import { generateQuoteDraft } from '../lib/aiQuoteDraft';
+import { inferActivityType } from '../../src/constants/quoteOptions';
 
 // Define Env locally if global scope is not picked up
 interface Env {
     DB: D1Database;
     BUCKET: R2Bucket;
     RESEND_API_KEY?: string;
+    ANTHROPIC_API_KEY?: string;
     ADMIN_EMAIL?: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
@@ -66,7 +70,13 @@ app.get('/', async (c) => {
     if (user.role === 'admin') {
         result = await db.select().from(quotes).orderBy(desc(quotes.createdAt)).all();
     } else {
-        result = await db.select().from(quotes).where(eq(quotes.userId, user.id)).orderBy(desc(quotes.createdAt)).all();
+        // 본인 계정 견적 + 같은 이메일로 받은 견적(관리자가 인스타·메일 문의로 만든 견적은 계정 없이 이메일만 있다)
+        // — 예약 목록과 같은 방식. 이메일은 대소문자를 구분하지 않는다
+        const email = String(user.email || '').trim().toLowerCase();
+        const mine = email
+            ? or(eq(quotes.userId, user.id), sql`lower(trim(${quotes.email})) = ${email}`)
+            : eq(quotes.userId, user.id);
+        result = await db.select().from(quotes).where(mine).orderBy(desc(quotes.createdAt)).all();
     }
 
     return c.json(result.map(parseQuoteRow));
@@ -282,6 +292,87 @@ app.delete('/:id', async (c) => {
     await db.delete(quotes).where(eq(quotes.id, id)).run();
 
     return c.json({ success: true });
+});
+
+// POST /api/quotes/:id/ai-draft — AI 견적 초안 (관리자 전용). 저장하지 않고 편집기에 돌려준다.
+// body: { people?, startDate?, endDate? } — 편집기에서 관리자가 고친 값이 있으면 그걸 우선
+app.post('/:id/ai-draft', requireAdmin, async (c) => {
+    const apiKey = c.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return c.json({ error: 'AI 키(ANTHROPIC_API_KEY)가 아직 설정되지 않았습니다. Cloudflare 환경 변수에 등록해 주세요.' }, 503);
+
+    const id = c.req.param('id');
+    const row: any = await c.env.DB.prepare('SELECT * FROM quotes WHERE id = ?').bind(id).first();
+    if (!row) return c.json({ error: '견적을 찾을 수 없습니다.' }, 404);
+    const body: any = await c.req.json().catch(() => ({}));
+
+    // 기간 → DAY 수 (날짜가 있으면 날짜로, 없으면 「3泊4日」·「4박5일」 같은 글에서)
+    const startDate = String(body.startDate || row.confirmed_start_date || '').slice(0, 10);
+    const endDate = String(body.endDate || row.confirmed_end_date || '').slice(0, 10);
+    let dayCount: number | null = null;
+    if (startDate && endDate) {
+        const n = Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86400000) + 1;
+        if (n >= 1 && n <= 20) dayCount = n;
+    }
+    if (!dayCount) {
+        const m = String(row.period || '').match(/(\d+)\s*(?:泊|박)\s*(\d+)\s*(?:日|일)/);
+        if (m) dayCount = Math.min(20, Number(m[2]));
+    }
+
+    // 관광지(음식·차량 제외, 사진 있는 곳) · 호텔 목록
+    const parseImgs = (v: unknown): string[] => { try { const a = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(a) ? a.filter((x: unknown) => typeof x === 'string' && x) : []; } catch { return []; } };
+    const spotRows = ((await c.env.DB.prepare("SELECT id, name_kr, region, description, images FROM tourist_spots WHERE (is_active IS NULL OR is_active = 1) AND (region IS NULL OR region NOT IN ('food','vehicle'))").all()).results || []) as any[];
+    const hotelRows = ((await c.env.DB.prepare('SELECT id, name_kr, name_local, city, star_rating, address, description, images FROM hotels WHERE (is_active IS NULL OR is_active = 1)').all()).results || []) as any[];
+    const spots = spotRows.filter(s => parseImgs(s.images).length);
+    const oneLine = (t: unknown, n: number) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, n);
+
+    try {
+        const { draft, usage, model } = await generateQuoteDraft(apiKey, {
+            destination: row.destination, headcount: row.headcount, people: Number(body.people) || null, period: row.period,
+            startDate, endDate, budget: row.budget, travelTypes: row.travel_types, accommodations: row.accommodations,
+            vehicle: row.vehicle, additionalRequest: row.additional_request, dayCount,
+        },
+        spots.map(s => ({ id: String(s.id), name: oneLine(s.name_kr, 60), region: String(s.region || ''), desc: oneLine(s.description, 50) })),
+        hotelRows.map(h => ({ id: String(h.id), name: oneLine(h.name_kr, 60), local: oneLine(h.name_local, 40), city: oneLine(h.city, 20), stars: Number(h.star_rating) || 0 })));
+
+        // AI 가 고른 ID → 우리 자료 (없는 ID 는 버린다)
+        const spotById = new Map(spots.map(s => [String(s.id), s]));
+        const hotelById = new Map(hotelRows.map(h => [String(h.id), h]));
+        const days = draft.days.map((d, i) => {
+            const titleSpot = spotById.get(d.titleSpotId);
+            const hotel = hotelById.get(d.hotelId);
+            return {
+                day: i + 1,
+                title: d.titleJa.trim(),
+                titleKo: d.titleKo.trim(),
+                ...(titleSpot ? { titleImage: parseImgs(titleSpot.images)[0] } : {}),
+                region: d.regionJa.trim(),
+                move: d.moveJa.trim(),
+                summary: '',
+                activities: d.items.filter(it => it.ja.trim()).map(it => {
+                    const s = spotById.get(it.spotId);
+                    return { time: '', type: inferActivityType(it.ja), title: it.ja.trim(), ko: it.ko.trim(), description: '', images: s ? parseImgs(s.images).slice(0, 4) : [] };
+                }),
+                meals: { breakfast: d.breakfast, lunch: d.lunch, dinner: d.dinner },
+                accommodation: hotel
+                    ? { id: String(hotel.id), name: String(hotel.name_kr), location: String(hotel.address || ''), images: parseImgs(hotel.images), description: String(hotel.description || '') }
+                    : (d.stayJa.trim() ? { name: d.stayJa.trim(), images: [] } : null),
+            };
+        });
+        return c.json({
+            draft: { title: draft.tripTitleJa, titleKo: draft.tripTitleKo, days, included: draft.included, excluded: draft.excluded, noteKo: draft.adminNoteKo },
+            model,
+            usage: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens ?? 0 },
+        });
+    } catch (e: any) {
+        console.error('[Quotes ai-draft] failed', e);
+        // 크레딧 소진·키 오류 등도 그대로 알려 준다 (관리자 화면)
+        const status = Number(e?.status) || 0;
+        const msg = status === 401 ? 'AI 키가 올바르지 않습니다. Cloudflare 의 ANTHROPIC_API_KEY 를 확인해 주세요.'
+            : status === 429 ? 'AI 요청이 잠시 많습니다. 1분 뒤 다시 시도해 주세요.'
+            : status === 402 || e?.type === 'billing_error' ? 'AI 크레딧(결제)에 문제가 있습니다 — 이번 달 크레딧을 다 썼을 수 있습니다. 직접 작성하거나 Console 에서 확인해 주세요.'
+            : (e?.message ? `AI 초안 만들기 실패: ${String(e.message).slice(0, 200)}` : 'AI 초안 만들기에 실패했습니다.');
+        return c.json({ error: msg }, 502);
+    }
 });
 
 export default app;

@@ -6,24 +6,32 @@ import type { TripDoc, DesignSpotLite } from './tripDocModel';
 import { toImages } from './tripDocModel';
 import { loadDesignSpots } from '../product/designTemplates/designSpots';
 import nightImg from '../../assets/about/about-night.webp';
-import team1Img from '../../assets/about/about-team-1.webp';
+import teamPhoto from '../../assets/team/team-photo.webp';
 import team2Img from '../../assets/about/about-team-2.webp';
 
 /**
  * 견적서·확정일정표 사진은 따로 등록하지 않고 기존 자료를 그대로 재사용한다.
  *
  * - 일자별 여행지 · 볼거리      ← 문서 편집기에서 관광지 마스터로 고른 일정 사진
- * - 숙소 섹션                  ← 문서의 일자별 숙소(호텔 마스터) + 호텔 마스터의 게르 숙소
- * - 식사 · 특별 요리 · 현지 요리 ← 관광지 마스터 「음식(food)」 분류
- * - 타사 비교(유목민 게르)       ← 관광지 마스터 「遊牧民」 체험
- * - 표지 · 팀 · 공항 미팅 배경   ← 회사소개 페이지 사진(src/assets/about)
+ * - 숙소 섹션(고급·일반 게르)   ← 호텔 마스터의 게르 숙소 (이름에 高級/プレミアム · 一般/スタンダード)
+ * - 차량 섹션                  ← 관광지 마스터 「차량(vehicle)」 분류 (이름 = 차종, 사진 = 차량 사진)
+ * - 식사 · 특별 요리            ← 관광지 마스터 「음식(food)」 분류
+ * - 표지 · 팀 사진              ← 회사소개 페이지 사진(src/assets/about)
  * - 사진이 없는 곳(관광지명 매칭) ← 관광지 마스터 → 여행지 사진 순으로 이름 매칭
  */
 
 export interface QuoteSpecial { id: string; name: string; sub: string; desc: string; image: string }
 export interface LocalFood { img: string; t: string; s: string; en: string }
+export interface Vehicle { name: string; img: string }
 export interface TripImages {
     slots: Record<string, string>;
+    /** 숙소 섹션 — 고급 게르 / 일반 게르 사진 (각 최대 4장) */
+    stayPremium: string[];
+    stayStandard: string[];
+    /** 차량 섹션 (관광지 마스터 「차량」) */
+    vehicles: Vehicle[];
+    /** 식사 섹션 맨 위 사진 띠 */
+    foodStrip: string[];
     /** 이번 문서에 포함된 特別料理 */
     specials: QuoteSpecial[];
     /** おすすめ現地料理 카드 */
@@ -80,7 +88,7 @@ export const spotToSpecial = (s: TouristSpot): QuoteSpecial => ({
 
 /** 사진 없는 일정 항목·경로를 채울 이름 매칭 후보 (관광지 마스터 → 여행지 사진) */
 export const fallbackSpots = (src: TripSources): DesignSpotLite[] => [
-    ...src.spots.filter(s => s.images?.length).map(s => ({ name: cleanSpotName(s.name_kr), image: s.images![0] })),
+    ...src.spots.filter(s => s.region !== 'vehicle' && s.images?.length).map(s => ({ name: cleanSpotName(s.name_kr), image: s.images![0] })),
     ...src.designSpots,
 ];
 
@@ -108,7 +116,7 @@ export function resolveTripImages(doc: TripDoc | null, src: TripSources): TripIm
     const foodImg = (i: number) => foods[i % Math.max(1, foods.length)]?.images?.[0] || '';
     const slots: Record<string, string> = {
         'quote-hero': nightImg,
-        'quote-team': team1Img,
+        'quote-team': teamPhoto,
         'quote-meet-3': team2Img,
         'quote-stay-lux': premium?.images?.[0] || stayPool[0] || '',
         'quote-stay-ger': standard?.images?.[0] || stayPool[1] || '',
@@ -128,5 +136,16 @@ export function resolveTripImages(doc: TripDoc | null, src: TripSources): TripIm
     for (const k of Object.keys(slots)) if (!slots[k]) delete slots[k];
 
     const localFoods: LocalFood[] = foods.slice(0, 6).map(f => ({ img: f.images?.[0] || '', t: cleanSpotName(f.name_kr), s: f.name_local || '', en: spotEn(f.name_kr).toUpperCase() }));
-    return { slots, specials, localFoods };
+
+    // 고급 게르 = 이름에 高級/プレミアム 등이 붙은 게르 숙소, 일반 게르 = 一般/スタンダード
+    const premiumImgs = uniq(gerHotels.filter(h => PREMIUM.test(`${h.name_kr} ${h.name_local || ''}`)).flatMap(h => h.images || []));
+    const standardImgs = uniq(gerHotels.filter(h => STANDARD.test(`${h.name_kr} ${h.name_local || ''}`)).flatMap(h => h.images || []));
+    const stayPremium = (premiumImgs.length ? premiumImgs : stayPool).slice(0, 4);
+    const stayStandard = standardImgs.slice(0, 4);
+    const vehicles: Vehicle[] = src.spots
+        .filter(s => s.region === 'vehicle' && s.images?.length)
+        .map(s => ({ name: cleanSpotName(s.name_kr), img: s.images![0] }));
+    // 음식 사진 띠 — 음식 분류 사진을 고루 섞어 최대 6장
+    const foodStrip = uniq([...foods.map(f => f.images?.[0] || ''), ...foods.flatMap(f => (f.images || []).slice(1))]).slice(0, 6);
+    return { slots, specials, localFoods, stayPremium, stayStandard, vehicles, foodStrip };
 }

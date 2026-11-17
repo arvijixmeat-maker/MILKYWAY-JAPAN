@@ -11,6 +11,8 @@ export const TRIP_DOC_CSS = `
 .tdoc .td-hov:hover{background:${C.mintBg}!important}
 .tdoc .td-lift{transition:transform .25s cubic-bezier(.22,.61,.36,1)}
 .tdoc .td-lift:hover{transform:translateY(-3px)}
+.tdoc .tdoc-printonly{display:none!important}
+.tdoc .tdoc-marq:hover>div,.tdoc .tdoc-marq:active>div{animation-play-state:paused!important}
 @keyframes qKen{0%{transform:scale(1.08) translate(0,0)}100%{transform:scale(1.18) translate(-2%,-2%)}}
 @keyframes qUp{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
 @keyframes qFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
@@ -25,9 +27,11 @@ export const TRIP_DOC_CSS = `
 @keyframes qFilmKen{0%{transform:scale(1.02)}100%{transform:scale(1.14)}}
 @keyframes qBar1{0%{width:0}50%{width:100%}100%{width:100%}}
 @keyframes qBar2{0%{width:0}50%{width:0}100%{width:100%}}
+@keyframes qStory{0%{width:0}100%{width:100%}}
 @media (prefers-reduced-motion: reduce){.tdoc *{animation:none!important;transition:none!important}}
 @media print{
   .tdoc-noprint{display:none!important}
+  .tdoc .tdoc-printonly{display:flex!important}
   .tdoc *{animation:none!important}
   .tdoc{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .tdoc section{break-inside:avoid-page}

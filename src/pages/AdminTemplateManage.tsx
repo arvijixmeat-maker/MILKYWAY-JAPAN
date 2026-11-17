@@ -12,11 +12,15 @@ import { defaultQuoteDocSettings, mergeQuoteDocSettings, type QuoteDocSettings }
 
 // ─── Types ───────────────────────────────────────────────
 export type ActivityType = 'pickup' | 'transport' | 'meal' | 'sightseeing' | 'activity' | 'checkin' | 'free' | 'other';
-export interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; }
+export interface Activity { time?: string; type?: ActivityType; title: string; description: string; images?: string[]; /** 관리자용 한국어 뜻 (AI 초안) — 고객 화면에는 안 나감 */ ko?: string; }
 export interface TemplateDay {
     day: number;
     date?: string;
     title: string;
+    /** DAY 제목을 관광지 마스터에서 골랐을 때 그 사진 — 견적서 일정 카드(루트 필름) 사진 */
+    titleImage?: string;
+    /** DAY 제목의 한국어 뜻 (AI 초안) — 관리자 화면 전용 */
+    titleKo?: string;
     region?: string;
     summary?: string;
     /** 이동 시간(목안) — 새 견적서 「移動 約4時間」 표시 */

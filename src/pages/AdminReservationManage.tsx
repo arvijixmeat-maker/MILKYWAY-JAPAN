@@ -4,7 +4,7 @@ import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
 import { type QuoteRequest, ConvertSelectionModal, QuoteDetailModal } from '../components/admin/QuoteModals';
 import { buildReservationFromQuote } from '../components/admin/quoteConvert';
-import { sendNotificationEmail } from '../lib/email';
+import { sendNotificationEmail, sendNotificationEmailOrThrow } from '../lib/email';
 import { sendNotification } from '../utils/notification';
 import { ReservationDocumentEditor, type ReservationDocContent, type DocPricing } from '../components/admin/ReservationDocumentEditor';
 import { decodeTemplateDescription, mergeDocumentSettings } from './AdminTemplateManage';
@@ -1070,7 +1070,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         }
         setSendingItinerary(true);
         try {
-            await sendNotificationEmail(reservation.email, 'ITINERARY_READY', {
+            await sendNotificationEmailOrThrow(reservation.email, 'ITINERARY_READY', {
                 customerName: reservation.customerName,
                 productName: reservation.productName,
                 reservationId: reservationNumber,
@@ -1097,7 +1097,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
         }
         setSendingContract(true);
         try {
-            await sendNotificationEmail(reservation.email, 'CONTRACT_READY', {
+            await sendNotificationEmailOrThrow(reservation.email, 'CONTRACT_READY', {
                 customerName: reservation.customerName,
                 productName: reservation.productName,
                 reservationId: reservationNumber,
@@ -1136,7 +1136,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                 title: '일정표',
                 ready: itineraryReady,
                 sent: itinerarySent,
-                send: () => sendNotificationEmail(reservation.email!, 'ITINERARY_READY', {
+                send: () => sendNotificationEmailOrThrow(reservation.email!, 'ITINERARY_READY', {
                     customerName: reservation.customerName,
                     productName: reservation.productName,
                     reservationId: reservationNumber,
@@ -1153,7 +1153,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                 title: '계약서',
                 ready: contractReady,
                 sent: contractSent,
-                send: () => sendNotificationEmail(reservation.email!, 'CONTRACT_READY', {
+                send: () => sendNotificationEmailOrThrow(reservation.email!, 'CONTRACT_READY', {
                     customerName: reservation.customerName,
                     productName: reservation.productName,
                     reservationId: reservationNumber,
@@ -2202,6 +2202,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
             onUnassignAccommodation={handleAccommodationUnassign}
             previewMode={isQuoteRes ? 'quote' : 'confirmed'}
             previewUrl={isQuoteRes ? `${window.location.origin}/estimate/${reservation.id}` : itineraryUrl}
+            aiDraftQuoteId={isQuoteRes ? reservation.id : undefined}
         />
     </>);
 };
@@ -3488,9 +3489,9 @@ export const AdminReservationManage: React.FC = () => {
 
                                 if (!emailResult.success) {
                                     console.error('Email Send Error:', emailResult.error);
-                                    alert('견적 정보는 저장되었으나, 이메일 발송에 실패했습니다.');
+                                    alert('견적은 저장되어 고객 마이페이지·견적 링크에서 볼 수 있지만, 메일은 발송되지 않았습니다.\n고객 이메일 주소를 확인하거나 견적 링크를 직접 보내 주세요.');
                                 } else {
-                                    alert(`견적서가 발송되었습니다. (이메일 알림 포함)\n확정 금액: ${priceDetail.totalAmount ? priceDetail.totalAmount.toLocaleString() + '원' : '미입력'}`);
+                                    alert(`견적서를 발송했습니다. 고객 메일로 견적서 링크가 나갔습니다.\n확정 금액: ${priceDetail.totalAmount ? '¥' + priceDetail.totalAmount.toLocaleString() : '미입력'}`);
                                 }
                             } catch (emailError) {
                                 console.error('Email Unexpected Error:', emailError);
