@@ -295,7 +295,8 @@ app.delete('/:id', async (c) => {
 });
 
 // POST /api/quotes/:id/ai-draft — AI 견적 초안 (관리자 전용). 저장하지 않고 편집기에 돌려준다.
-// body: { people?, startDate?, endDate? } — 편집기에서 관리자가 고친 값이 있으면 그걸 우선
+// body: { people?, startDate?, endDate?, revise?: { instruction, current: { title, days, included, excluded } } }
+//   — 날짜·인원은 편집기에서 관리자가 고친 값이 있으면 그걸 우선. revise 가 있으면 지금 일정을 한국어 수정 요청대로 고친다 (「AI로 수정」)
 app.post('/:id/ai-draft', requireAdmin, async (c) => {
     // 키를 붙여 넣을 때 섞인 줄바꿈·공백 제거 (키 안에는 원래 공백이 없다 — 줄바꿈이 섞이면 「Invalid header value」로 실패)
     const apiKey = String(c.env.ANTHROPIC_API_KEY || '').replace(/\s+/g, '');
@@ -330,14 +331,51 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
         const productRows = ((await c.env.DB.prepare("SELECT id, name, duration, price, itinerary_blocks FROM products WHERE (status IS NULL OR status = 'active') ORDER BY sort_order ASC, created_at DESC LIMIT 30").all()).results || []) as any[];
         const oneLine = (t: unknown, n: number) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, n);
 
+        // 「AI로 수정」 — 편집기의 지금 일정을 AI 가 읽는 모양으로 (사진 → 관광지 ID, 숙소 → 호텔 ID)
+        const reviseReq = body?.revise && typeof body.revise === 'object' ? body.revise : null;
+        let revise: { currentJson: string; instruction: string } | undefined;
+        if (reviseReq) {
+            const instruction = String(reviseReq.instruction || '').trim().slice(0, 1500);
+            const cur = reviseReq.current || {};
+            const curDays: any[] = Array.isArray(cur.days) ? cur.days.slice(0, 20) : [];
+            if (!instruction) return c.json({ error: '수정할 내용을 적어 주세요.' }, 400);
+            if (!curDays.length) return c.json({ error: '고칠 일정이 없습니다. 먼저 「AI 초안」으로 일정을 만들어 주세요.' }, 400);
+            const spotIdByImage = new Map<string, string>();
+            for (const s of spots) for (const img of parseImgs(s.images)) if (!spotIdByImage.has(img)) spotIdByImage.set(img, String(s.id));
+            const hotelIds = new Set(hotelRows.map(h => String(h.id)));
+            const meal = (v: unknown) => oneLine(v, 40);
+            const current = {
+                tripTitleJa: oneLine(cur.title, 120),
+                days: curDays.map(d => {
+                    const acc = d?.accommodation && typeof d.accommodation === 'object' ? d.accommodation : null;
+                    const accId = acc?.id ? String(acc.id) : '';
+                    return {
+                        titleJa: oneLine(d?.title, 120), titleKo: oneLine(d?.titleKo, 120),
+                        titleSpotId: spotIdByImage.get(String(d?.titleImage || '')) || '',
+                        regionJa: oneLine(d?.region, 60), moveJa: oneLine(d?.move, 40),
+                        items: (Array.isArray(d?.activities) ? d.activities.slice(0, 20) : []).map((a: any) => ({
+                            ja: oneLine(a?.title, 200), ko: oneLine(a?.ko, 200),
+                            spotId: spotIdByImage.get(String((Array.isArray(a?.images) && a.images[0]) || '')) || '',
+                        })),
+                        hotelId: hotelIds.has(accId) ? accId : '',
+                        stayJa: acc && !hotelIds.has(accId) ? oneLine(acc.name, 80) : '',
+                        breakfast: meal(d?.meals?.breakfast), lunch: meal(d?.meals?.lunch), dinner: meal(d?.meals?.dinner),
+                    };
+                }),
+                included: (Array.isArray(cur.included) ? cur.included : []).map((x: unknown) => oneLine(x, 60)).slice(0, 40),
+                excluded: (Array.isArray(cur.excluded) ? cur.excluded : []).map((x: unknown) => oneLine(x, 60)).slice(0, 40),
+            };
+            revise = { currentJson: JSON.stringify(current), instruction };
+        }
+
         const { draft, usage, model } = await generateQuoteDraft(apiKey, {
             destination: row.destination, headcount: row.headcount, people: Number(body.people) || null, period: row.period,
             startDate, endDate, budget: row.budget, travelTypes: row.travel_types, accommodations: row.accommodations,
-            vehicle: row.vehicle, additionalRequest: row.additional_request, dayCount,
+            vehicle: row.vehicle, additionalRequest: row.additional_request, dayCount: revise ? null : dayCount,
         },
         spots.map(s => ({ id: String(s.id), name: oneLine(s.name_kr, 60), region: String(s.region || ''), desc: oneLine(s.description, 50) })),
         hotelRows.map(h => ({ id: String(h.id), name: oneLine(h.name_kr, 60), local: oneLine(h.name_local, 40), city: oneLine(h.city, 20), stars: Number(h.star_rating) || 0 })),
-        summarizeProducts(productRows));
+        summarizeProducts(productRows), revise);
 
         // AI 가 고른 ID → 우리 자료 (없는 ID 는 버린다)
         const spotById = new Map(spots.map(s => [String(s.id), s]));
