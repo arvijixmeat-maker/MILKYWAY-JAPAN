@@ -324,6 +324,12 @@ export const api = {
             body: JSON.stringify(data),
         }),
         delete: async (id: string) => request(`${API_BASE}/tourist-spots/${id}`, { method: 'DELETE' }),
+        /** 상품 일정의 우리 사진·설명으로 관광지 마스터 자동 채우기 (productId 가 있으면 그 상품만) */
+        autoFill: async (body: { productId?: string; dryRun?: boolean } = {}) => request(`${API_BASE}/tourist-spots/auto-fill`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        }),
     },
     hotels: {
         // Reusable master library — admin picks from this when filling out

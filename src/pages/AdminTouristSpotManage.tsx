@@ -54,6 +54,31 @@ export const AdminTouristSpotManage: React.FC = () => {
 
     const [editing, setEditing] = useState<TouristSpot | null>(null);
     const [isNew, setIsNew] = useState(false);
+    // 상품 사진으로 자동 채우기
+    const [autoBusy, setAutoBusy] = useState(false);
+    const [autoMsg, setAutoMsg] = useState<{ ok: boolean; text: string; names?: string[] } | null>(null);
+    const runAutoFill = async () => {
+        if (autoBusy) return;
+        setAutoBusy(true);
+        setAutoMsg({ ok: true, text: '상품 일정의 사진·설명을 살펴보는 중입니다… (1분 정도)' });
+        try {
+            const r: any = await api.touristSpots.autoFill({});
+            const created = (r?.created || []) as Array<{ name: string }>;
+            const improved = (r?.improved || []) as Array<{ name: string }>;
+            setAutoMsg({
+                ok: true,
+                text: created.length || improved.length
+                    ? `새로 등록 ${created.length}곳 · 설명·사진 보충 ${improved.length}곳 (상품 일정 ${r?.candidates || 0}줄 확인)`
+                    : `더 채울 곳이 없습니다 (상품 일정 ${r?.candidates || 0}줄 확인)`,
+                names: [...created.map(c => `＋ ${c.name}`), ...improved.map(c => `↻ ${c.name}`)],
+            });
+            await load();
+        } catch (e) {
+            setAutoMsg({ ok: false, text: e instanceof Error ? e.message : '자동 채우기에 실패했습니다.' });
+        } finally {
+            setAutoBusy(false);
+        }
+    };
 
     const load = async () => {
         setLoading(true);
@@ -164,13 +189,29 @@ export const AdminTouristSpotManage: React.FC = () => {
             activePage="tourist-spots"
             title="관광지 마스터"
             actions={
-                <button type="button" onClick={startNew} className="btn btn-ink">
-                    <Icon name="add" />
-                    관광지 추가
-                </button>
+                <>
+                    <button type="button" onClick={runAutoFill} disabled={autoBusy} className="btn btn-ghost"
+                        title="상품 일정에 올린 사진·설명으로, 마스터에 없는 관광지·체험을 자동 등록하고 설명이 짧은 곳을 보충합니다 (상품을 저장할 때도 자동 실행)">
+                        <Icon name="auto_awesome" />
+                        {autoBusy ? '채우는 중…' : '상품 사진으로 자동 채우기'}
+                    </button>
+                    <button type="button" onClick={startNew} className="btn btn-ink">
+                        <Icon name="add" />
+                        관광지 추가
+                    </button>
+                </>
             }
         >
             <div className="route-anim">
+                {autoMsg && (
+                    <div role="status" style={{ marginBottom: 12, padding: '12px 16px', borderRadius: 12, background: autoMsg.ok ? '#E8FAF5' : '#FFF1F0', color: autoMsg.ok ? '#007F75' : '#B42318', fontSize: 13, fontWeight: 700 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ flex: 1 }}>{autoMsg.text}</span>
+                            {!autoBusy && <button type="button" onClick={() => setAutoMsg(null)} style={{ border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', fontWeight: 700 }}>✕</button>}
+                        </div>
+                        {!!autoMsg.names?.length && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 500, color: '#3F5856', lineHeight: 1.7 }}>{autoMsg.names.join('  ·  ')}</div>}
+                    </div>
+                )}
                 {/* Toolbar: search + region select + 사용여부 select + add button */}
                 <div className="toolbar">
                     <label className="tb-search">
@@ -281,6 +322,9 @@ export const AdminTouristSpotManage: React.FC = () => {
                                                 </td>
                                                 <td>
                                                     <span className="cell-strong">{s.name_kr}</span>
+                                                    {s.id.startsWith('spot-auto-') && (
+                                                        <span title="상품 일정의 사진·설명으로 자동 등록" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: '#E8FAF5', color: '#007F75', fontSize: 10.5, fontWeight: 700 }}>자동</span>
+                                                    )}
                                                     {s.name_local && (
                                                         <span className="cell-muted" style={{ marginLeft: 8, fontSize: 12.5 }}>
                                                             {s.name_local}

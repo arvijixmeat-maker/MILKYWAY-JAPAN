@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { requireAdmin } from '../lib/adminAuth';
+import { autoFillSpots, collectCandidates, loadExistingSpots } from '../lib/spotAutoFill';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -19,6 +20,34 @@ const decorate = (row: any) => ({
     ...row,
     images: safeArr(row.images),
     is_active: row.is_active === 1 || row.is_active === true,
+});
+
+// POST /api/tourist-spots/auto-fill — 상품 일정의 우리 사진·설명으로 관광지 마스터를 자동으로 채운다 (관리자 전용)
+// body: { productId?: 그 상품만 (상품 저장 직후 자동 실행), dryRun?: true 면 DB 에 쓰지 않고 계획만 }
+app.post('/auto-fill', requireAdmin, async (c) => {
+    const apiKey = String(c.env.ANTHROPIC_API_KEY || '').replace(/\s+/g, '');
+    if (!apiKey.startsWith('sk-ant-')) return c.json({ error: 'AI 키(ANTHROPIC_API_KEY)가 설정되지 않았거나 올바르지 않습니다.' }, 503);
+    const body: any = await c.req.json().catch(() => ({}));
+    const db = c.env.DB;
+    try {
+        const productId = typeof body.productId === 'string' ? body.productId : '';
+        const products = ((productId
+            ? await db.prepare('SELECT id, name, itinerary_blocks FROM products WHERE id = ?').bind(productId).all()
+            : await db.prepare("SELECT id, name, itinerary_blocks FROM products WHERE (status IS NULL OR status != 'deleted') ORDER BY sort_order ASC, created_at DESC LIMIT 60").all()
+        ).results || []) as Array<Record<string, unknown>>;
+        const candidates = collectCandidates(products, productId ? 40 : 120);
+        const existing = await loadExistingSpots(db);
+        const result = await autoFillSpots(apiKey, db, candidates, existing, body.dryRun === true);
+        return c.json({ success: true, ...result });
+    } catch (e: any) {
+        console.error('[tourist-spots auto-fill] failed', e);
+        const status = Number(e?.status) || 0;
+        const msg = status === 401 ? 'AI 키가 올바르지 않습니다.'
+            : status === 429 ? 'AI 요청이 잠시 많습니다. 1분 뒤 다시 시도해 주세요.'
+            : status === 402 || e?.type === 'billing_error' ? 'AI 크레딧(결제)에 문제가 있습니다.'
+            : `자동 채우기 실패: ${String(e?.message || e).slice(0, 200)}`;
+        return c.json({ error: msg }, 500);
+    }
 });
 
 // GET /api/tourist-spots?q=&active=&region=central|gobi|hovsgol|uncat

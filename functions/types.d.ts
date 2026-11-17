@@ -7,5 +7,7 @@ declare global {
         GOOGLE_CLIENT_ID: string;
         GOOGLE_CLIENT_SECRET: string;
         ENVIRONMENT: string;
+        /** Claude API 키 — AI 견적 초안 · 관광지 자동 채우기 */
+        ANTHROPIC_API_KEY?: string;
     }
 }
