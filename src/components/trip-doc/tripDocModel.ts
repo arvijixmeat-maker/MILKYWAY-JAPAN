@@ -114,6 +114,8 @@ export interface TripDay {
     titleImage: string;
     region: string;
     move: string;
+    /** 그날의 포인트 (편집기 「DAY 포인트」) */
+    note: string;
     items: string[];
     activities: TripActivity[];
     stay: string;
@@ -332,6 +334,7 @@ export function buildTripDoc(input: BuildInput): TripDoc {
             titleImage: typeof d?.titleImage === 'string' ? d.titleImage.trim() : '',
             region: String(d?.region || '').trim(),
             move: String(d?.move || '').trim(),
+            note: String(d?.note || '').trim(),
             items: items.length ? items : (d?.summary ? lines(d.summary) : []),
             activities: acts,
             stay: acc?.name ? String(acc.name) : '—',

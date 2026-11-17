@@ -25,6 +25,10 @@ export interface TemplateDay {
     summary?: string;
     /** 이동 시간(목안) — 새 견적서 「移動 約4時間」 표시 */
     move?: string;
+    /** 그날의 포인트 (일본어 한 문장) — 고객 견적서 DAY 안에 표시 */
+    note?: string;
+    /** 포인트의 한국어 뜻 (AI 초안) — 관리자 화면 전용 */
+    noteKo?: string;
     activities: Activity[];
     meals?: { breakfast?: string; lunch?: string; dinner?: string };
     accommodation?: {

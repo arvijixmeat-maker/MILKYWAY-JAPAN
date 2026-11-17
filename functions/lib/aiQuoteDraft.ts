@@ -17,6 +17,8 @@ const INC_CHOICES = INC_OPTS.map(([ja]) => ja);
 const EXC_CHOICES = EXC_OPTS.map(([ja]) => ja);
 /** 관리자 확인 메모의 꼬리표 — 편집기 안내 카드에 색으로 구분해 보여 준다 */
 export const MEMO_TAGS = ['일정', '숙소 확인', '요청', '날짜', '금액', '기타'];
+/** 요청 반영 체크리스트의 상태 */
+export const CHECK_STATUS = ['반영', '일부 반영', '확인 필요', '반영 못 함'];
 
 /**
  * 구조화 출력용 JSON 스키마 — Zod 를 쓰지 않고 직접 적는다.
@@ -35,10 +37,12 @@ const DRAFT_SCHEMA = obj({
             titleSpotId: str('DAYの代表写真にする観光地ID（リストのIDのみ。無ければ空文字）'),
             regionJa: str('地域名（日本語、例: テレルジ）'),
             moveJa: str('その日の主な移動時間（例: 約4時間）。移動がほぼ無ければ空文字'),
+            noteJa: str('その日のポイントを日本語1文（お客様画面に表示。例: 乗馬は合計約4時間。基礎から段階的に練習します）。特に無ければ空文字'),
+            noteKo: str('같은 포인트의 한국어'),
             items: {
                 type: 'array',
                 items: obj({
-                    ja: str('日程の1行（日本語・丁寧で簡潔）'),
+                    ja: str('日程の1行（日本語・丁寧）。重視される体験は所要時間を（約2時間）のように付ける。補足・別行動の方の過ごし方は全角「（」で始まる行にする'),
                     ko: str('같은 줄의 한국어 뜻'),
                     spotId: str('この行に対応する観光地ID（リストのIDのみ。無ければ空文字）'),
                 }),
@@ -60,13 +64,22 @@ const DRAFT_SCHEMA = obj({
         items: obj({ tag: { enum: MEMO_TAGS }, textKo: str('메모 한 문장 (한국어)') }),
     },
     budgetNoteKo: str('고객 예산에 대한 한국어 한 줄 판단 (예: 「1인 약 8만엔 — 표준 일정으로 충분」). 예산 정보가 없으면 빈 문자열'),
+    requestChecks: {
+        type: 'array',
+        description: '고객 요청서의 희망·질문·제외 지시를 하나씩 — 일정에 어떻게 넣었는지 (요청 항목 수만큼, 보통 5〜12개)',
+        items: obj({
+            itemKo: str('요청 항목 (한국어로 짧게, 예: 「초보자 승마 — 혼자 달리기까지」)'),
+            status: { enum: CHECK_STATUS },
+            howKo: str('어떻게 반영했는지 / 무엇을 확인해야 하는지 (한국어 한 문장)'),
+        }),
+    },
 });
 
 export interface QuoteDraft {
     tripTitleJa: string;
     tripTitleKo: string;
     days: Array<{
-        titleJa: string; titleKo: string; titleSpotId: string; regionJa: string; moveJa: string;
+        titleJa: string; titleKo: string; titleSpotId: string; regionJa: string; moveJa: string; noteJa: string; noteKo: string;
         items: Array<{ ja: string; ko: string; spotId: string }>;
         hotelId: string; stayJa: string; breakfast: string; lunch: string; dinner: string;
     }>;
@@ -76,6 +89,7 @@ export interface QuoteDraft {
     adminNoteKo: string;
     memosKo: Array<{ tag: string; textKo: string }>;
     budgetNoteKo: string;
+    requestChecks: Array<{ itemKo: string; status: string; howKo: string }>;
 }
 
 /** 응답 JSON → QuoteDraft (모양이 어긋난 칸은 빈 값으로) */
@@ -92,6 +106,7 @@ function toDraft(raw: unknown): QuoteDraft | null {
             const meal = (v: unknown) => (MEAL_CHOICES.includes(t(v)) ? t(v) : '');
             return {
                 titleJa: t(d.titleJa), titleKo: t(d.titleKo), titleSpotId: t(d.titleSpotId), regionJa: t(d.regionJa), moveJa: t(d.moveJa),
+                noteJa: t(d.noteJa), noteKo: t(d.noteKo),
                 items: arr(d.items).map(iv => { const i = (iv || {}) as Record<string, unknown>; return { ja: t(i.ja), ko: t(i.ko), spotId: t(i.spotId) }; }),
                 hotelId: t(d.hotelId), stayJa: t(d.stayJa), breakfast: meal(d.breakfast), lunch: meal(d.lunch), dinner: meal(d.dinner),
             };
@@ -101,6 +116,10 @@ function toDraft(raw: unknown): QuoteDraft | null {
         baseProductName: t(r.baseProductName), adminNoteKo: t(r.adminNoteKo),
         memosKo: arr(r.memosKo).map(mv => { const m = (mv || {}) as Record<string, unknown>; return { tag: MEMO_TAGS.includes(t(m.tag)) ? t(m.tag) : '기타', textKo: t(m.textKo) }; }).filter(m => m.textKo.trim()),
         budgetNoteKo: t(r.budgetNoteKo),
+        requestChecks: arr(r.requestChecks).map(cv => {
+            const c = (cv || {}) as Record<string, unknown>;
+            return { itemKo: t(c.itemKo), status: CHECK_STATUS.includes(t(c.status)) ? t(c.status) : '확인 필요', howKo: t(c.howKo) };
+        }).filter(c => c.itemKo.trim()),
     };
 }
 
@@ -124,9 +143,17 @@ export interface HotelLite { id: string; name: string; local: string; city: stri
 const SYSTEM = `あなたはモンゴル現地旅行会社「モンゴリア天の川（Milkyway Japan）」の旅程プランナーです。
 日本人のお客様のお見積りリクエストから、プライベートツアーの日程表の下書きを作ります。下書きは担当者（韓国語話者）が確認・修正してからお客様に送ります。
 
-ルール:
-- 日程の文章は日本語の丁寧で簡潔な表現（例: 「専用車でテレルジ国立公園へ移動（約2時間）」「乗馬体験（約1時間）」）。1日あたり3〜8行。
-- 各行・各タイトルに必ず自然な韓国語訳を付けます（担当者が読むため）。
+進め方:
+1. まずリクエスト本文を最後まで読み、希望・質問・「不要」「立ち寄らない」などの除外指示・参加者構成（年齢、参加しない人）・予算・宿泊条件・最終日の送迎先をすべて拾い出します。
+2. その全項目を日程に反映します。反映した方法を requestChecks に1項目ずつ書きます（反映 / 일부 반영 / 확인 필요 / 반영 못 함）。手配の可否・設備・料金など旅行会社が確認すべき点は「확인 필요」にします。
+3. 担当者向けの注意は memosKo に、予算の見立ては budgetNoteKo に書きます。
+
+日程の書き方:
+- 日本語の丁寧な表現。1日あたり4〜10行。
+- お客様が特に重視している体験（例: 乗馬）は、内容を段階的・具体的に書き、所要時間を付けます（例: 「乗馬レッスン①：乗り降り・手綱の持ち方・常歩の基礎（約1時間30分）」「乗馬レッスン②：方向転換・停止・速歩の練習（約2時間）」）。日ごとの合計時間がわかるようにします。
+- 補足や、別行動の方（乗馬をしない子ども・高齢の方など）の過ごし方は、直後に全角「（」で始まる行で書きます（例: 「（乗馬をしない方は、ゲル周辺で遊牧民の暮らし体験・草原散策をお楽しみいただけます）」）。
+- 各日の noteJa に、その日のポイントを1文で書きます（例: 「乗馬は合計約4時間。基礎から段階的に練習します」）。
+- 各行・各タイトル・noteJa に必ず自然な韓国語訳を付けます（担当者が読むため）。
 - 当社の既存商品（商品リスト）が当社の標準の旅程です。リクエストに一番近い商品の日程構成・移動・宿泊・食事を土台にし、お客様の希望（日数・体力・宿泊条件・やりたいこと）に合わせて調整してください。土台にした商品名を baseProductName に入れます。近い商品が無ければ一から作ります。
 - 観光地・ホテルは、渡されたリストのIDだけを使います。リストに無い場所は文章には書いてよいが、IDは空文字にします。存在しないIDを作らないでください。
 - 1日目は空港到着・ガイドとミーティング・ウランバートル市内、最終日は空港へ移動・出国が基本です（リクエストに別の指定があれば従います）。
@@ -148,7 +175,7 @@ function reviseMessage(revise: ReviseInput, request: string) {
 - 新しく入れる観光地・ホテルは、リストにあればそのIDを使います。無ければ文章だけ書いてIDは空文字にします。
 - 料金・日付の数字は作りません。料金に関する指示があれば、adminNoteKo に「금액은 직접 고쳐 주세요」と書くだけにします。
 - adminNoteKo には、実際に何を変えたかを韓国語で簡潔に書きます（3줄 이내、例: 「2일차: 테를지 → 엘승타사르해 / 3일차 숙소 고급 게르로」）。指示が曖昧だった点・できなかった点もここに書きます。
-- baseProductName は空文字にします。memosKo は修正後も担当者が確認すべき点（無ければ空配列）、budgetNoteKo は空文字で構いません。
+- baseProductName は空文字にします。memosKo は修正後も担当者が確認すべき点（無ければ空配列）、budgetNoteKo は空文字で構いません。requestChecks は修正後の日程に合わせて更新します（修正指示で変わった項目があれば status と howKo を直す）。
 
 現在の日程表（JSON）:
 <current>
@@ -186,7 +213,7 @@ export async function generateQuoteDraft(apiKey: string, req: DraftRequest, spot
 
     const response = await client.messages.create({
         model: MODEL,
-        max_tokens: 12000,
+        max_tokens: 16000,
         // 관광지·호텔 목록은 매번 같으므로 캐시 (요청 내용은 맨 뒤라 캐시 앞부분을 건드리지 않는다)
         system: [
             { type: 'text', text: SYSTEM },
