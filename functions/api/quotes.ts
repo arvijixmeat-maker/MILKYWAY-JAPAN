@@ -355,6 +355,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
                         titleJa: oneLine(d?.title, 120), titleKo: oneLine(d?.titleKo, 120),
                         titleSpotId: spotIdByImage.get(String(d?.titleImage || '')) || '',
                         regionJa: oneLine(d?.region, 60), moveJa: oneLine(d?.move, 40),
+                        noteJa: oneLine(d?.note, 200), noteKo: oneLine(d?.noteKo, 200),
                         items: (Array.isArray(d?.activities) ? d.activities.slice(0, 20) : []).map((a: any) => ({
                             ja: oneLine(a?.title, 200), ko: oneLine(a?.ko, 200),
                             spotId: spotIdByImage.get(String((Array.isArray(a?.images) && a.images[0]) || '')) || '',
@@ -392,6 +393,8 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
                 ...(titleSpot ? { titleImage: parseImgs(titleSpot.images)[0] } : {}),
                 region: d.regionJa.trim(),
                 move: d.moveJa.trim(),
+                note: d.noteJa.trim(),
+                noteKo: d.noteKo.trim(),
                 summary: '',
                 activities: d.items.filter(it => it.ja.trim()).map(it => {
                     const s = spotById.get(it.spotId);
@@ -410,6 +413,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
             draft: {
                 title: draft.tripTitleJa, titleKo: draft.tripTitleKo, days, included: draft.included, excluded: draft.excluded, noteKo: draft.adminNoteKo,
                 memos: draft.memosKo.map(m => ({ tag: m.tag, text: m.textKo })), budgetNote: draft.budgetNoteKo, budget: String(row.budget || ''),
+                checks: draft.requestChecks.map(c => ({ item: c.itemKo, status: c.status, how: c.howKo })),
                 baseProduct: baseRow ? { id: String(baseRow.id), name: String(baseRow.name), price: Number(baseRow.price) || 0, duration: String(baseRow.duration || '') } : null,
             },
             model,

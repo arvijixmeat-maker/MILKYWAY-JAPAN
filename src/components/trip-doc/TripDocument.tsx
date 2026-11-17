@@ -528,6 +528,13 @@ export const TripDocument: React.FC<TripDocumentProps> = ({ doc, images, bar, no
                                         </button>
                                         {o && (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 0 18px 4px' }}>
+                                                {d.note && (
+                                                    // 그날의 포인트 (편집기 「DAY 포인트」)
+                                                    <span style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 12, background: '#E8FAF5', fontSize: 12, fontWeight: 700, lineHeight: 1.6, color: C.mintDeep, overflowWrap: 'anywhere' }}>
+                                                        <span style={{ flex: 'none', ...inter, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', paddingTop: 2 }}>POINT</span>
+                                                        <span style={{ flex: 1, minWidth: 0 }}>{d.note}</span>
+                                                    </span>
+                                                )}
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                     {d.items.map((t, i) => <span key={i} style={{ fontSize: 12, lineHeight: 1.6, color: /^[（(]/.test(t) ? C.mute : C.body, wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{t}</span>)}
                                                 </div>

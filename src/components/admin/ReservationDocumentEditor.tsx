@@ -268,8 +268,13 @@ interface AiInfo {
     memos: Array<{ tag: string; text: string }>;
     budget: string;
     budgetNote: string;
+    /** 요청 반영 체크리스트 — 고객 요청 항목별로 반영 / 일부 반영 / 확인 필요 / 반영 못 함 */
+    checks: Array<{ item: string; status: string; how: string }>;
     fromCache: boolean;
 }
+const CHECK_COLOR: Record<string, [string, string]> = {
+    '반영': [C.mintBg, C.mintDeep], '일부 반영': [C.amberBg, C.amberFg], '확인 필요': [C.amberBg, C.amberFg], '반영 못 함': ['#FFF1F0', '#B42318'],
+};
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
 export const ReservationDocumentEditor: React.FC<Props> = ({
@@ -433,6 +438,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         title?: string; titleKo?: string; days: TemplateDay[]; included?: string[]; excluded?: string[]; noteKo?: string;
         baseProduct?: { id: string; name: string; price: number; duration: string } | null;
         memos?: Array<{ tag: string; text: string }>; budgetNote?: string; budget?: string;
+        checks?: Array<{ item: string; status: string; how: string }>;
     };
     const applyAiDraft = (draft: AiDraft, fromCache: boolean) => {
         if (!Array.isArray(draft?.days) || draft.days.length === 0) return;
@@ -455,7 +461,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         const memos = draft.memos?.length
             ? draft.memos
             : String(draft.noteKo || '').split(/\s*\n\s*|\s+\/\s+/).map(t => t.trim()).filter(Boolean).map(text => ({ tag: '기타', text }));
-        setAiInfo({ base: draft.baseProduct || null, summary: draft.memos?.length ? draft.noteKo || '' : '', memos, budget: draft.budget || '', budgetNote: draft.budgetNote || '', fromCache });
+        setAiInfo({ base: draft.baseProduct || null, summary: draft.memos?.length ? draft.noteKo || '' : '', memos, budget: draft.budget || '', budgetNote: draft.budgetNote || '', checks: draft.checks || [], fromCache });
         setNotice(null);
     };
     const runAiDraft = async (force: boolean) => {
@@ -704,7 +710,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                     return {
                         label: `DAY ${d.day}${dateOf(d.day) ? ` · ${dateOf(d.day)}` : ''}`,
                         title: d.titleKo || d.title,
-                        sub: [d.region ? `지역 ${d.region}` : '', d.move ? `이동 ${jaToKo(d.move)}` : ''].filter(Boolean).join('  ·  '),
+                        sub: [d.region ? `지역 ${d.region}` : '', d.move ? `이동 ${jaToKo(d.move)}` : '', d.noteKo || d.note ? `포인트 ${d.noteKo || d.note}` : ''].filter(Boolean).join('  ·  '),
                         lines: d.activities.map(a => a.ko || a.title).filter(Boolean),
                         stay: stay === '—' || stay.startsWith('— ') ? `없음 ${stay.replace(/^—\s*/, '')}`.trim() : stay,
                         meals: [['조식', mealKo(d.meals?.breakfast)], ['중식', mealKo(d.meals?.lunch)], ['석식', mealKo(d.meals?.dinner)]],
@@ -841,14 +847,22 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                 <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg,${C.mint} 0%,${C.mintHi} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={12} /></span>
                                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>AI 초안을 넣었어요{aiInfo.fromCache ? ' (앞서 만든 초안)' : ''}</span>
-                                    <span style={{ fontSize: 12, color: C.sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{aiInfo.summary || '내용을 확인하고 금액을 넣은 뒤 저장해 주세요'}</span>
+                                    <span style={{ fontSize: 12, color: C.sub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {aiInfo.checks.length > 0 && (() => {
+                                            // 요청 반영 요약 — 「요청 9개 · 반영 6 · 확인 필요 3」
+                                            const cnt = (st: string) => aiInfo.checks.filter(c => c.status === st).length;
+                                            const parts = [['반영', cnt('반영')], ['일부 반영', cnt('일부 반영')], ['확인 필요', cnt('확인 필요')], ['반영 못 함', cnt('반영 못 함')]].filter(([, n]) => n);
+                                            return <b style={{ color: C.ink, fontWeight: 700 }}>요청 {aiInfo.checks.length}개 · {parts.map(([k, n]) => `${k} ${n}`).join(' · ')} — </b>;
+                                        })()}
+                                        {aiInfo.summary || '내용을 확인하고 금액을 넣은 뒤 저장해 주세요'}
+                                    </span>
                                 </span>
                                 {undoDays && (
                                     <button type="button" onClick={undoAll} className="qe-hbg" style={{ flex: 'none', height: 32, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, background: '#FFFFFF', fontSize: 12, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>되돌리기</button>
                                 )}
-                                {(aiInfo.base || aiInfo.memos.length > 0 || aiInfo.budget || aiInfo.budgetNote) && (
+                                {(aiInfo.base || aiInfo.memos.length > 0 || aiInfo.checks.length > 0 || aiInfo.budget || aiInfo.budgetNote) && (
                                     <button type="button" onClick={() => setAiInfoOpen(v => !v)} style={{ flex: 'none', height: 32, padding: '0 10px', border: 0, borderRadius: 8, background: C.mintBg2, fontSize: 12, fontWeight: 700, color: C.mintDeep, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        {aiInfoOpen ? '접기' : `메모 보기${aiInfo.memos.length ? ` ${aiInfo.memos.length}` : ''}`}<Chevron open={aiInfoOpen} size={13} />
+                                        {aiInfoOpen ? '접기' : aiInfo.checks.length ? '요청 반영·메모 보기' : `메모 보기${aiInfo.memos.length ? ` ${aiInfo.memos.length}` : ''}`}<Chevron open={aiInfoOpen} size={13} />
                                     </button>
                                 )}
                                 <button type="button" aria-label="닫기" onClick={() => { setAiInfo(null); setUndoDays(null); setUndoRest(null); }} className="qe-hbg" style={iconBtn}>
@@ -876,6 +890,24 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                     {aiInfo.budget && aiInfo.budgetNote && <span style={{ fontSize: 12, color: C.sub }}>고객이 적은 예산: {aiInfo.budget}</span>}
                                                 </div>
                                             )}
+                                        </div>
+                                    )}
+                                    {aiInfo.checks.length > 0 && (
+                                        // 요청 반영 체크리스트 — 고객 요청서의 항목마다 일정에 어떻게 넣었는지
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 38 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: C.mute, marginBottom: 4 }}>고객 요청 반영 체크리스트</span>
+                                            {aiInfo.checks.map((c, k) => {
+                                                const [cb, cf] = CHECK_COLOR[c.status] || CHECK_COLOR['확인 필요'];
+                                                return (
+                                                    <div key={k} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderTop: k ? `1px solid ${C.line2}` : 0 }}>
+                                                        <span style={{ flex: 'none', minWidth: 58, height: 20, padding: '0 7px', boxSizing: 'border-box', borderRadius: 6, background: cb, fontSize: 10, fontWeight: 700, color: cf, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }}>{c.status}</span>
+                                                        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                            <span style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>{c.item}</span>
+                                                            {c.how && <span style={{ fontSize: 12, lineHeight: 1.6, color: C.body }}>{c.how}</span>}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                     {aiInfo.memos.length > 0 && (
@@ -1130,6 +1162,15 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}><Lbl>이동 시간</Lbl>
                                                         <input value={d.move || ''} placeholder="約4時間" onChange={e => patchDay(i, { move: e.target.value })} style={fieldStyle({ padding: '0 12px', fontFamily: JP, fontSize: 13 })} /></label>
                                                 </div>
+
+                                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: -6 }}>
+                                                    <Lbl note="고객 화면 DAY 안에 보여요 · 선택">DAY 포인트</Lbl>
+                                                    {/* 고치면 AI 가 단 한국어 뜻은 맞지 않으므로 지운다 */}
+                                                    <input value={d.note || ''} placeholder="乗馬は合計約4時間。基礎から段階的に練習します"
+                                                        onChange={e => patchDay(i, { note: e.target.value, noteKo: undefined })}
+                                                        style={fieldStyle({ fontFamily: JP, fontSize: 13 })} />
+                                                    {d.noteKo && <span style={{ fontSize: 11, color: C.mute }}>뜻: {d.noteKo}</span>}
+                                                </label>
 
                                                 {picking && (
                                                     // 관광지 마스터에서 고르면 DAY 제목(일본어)과 사진이 함께 들어간다
