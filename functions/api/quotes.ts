@@ -409,6 +409,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
         return c.json({
             draft: {
                 title: draft.tripTitleJa, titleKo: draft.tripTitleKo, days, included: draft.included, excluded: draft.excluded, noteKo: draft.adminNoteKo,
+                memos: draft.memosKo.map(m => ({ tag: m.tag, text: m.textKo })), budgetNote: draft.budgetNoteKo, budget: String(row.budget || ''),
                 baseProduct: baseRow ? { id: String(baseRow.id), name: String(baseRow.name), price: Number(baseRow.price) || 0, duration: String(baseRow.duration || '') } : null,
             },
             model,

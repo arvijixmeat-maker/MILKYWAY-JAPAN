@@ -15,6 +15,8 @@ const MODEL = 'claude-opus-5-5';
 const MEAL_CHOICES = ['', ...MEAL_KO.map(([ja]) => ja)];
 const INC_CHOICES = INC_OPTS.map(([ja]) => ja);
 const EXC_CHOICES = EXC_OPTS.map(([ja]) => ja);
+/** 관리자 확인 메모의 꼬리표 — 편집기 안내 카드에 색으로 구분해 보여 준다 */
+export const MEMO_TAGS = ['일정', '숙소 확인', '요청', '날짜', '금액', '기타'];
 
 /**
  * 구조화 출력용 JSON 스키마 — Zod 를 쓰지 않고 직접 적는다.
@@ -51,7 +53,13 @@ const DRAFT_SCHEMA = obj({
     included: { type: 'array', items: { enum: INC_CHOICES } },
     excluded: { type: 'array', items: { enum: EXC_CHOICES } },
     baseProductName: str('下書きの土台にした当社商品の名前（商品リストの名前そのまま）。どれも使っていなければ空文字'),
-    adminNoteKo: str('관리자에게 남기는 한국어 메모 — 참고한 상품과 바꾼 점, 요청에서 애매했던 점, 꼭 확인할 것 (3줄 이내)'),
+    adminNoteKo: str('관리자에게 남기는 한국어 한 줄 요약 — 참고한 상품과 크게 바꾼 점 (1줄)'),
+    memosKo: {
+        type: 'array',
+        description: '담당자가 확인할 한국어 메모 2〜5개 — 요청에서 애매한 점, 숙소·영업 여부 확인, 일정상 빠진 요청, 날짜·계절 주의 등',
+        items: obj({ tag: { enum: MEMO_TAGS }, textKo: str('메모 한 문장 (한국어)') }),
+    },
+    budgetNoteKo: str('고객 예산에 대한 한국어 한 줄 판단 (예: 「1인 약 8만엔 — 표준 일정으로 충분」). 예산 정보가 없으면 빈 문자열'),
 });
 
 export interface QuoteDraft {
@@ -66,6 +74,8 @@ export interface QuoteDraft {
     excluded: string[];
     baseProductName: string;
     adminNoteKo: string;
+    memosKo: Array<{ tag: string; textKo: string }>;
+    budgetNoteKo: string;
 }
 
 /** 응답 JSON → QuoteDraft (모양이 어긋난 칸은 빈 값으로) */
@@ -89,6 +99,8 @@ function toDraft(raw: unknown): QuoteDraft | null {
         included: arr(r.included).map(t).filter(x => INC_CHOICES.includes(x)),
         excluded: arr(r.excluded).map(t).filter(x => EXC_CHOICES.includes(x)),
         baseProductName: t(r.baseProductName), adminNoteKo: t(r.adminNoteKo),
+        memosKo: arr(r.memosKo).map(mv => { const m = (mv || {}) as Record<string, unknown>; return { tag: MEMO_TAGS.includes(t(m.tag)) ? t(m.tag) : '기타', textKo: t(m.textKo) }; }).filter(m => m.textKo.trim()),
+        budgetNoteKo: t(r.budgetNoteKo),
     };
 }
 
@@ -136,7 +148,7 @@ function reviseMessage(revise: ReviseInput, request: string) {
 - 新しく入れる観光地・ホテルは、リストにあればそのIDを使います。無ければ文章だけ書いてIDは空文字にします。
 - 料金・日付の数字は作りません。料金に関する指示があれば、adminNoteKo に「금액은 직접 고쳐 주세요」と書くだけにします。
 - adminNoteKo には、実際に何を変えたかを韓国語で簡潔に書きます（3줄 이내、例: 「2일차: 테를지 → 엘승타사르해 / 3일차 숙소 고급 게르로」）。指示が曖昧だった点・できなかった点もここに書きます。
-- baseProductName は空文字にします。
+- baseProductName は空文字にします。memosKo は修正後も担当者が確認すべき点（無ければ空配列）、budgetNoteKo は空文字で構いません。
 
 現在の日程表（JSON）:
 <current>
