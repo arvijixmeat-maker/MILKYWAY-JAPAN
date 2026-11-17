@@ -146,11 +146,19 @@ export const AdminProductManage: React.FC = () => {
             const isEditing = products.some(p => p.id === productToSave.id);
             console.log('Is editing?', isEditing);
 
+            // 일정(사진·설명)이 바뀌었으면 저장 뒤 관광지 마스터를 자동으로 채운다 (기다리지 않음)
+            const before = products.find(p => p.id === productToSave.id);
+            const itineraryChanged = JSON.stringify(before?.itineraryBlocks || null) !== JSON.stringify(productToSave.itineraryBlocks || null);
             try {
                 if (isEditing) {
                     await api.products.update(productToSave.id, dbPayload);
                 } else {
                     await api.products.create(dbPayload);
+                }
+                if (itineraryChanged && productToSave.id) {
+                    api.touristSpots.autoFill({ productId: productToSave.id })
+                        .then((r: any) => { if (r?.created?.length || r?.improved?.length) console.info('[관광지 자동 채우기]', r); })
+                        .catch((e: unknown) => console.warn('[관광지 자동 채우기] 건너뜀:', e));
                 }
             } catch (apiError: any) {
                 console.error('API call failed:', apiError);
