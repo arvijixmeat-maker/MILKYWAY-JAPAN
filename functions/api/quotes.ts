@@ -8,7 +8,7 @@ import { getSessionUser } from '../lib/userAuth';
 import { sendEmail, baseLayout } from '../lib/mailer';
 import { requireAdmin } from '../lib/adminAuth';
 import { generateQuoteDraft, summarizeProducts } from '../lib/aiQuoteDraft';
-import { inferActivityType } from '../../src/constants/quoteOptions';
+import { inferActivityType, periodDates } from '../../src/constants/quoteOptions';
 
 // Define Env locally if global scope is not picked up
 interface Env {
@@ -309,8 +309,10 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
     const body: any = await c.req.json().catch(() => ({}));
 
     // 기간 → DAY 수 (날짜가 있으면 날짜로, 없으면 「3泊4日」·「4박5일」 같은 글에서)
-    const startDate = String(body.startDate || row.confirmed_start_date || '').slice(0, 10);
-    const endDate = String(body.endDate || row.confirmed_end_date || '').slice(0, 10);
+    // 편집기 날짜 → 확정 날짜 → 고객이 적은 희망 일정(예: 2027-08-01 ~ 2027-08-04) 순
+    const wish = periodDates(row.period);
+    const startDate = String(body.startDate || row.confirmed_start_date || wish.start).slice(0, 10);
+    const endDate = String(body.endDate || row.confirmed_end_date || (body.startDate || row.confirmed_start_date ? '' : wish.end)).slice(0, 10);
     let dayCount: number | null = null;
     if (startDate && endDate) {
         const n = Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86400000) + 1;

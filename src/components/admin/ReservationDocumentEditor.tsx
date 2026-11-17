@@ -17,6 +17,7 @@ import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
 import { buildTripDoc, yen, DEFAULT_INCLUDED, DEFAULT_EXCLUDED } from '../trip-doc/tripDocModel';
 import { MEAL_KO, INC_OPTS, EXC_OPTS, inferActivityType } from '../../constants/quoteOptions';
+import { downloadKoItineraryImage } from './koItineraryImage';
 import { useTripSources, resolveTripImages, fallbackSpots, cleanSpotName } from '../trip-doc/tripDocSources';
 
 /**
@@ -211,6 +212,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     aiDraftQuoteId,
 }) => {
     const [name, setName] = useState('');
+    /** 여행 제목의 한국어 (AI 초안) — 한국어 일정표 이미지 제목에만 씀 */
+    const [nameKo, setNameKo] = useState('');
     const [description, setDescription] = useState('');
     const [days, setDays] = useState<TemplateDay[]>([]);
     const [ds, setDs] = useState<DocumentSettings>(defaultDocumentSettings());
@@ -263,6 +266,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         // 새 문서는 기본값(예시 요금)을 쓰지 않는다 — 총액이 있으면 총액 ÷ 인원, 없으면 빈칸
         if (!initialContent) merged.overview.pricePerPerson = customer?.totalAmount ? String(Math.round(customer.totalAmount / ppl)) : '';
         setName(initialContent?.name || customer?.tripType || '');
+        setNameKo('');
         setDescription(initialContent?.description || '');
         setDays(Array.isArray(initialContent?.days) ? initialContent!.days : []);
         setDs(merged);
@@ -319,6 +323,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         const included = (p.included || []).map(textOf).map((s: string) => s.trim()).filter(Boolean);
         const excluded = (p.excluded || []).map(textOf).map((s: string) => s.trim()).filter(Boolean);
         setName(p.name || name);
+        setNameKo('');
         setDays(imported);
         setOpenDay(0);
         resetDrafts();
@@ -351,6 +356,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setUndoRest(null);
         setDays(draft.days);
         if (draft.title) setName(draft.title);
+        setNameKo(draft.titleKo || '');
         setOpenDay(0);
         resetDrafts();
         setDs(cur => ({
@@ -407,6 +413,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
             setUndoRest({ name, included: ds.quoteDoc.included, excluded: ds.quoteDoc.excluded });
             setDays(merged);
             if (draft.title) setName(draft.title);
+            if (draft.titleKo) setNameKo(draft.titleKo);
             setDs(cur => ({ ...cur, quoteDoc: { ...cur.quoteDoc, included: draft.included || cur.quoteDoc.included, excluded: draft.excluded || cur.quoteDoc.excluded } }));
             resetDrafts();
             setReviseText('');
@@ -572,6 +579,52 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     if (!open) return null;
     const nights = startDate && endDate ? Math.round((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000) : null;
 
+    // ── 견적 담당자용 한국어 일정표 이미지 (숙소·식사 중심, 사진 없음) ──
+    const downloadKoImage = async () => {
+        if (!days.length) return;
+        const WD = ['일', '월', '화', '수', '목', '금', '토'];
+        const dateOf = (dayNo: number) => {
+            if (!startDate) return '';
+            const d = new Date(`${startDate}T00:00:00`);
+            d.setDate(d.getDate() + dayNo - 1);
+            return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`;
+        };
+        const jaToKo = (t = '') => t.replace(/約/g, '약 ').replace(/時間/g, '시간').replace(/分/g, '분').replace(/\s+/g, ' ').trim();
+        // 식사 — 목록 이름이면 한국어로, 섞인 글이면 아는 낱말만 바꾼다
+        const mealKo = (v = '') => {
+            const t = v.trim();
+            if (!t) return '없음';
+            if (/^(o|○|◯)$/i.test(t)) return '포함';
+            return koOf(t) || MEAL_KO.reduce((acc, [ja, ko]) => (ja.length > 1 ? acc.split(ja).join(ko) : acc), t);
+        };
+        try {
+            await downloadKoItineraryImage({
+                title: nameKo || name || '일정표',
+                meta: [
+                    customer?.name ? `고객 ${customer.name}` : '',
+                    `인원 ${people}명`,
+                    startDate ? `기간 ${startDate}${endDate ? ` ~ ${endDate}` : ''}${nights != null && nights >= 0 ? ` (${nights}박 ${nights + 1}일)` : ''}` : '',
+                    perPerson ? `1인 ¥${yen(perPerson)} · 총액 ¥${yen(total)}` : '',
+                ],
+                days: days.map(d => {
+                    const stay = assignedOf(d.day)?.name || d.accommodation?.name || '';
+                    return {
+                        label: `DAY ${d.day}${dateOf(d.day) ? ` · ${dateOf(d.day)}` : ''}`,
+                        title: d.titleKo || d.title,
+                        sub: [d.region ? `지역 ${d.region}` : '', d.move ? `이동 ${jaToKo(d.move)}` : ''].filter(Boolean).join('  ·  '),
+                        lines: d.activities.map(a => a.ko || a.title).filter(Boolean),
+                        stay: stay === '—' || stay.startsWith('— ') ? `없음 ${stay.replace(/^—\s*/, '')}`.trim() : stay,
+                        meals: [['조식', mealKo(d.meals?.breakfast)], ['중식', mealKo(d.meals?.lunch)], ['석식', mealKo(d.meals?.dinner)]],
+                    };
+                }),
+                included: incNow.map(t => koOf(t) || t),
+                excluded: excNow.map(t => koOf(t) || t),
+            }, `일정표_${customer?.name || '견적'}_${startDate || new Date().toISOString().slice(0, 10)}.png`);
+        } catch (e) {
+            setSaveError(e instanceof Error ? e.message : '이미지를 만들지 못했습니다.');
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[210] bg-slate-900/50 p-3 backdrop-blur-sm sm:p-6">
             <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[#F5F7FA] shadow-2xl dark:bg-slate-900">
@@ -686,6 +739,13 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                         <Section n={templateMode ? 2 : 3} title="일정표" hint={`${days.length}일`}
                             right={
                                 <div className="flex items-center gap-2">
+                                    {!templateMode && days.length > 0 && (
+                                        <button type="button" onClick={() => void downloadKoImage()}
+                                            title="견적 담당자용 — DAY별 일정·숙소·식사를 한국어로 정리한 이미지(PNG)를 내려받습니다 (고객에게는 나가지 않음)"
+                                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-700 hover:border-[#06C4A0] hover:text-[#007F75]">
+                                            <span className="material-symbols-outlined text-[16px]">download</span>한국어 일정표
+                                        </button>
+                                    )}
                                     {aiDraftQuoteId && !templateMode && (
                                         <button type="button" disabled={aiBusy} onClick={() => void runAiDraft(true)}
                                             title="고객 견적 요청 내용으로 일정 초안을 새로 만듭니다 (지금 일정은 「일정 되돌리기」로 되돌릴 수 있음)"
