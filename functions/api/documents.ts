@@ -358,10 +358,18 @@ app.post('/contract/:reservationId/customer', async (c) => {
         contractData.departure = { date: body.departure.date || '', time: body.departure.time || '', flight: body.departure.flight || '' };
     }
     if (body.agreement && body.agreement.agreed) {
+        // 손글씨 전자서명 — PNG data URL 만, 400KB 이하. 새 서명이 없으면 전에 받은 서명을 유지
+        const sig = typeof body.agreement.signature === 'string' ? body.agreement.signature : '';
+        const validSig = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(sig) && sig.length <= 400_000;
+        if (sig && !validSig) return c.json({ error: '署名データが正しくありません。書き直してから再度お試しください。' }, 400);
+        const name = String(body.agreement.name || '').trim().slice(0, 100);
+        if (!name) return c.json({ error: '署名欄にお名前を入力してください。' }, 400);
         contractData.agreement = {
             agreed: true,
-            name: body.agreement.name || '',
-            agreedAt: body.agreement.agreedAt || new Date().toISOString(),
+            name,
+            // 동의 시각은 서버 시계로 (고객 기기 시계를 믿지 않는다)
+            agreedAt: new Date().toISOString(),
+            ...(validSig ? { signature: sig } : contractData.agreement?.signature ? { signature: contractData.agreement.signature } : {}),
         };
     }
     contractData.customerSubmittedAt = new Date().toISOString();
