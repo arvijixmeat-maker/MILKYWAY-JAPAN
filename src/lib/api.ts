@@ -19,8 +19,14 @@ async function request(url: string, options?: RequestInit) {
     // Same-origin requests are unaffected.
     const res = await fetch(url, { credentials: 'include', ...options });
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        const text = await res.text().catch(() => '');
+        let msg = '';
+        try { msg = JSON.parse(text)?.error || ''; } catch { /* JSON 이 아닌 응답 (Cloudflare 오류 화면 등) */ }
+        if (!msg) {
+            const plain = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+            msg = `요청 실패 (HTTP ${res.status})${plain ? ` — ${plain}` : ''}`;
+        }
+        throw new Error(msg);
     }
     return res.json();
 }

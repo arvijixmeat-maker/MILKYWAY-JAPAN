@@ -7,7 +7,7 @@ import { eq, desc, or, sql } from 'drizzle-orm';
 import { getSessionUser } from '../lib/userAuth';
 import { sendEmail, baseLayout } from '../lib/mailer';
 import { requireAdmin } from '../lib/adminAuth';
-import { generateQuoteDraft } from '../lib/aiQuoteDraft';
+import { generateQuoteDraft, summarizeProducts } from '../lib/aiQuoteDraft';
 import { inferActivityType } from '../../src/constants/quoteOptions';
 
 // Define Env locally if global scope is not picked up
@@ -318,21 +318,24 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
         if (m) dayCount = Math.min(20, Number(m[2]));
     }
 
-    // 관광지(음식·차량 제외, 사진 있는 곳) · 호텔 목록
-    const parseImgs = (v: unknown): string[] => { try { const a = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(a) ? a.filter((x: unknown) => typeof x === 'string' && x) : []; } catch { return []; } };
-    const spotRows = ((await c.env.DB.prepare("SELECT id, name_kr, region, description, images FROM tourist_spots WHERE (is_active IS NULL OR is_active = 1) AND (region IS NULL OR region NOT IN ('food','vehicle'))").all()).results || []) as any[];
-    const hotelRows = ((await c.env.DB.prepare('SELECT id, name_kr, name_local, city, star_rating, address, description, images FROM hotels WHERE (is_active IS NULL OR is_active = 1)').all()).results || []) as any[];
-    const spots = spotRows.filter(s => parseImgs(s.images).length);
-    const oneLine = (t: unknown, n: number) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, n);
-
     try {
+        // 관광지(음식·차량 제외, 사진 있는 곳) · 호텔 목록
+        const parseImgs = (v: unknown): string[] => { try { const a = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(a) ? a.filter((x: unknown) => typeof x === 'string' && x) : []; } catch { return []; } };
+        const spotRows = ((await c.env.DB.prepare("SELECT id, name_kr, region, description, images FROM tourist_spots WHERE (is_active IS NULL OR is_active = 1) AND (region IS NULL OR region NOT IN ('food','vehicle'))").all()).results || []) as any[];
+        const hotelRows = ((await c.env.DB.prepare('SELECT id, name_kr, name_local, city, star_rating, address, description, images FROM hotels WHERE (is_active IS NULL OR is_active = 1)').all()).results || []) as any[];
+        const spots = spotRows.filter(s => parseImgs(s.images).length);
+        // 판매 중인 상품 — AI 가 우리 표준 일정을 바탕으로 초안을 만들게
+        const productRows = ((await c.env.DB.prepare("SELECT id, name, duration, price, itinerary_blocks FROM products WHERE (status IS NULL OR status = 'active') ORDER BY sort_order ASC, created_at DESC LIMIT 30").all()).results || []) as any[];
+        const oneLine = (t: unknown, n: number) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, n);
+
         const { draft, usage, model } = await generateQuoteDraft(apiKey, {
             destination: row.destination, headcount: row.headcount, people: Number(body.people) || null, period: row.period,
             startDate, endDate, budget: row.budget, travelTypes: row.travel_types, accommodations: row.accommodations,
             vehicle: row.vehicle, additionalRequest: row.additional_request, dayCount,
         },
         spots.map(s => ({ id: String(s.id), name: oneLine(s.name_kr, 60), region: String(s.region || ''), desc: oneLine(s.description, 50) })),
-        hotelRows.map(h => ({ id: String(h.id), name: oneLine(h.name_kr, 60), local: oneLine(h.name_local, 40), city: oneLine(h.city, 20), stars: Number(h.star_rating) || 0 })));
+        hotelRows.map(h => ({ id: String(h.id), name: oneLine(h.name_kr, 60), local: oneLine(h.name_local, 40), city: oneLine(h.city, 20), stars: Number(h.star_rating) || 0 })),
+        summarizeProducts(productRows));
 
         // AI 가 고른 ID → 우리 자료 (없는 ID 는 버린다)
         const spotById = new Map(spots.map(s => [String(s.id), s]));
@@ -358,8 +361,14 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
                     : (d.stayJa.trim() ? { name: d.stayJa.trim(), images: [] } : null),
             };
         });
+        // 참고한 상품 — 이름이 맞는 실제 상품의 1인 가격을 함께 (AI 가 만든 숫자가 아님)
+        const base = draft.baseProductName.trim();
+        const baseRow = base ? productRows.find(p => String(p.name || '').trim() === base) || productRows.find(p => String(p.name || '').includes(base) || base.includes(String(p.name || '').trim())) : undefined;
         return c.json({
-            draft: { title: draft.tripTitleJa, titleKo: draft.tripTitleKo, days, included: draft.included, excluded: draft.excluded, noteKo: draft.adminNoteKo },
+            draft: {
+                title: draft.tripTitleJa, titleKo: draft.tripTitleKo, days, included: draft.included, excluded: draft.excluded, noteKo: draft.adminNoteKo,
+                baseProduct: baseRow ? { id: String(baseRow.id), name: String(baseRow.name), price: Number(baseRow.price) || 0, duration: String(baseRow.duration || '') } : null,
+            },
             model,
             usage: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens ?? 0 },
         });
@@ -371,7 +380,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
             : status === 429 ? 'AI 요청이 잠시 많습니다. 1분 뒤 다시 시도해 주세요.'
             : status === 402 || e?.type === 'billing_error' ? 'AI 크레딧(결제)에 문제가 있습니다 — 이번 달 크레딧을 다 썼을 수 있습니다. 직접 작성하거나 Console 에서 확인해 주세요.'
             : (e?.message ? `AI 초안 만들기 실패: ${String(e.message).slice(0, 200)}` : 'AI 초안 만들기에 실패했습니다.');
-        return c.json({ error: msg }, 502);
+        return c.json({ error: msg }, 500);
     }
 });
 
