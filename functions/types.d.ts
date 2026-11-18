@@ -9,9 +9,5 @@ declare global {
         ENVIRONMENT: string;
         /** Claude API 키 — AI 견적 초안 · 관광지 자동 채우기 */
         ANTHROPIC_API_KEY?: string;
-        /** 채널톡 Open API 키 (선택 — 없으면 관리자 화면에서 저장한 값을 쓴다) */
-        CHANNEL_ACCESS_KEY?: string;
-        CHANNEL_ACCESS_SECRET?: string;
-        CHANNEL_WEBHOOK_TOKEN?: string;
     }
 }
