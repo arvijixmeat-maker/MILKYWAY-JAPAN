@@ -331,6 +331,14 @@ export const api = {
             body: JSON.stringify(body),
         }),
     },
+    /** 요금표 · 규칙 (관리자) — 원가표 · 계산 설정 · 엔화 환율 */
+    pricing: {
+        get: async () => request(`${API_BASE}/pricing`),
+        rate: async (refresh = false) => request(`${API_BASE}/pricing/rate${refresh ? '?refresh=1' : ''}`),
+        saveItems: async (items: unknown[]) => request(`${API_BASE}/pricing/items`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) }),
+        saveConfig: async (config: unknown) => request(`${API_BASE}/pricing/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) }),
+        seed: async () => request(`${API_BASE}/pricing/seed`, { method: 'POST' }),
+    },
     hotels: {
         // Reusable master library — admin picks from this when filling out
         // a day's accommodation slot in the itinerary editor.
