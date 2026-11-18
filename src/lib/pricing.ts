@@ -223,3 +223,71 @@ export function staffLines(pax: number, nights: number, cfg: PricingConfig, last
 
 /** 승마·낙타 과금 인원 — 고객 2명당 마부 1명 (규칙 11) */
 export const ridingBillPax = (riders: number, cfg: PricingConfig) => riders + Math.ceil(riders / Math.max(1, cfg.horsemanPerPax));
+
+// ── AI 가 고른 원가 계획 → 등급별 원가 줄 ─────────────────────────────────────
+
+/** AI 초안이 일정과 함께 돌려주는 원가 계획 — 금액은 없고 원가표 항목 ID 와 수량만 */
+export interface CostPlan {
+    /** 마지막 날이 점심 전 오전에 끝나는지 (인건비 0.5일) */
+    lastDayMorningEnd: boolean;
+    days: Array<{
+        day: number;
+        /** 그날 밤 숙박 지역 (원가표 숙박 지역 이름) — 숙박이 없으면 빈 값 */
+        stayRegion: string;
+        stayType: 'hotel' | 'ger' | '';
+        picks: Array<{ itemId: string; qty: number; /** 참가 인원 (0 = 전원) */ pax: number }>;
+    }>;
+}
+
+const HOTEL_GRADE: Record<TripGrade, string> = { value: '3성급', full: '4성급', luxury: '5성급' };
+const isRiding = (name: string) => /승마|낙타|乗馬|ラクダ/.test(name);
+
+/** 원가 계획 + 원가표 + 설정 → 그 등급의 원가 줄 (같은 항목은 한 줄로 합친다) */
+export function buildCostLines(input: { plan: CostPlan; items: CostItem[]; config: PricingConfig; pax: number; grade: TripGrade; startDate?: string }): QuoteCostLine[] {
+    const { plan, items, config: cfg, grade } = input;
+    const pax = Math.max(1, Math.floor(input.pax || 1));
+    const peak = isPeakDate(input.startDate, cfg);
+    const priceOf = (it: CostItem) => (peak && it.peakPriceMnt > 0 ? it.peakPriceMnt : it.priceMnt);
+    const active = items.filter(i => i.isActive);
+    const byId = new Map(active.map(i => [i.id, i]));
+    const out: QuoteCostLine[] = [];
+    const add = (l: QuoteCostLine) => {
+        const same = out.find(o => o.label === l.label && o.unit === l.unit && o.unitPriceMnt === l.unitPriceMnt && o.billPax === l.billPax && o.units === l.units);
+        if (same) same.qty += l.qty; else out.push({ ...l });
+    };
+    const stayItem = (region: string, g: string) => active.find(i => i.category === 'stay' && i.region === region && i.grade === g);
+
+    let nights = 0;
+    for (const d of plan.days) {
+        if (d.stayType && d.stayRegion) {
+            nights += 1;
+            if (d.stayType === 'hotel') {
+                const g = HOTEL_GRADE[grade];
+                const it = stayItem(d.stayRegion, g);
+                add({ itemId: it?.id, label: `${d.stayRegion} 호텔 ${g}`, category: 'stay', unit: 'room_night', unitPriceMnt: it ? priceOf(it) : 0, qty: 1, needsCheck: !it || it.needsCheck });
+            } else if (grade === 'luxury') {
+                // 럭셔리 게르 1실 1박 = 그 지역 고급 게르 1인 단가 × 배수, 고객 2인 1실
+                const it = stayItem(d.stayRegion, '고급 게르');
+                add({ itemId: it?.id, label: `${d.stayRegion} 럭셔리 게르 (2인 1실)`, category: 'stay', unit: 'room_night', unitPriceMnt: it ? priceOf(it) * cfg.luxuryGerMultiplier : 0, qty: 1, needsCheck: !it || it.needsCheck });
+            } else {
+                const g = grade === 'value' ? '일반 게르' : '고급 게르';
+                const it = stayItem(d.stayRegion, g);
+                add({ itemId: it?.id, label: `${d.stayRegion} ${g}`, category: 'stay', unit: 'person_night', unitPriceMnt: it ? priceOf(it) : 0, qty: 1, needsCheck: !it || it.needsCheck });
+            }
+        }
+        for (const p of d.picks) {
+            const it = byId.get(p.itemId);
+            if (!it || it.category === 'stay') continue;
+            const qty = p.qty > 0 ? p.qty : 1;
+            const who = p.pax > 0 ? Math.min(p.pax, pax) : pax;
+            const perPerson = it.unit === 'person' || it.unit === 'person_night';
+            // 승마·낙타는 고객 2명당 마부 1명분을 더한다 / 일부만 참가하면 그 인원만
+            const billPax = !perPerson ? undefined : isRiding(it.name) ? ridingBillPax(who, cfg) : who !== pax ? who : undefined;
+            const label = `${it.region ? `${it.region} · ` : ''}${it.name}${perPerson && isRiding(it.name) ? ` (고객 ${who}명 + 마부)` : perPerson && who !== pax ? ` (${who}명만)` : ''}`;
+            add({ itemId: it.id, label, category: it.category, unit: it.unit, unitPriceMnt: priceOf(it), qty, billPax, needsCheck: it.needsCheck });
+        }
+    }
+    for (const l of staffLines(pax, nights, cfg, plan.lastDayMorningEnd)) add(l);
+    const order: CostCategory[] = ['stay', 'meal', 'activity', 'entrance', 'transfer', 'vehicle', 'staff', 'misc'];
+    return out.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+}

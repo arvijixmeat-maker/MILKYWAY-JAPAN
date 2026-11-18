@@ -338,6 +338,9 @@ export const api = {
         saveItems: async (items: unknown[]) => request(`${API_BASE}/pricing/items`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) }),
         saveConfig: async (config: unknown) => request(`${API_BASE}/pricing/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) }),
         seed: async () => request(`${API_BASE}/pricing/seed`, { method: 'POST' }),
+        /** 견적별 원가 내역 (관리자 전용 — 고객 견적서에는 나가지 않는다) */
+        quoteCost: async (quoteId: string) => request(`${API_BASE}/pricing/quote/${quoteId}`),
+        saveQuoteCost: async (quoteId: string, costing: unknown) => request(`${API_BASE}/pricing/quote/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ costing }) }),
     },
     hotels: {
         // Reusable master library — admin picks from this when filling out
