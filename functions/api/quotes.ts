@@ -9,6 +9,7 @@ import { sendEmail, baseLayout } from '../lib/mailer';
 import { requireAdmin } from '../lib/adminAuth';
 import { generateQuoteDraft, summarizeProducts } from '../lib/aiQuoteDraft';
 import { CATEGORY_KO, UNIT_KO, type CostCategory, type CostUnit } from '../../src/lib/pricing';
+import { ensurePricingReady } from '../lib/pricingStore';
 import { inferActivityType, periodDates } from '../../src/constants/quoteOptions';
 
 // Define Env locally if global scope is not picked up
@@ -338,7 +339,10 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
         const reviseReq = body?.revise && typeof body.revise === 'object' ? body.revise : null;
         let revise: { currentJson: string; instruction: string } | undefined;
         if (reviseReq) {
-            const instruction = String(reviseReq.instruction || '').trim().slice(0, 1500);
+            // costOnly: 이미 만든 일정에 원가 항목만 붙인다 (일정은 바꾸지 않는다)
+            const instruction = reviseReq.costOnly === true
+                ? '일정은 한 글자도 바꾸지 말고 그대로 돌려주세요. 각 날의 stayRegion / stayType / costs (원가 항목)만 일정에 맞게 채워 주세요.'
+                : String(reviseReq.instruction || '').trim().slice(0, 1500);
             const cur = reviseReq.current || {};
             const curDays: any[] = Array.isArray(cur.days) ? cur.days.slice(0, 20) : [];
             if (!instruction) return c.json({ error: '수정할 내용을 적어 주세요.' }, 400);
@@ -374,7 +378,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
 
         // 원가표 — AI 는 항목 ID 만 고른다 (단가는 보내지 않는다: 금액은 서버·편집기가 계산)
         let costRows: any[] = [];
-        try { costRows = ((await c.env.DB.prepare('SELECT id, category, region, name, unit FROM cost_items WHERE is_active = 1 ORDER BY sort_order ASC').all()).results || []) as any[]; } catch { costRows = []; /* 표가 아직 없으면 원가 없이 */ }
+        try { await ensurePricingReady(c.env.DB); costRows = ((await c.env.DB.prepare('SELECT id, category, region, name, unit FROM cost_items WHERE is_active = 1 ORDER BY sort_order ASC').all()).results || []) as any[]; } catch { costRows = []; /* 표가 아직 없으면 원가 없이 */ }
         const stayRegions = [...new Set(costRows.filter(r => r.category === 'stay').map(r => String(r.region || '')).filter(Boolean))];
         const costText = costRows.length
             ? `原価表の宿泊地域（stayRegion に使う名前）: ${stayRegions.join(' / ')}\n原価表の項目（ID | 分類 | 地域 | 項目 | 単位）— costs に使う:\n${costRows.filter(r => r.category !== 'stay').map(r => `${r.id} | ${CATEGORY_KO[r.category as CostCategory] || r.category} | ${r.region || '-'} | ${r.name} | ${UNIT_KO[r.unit as CostUnit] || r.unit}`).join('\n')}`

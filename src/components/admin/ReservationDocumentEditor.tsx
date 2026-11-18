@@ -325,6 +325,22 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     /** AI 초안이 고른 원가 계획 (항목·수량 — 금액 없음) → 「원가 계산」 카드 */
     const [costPlan, setCostPlan] = useState<CostPlan | null>(null);
     const [budgetText, setBudgetText] = useState('');
+    const [planBusy, setPlanBusy] = useState(false);
+    /** 이미 만든 일정에 원가 항목만 자동으로 붙인다 (일정은 바꾸지 않음) */
+    const fetchCostPlan = async () => {
+        if (!aiDraftQuoteId || planBusy || aiBusy || days.length === 0) return;
+        setPlanBusy(true);
+        try {
+            const res = await api.quotes.aiDraft(aiDraftQuoteId, {
+                people, startDate: startDate || undefined, endDate: endDate || undefined,
+                revise: { instruction: '', costOnly: true, current: { title: name, days, included: ds.quoteDoc.included, excluded: ds.quoteDoc.excluded } },
+            });
+            if (res?.draft?.costPlan) setCostPlan(res.draft.costPlan);
+            if (res?.draft?.budget) setBudgetText(res.draft.budget);
+        } catch (e) {
+            setSaveError(`원가 항목을 자동으로 고르지 못했습니다 — ${e instanceof Error ? e.message : '다시 시도해 주세요'}`);
+        } finally { setPlanBusy(false); }
+    };
     const scrollRef = useRef<HTMLDivElement>(null);
     /** 열었을 때의 내용 — 바뀌었는지(작성 중) 표시용 */
     const baseSnap = useRef<string | null>(null);
@@ -1023,7 +1039,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                             </div>
                         )}
                         {aiDraftQuoteId && !templateMode && (
-                            <QuoteCostCard quoteId={aiDraftQuoteId} pax={people} startDate={startDate} plan={costPlan} budgetText={budgetText}
+                            <QuoteCostCard quoteId={aiDraftQuoteId} pax={people} startDate={startDate} plan={costPlan} budgetText={budgetText} planBusy={planBusy || aiBusy} onNeedPlan={() => void fetchCostPlan()}
                                 onApply={(perYen, depPerYen) => {
                                     setDs(cur => ({ ...cur, overview: { ...cur.overview, pricePerPerson: String(perYen) } }));
                                     if (!deposit && depPerYen) setDeposit(depPerYen * people);

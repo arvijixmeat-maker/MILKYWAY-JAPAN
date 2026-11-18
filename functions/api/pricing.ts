@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { requireAdmin } from '../lib/adminAuth';
 import { mergePricingConfig, type CostItem } from '../../src/lib/pricing';
-import { PRICING_SEED } from '../lib/pricingSeed';
 import { getFuelPrices } from '../lib/fuelPrices';
+import { ensurePricingReady, seedCostItems } from '../lib/pricingStore';
 
 /**
  * 요금표 · 규칙 (관리자 전용) — 원가표(cost_items) · 계산 설정 · 엔화 환율.
@@ -53,6 +53,8 @@ export async function getLiveRate(db: any, force = false): Promise<StoredRate | 
 }
 
 export async function loadPricing(db: any) {
+    // 표가 없거나 한 번도 채운 적이 없으면 여기서 알아서 준비한다 (migrate-db · 버튼 없이)
+    await ensurePricingReady(db);
     const rows = ((await db.prepare('SELECT * FROM cost_items ORDER BY sort_order ASC, category ASC, region ASC, name ASC').all()).results || []) as any[];
     const cfgRow: any = await db.prepare("SELECT value FROM pricing_settings WHERE key = 'config'").first();
     let cfg: unknown = {};
@@ -139,11 +141,7 @@ app.post('/seed', async (c) => {
     try {
         const n: any = await db.prepare('SELECT COUNT(*) AS n FROM cost_items').first();
         if (Number(n?.n) > 0) return c.json({ error: '원가표에 이미 항목이 있습니다. 비어 있을 때만 초기 데이터를 넣을 수 있습니다.' }, 409);
-        const stmts = PRICING_SEED.map(([category, region, name, grade, unit, price, note], i) => db.prepare(`
-            INSERT INTO cost_items (id, category, region, name, grade, unit, price_mnt, peak_price_mnt, supplier, note, source, needs_check, is_active, sort_order, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, '', ?, '2026 원가표', 1, 1, ?, datetime('now'))
-        `).bind(`cost-seed-${i.toString(36).padStart(3, '0')}`, category, region, name, grade, unit, price, note, i));
-        for (let i = 0; i < stmts.length; i += 80) await db.batch(stmts.slice(i, i + 80));
+        await seedCostItems(db);
         return c.json({ success: true, ...(await loadPricing(db)) });
     } catch (e: any) {
         if (missingTable(e)) return c.json({ error: NEED_MIGRATE, needsMigration: true }, 503);

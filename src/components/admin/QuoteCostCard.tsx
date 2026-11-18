@@ -31,7 +31,11 @@ export const QuoteCostCard: React.FC<{
     /** 고객이 적은 예산 글 (참고 표시) */
     budgetText?: string;
     onApply: (perPersonYen: number, depositPerPersonYen: number) => void;
-}> = ({ quoteId, pax, startDate, plan, budgetText, onApply }) => {
+    /** 원가표는 있는데 이 견적의 원가 내역·계획이 없을 때 — 편집기가 지금 일정으로 원가 항목을 자동으로 받아 온다 */
+    onNeedPlan?: () => void;
+    /** 원가 항목을 받아 오는 중 */
+    planBusy?: boolean;
+}> = ({ quoteId, pax, startDate, plan, budgetText, onApply, onNeedPlan, planBusy }) => {
     const [items, setItems] = useState<CostItem[]>([]);
     const [config, setConfig] = useState<PricingConfig | null>(null);
     const [rate, setRate] = useState<Rate>(null);
@@ -59,6 +63,15 @@ export const QuoteCostCard: React.FC<{
         })();
         return () => { alive = false; };
     }, [quoteId]);
+
+    // 불러온 뒤에도 원가 내역이 없고 AI 계획도 없으면 — 한 번만 자동으로 요청
+    const asked = useRef(false);
+    useEffect(() => {
+        if (!loaded || asked.current || costing || plan || !items.length) return;
+        asked.current = true;
+        onNeedPlan?.();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loaded, costing, plan, items.length]);
 
     const build = (pl: CostPlan, cfg: PricingConfig, fuel = costing?.fuel): Lines => ({
         value: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'value', startDate, fuel, fuelPrices }),
@@ -130,7 +143,7 @@ export const QuoteCostCard: React.FC<{
     if (!items.length) {
         return (
             <div style={{ ...box, background: C.amberBg, borderColor: 'transparent', fontSize: 12, fontWeight: 600, color: C.amberFg }}>
-                원가표가 비어 있어 금액을 계산할 수 없습니다. <a href="/admin/pricing" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>요금표 · 규칙에서 원가표 채우기</a>
+                원가표가 비어 있어 금액을 계산할 수 없습니다 (원가표를 직접 비우신 경우입니다). <a href="/admin/pricing" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>요금표 · 규칙에서 원가표 채우기</a>
             </div>
         );
     }
@@ -161,7 +174,7 @@ export const QuoteCostCard: React.FC<{
 
             {!costing ? (
                 <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.7 }}>
-                    아직 원가 내역이 없습니다. <b>「AI 초안 만들기 / AI로 다시 만들기」</b>를 누르면 일정에 맞는 원가 항목이 자동으로 들어옵니다. 직접 넣으려면 아래에서 항목을 고르세요.
+                    {planBusy ? <b>AI가 지금 일정에 맞는 원가 항목을 고르는 중입니다… (30초~1분)</b> : <>아직 원가 내역이 없습니다. 일정이 있으면 원가 항목을 자동으로 고릅니다. 직접 넣으려면 아래에서 항목을 고르세요.</>}
                 </div>
             ) : (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
