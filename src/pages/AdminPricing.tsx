@@ -244,12 +244,28 @@ export const AdminPricing: React.FC = () => {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
                                 {numField('럭셔리 게르 1실 = 고급 게르 1인 ×', 'luxuryGerMultiplier', '배')}
-                                {numField('게르 조식 (미포함 지역)', 'breakfastMnt', '₮/인', '테를지·미니사막 게르는 조식 포함')}
+                                {numField('게르 조식 (미포함 캠프만)', 'breakfastMnt', '₮/인', '조식은 보통 캠프장·호텔 숙박에 포함 — 점심·저녁만 따로 계산')}
                                 {numField('승마·낙타 — 마부 1명당 고객', 'horsemanPerPax', '명', '고객 2명 → 3인분, 4명 → 6인분')}
                             </div>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                 <input type="checkbox" checked={config.gerMinThreeForTwo} onChange={e => setCfg({ gerMinThreeForTwo: e.target.checked })} />4인 게르를 2명이 쓰면 최소 3인분 청구
                             </label>
+                        </div>
+                        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <b style={{ fontSize: 14 }}>유류비 <span style={{ fontWeight: 500, color: '#8A9E9B', fontSize: 12 }}>거리 ÷ 100 × 연비 × 리터당 가격</span></b>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
+                                {numField('연료 리터당 가격', 'fuelPriceMnt', '₮/L', config.fuelPriceMnt ? undefined : '비어 있으면 유류비가 「확인 필요」로 나옵니다')}
+                                {numField('기본 코스 거리', 'defaultCourseKm', 'km', '울란바타르 ↔ 테를지 코스 가정 — 견적마다 바꿀 수 있음')}
+                            </div>
+                            {config.vehicles.map((v, i) => (
+                                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                    <input style={cell} value={v.name} placeholder="차량 이름" onChange={e => setCfg({ vehicles: config.vehicles.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)) })} />
+                                    <input inputMode="decimal" style={{ ...cell, width: 80, textAlign: 'right' }} value={String(v.lPer100 || '')} onChange={e => setCfg({ vehicles: config.vehicles.map((x, k) => (k === i ? { ...x, lPer100: Number(e.target.value.replace(/[^\d.]/g, '')) || 0 } : x)) })} />
+                                    <span style={{ flex: 'none', fontSize: 12, color: '#8A9E9B', whiteSpace: 'nowrap' }}>L / 100km{i === 0 ? ' · 기본' : ''}</span>
+                                    <button type="button" onClick={() => setCfg({ vehicles: config.vehicles.filter((_, k) => k !== i) })} style={{ border: 0, background: 'transparent', color: '#B6C7C3', cursor: 'pointer' }}>✕</button>
+                                </div>
+                            ))}
+                            <button type="button" className="btn btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setCfg({ vehicles: [...config.vehicles, { name: '', lPer100: 20 }] })}>+ 차량 추가</button>
                         </div>
                         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}>
                             <b style={{ fontSize: 14 }}>성수기 기간 <span style={{ fontWeight: 500, color: '#8A9E9B', fontSize: 12 }}>출발일이 여기 들면 성수기 원가를 씁니다</span></b>

@@ -85,6 +85,12 @@ export interface PricingConfig {
     gerMinThreeForTwo: boolean;
     /** 럭셔리 게르 1실 1박 = 그 지역 고급 게르 1인 단가 × 이 값 */
     luxuryGerMultiplier: number;
+    /** 유류비 = 이동 거리(km) ÷ 100 × 차량 연비(L/100km) × 리터당 가격 */
+    fuelPriceMnt: number;
+    /** 기본 코스 거리 (울란바타르 ↔ 테를지 국립공원 코스 가정) */
+    defaultCourseKm: number;
+    /** 차량별 연비 (100km 당 리터) — 첫 줄이 기본 차량 */
+    vehicles: Array<{ name: string; lPer100: number }>;
     /** 성수기 기간 — MM-DD ~ MM-DD */
     peakSeasons: Array<{ from: string; to: string; label: string }>;
 }
@@ -95,6 +101,11 @@ export const DEFAULT_PRICING_CONFIG: PricingConfig = {
     guideDriverMaxPax: 4, guideDriverDayMnt: 400000, guideDayMnt: 300000, driverDayMnt: 350000,
     staffStayMnt: 150000, lastDayHalf: true, breakfastMnt: 40000, horsemanPerPax: 2,
     gerMinThreeForTwo: false, luxuryGerMultiplier: 4,
+    fuelPriceMnt: 0, defaultCourseKm: 500,
+    vehicles: [
+        { name: '스타렉스', lPer100: 20 }, { name: '알파드', lPer100: 16 }, { name: '랜드크루저', lPer100: 20 },
+        { name: '하이에이스', lPer100: 20 }, { name: '푸르공', lPer100: 20 },
+    ],
     peakSeasons: [{ from: '07-01', to: '08-31', label: '여름 성수기' }],
 };
 
@@ -106,6 +117,12 @@ export const mergePricingConfig = (raw: unknown): PricingConfig => {
         if (typeof d === 'number') { const n = Number(v); if (v !== undefined && v !== null && v !== '' && Number.isFinite(n) && n >= 0) out[k] = n; }
         else if (typeof d === 'boolean') { if (typeof v === 'boolean') out[k] = v; }
         else if (k === 'rateMode') { if (v === 'live' || v === 'manual') out[k] = v; }
+        else if (k === 'vehicles') {
+            if (Array.isArray(v)) {
+                const list = v.map((x: any) => ({ name: String(x?.name || '').trim().slice(0, 40), lPer100: Number(x?.lPer100) })).filter((x: any) => x.name && x.lPer100 > 0 && x.lPer100 < 100);
+                if (list.length) out[k] = list;
+            }
+        }
         else if (k === 'peakSeasons') {
             if (Array.isArray(v)) out[k] = v.filter((s: any) => /^\d{2}-\d{2}$/.test(s?.from) && /^\d{2}-\d{2}$/.test(s?.to)).map((s: any) => ({ from: s.from, to: s.to, label: String(s.label || '') }));
         }
@@ -243,7 +260,16 @@ const HOTEL_GRADE: Record<TripGrade, string> = { value: '3성급', full: '4성�
 const isRiding = (name: string) => /승마|낙타|乗馬|ラクダ/.test(name);
 
 /** 원가 계획 + 원가표 + 설정 → 그 등급의 원가 줄 (같은 항목은 한 줄로 합친다) */
-export function buildCostLines(input: { plan: CostPlan; items: CostItem[]; config: PricingConfig; pax: number; grade: TripGrade; startDate?: string }): QuoteCostLine[] {
+/** 유류비 줄 — 거리 ÷ 100 × 연비 × 리터당 가격. 리터당 가격이 없으면 「확인 필요」 */
+export const FUEL_LABEL = '유류비';
+export function fuelLine(cfg: PricingConfig, vehicleName?: string, km?: number): QuoteCostLine {
+    const v = cfg.vehicles.find(x => x.name === vehicleName) || cfg.vehicles[0] || { name: '차량', lPer100: 20 };
+    const dist = km && km > 0 ? km : cfg.defaultCourseKm;
+    const liters = dist / 100 * v.lPer100;
+    return { label: `${FUEL_LABEL} — ${v.name} ${dist}km × ${v.lPer100}L/100km = ${Math.round(liters)}L`, category: 'vehicle', unit: 'team', unitPriceMnt: Math.round(liters * cfg.fuelPriceMnt), qty: 1, needsCheck: !cfg.fuelPriceMnt };
+}
+
+export function buildCostLines(input: { plan: CostPlan; items: CostItem[]; config: PricingConfig; pax: number; grade: TripGrade; startDate?: string; fuel?: { vehicle?: string; km?: number } }): QuoteCostLine[] {
     const { plan, items, config: cfg, grade } = input;
     const pax = Math.max(1, Math.floor(input.pax || 1));
     const peak = isPeakDate(input.startDate, cfg);
@@ -287,6 +313,7 @@ export function buildCostLines(input: { plan: CostPlan; items: CostItem[]; confi
             add({ itemId: it.id, label, category: it.category, unit: it.unit, unitPriceMnt: priceOf(it), qty, billPax, needsCheck: it.needsCheck });
         }
     }
+    add(fuelLine(cfg, input.fuel?.vehicle, input.fuel?.km));
     for (const l of staffLines(pax, nights, cfg, plan.lastDayMorningEnd)) add(l);
     const order: CostCategory[] = ['stay', 'meal', 'activity', 'entrance', 'transfer', 'vehicle', 'staff', 'misc'];
     return out.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
