@@ -331,6 +331,12 @@ export const api = {
             body: JSON.stringify(body),
         }),
     },
+    /** 채널톡 연동 (관리자) — 답장 초안을 내부대화에 자동으로 남긴다 */
+    channelTalk: {
+        status: async () => request(`${API_BASE}/channel-talk/status`),
+        connect: async (accessKey: string, accessSecret: string) => request(`${API_BASE}/channel-talk/connect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessKey, accessSecret }) }),
+        disconnect: async () => request(`${API_BASE}/channel-talk/disconnect`, { method: 'POST' }),
+    },
     hotels: {
         // Reusable master library — admin picks from this when filling out
         // a day's accommodation slot in the itinerary editor.
