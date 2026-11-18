@@ -22,11 +22,11 @@ export const AdminChannelTalk: React.FC = () => {
     const [draft, setDraft] = useState<Draft | null>(null);
     const [replyJa, setReplyJa] = useState('');
     const [instruction, setInstruction] = useState('');
-    const [busy, setBusy] = useState<'' | 'draft' | 'revise'>('');
+    const [busy, setBusy] = useState<'' | 'make' | 'revise'>('');
     const [copied, setCopied] = useState(false);
     const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-    const run = async (kind: 'draft' | 'revise') => {
+    const run = async (kind: 'make' | 'revise') => {
         if (busy) return;
         setBusy(kind); setMsg(null); setCopied(false);
         try {
@@ -84,8 +84,8 @@ export const AdminChannelTalk: React.FC = () => {
                             <textarea rows={4} style={area} value={koDraft} onChange={e => setKoDraft(e.target.value)}
                                 placeholder="예) 4일차는 아침 8시쯤 출발하고, 바양작은 1시간 정도 봅니다. 숙소에는 저녁 6시쯤 도착합니다." /></label>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <button type="button" className="btn btn-ink" disabled={!canDraft || !!busy} onClick={() => void run('draft')}>
-                                {busy === 'draft' ? '만드는 중… (10~20초)' : koDraft.trim() ? '일본어 답장으로 바꾸기' : '답장 초안 만들기'}
+                            <button type="button" className="btn btn-ink" disabled={!canDraft || !!busy} onClick={() => void run('make')}>
+                                {busy === 'make' ? '만드는 중… (10~20초)' : koDraft.trim() ? '일본어 답장으로 바꾸기' : '답장 초안 만들기'}
                             </button>
                             {(conversation || koDraft || draft) && <button type="button" className="btn btn-ghost" onClick={reset} disabled={!!busy}>새로 시작</button>}
                         </div>
