@@ -144,4 +144,30 @@ app.post('/seed', async (c) => {
     }
 });
 
+// GET / PUT /api/pricing/quote/:id — 견적별 원가 내역 (원가 계획 · 등급별 원가 줄 · 계산한 날의 환율)
+// 견적 문서(document_content)는 고객 화면으로 나가므로 원가는 거기 넣지 않고 여기 따로 둔다.
+app.get('/quote/:id', async (c) => {
+    try {
+        const row: any = await c.env.DB.prepare('SELECT value FROM pricing_settings WHERE key = ?').bind(`quote:${c.req.param('id')}`).first();
+        let costing: unknown = null;
+        try { costing = row?.value ? JSON.parse(row.value) : null; } catch { costing = null; }
+        return c.json({ costing });
+    } catch (e: any) {
+        if (missingTable(e)) return c.json({ error: NEED_MIGRATE, needsMigration: true }, 503);
+        return c.json({ error: e.message }, 500);
+    }
+});
+app.put('/quote/:id', async (c) => {
+    const body: any = await c.req.json().catch(() => ({}));
+    const value = JSON.stringify(body.costing ?? null);
+    if (value.length > 200_000) return c.json({ error: '원가 내역이 너무 큽니다.' }, 413);
+    try {
+        await c.env.DB.prepare('INSERT INTO pricing_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind(`quote:${c.req.param('id')}`, value).run();
+        return c.json({ success: true });
+    } catch (e: any) {
+        if (missingTable(e)) return c.json({ error: NEED_MIGRATE, needsMigration: true }, 503);
+        return c.json({ error: e.message }, 500);
+    }
+});
+
 export default app;

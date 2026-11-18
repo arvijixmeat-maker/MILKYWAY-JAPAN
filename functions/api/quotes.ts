@@ -8,6 +8,7 @@ import { getSessionUser } from '../lib/userAuth';
 import { sendEmail, baseLayout } from '../lib/mailer';
 import { requireAdmin } from '../lib/adminAuth';
 import { generateQuoteDraft, summarizeProducts } from '../lib/aiQuoteDraft';
+import { CATEGORY_KO, UNIT_KO, type CostCategory, type CostUnit } from '../../src/lib/pricing';
 import { inferActivityType, periodDates } from '../../src/constants/quoteOptions';
 
 // Define Env locally if global scope is not picked up
@@ -371,6 +372,13 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
             revise = { currentJson: JSON.stringify(current), instruction };
         }
 
+        // 원가표 — AI 는 항목 ID 만 고른다 (단가는 보내지 않는다: 금액은 서버·편집기가 계산)
+        let costRows: any[] = [];
+        try { costRows = ((await c.env.DB.prepare('SELECT id, category, region, name, unit FROM cost_items WHERE is_active = 1 ORDER BY sort_order ASC').all()).results || []) as any[]; } catch { costRows = []; /* 표가 아직 없으면 원가 없이 */ }
+        const stayRegions = [...new Set(costRows.filter(r => r.category === 'stay').map(r => String(r.region || '')).filter(Boolean))];
+        const costText = costRows.length
+            ? `原価表の宿泊地域（stayRegion に使う名前）: ${stayRegions.join(' / ')}\n原価表の項目（ID | 分類 | 地域 | 項目 | 単位）— costs に使う:\n${costRows.filter(r => r.category !== 'stay').map(r => `${r.id} | ${CATEGORY_KO[r.category as CostCategory] || r.category} | ${r.region || '-'} | ${r.name} | ${UNIT_KO[r.unit as CostUnit] || r.unit}`).join('\n')}`
+            : '';
         const { draft, usage, model } = await generateQuoteDraft(apiKey, {
             destination: row.destination, headcount: row.headcount, people: Number(body.people) || null, period: row.period,
             startDate, endDate, budget: row.budget, travelTypes: row.travel_types, accommodations: row.accommodations,
@@ -378,7 +386,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
         },
         spots.map(s => ({ id: String(s.id), name: oneLine(s.name_kr, 60), region: String(s.region || ''), desc: oneLine(s.description, 50) })),
         hotelRows.map(h => ({ id: String(h.id), name: oneLine(h.name_kr, 60), local: oneLine(h.name_local, 40), city: oneLine(h.city, 20), stars: Number(h.star_rating) || 0 })),
-        summarizeProducts(productRows), revise);
+        summarizeProducts(productRows), revise, costText);
 
         // AI 가 고른 ID → 우리 자료 (없는 ID 는 버린다)
         const spotById = new Map(spots.map(s => [String(s.id), s]));
@@ -407,6 +415,17 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
             };
         });
         // 참고한 상품 — 이름이 맞는 실제 상품의 1인 가격을 함께 (AI 가 만든 숫자가 아님)
+        // 원가 계획 — 원가표에 있는 ID · 지역만 남긴다
+        const costIds = new Set(costRows.map(r => String(r.id)));
+        const costPlan = costRows.length ? {
+            lastDayMorningEnd: draft.lastDayMorningEnd,
+            days: draft.days.map((d, i) => ({
+                day: i + 1,
+                stayRegion: stayRegions.includes(d.stayRegion) ? d.stayRegion : '',
+                stayType: stayRegions.includes(d.stayRegion) ? d.stayType : '',
+                picks: d.costs.filter(p => costIds.has(p.itemId)),
+            })),
+        } : null;
         const base = draft.baseProductName.trim();
         const baseRow = base ? productRows.find(p => String(p.name || '').trim() === base) || productRows.find(p => String(p.name || '').includes(base) || base.includes(String(p.name || '').trim())) : undefined;
         return c.json({
@@ -414,6 +433,7 @@ app.post('/:id/ai-draft', requireAdmin, async (c) => {
                 title: draft.tripTitleJa, titleKo: draft.tripTitleKo, days, included: draft.included, excluded: draft.excluded, noteKo: draft.adminNoteKo,
                 memos: draft.memosKo.map(m => ({ tag: m.tag, text: m.textKo })), budgetNote: draft.budgetNoteKo, budget: String(row.budget || ''),
                 checks: draft.requestChecks.map(c => ({ item: c.itemKo, status: c.status, how: c.howKo })),
+                costPlan,
                 baseProduct: baseRow ? { id: String(baseRow.id), name: String(baseRow.name), price: Number(baseRow.price) || 0, duration: String(baseRow.duration || '') } : null,
             },
             model,
