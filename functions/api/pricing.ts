@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { requireAdmin } from '../lib/adminAuth';
 import { mergePricingConfig, type CostItem } from '../../src/lib/pricing';
 import { PRICING_SEED } from '../lib/pricingSeed';
+import { getFuelPrices } from '../lib/fuelPrices';
 
 /**
  * 요금표 · 규칙 (관리자 전용) — 원가표(cost_items) · 계산 설정 · 엔화 환율.
@@ -63,8 +64,8 @@ export async function loadPricing(db: any) {
 app.get('/', async (c) => {
     try {
         const { items, config } = await loadPricing(c.env.DB);
-        const rate = await getLiveRate(c.env.DB);
-        return c.json({ items, config, rate });
+        const [rate, fuel] = await Promise.all([getLiveRate(c.env.DB), getFuelPrices(c.env.DB)]);
+        return c.json({ items, config, rate, fuel });
     } catch (e: any) {
         if (missingTable(e)) return c.json({ error: NEED_MIGRATE, needsMigration: true }, 503);
         return c.json({ error: e.message }, 500);
@@ -75,6 +76,12 @@ app.get('/', async (c) => {
 app.get('/rate', async (c) => {
     const rate = await getLiveRate(c.env.DB, c.req.query('refresh') === '1');
     return rate ? c.json(rate) : c.json({ error: '환율을 받지 못했습니다. 잠시 뒤 다시 시도하거나 직접 입력해 주세요.' }, 502);
+});
+
+// GET /api/pricing/fuel?refresh=1 — 연료 가격 (슈흐라이 주유소 가격표)
+app.get('/fuel', async (c) => {
+    const fuel = await getFuelPrices(c.env.DB, c.req.query('refresh') === '1');
+    return fuel ? c.json(fuel) : c.json({ error: '연료 가격표를 읽지 못했습니다. 잠시 뒤 다시 시도하거나 직접 입력해 주세요.' }, 502);
 });
 
 // PUT /api/pricing/items — 원가표 전체 저장 (보낸 목록이 곧 원가표: 빠진 줄은 지운다)

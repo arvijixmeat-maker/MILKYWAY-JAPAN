@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { api } from '../lib/api';
 import {
-    CATEGORY_KO, UNIT_KO, DEFAULT_PRICING_CONFIG, GRADE_KO, GRADE_STAY, calcQuote, effectiveRate, marginPctFor, staffLines,
+    CATEGORY_KO, UNIT_KO, DEFAULT_PRICING_CONFIG, FUEL_GRADE_KO, type FuelGrade, type FuelPrices, GRADE_KO, GRADE_STAY, calcQuote, effectiveRate, marginPctFor, staffLines,
     type CostCategory, type CostItem, type CostUnit, type PricingConfig, type TripGrade,
 } from '../lib/pricing';
 
@@ -37,6 +37,7 @@ export const AdminPricing: React.FC = () => {
     const [items, setItems] = useState<CostItem[]>([]);
     const [config, setConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
     const [rate, setRate] = useState<Rate>(null);
+    const [fuel, setFuel] = useState<FuelPrices | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [dirty, setDirty] = useState(false);
@@ -51,7 +52,7 @@ export const AdminPricing: React.FC = () => {
         setLoading(true);
         try {
             const r: any = await api.pricing.get();
-            setItems(r.items || []); setConfig(r.config || DEFAULT_PRICING_CONFIG); setRate(r.rate || null);
+            setItems(r.items || []); setConfig(r.config || DEFAULT_PRICING_CONFIG); setRate(r.rate || null); setFuel(r.fuel || null);
             setNeedMigrate(false); setDirty(false);
         } catch (e) {
             const t = e instanceof Error ? e.message : '불러오지 못했습니다.';
@@ -253,8 +254,27 @@ export const AdminPricing: React.FC = () => {
                         </div>
                         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}>
                             <b style={{ fontSize: 14 }}>유류비 <span style={{ fontWeight: 500, color: '#8A9E9B', fontSize: 12 }}>거리 ÷ 100 × 연비 × 리터당 가격</span></b>
+                            <div style={{ padding: '10px 12px', borderRadius: 12, background: '#F7FAF9', fontSize: 12.5, color: '#3F5856', lineHeight: 1.8 }}>
+                                {fuel ? <>
+                                    <b style={{ color: '#123B3A' }}>슈흐라이 주유소 가격표</b> (<a href="https://www.shunkhlai.mn/prices" target="_blank" rel="noreferrer" style={{ color: '#007F75' }}>shunkhlai.mn/prices</a>) · {new Date(fuel.fetchedAt).toLocaleString('ko-KR')} · 울란바타르 주유소 {fuel.stations}곳에서 가장 많은 값{fuel.stale ? ' · 새로 읽지 못해 전에 읽은 값' : ''}<br />
+                                    {(Object.keys(FUEL_GRADE_KO) as FuelGrade[]).map(g => <span key={g} style={{ marginRight: 12, whiteSpace: 'nowrap' }}>{FUEL_GRADE_KO[g]} <b style={{ color: '#123B3A' }}>{fuel[g] ? `${fuel[g].toLocaleString('en-US')}₮` : '—'}</b></span>)}
+                                </> : '연료 가격표를 아직 읽지 못했습니다.'}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                {(['live', 'manual'] as const).map(m => <button key={m} type="button" onClick={() => setCfg({ fuelMode: m })} className={`btn ${config.fuelMode === m ? 'btn-ink' : 'btn-ghost'}`}>{m === 'live' ? '가격표 사용 (매일 자동 갱신)' : '직접 입력한 가격으로 고정'}</button>)}
+                                <button type="button" className="btn btn-ghost" disabled={busy} onClick={async () => { setBusy(true); try { setFuel(await api.pricing.fuel(true)); setMsg({ ok: true, text: '연료 가격을 새로 읽었습니다.' }); } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : '읽지 못했습니다.' }); } finally { setBusy(false); } }}>지금 새로 읽기</button>
+                            </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
-                                {numField('연료 리터당 가격', 'fuelPriceMnt', '₮/L', config.fuelPriceMnt ? undefined : '비어 있으면 유류비가 「확인 필요」로 나옵니다')}
+                                {(['gasolineGrade', 'dieselGrade'] as const).map(k => (
+                                    <label key={k} style={lbl}>{k === 'gasolineGrade' ? '휘발유 차량에 쓸 유종' : '경유 차량에 쓸 유종'}
+                                        <select style={{ ...cell, height: 40 }} value={config[k]} onChange={e => setCfg({ [k]: e.target.value } as Partial<PricingConfig>)}>
+                                            {(Object.keys(FUEL_GRADE_KO) as FuelGrade[]).map(g => <option key={g} value={g}>{FUEL_GRADE_KO[g]}{fuel?.[g] ? ` — ${fuel[g].toLocaleString('en-US')}₮` : ''}</option>)}
+                                        </select>
+                                    </label>
+                                ))}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
+                                {numField('직접 입력 가격', 'fuelPriceMnt', '₮/L', config.fuelMode === 'manual' ? '이 값으로 계산합니다' : '「고정」을 고르면 쓰입니다')}
                                 {numField('기본 코스 거리', 'defaultCourseKm', 'km', '울란바타르 ↔ 테를지 코스 가정 — 견적마다 바꿀 수 있음')}
                             </div>
                             {config.vehicles.map((v, i) => (
@@ -262,10 +282,11 @@ export const AdminPricing: React.FC = () => {
                                     <input style={cell} value={v.name} placeholder="차량 이름" onChange={e => setCfg({ vehicles: config.vehicles.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)) })} />
                                     <input inputMode="decimal" style={{ ...cell, width: 80, textAlign: 'right' }} value={String(v.lPer100 || '')} onChange={e => setCfg({ vehicles: config.vehicles.map((x, k) => (k === i ? { ...x, lPer100: Number(e.target.value.replace(/[^\d.]/g, '')) || 0 } : x)) })} />
                                     <span style={{ flex: 'none', fontSize: 12, color: '#8A9E9B', whiteSpace: 'nowrap' }}>L / 100km{i === 0 ? ' · 기본' : ''}</span>
+                                    <select style={{ ...cell, width: 86 }} value={v.fuel} onChange={e => setCfg({ vehicles: config.vehicles.map((x, k) => (k === i ? { ...x, fuel: e.target.value === 'gasoline' ? 'gasoline' : 'diesel' } : x)) })}><option value="diesel">경유</option><option value="gasoline">휘발유</option></select>
                                     <button type="button" onClick={() => setCfg({ vehicles: config.vehicles.filter((_, k) => k !== i) })} style={{ border: 0, background: 'transparent', color: '#B6C7C3', cursor: 'pointer' }}>✕</button>
                                 </div>
                             ))}
-                            <button type="button" className="btn btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setCfg({ vehicles: [...config.vehicles, { name: '', lPer100: 20 }] })}>+ 차량 추가</button>
+                            <button type="button" className="btn btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setCfg({ vehicles: [...config.vehicles, { name: '', lPer100: 20, fuel: 'diesel' }] })}>+ 차량 추가</button>
                         </div>
                         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}>
                             <b style={{ fontSize: 14 }}>성수기 기간 <span style={{ fontWeight: 500, color: '#8A9E9B', fontSize: 12 }}>출발일이 여기 들면 성수기 원가를 씁니다</span></b>

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import {
     CATEGORY_KO, UNIT_KO, GRADE_KO, GRADE_STAY, FUEL_LABEL, buildCostLines, calcQuote, effectiveRate, fuelLine,
-    type CostItem, type CostPlan, type PricingConfig, type QuoteCostLine, type TripGrade,
+    fuelPriceFor, type CostItem, type CostPlan, type FuelPrices, type PricingConfig, type QuoteCostLine, type TripGrade,
 } from '../../lib/pricing';
 
 /**
@@ -35,6 +35,7 @@ export const QuoteCostCard: React.FC<{
     const [items, setItems] = useState<CostItem[]>([]);
     const [config, setConfig] = useState<PricingConfig | null>(null);
     const [rate, setRate] = useState<Rate>(null);
+    const [fuelPrices, setFuelPrices] = useState<FuelPrices | null>(null);
     const [costing, setCosting] = useState<Costing | null>(null);
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState('');
@@ -50,7 +51,7 @@ export const QuoteCostCard: React.FC<{
             try {
                 const [p, q]: any[] = await Promise.all([api.pricing.get(), api.pricing.quoteCost(quoteId)]);
                 if (!alive) return;
-                setItems(p.items || []); setConfig(p.config); setRate(p.rate || null);
+                setItems(p.items || []); setConfig(p.config); setRate(p.rate || null); setFuelPrices(p.fuel || null);
                 if (q?.costing?.lines) setCosting(q.costing);
             } catch (e) {
                 if (alive) setError(e instanceof Error ? e.message : '원가표를 불러오지 못했습니다.');
@@ -60,14 +61,14 @@ export const QuoteCostCard: React.FC<{
     }, [quoteId]);
 
     const build = (pl: CostPlan, cfg: PricingConfig, fuel = costing?.fuel): Lines => ({
-        value: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'value', startDate, fuel }),
-        full: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'full', startDate, fuel }),
-        luxury: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'luxury', startDate, fuel }),
+        value: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'value', startDate, fuel, fuelPrices }),
+        full: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'full', startDate, fuel, fuelPrices }),
+        luxury: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'luxury', startDate, fuel, fuelPrices }),
     });
     /** 차량·거리를 바꾸면 세 등급의 유류비 줄만 바꾼다 (없으면 추가) */
     const setFuel = (p: { vehicle?: string; km?: number }) => change(c => {
         const fuel = { ...c.fuel, ...p };
-        const line = fuelLine(config!, fuel.vehicle, fuel.km);
+        const line = fuelLine(config!, fuel.vehicle, fuel.km, fuelPrices);
         const swap = (ls: QuoteCostLine[]) => (ls.some(l => l.label.startsWith(FUEL_LABEL)) ? ls.map(l => (l.label.startsWith(FUEL_LABEL) ? { ...line } : l)) : [...ls, { ...line }]);
         return { ...c, fuel, lines: { value: swap(c.lines.value), full: swap(c.lines.full), luxury: swap(c.lines.luxury) } };
     });
@@ -215,12 +216,16 @@ export const QuoteCostCard: React.FC<{
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 10, background: C.bg, fontSize: 12, color: C.sub }}>
                         <b style={{ color: C.ink }}>유류비</b>
                         <select value={costing.fuel?.vehicle || config.vehicles[0]?.name || ''} onChange={e => setFuel({ vehicle: e.target.value })} style={{ height: 30, padding: '0 6px', border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 12, background: '#fff', color: C.ink }}>
-                            {config.vehicles.map(v => <option key={v.name} value={v.name}>{v.name} · {v.lPer100}L/100km</option>)}
+                            {config.vehicles.map(v => <option key={v.name} value={v.name}>{v.name} · {v.lPer100}L/100km · {v.fuel === 'gasoline' ? '휘발유' : '경유'}</option>)}
                         </select>
                         <span>이동 거리</span>
                         <input inputMode="numeric" value={String(costing.fuel?.km ?? config.defaultCourseKm)} onChange={e => setFuel({ km: num(e.target.value) })} style={{ ...inCell, width: 76 }} />
                         <span>km</span>
-                        <span style={{ color: config.fuelPriceMnt ? C.mute : C.amberFg, fontWeight: config.fuelPriceMnt ? 400 : 700 }}>{config.fuelPriceMnt ? `리터당 ${n0(config.fuelPriceMnt)}₮` : '리터당 가격이 없어요 — 요금표 · 규칙 → 계산 설정에서 넣어 주세요'}</span>
+                        {(() => {
+                            const v = config.vehicles.find(x => x.name === costing.fuel?.vehicle) || config.vehicles[0];
+                            const fp = fuelPriceFor(config, v?.fuel || 'diesel', fuelPrices);
+                            return <span style={{ color: fp.price ? C.mute : C.amberFg, fontWeight: fp.price ? 400 : 700 }}>{fp.price ? `${fp.grade} 리터당 ${n0(fp.price)}₮${config.fuelMode === 'live' && fuelPrices ? ` · shunkhlai.mn ${fuelPrices.fetchedAt.slice(0, 10)}${fuelPrices.stale ? ' (오래됨)' : ''}` : ''}` : '연료 가격을 읽지 못했어요 — 요금표 · 규칙 → 계산 설정에서 확인해 주세요'}</span>;
+                        })()}
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <select value={addId} onChange={e => { if (e.target.value) addLine(e.target.value); }} style={{ flex: '1 1 240px', height: 34, padding: '0 8px', border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 12, color: C.ink, background: '#fff' }}>
