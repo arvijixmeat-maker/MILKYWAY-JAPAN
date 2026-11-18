@@ -614,33 +614,6 @@ app.get('/', requireAdmin, async (c) => {
         migrationResults.push(`Skipped bank_account cleanup: ${e.message}`);
     }
 
-    // 요금표 · 규칙 — 원가표(지역 × 항목 × 단위, ₮)와 계산 설정·환율 보관
-    try {
-        await c.env.DB.prepare(`
-            CREATE TABLE IF NOT EXISTS cost_items (
-                id TEXT PRIMARY KEY NOT NULL,
-                category TEXT NOT NULL,
-                region TEXT DEFAULT '',
-                name TEXT NOT NULL,
-                grade TEXT DEFAULT '',
-                unit TEXT NOT NULL,
-                price_mnt INTEGER DEFAULT 0,
-                peak_price_mnt INTEGER DEFAULT 0,
-                supplier TEXT DEFAULT '',
-                note TEXT DEFAULT '',
-                source TEXT DEFAULT '',
-                needs_check INTEGER DEFAULT 0,
-                is_active INTEGER DEFAULT 1,
-                sort_order INTEGER DEFAULT 0,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        `).run();
-        await c.env.DB.prepare('CREATE TABLE IF NOT EXISTS pricing_settings (key TEXT PRIMARY KEY NOT NULL, value TEXT)').run();
-        migrationResults.push('Created cost_items / pricing_settings tables');
-    } catch (e: any) {
-        migrationResults.push(`Skipped pricing tables: ${e.message}`);
-    }
-
     return c.json({
         success: true,
         message: "Migrations executed",

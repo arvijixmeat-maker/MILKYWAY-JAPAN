@@ -52,7 +52,6 @@ import itineraryTemplates from './itinerary-templates';
 import documents from './documents';
 import promotions from './promotions';
 import inquiries from './inquiries';
-import pricing from './pricing';
 
 // Register routes
 app.route('/products', products);
@@ -93,6 +92,5 @@ app.route('/itinerary-templates', itineraryTemplates);
 app.route('/documents', documents);
 app.route('/promotions', promotions);
 app.route('/inquiries', inquiries);
-app.route('/pricing', pricing);
 
 export const onRequest = handle(app);

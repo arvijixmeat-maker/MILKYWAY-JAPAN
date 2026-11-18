@@ -17,8 +17,6 @@ import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
 import { buildTripDoc, yen, DEFAULT_INCLUDED, DEFAULT_EXCLUDED } from '../trip-doc/tripDocModel';
 import { MEAL_KO, INC_OPTS, EXC_OPTS, inferActivityType } from '../../constants/quoteOptions';
 import { downloadKoItineraryImage } from './koItineraryImage';
-import { QuoteCostCard } from './QuoteCostCard';
-import type { CostPlan } from '../../lib/pricing';
 import { useTripSources, resolveTripImages, fallbackSpots, cleanSpotName } from '../trip-doc/tripDocSources';
 
 /**
@@ -322,25 +320,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     /** AI 초안 안내 카드 — 참고 상품 · 예산 · 확인 메모 */
     const [aiInfo, setAiInfo] = useState<AiInfo | null>(null);
     const [aiInfoOpen, setAiInfoOpen] = useState(false);
-    /** AI 초안이 고른 원가 계획 (항목·수량 — 금액 없음) → 「원가 계산」 카드 */
-    const [costPlan, setCostPlan] = useState<CostPlan | null>(null);
-    const [budgetText, setBudgetText] = useState('');
-    const [planBusy, setPlanBusy] = useState(false);
-    /** 이미 만든 일정에 원가 항목만 자동으로 붙인다 (일정은 바꾸지 않음) */
-    const fetchCostPlan = async () => {
-        if (!aiDraftQuoteId || planBusy || aiBusy || days.length === 0) return;
-        setPlanBusy(true);
-        try {
-            const res = await api.quotes.aiDraft(aiDraftQuoteId, {
-                people, startDate: startDate || undefined, endDate: endDate || undefined,
-                revise: { instruction: '', costOnly: true, current: { title: name, days, included: ds.quoteDoc.included, excluded: ds.quoteDoc.excluded } },
-            });
-            if (res?.draft?.costPlan) setCostPlan(res.draft.costPlan);
-            if (res?.draft?.budget) setBudgetText(res.draft.budget);
-        } catch (e) {
-            setSaveError(`원가 항목을 자동으로 고르지 못했습니다 — ${e instanceof Error ? e.message : '다시 시도해 주세요'}`);
-        } finally { setPlanBusy(false); }
-    };
     const scrollRef = useRef<HTMLDivElement>(null);
     /** 열었을 때의 내용 — 바뀌었는지(작성 중) 표시용 */
     const baseSnap = useRef<string | null>(null);
@@ -388,8 +367,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setTitlePick(null);
         setAiInfo(null);
         setAiInfoOpen(false);
-        setCostPlan(null);
-        setBudgetText('');
         resetDrafts();
         aiAutoTried.current = false;
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -462,7 +439,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         baseProduct?: { id: string; name: string; price: number; duration: string } | null;
         memos?: Array<{ tag: string; text: string }>; budgetNote?: string; budget?: string;
         checks?: Array<{ item: string; status: string; how: string }>;
-        costPlan?: CostPlan | null;
     };
     const applyAiDraft = (draft: AiDraft, fromCache: boolean) => {
         if (!Array.isArray(draft?.days) || draft.days.length === 0) return;
@@ -471,8 +447,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setDays(draft.days);
         if (draft.title) setName(draft.title);
         setNameKo(draft.titleKo || '');
-        if (draft.costPlan) setCostPlan(draft.costPlan);
-        if (draft.budget) setBudgetText(draft.budget);
         setOpenDay(0);
         resetDrafts();
         setDs(cur => ({
@@ -535,7 +509,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
             setDays(merged);
             if (draft.title) setName(draft.title);
             if (draft.titleKo) setNameKo(draft.titleKo);
-            if (draft.costPlan) setCostPlan(draft.costPlan);
             setDs(cur => ({ ...cur, quoteDoc: { ...cur.quoteDoc, included: draft.included || cur.quoteDoc.included, excluded: draft.excluded || cur.quoteDoc.excluded } }));
             resetDrafts();
             setReviseText('');
@@ -1037,14 +1010,6 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     <span style={{ fontFamily: EN, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>¥{yen(balance)}</span>
                                 </div>
                             </div>
-                        )}
-                        {aiDraftQuoteId && !templateMode && (
-                            <QuoteCostCard quoteId={aiDraftQuoteId} pax={people} startDate={startDate} plan={costPlan} budgetText={budgetText} planBusy={planBusy || aiBusy} onNeedPlan={() => void fetchCostPlan()}
-                                onApply={(perYen, depPerYen) => {
-                                    setDs(cur => ({ ...cur, overview: { ...cur.overview, pricePerPerson: String(perYen) } }));
-                                    if (!deposit && depPerYen) setDeposit(depPerYen * people);
-                                    setNotice(`원가 계산 금액을 넣었습니다 — 1인 ¥${perYen.toLocaleString('ja-JP')}`);
-                                }} />
                         )}
                         <button type="button" onClick={() => setShowMore(v => !v)}
                             style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 4px', border: 0, background: 'transparent', fontSize: 12, fontWeight: 600, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
