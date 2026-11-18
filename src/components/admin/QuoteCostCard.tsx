@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import {
-    CATEGORY_KO, UNIT_KO, GRADE_KO, GRADE_STAY, buildCostLines, calcQuote, effectiveRate,
-    type CostItem, type CostPlan, type PricingConfig, type QuoteCostLine, type TripGrade,
+    CATEGORY_KO, UNIT_KO, GRADE_KO, GRADE_STAY, FUEL_LABEL, buildCostLines, calcQuote, effectiveRate, fuelLine,
+    fuelPriceFor, type CostItem, type CostPlan, type FuelPrices, type PricingConfig, type QuoteCostLine, type TripGrade,
 } from '../../lib/pricing';
 
 /**
@@ -13,7 +13,7 @@ import {
 
 const GRADES: TripGrade[] = ['value', 'full', 'luxury'];
 type Lines = Record<TripGrade, QuoteCostLine[]>;
-interface Costing { planKey: string; plan: CostPlan | null; grade: TripGrade; lines: Lines; mntPerJpy?: number; calcAt?: string }
+interface Costing { planKey: string; plan: CostPlan | null; grade: TripGrade; lines: Lines; fuel?: { vehicle?: string; km?: number }; mntPerJpy?: number; calcAt?: string }
 type Rate = { mntPerJpy: number; fetchedAt: string; source: string; stale?: boolean } | null;
 
 const C = { ink: '#123B3A', sub: '#5F7674', mute: '#8A9E9B', line: '#DDEBE7', line2: '#EEF3F1', bg: '#F7FAF9', mint: '#00A88B', mintDeep: '#007F75', mintBg: '#E8FAF5', mintBg2: '#F1FCF8', amberBg: '#FFF4D6', amberFg: '#8A5A00' };
@@ -35,6 +35,7 @@ export const QuoteCostCard: React.FC<{
     const [items, setItems] = useState<CostItem[]>([]);
     const [config, setConfig] = useState<PricingConfig | null>(null);
     const [rate, setRate] = useState<Rate>(null);
+    const [fuelPrices, setFuelPrices] = useState<FuelPrices | null>(null);
     const [costing, setCosting] = useState<Costing | null>(null);
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState('');
@@ -50,7 +51,7 @@ export const QuoteCostCard: React.FC<{
             try {
                 const [p, q]: any[] = await Promise.all([api.pricing.get(), api.pricing.quoteCost(quoteId)]);
                 if (!alive) return;
-                setItems(p.items || []); setConfig(p.config); setRate(p.rate || null);
+                setItems(p.items || []); setConfig(p.config); setRate(p.rate || null); setFuelPrices(p.fuel || null);
                 if (q?.costing?.lines) setCosting(q.costing);
             } catch (e) {
                 if (alive) setError(e instanceof Error ? e.message : '원가표를 불러오지 못했습니다.');
@@ -59,10 +60,17 @@ export const QuoteCostCard: React.FC<{
         return () => { alive = false; };
     }, [quoteId]);
 
-    const build = (pl: CostPlan, cfg: PricingConfig): Lines => ({
-        value: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'value', startDate }),
-        full: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'full', startDate }),
-        luxury: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'luxury', startDate }),
+    const build = (pl: CostPlan, cfg: PricingConfig, fuel = costing?.fuel): Lines => ({
+        value: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'value', startDate, fuel, fuelPrices }),
+        full: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'full', startDate, fuel, fuelPrices }),
+        luxury: buildCostLines({ plan: pl, items, config: cfg, pax, grade: 'luxury', startDate, fuel, fuelPrices }),
+    });
+    /** 차량·거리를 바꾸면 세 등급의 유류비 줄만 바꾼다 (없으면 추가) */
+    const setFuel = (p: { vehicle?: string; km?: number }) => change(c => {
+        const fuel = { ...c.fuel, ...p };
+        const line = fuelLine(config!, fuel.vehicle, fuel.km, fuelPrices);
+        const swap = (ls: QuoteCostLine[]) => (ls.some(l => l.label.startsWith(FUEL_LABEL)) ? ls.map(l => (l.label.startsWith(FUEL_LABEL) ? { ...line } : l)) : [...ls, { ...line }]);
+        return { ...c, fuel, lines: { value: swap(c.lines.value), full: swap(c.lines.full), luxury: swap(c.lines.luxury) } };
     });
 
     // AI 가 새 원가 계획을 주면 (저장해 둔 것과 다를 때만) 줄을 다시 만든다
@@ -205,6 +213,20 @@ export const QuoteCostCard: React.FC<{
                             </tbody>
                         </table>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 10, background: C.bg, fontSize: 12, color: C.sub }}>
+                        <b style={{ color: C.ink }}>유류비</b>
+                        <select value={costing.fuel?.vehicle || config.vehicles[0]?.name || ''} onChange={e => setFuel({ vehicle: e.target.value })} style={{ height: 30, padding: '0 6px', border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 12, background: '#fff', color: C.ink }}>
+                            {config.vehicles.map(v => <option key={v.name} value={v.name}>{v.name} · {v.lPer100}L/100km · {v.fuel === 'gasoline' ? '휘발유' : '경유'}</option>)}
+                        </select>
+                        <span>이동 거리</span>
+                        <input inputMode="numeric" value={String(costing.fuel?.km ?? config.defaultCourseKm)} onChange={e => setFuel({ km: num(e.target.value) })} style={{ ...inCell, width: 76 }} />
+                        <span>km</span>
+                        {(() => {
+                            const v = config.vehicles.find(x => x.name === costing.fuel?.vehicle) || config.vehicles[0];
+                            const fp = fuelPriceFor(config, v?.fuel || 'diesel', fuelPrices);
+                            return <span style={{ color: fp.price ? C.mute : C.amberFg, fontWeight: fp.price ? 400 : 700 }}>{fp.price ? `${fp.grade} 리터당 ${n0(fp.price)}₮${config.fuelMode === 'live' && fuelPrices ? ` · shunkhlai.mn ${fuelPrices.fetchedAt.slice(0, 10)}${fuelPrices.stale ? ' (오래됨)' : ''}` : ''}` : '연료 가격을 읽지 못했어요 — 요금표 · 규칙 → 계산 설정에서 확인해 주세요'}</span>;
+                        })()}
+                    </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <select value={addId} onChange={e => { if (e.target.value) addLine(e.target.value); }} style={{ flex: '1 1 240px', height: 34, padding: '0 8px', border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 12, color: C.ink, background: '#fff' }}>
                             <option value="">+ 원가표에서 항목 추가 ({GRADE_KO[grade]})</option>
@@ -238,7 +260,7 @@ export const QuoteCostCard: React.FC<{
                             style={{ flex: 'none', height: 40, padding: '0 16px', border: 0, borderRadius: 10, background: useRate && res.perPersonYen ? `linear-gradient(135deg,${C.mint} 0%,#06C4A0 100%)` : '#3F5856', fontSize: 13, fontWeight: 700, color: '#FFFFFF', cursor: useRate && res.perPersonYen ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}>1인 요금에 넣기</button>
                     </div>
                     <span style={{ fontSize: 10.5, color: C.mute, lineHeight: 1.7 }}>
-                        금액은 AI가 아니라 원가표와 계산 설정으로 계산합니다 · 식사 인원은 고객 수 기준(가이드·기사 식사는 필요하면 줄을 추가) · 유류비는 코스마다 달라 자동으로 넣지 않습니다
+                        금액은 AI가 아니라 원가표와 계산 설정으로 계산합니다 · 조식은 숙박에 포함으로 보고 점심·저녁만 계산 · 식사 인원은 고객 수 기준(가이드·기사 식사는 필요하면 줄을 추가) · 유류비 = 거리 ÷ 100 × 연비 × 리터당 가격
                     </span>
                 </>
             )}
