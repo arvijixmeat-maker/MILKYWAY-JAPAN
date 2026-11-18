@@ -29,6 +29,7 @@ const primaryItems: NavItem[] = [
     { id: 'reviews', icon: 'reviews', label: '후기 관리', href: '/admin/reviews' },
     { id: 'faq', icon: 'help', label: 'FAQ 관리', href: '/admin/faq' },
     { id: 'inquiries', icon: 'mail', label: '문의 관리', href: '/admin/inquiries' },
+    { id: 'channel-talk', icon: 'forum', label: '채널톡 답장 도우미', href: '/admin/channel-talk' },
 ];
 
 const settingItems: NavItem[] = [
