@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { requireAdmin } from '../lib/adminAuth';
 import { summarizeProducts } from '../lib/aiQuoteDraft';
-import { channelApi, getPrivate, handleChannelMessage, loadChannelKeys, safeEqual, setPrivate } from '../lib/channelTalk';
+import { channelApi, draftReply, getPrivate, handleChannelMessage, loadChannelKeys, safeEqual, setPrivate } from '../lib/channelTalk';
 
 /**
  * 채널톡 연동 — 고객 메시지에 일본어 답장 초안을 내부대화로 남긴다.
@@ -26,6 +26,33 @@ app.post('/webhook', async (c) => {
         .catch(e => console.error('[channel-talk] failed', e?.message || e));
     try { c.executionCtx.waitUntil(work); } catch { await work; }
     return c.json({ ok: true });
+});
+
+// POST /api/channel-talk/draft — 답장 도우미 (관리자): 붙여 넣은 대화로 일본어 답장 초안을 만든다. 채널톡 유료 플랜(API) 없이 쓴다.
+// body: { conversation, koDraft?: 한국어로 직접 쓴 답 → 일본어로, previousJa? + instruction?: 앞 초안을 한국어 지시로 고치기 }
+app.post('/draft', requireAdmin, async (c) => {
+    const apiKey = String(c.env.ANTHROPIC_API_KEY || '').replace(/\s+/g, '');
+    if (!apiKey.startsWith('sk-ant-')) return c.json({ error: 'AI 키(ANTHROPIC_API_KEY)가 설정되지 않았습니다.' }, 503);
+    const body: any = await c.req.json().catch(() => ({}));
+    const conversation = String(body.conversation || '').trim().slice(0, 12000);
+    const koDraft = String(body.koDraft || '').trim().slice(0, 4000);
+    const instruction = String(body.instruction || '').trim().slice(0, 1500);
+    const previousJa = String(body.previousJa || '').trim().slice(0, 6000);
+    if (!conversation && !koDraft) return c.json({ error: '고객 메시지를 붙여 넣거나, 한국어로 답을 적어 주세요.' }, 400);
+    try {
+        let productsText = '';
+        try {
+            const rows = ((await c.env.DB.prepare("SELECT id, name, duration, price, itinerary_blocks FROM products WHERE (status IS NULL OR status = 'active') ORDER BY sort_order ASC, created_at DESC LIMIT 20").all()).results || []) as any[];
+            productsText = summarizeProducts(rows).slice(0, 12000);
+        } catch { productsText = ''; }
+        const draft = await draftReply(apiKey, conversation || '（会話の貼り付けなし）', productsText, koDraft || undefined, !koDraft && instruction && previousJa ? { previousJa, instructionKo: instruction } : undefined);
+        return c.json(draft);
+    } catch (e: any) {
+        const status = Number(e?.status) || 0;
+        const msg = status === 401 ? 'AI 키가 올바르지 않습니다.' : status === 429 ? 'AI 요청이 잠시 많습니다. 1분 뒤 다시 시도해 주세요.'
+            : status === 402 || e?.type === 'billing_error' ? 'AI 크레딧(결제)에 문제가 있습니다.' : `초안 만들기 실패: ${String(e?.message || e).slice(0, 200)}`;
+        return c.json({ error: msg }, 500);
+    }
 });
 
 app.get('/status', requireAdmin, async (c) => {
