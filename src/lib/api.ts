@@ -105,7 +105,7 @@ export const api = {
         list: async () => request(`${API_BASE}/quotes`),
         get: async (id: string) => request(`${API_BASE}/quotes/${id}`),
         /** AI 견적 초안 (관리자 전용) — 저장하지 않고 편집기에 넣을 일정 초안을 돌려준다 */
-        aiDraft: async (id: string, body: { people?: number; startDate?: string; endDate?: string; revise?: { instruction: string; costOnly?: boolean; current: { title: string; days: unknown[]; included: string[]; excluded: string[] } } }) => request(`${API_BASE}/quotes/${id}/ai-draft`, {
+        aiDraft: async (id: string, body: { people?: number; startDate?: string; endDate?: string; revise?: { instruction: string; current: { title: string; days: unknown[]; included: string[]; excluded: string[] } } }) => request(`${API_BASE}/quotes/${id}/ai-draft`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -330,18 +330,6 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         }),
-    },
-    /** 요금표 · 규칙 (관리자) — 원가표 · 계산 설정 · 엔화 환율 */
-    pricing: {
-        get: async () => request(`${API_BASE}/pricing`),
-        rate: async (refresh = false) => request(`${API_BASE}/pricing/rate${refresh ? '?refresh=1' : ''}`),
-        saveItems: async (items: unknown[]) => request(`${API_BASE}/pricing/items`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) }),
-        saveConfig: async (config: unknown) => request(`${API_BASE}/pricing/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) }),
-        seed: async () => request(`${API_BASE}/pricing/seed`, { method: 'POST' }),
-        fuel: async (refresh = false) => request(`${API_BASE}/pricing/fuel${refresh ? '?refresh=1' : ''}`),
-        /** 견적별 원가 내역 (관리자 전용 — 고객 견적서에는 나가지 않는다) */
-        quoteCost: async (quoteId: string) => request(`${API_BASE}/pricing/quote/${quoteId}`),
-        saveQuoteCost: async (quoteId: string, costing: unknown) => request(`${API_BASE}/pricing/quote/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ costing }) }),
     },
     hotels: {
         // Reusable master library — admin picks from this when filling out
