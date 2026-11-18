@@ -18,6 +18,25 @@ export interface KoItinerary {
     included: string[];
     excluded: string[];
     note?: string;
+    /** 투어 비용 내역 (원가 계산 카드에서 고른 등급) — 원가·마진이 들어 있으니 고객에게 보내지 않는다 */
+    cost?: KoCost | null;
+}
+export interface KoCost {
+    grade: string;          // 「실속 (3성급 + 일반 게르)」
+    pax: number;
+    lines: Array<{ category: string; label: string; formula: string; amountMnt: number; warn: string }>;
+    totalCostMnt: number;
+    marginPct: number;
+    marginMnt: number;
+    teamTotalMnt: number;
+    mntPerJpy: number;
+    teamTotalYen: number;
+    perPersonYenRaw: number;
+    perPersonYen: number;
+    roundedTeamYen: number;
+    /** 세 등급의 1인 금액 */
+    grades: Array<{ name: string; perPersonYen: number; checks: number }>;
+    budgetText?: string;
 }
 
 const W = 900;          // 그림 폭 (CSS px) — 2배로 그려 선명하게
@@ -124,6 +143,61 @@ function paint(ctx: CanvasRenderingContext2D, it: KoItinerary, dry: boolean): nu
     list('포함', it.included);
     list('불포함', it.excluded);
     if (it.note) list('메모', [it.note]);
+    // ── 투어 비용 (원가 계산) ──
+    const cost = it.cost;
+    if (cost && cost.lines.length) {
+        const n0 = (v: number) => Math.round(v).toLocaleString('en-US');
+        const right = (t: string, xr: number, yy: number, color: string) => { if (!dry) { ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.fillText(t, xr, yy); ctx.textAlign = 'left'; } };
+        y += 8;
+        if (!dry) { ctx.fillStyle = C.line; ctx.fillRect(PAD, y, W - PAD * 2, 1); }
+        y += 18;
+        font(800, 18); text('투어 비용', PAD, y, C.ink);
+        font(600, 13); text(`${cost.grade} · ${cost.pax}명 · 환율 ¥1 = ${cost.mntPerJpy.toFixed(2)}₮`, PAD + 96, y + 4, C.sub);
+        y += 34;
+        // 등급별 1인 금액
+        const gw = (W - PAD * 2 - 16) / 3;
+        cost.grades.forEach((g, k) => {
+            const gx = PAD + k * (gw + 8);
+            const on = cost.grade.startsWith(g.name);
+            rect(gx, y, gw, 64, 12, on ? C.dark : C.card, on ? undefined : C.line);
+            font(700, 12); text(g.name + (g.checks ? ` · 확인 필요 ${g.checks}` : ''), gx + 14, y + 12, on ? '#8CE9D8' : C.sub);
+            const price = g.perPersonYen ? `¥${n0(g.perPersonYen)}` : '—';
+            font(800, 20); text(price, gx + 14, y + 32, on ? '#FFFFFF' : C.ink);
+            const pw = ctx.measureText(price).width;
+            font(500, 11); text('/ 1인', gx + 20 + pw, y + 40, on ? '#B6C7C3' : C.faint);
+        });
+        y += 80;
+        // 내역 표
+        const xAmt = W - PAD - 14, xFormula = PAD + 430;
+        rect(PAD, y, W - PAD * 2, 30, 8, C.mintBg);
+        font(800, 12); text('항목', PAD + 14, y + 9, C.mint); text('계산', xFormula, y + 9, C.mint); right('금액 ₮', xAmt, y + 9, C.mint);
+        y += 36;
+        for (const l of cost.lines) {
+            font(700, 11); const cw2 = ctx.measureText(l.category).width + 12;
+            rect(PAD + 10, y, cw2, 20, 5, C.bg);
+            text(l.category, PAD + 16, y + 5, C.sub);
+            font(600, 13);
+            const ls = wrap(ctx, l.label + (l.warn ? ` 〔${l.warn}〕` : ''), xFormula - (PAD + 22 + cw2) - 12);
+            ls.forEach((t, k) => text(t, PAD + 18 + cw2, y + 3 + k * 18, l.warn ? '#8A5A00' : C.ink));
+            font(500, 12); text(l.formula, xFormula, y + 4, C.sub);
+            font(700, 13); right(n0(l.amountMnt), xAmt, y + 3, C.ink);
+            y += Math.max(26, ls.length * 18 + 8);
+            if (!dry) { ctx.fillStyle = C.line; ctx.fillRect(PAD + 10, y - 3, W - PAD * 2 - 20, 1); }
+        }
+        y += 8;
+        const sum = (k: string, v: string, strong = false) => { font(strong ? 800 : 600, strong ? 15 : 13); text(k, PAD + 14, y, strong ? C.ink : C.sub); right(v, xAmt, y, strong ? C.ink : C.ink); y += strong ? 26 : 22; };
+        sum('총원가', `${n0(cost.totalCostMnt)}₮`);
+        sum(`마진 ${cost.marginPct}% (원가에 가산)`, `${n0(cost.marginMnt)}₮`);
+        sum('팀 총액', `${n0(cost.teamTotalMnt)}₮  =  ¥${n0(cost.teamTotalYen)}`);
+        sum('1인 금액 (반올림 전)', `¥${n0(cost.perPersonYenRaw)}`);
+        y += 4;
+        rect(PAD, y, W - PAD * 2, 54, 12, C.dark);
+        font(700, 13); text(`1인 판매가 · ${cost.pax}명 합계 ¥${n0(cost.roundedTeamYen)}`, PAD + 16, y + 20, '#B6C7C3');
+        font(800, 24); right(`¥${n0(cost.perPersonYen)}`, xAmt, y + 14, '#FFFFFF');
+        y += 66;
+        if (cost.budgetText) { font(500, 12); text(`고객이 적은 예산: ${cost.budgetText}`, PAD, y, C.sub); y += 20; }
+        font(700, 11); text('※ 원가와 마진이 들어 있습니다 — 고객에게 보내지 마세요.', PAD, y, '#B42318'); y += 18;
+    }
     font(500, 11); text('※ 관리자 확인용 — 고객에게는 일본어 견적서가 나갑니다.', PAD, y + 4, C.faint);
     return y + 4 + 18 + PAD;
 }

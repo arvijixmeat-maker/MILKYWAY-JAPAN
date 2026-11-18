@@ -16,7 +16,7 @@ import { MAP_DESTINATIONS } from '../product/designTemplates/mapDestinations';
 import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
 import { buildTripDoc, yen, DEFAULT_INCLUDED, DEFAULT_EXCLUDED } from '../trip-doc/tripDocModel';
 import { MEAL_KO, INC_OPTS, EXC_OPTS, inferActivityType } from '../../constants/quoteOptions';
-import { downloadKoItineraryImage } from './koItineraryImage';
+import { downloadKoItineraryImage, type KoCost } from './koItineraryImage';
 import { QuoteCostCard } from './QuoteCostCard';
 import type { CostPlan } from '../../lib/pricing';
 import { useTripSources, resolveTripImages, fallbackSpots, cleanSpotName } from '../trip-doc/tripDocSources';
@@ -326,6 +326,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
     const [costPlan, setCostPlan] = useState<CostPlan | null>(null);
     const [budgetText, setBudgetText] = useState('');
     const [planBusy, setPlanBusy] = useState(false);
+    /** 원가 계산 카드의 지금 내역 — 한국어 일정표 이미지에 함께 넣는다 */
+    const costSummary = useRef<KoCost | null>(null);
     /** 이미 만든 일정에 원가 항목만 자동으로 붙인다 (일정은 바꾸지 않음) */
     const fetchCostPlan = async () => {
         if (!aiDraftQuoteId || planBusy || aiBusy || days.length === 0) return;
@@ -745,6 +747,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                 }),
                 included: incNow.map(t => koOf(t) || t),
                 excluded: excNow.map(t => koOf(t) || t),
+                cost: aiDraftQuoteId && !templateMode ? costSummary.current : null,
             }, `일정표_${customer?.name || '견적'}_${startDate || new Date().toISOString().slice(0, 10)}.png`);
         } catch (e) {
             setSaveError(e instanceof Error ? e.message : '이미지를 만들지 못했습니다.');
@@ -1039,7 +1042,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                             </div>
                         )}
                         {aiDraftQuoteId && !templateMode && (
-                            <QuoteCostCard quoteId={aiDraftQuoteId} pax={people} startDate={startDate} plan={costPlan} budgetText={budgetText} planBusy={planBusy || aiBusy} onNeedPlan={() => void fetchCostPlan()}
+                            <QuoteCostCard quoteId={aiDraftQuoteId} pax={people} startDate={startDate} plan={costPlan} budgetText={budgetText} planBusy={planBusy || aiBusy} onNeedPlan={() => void fetchCostPlan()} onSummary={s => { costSummary.current = s; }}
                                 onApply={(perYen, depPerYen) => {
                                     setDs(cur => ({ ...cur, overview: { ...cur.overview, pricePerPerson: String(perYen) } }));
                                     if (!deposit && depPerYen) setDeposit(depPerYen * people);
@@ -1070,7 +1073,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                 {!templateMode && days.length > 0 && (
                                     <button type="button" onClick={() => void downloadKoImage()} className="qe-hbd" style={smallBtn}
-                                        title="견적 담당자용 — DAY별 일정·숙소·식사를 한국어로 정리한 이미지(PNG) (고객에게는 나가지 않음)">
+                                        title="견적 담당자용 — DAY별 일정·숙소·식사와 투어 비용 내역(원가·마진·1인 금액)을 한국어로 정리한 이미지(PNG) (고객에게 보내지 마세요)">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>한국어 일정표
                                     </button>
                                 )}

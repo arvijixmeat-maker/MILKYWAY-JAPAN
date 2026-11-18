@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
+import type { KoCost } from './koItineraryImage';
 import {
     CATEGORY_KO, UNIT_KO, GRADE_KO, GRADE_STAY, FUEL_LABEL, buildCostLines, calcQuote, effectiveRate, fuelLine,
     fuelPriceFor, type CostItem, type CostPlan, type FuelPrices, type PricingConfig, type QuoteCostLine, type TripGrade,
@@ -35,7 +36,9 @@ export const QuoteCostCard: React.FC<{
     onNeedPlan?: () => void;
     /** 원가 항목을 받아 오는 중 */
     planBusy?: boolean;
-}> = ({ quoteId, pax, startDate, plan, budgetText, onApply, onNeedPlan, planBusy }) => {
+    /** 지금 고른 등급의 비용 내역 — 한국어 일정표 이미지에 넣는다 */
+    onSummary?: (s: KoCost | null) => void;
+}> = ({ quoteId, pax, startDate, plan, budgetText, onApply, onNeedPlan, planBusy, onSummary }) => {
     const [items, setItems] = useState<CostItem[]>([]);
     const [config, setConfig] = useState<PricingConfig | null>(null);
     const [rate, setRate] = useState<Rate>(null);
@@ -103,6 +106,20 @@ export const QuoteCostCard: React.FC<{
         for (const g of GRADES) out[g] = calcQuote({ lines: costing.lines[g] || [], pax, config, mntPerJpy: baseRate });
         return out;
     }, [costing, config, pax, baseRate]);
+    useEffect(() => {
+        if (!onSummary) return;
+        if (!results || !costing || !config) { onSummary(null); return; }
+        const r = results[costing.grade];
+        onSummary({
+            grade: `${GRADE_KO[costing.grade]} (${GRADE_STAY[costing.grade].hotel} + ${GRADE_STAY[costing.grade].ger})`, pax,
+            lines: r.lines.map(l => ({ category: CATEGORY_KO[l.category], label: l.label, formula: l.formula, amountMnt: l.amountMnt, warn: l.warn })),
+            totalCostMnt: r.totalCostMnt, marginPct: r.marginPct, marginMnt: r.marginMnt, teamTotalMnt: r.teamTotalMnt, mntPerJpy: r.mntPerJpy,
+            teamTotalYen: r.teamTotalYen, perPersonYenRaw: r.perPersonYenRaw, perPersonYen: r.perPersonYen, roundedTeamYen: r.roundedTeamYen,
+            grades: GRADES.map(g => ({ name: GRADE_KO[g], perPersonYen: results[g].perPersonYen, checks: results[g].checks })),
+            budgetText,
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [results, costing?.grade, budgetText]);
 
     // 바뀌면 잠시 뒤 자동 저장 (견적별 · 관리자 전용 보관함)
     useEffect(() => {
