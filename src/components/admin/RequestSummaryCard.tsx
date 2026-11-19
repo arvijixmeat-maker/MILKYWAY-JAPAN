@@ -8,7 +8,7 @@ import { api } from '../../lib/api';
  */
 interface Summary { headlineKo: string; whoKo: string; wantsKo: string[]; mustsKo: string[]; avoidsKo: string[]; questionsKo: string[]; translationKo: string }
 
-const C = { ink: '#123B3A', sub: '#5F7674', mute: '#8A9E9B', body: '#3F5856', line: '#E6EFEC', line2: '#EEF3F1', bg: '#F7FAF9', mint: '#00A88B', mintDeep: '#007F75', mintBg: '#E8FAF5', amberBg: '#FFF4D6', amberFg: '#8A5A00', redBg: '#FFF1F0', redFg: '#B42318', grayBg: '#F3F6F5' };
+const C = { ink: 'var(--mw-ink)', sub: 'var(--mw-muted)', mute: 'var(--mw-gray-500)', body: 'var(--mw-gray-700)', line: 'var(--mw-gray-200)', line2: 'var(--mw-gray-100)', bg: 'var(--mw-gray-50)', mint: 'var(--mw-green-700)', mintDeep: 'var(--mw-green-700)', mintBg: 'var(--mw-green-50)', amberBg: 'var(--mw-warn-soft)', amberFg: 'var(--mw-gray-800)', redBg: 'var(--mw-error-soft)', redFg: 'var(--mw-error-ink)', grayBg: 'var(--mw-gray-100)' };
 const Chevron: React.FC<{ open: boolean }> = ({ open }) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
         style={{ flex: 'none', transform: `rotate(${open ? 180 : 0}deg)`, transition: 'transform .2s' }}><path d="M6 9l6 6 6-6" /></svg>
@@ -46,7 +46,7 @@ export const RequestSummaryCard: React.FC<{ quoteId: string }> = ({ quoteId }) =
     useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [quoteId]);
 
     if (state === 'empty') return null; // 고객이 적은 요청 글이 없는 견적
-    const box: React.CSSProperties = { padding: '18px 24px', borderRadius: 20, background: '#FFFFFF', border: `1px solid ${C.line}`, display: 'flex', flexDirection: 'column', gap: 14 };
+    const box: React.CSSProperties = { padding: '18px 24px', borderRadius: 20, background: 'var(--mw-surface)', border: `1px solid ${C.line}`, display: 'flex', flexDirection: 'column', gap: 14 };
     const group = (title: string, items: string[], bg: string, fg: string) => items.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px', borderRadius: 14, background: bg, minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: fg }}>{title} <span style={{ fontWeight: 600, opacity: 0.7 }}>{items.length}</span></span>
@@ -71,7 +71,7 @@ export const RequestSummaryCard: React.FC<{ quoteId: string }> = ({ quoteId }) =
                 </button>
                 {state !== 'loading' && (
                     <button type="button" onClick={() => void load(true)} title="고객 요청을 다시 읽고 정리합니다"
-                        style={{ flex: 'none', height: 28, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, background: '#fff', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>다시 정리</button>
+                        style={{ flex: 'none', height: 28, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, background: 'var(--mw-surface)', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>다시 정리</button>
                 )}
             </div>
 

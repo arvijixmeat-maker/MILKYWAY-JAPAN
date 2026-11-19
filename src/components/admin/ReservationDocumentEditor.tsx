@@ -193,27 +193,27 @@ const splitLines = (t?: string) => String(t || '').split(/\r?\n/).map(x => x.rep
 
 // ── 디자인 토큰 — Claude Design 「Quote Editor」 시안 (민트 · 네이비) ──
 const C = {
-    ink: '#123B3A', sub: '#5F7674', mute: '#8A9E9B', body: '#3F5856', faint: '#B6C7C3',
-    line: '#DDEBE7', line2: '#EEF3F1', cardLine: '#E6EFEC', bg: '#F7FAF9',
-    mint: '#00A88B', mintDeep: '#007F75', mintHi: '#06C4A0', mintBg: '#E8FAF5', mintBg2: '#F1FCF8', mintLine: '#9FE3D2', glow: '#6CE3CC',
-    amberBg: '#FFF4D6', amberFg: '#8A5A00', grayBg: '#F3F6F5',
+    ink: 'var(--mw-accent)', sub: 'var(--mw-muted)', mute: 'var(--mw-gray-500)', body: 'var(--mw-gray-700)', faint: 'var(--mw-gray-300)',
+    line: 'var(--mw-gray-200)', line2: 'var(--mw-gray-100)', cardLine: 'var(--mw-gray-200)', bg: 'var(--mw-gray-50)',
+    mint: 'var(--mw-green-700)', mintDeep: 'var(--mw-green-700)', mintHi: 'var(--mw-green-700)', mintBg: 'var(--mw-green-50)', mintBg2: 'var(--mw-green-50)', mintLine: 'var(--mw-green-80)', glow: 'var(--mw-accent-soft)',
+    amberBg: 'var(--mw-warn-soft)', amberFg: 'var(--mw-gray-800)', grayBg: 'var(--mw-gray-100)',
 };
 const EN = "'Inter',sans-serif";
 const JP = "'Noto Sans JP',sans-serif";
 const EDITOR_CSS = `
 .qe{font-family:'Pretendard Variable',Pretendard,'Noto Sans JP',sans-serif;color:${C.ink};-webkit-font-smoothing:antialiased;word-break:keep-all}
 .qe input,.qe select,.qe textarea,.qe button{font-family:inherit}
-.qe input:focus,.qe select:focus,.qe textarea:focus{outline:none;border-color:${C.mintHi} !important;box-shadow:0 0 0 3px rgba(6,196,160,0.25)}
+.qe input:focus,.qe select:focus,.qe textarea:focus{outline:none;border-color:${C.mintHi} !important;box-shadow:var(--ring-blue)}
 .qe .qe-bare:focus{box-shadow:none !important}
 .qe-noscroll{scrollbar-width:none}.qe-noscroll::-webkit-scrollbar{display:none}
 .qe-hbd:hover{border-color:${C.mintHi} !important}
 .qe-hbg:hover{background:${C.bg} !important}
 .qe-hmint:hover{background:${C.mintBg2} !important}
-.qe-hred:hover{background:#FFF1F0 !important}
-.qe-hdark:hover{background:#0C2B2A !important}
+.qe-hred:hover{background:var(--mw-error-soft) !important}
+.qe-hdark:hover{background:var(--mw-accent) !important}
 `;
 const fieldStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
-    height: 46, padding: '0 14px', border: `1px solid ${C.line}`, borderRadius: 12, background: '#FFFFFF',
+    height: 46, padding: '0 14px', border: `1px solid ${C.line}`, borderRadius: 12, background: 'var(--mw-surface)',
     fontSize: 15, color: C.ink, boxSizing: 'border-box', width: '100%', ...extra,
 });
 const Lbl: React.FC<{ children: React.ReactNode; note?: string }> = ({ children, note }) => (
@@ -226,7 +226,7 @@ const Chevron: React.FC<{ open: boolean; size?: number; color?: string }> = ({ o
 const Sparkle: React.FC<{ size?: number; color?: string }> = ({ size = 15, color = C.glow }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
 );
-const Check: React.FC<{ size?: number; color?: string; w?: number }> = ({ size = 10, color = '#FFFFFF', w = 3.2 }) => (
+const Check: React.FC<{ size?: number; color?: string; w?: number }> = ({ size = 10, color = 'var(--mw-surface)', w = 3.2 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
 );
 /** 동그란(또는 둥근 네모) 사진 — 사진이 없으면 연한 민트 */
@@ -245,7 +245,7 @@ const SecHead: React.FC<{ n: string; title: React.ReactNode; hint?: string; righ
         {right}
     </div>
 );
-const sectionStyle: React.CSSProperties = { scrollMarginTop: 12, padding: 24, borderRadius: 20, background: '#FFFFFF', border: `1px solid ${C.cardLine}`, display: 'flex', flexDirection: 'column', gap: 18 };
+const sectionStyle: React.CSSProperties = { scrollMarginTop: 12, padding: 24, borderRadius: 20, background: 'var(--mw-surface)', border: `1px solid ${C.cardLine}`, display: 'flex', flexDirection: 'column', gap: 18 };
 
 /** 숙소 종류 — 호텔 마스터에 종류 칸이 없어 이름으로 나눈다 */
 type HotelKind = 'ger' | 'premium' | 'hotel';
@@ -274,7 +274,7 @@ interface AiInfo {
     fromCache: boolean;
 }
 const CHECK_COLOR: Record<string, [string, string]> = {
-    '반영': [C.mintBg, C.mintDeep], '일부 반영': [C.amberBg, C.amberFg], '확인 필요': [C.amberBg, C.amberFg], '반영 못 함': ['#FFF1F0', '#B42318'],
+    '반영': [C.mintBg, C.mintDeep], '일부 반영': [C.amberBg, C.amberFg], '확인 필요': [C.amberBg, C.amberFg], '반영 못 함': ['var(--mw-error-soft)', 'var(--mw-error-ink)'],
 };
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -768,7 +768,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         setNotice('바꾸기 전 일정으로 되돌렸습니다.');
     };
     const isTimeLike = (v: string) => !v || /^\d{1,2}:\d{2}$/.test(v.trim());
-    const smallBtn: React.CSSProperties = { height: 38, padding: '0 12px', border: `1px solid ${C.line}`, borderRadius: 10, background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: C.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
+    const smallBtn: React.CSSProperties = { height: 38, padding: '0 12px', border: `1px solid ${C.line}`, borderRadius: 10, background: 'var(--mw-surface)', fontSize: 12, fontWeight: 600, color: C.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
     const iconBtn: React.CSSProperties = { width: 32, height: 32, border: 0, borderRadius: 8, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' };
 
     return (
@@ -796,21 +796,21 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                         </button>
                     )}
                     <button type="button" onClick={() => setPreviewOpen(v => !v)} aria-pressed={previewOpen} className="qe-hbd"
-                        style={{ ...smallBtn, height: 40, borderRadius: 12, fontSize: 13, fontWeight: 700, ...(previewOpen ? { background: C.ink, color: '#FFFFFF', borderColor: C.ink } : {}) }}>
+                        style={{ ...smallBtn, height: 40, borderRadius: 12, fontSize: 13, fontWeight: 700, ...(previewOpen ? { background: C.ink, color: 'var(--mw-on-dark)', borderColor: C.ink } : {}) }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" /></svg>
                         {previewOpen ? '미리보기 닫기' : '고객 화면 보기'}
                     </button>
                     <button type="button" onClick={onClose} className="qe-hbg" style={{ flex: 'none', height: 40, padding: '0 12px', border: 0, borderRadius: 12, background: 'transparent', fontSize: 13, fontWeight: 600, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>취소</button>
                     <button type="button" onClick={handleSave} disabled={saving} className="qe-hdark"
-                        style={{ flex: 'none', height: 40, padding: '0 18px', border: 0, borderRadius: 12, background: C.ink, fontSize: 13, fontWeight: 700, color: '#FFFFFF', cursor: saving ? 'wait' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+                        style={{ flex: 'none', height: 40, padding: '0 18px', border: 0, borderRadius: 12, background: C.ink, fontSize: 13, fontWeight: 700, color: 'var(--mw-on-dark)', cursor: saving ? 'wait' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
                         <Check size={16} w={2.4} />{saving ? '저장 중…' : '저장'}
                     </button>
                 </div>
                 <nav className="qe-noscroll" style={{ display: 'flex', gap: 4, overflowX: 'auto', padding: '0 20px 10px' }}>
                     {steps.map(s => (
                         <button key={s.id} type="button" onClick={() => goTo(s.id)} className="qe-hbd"
-                            style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 14px 0 8px', borderRadius: 999, background: '#FFFFFF', border: `1px solid ${C.line}`, color: C.ink, whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                            <span style={{ width: 20, height: 20, borderRadius: '50%', background: s.ok ? C.mint : C.line2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: EN, fontSize: 10, fontWeight: 700, color: s.ok ? '#FFFFFF' : C.sub }}>
+                            style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, height: 36, padding: '0 14px 0 8px', borderRadius: 999, background: 'var(--mw-surface)', border: `1px solid ${C.line}`, color: C.ink, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                            <span style={{ width: 20, height: 20, borderRadius: '50%', background: s.ok ? C.mint : C.line2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: EN, fontSize: 10, fontWeight: 700, color: s.ok ? 'var(--mw-surface)' : C.sub }}>
                                 {s.ok ? <Check size={10} /> : s.n}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: 600 }}>{s.label}</span>
@@ -822,17 +822,17 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
 
             {/* ── 알림 줄 ── */}
             {saveError && (
-                <div role="alert" style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: '#FFF1F0', borderBottom: '1px solid #F8D3CF', fontSize: 12, fontWeight: 700, color: '#B42318' }}>
+                <div role="alert" style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--mw-error-soft)', borderBottom: '1px solid var(--mw-error-soft)', fontSize: 12, fontWeight: 700, color: 'var(--mw-error-ink)' }}>
                     <span style={{ flex: 1, minWidth: 0 }}>{saveError}</span>
-                    <button type="button" aria-label="닫기" onClick={() => setSaveError(null)} style={{ ...iconBtn, width: 26, height: 26, color: '#B42318' }}>✕</button>
+                    <button type="button" aria-label="닫기" onClick={() => setSaveError(null)} style={{ ...iconBtn, width: 26, height: 26, color: 'var(--mw-error-ink)' }}>✕</button>
                 </div>
             )}
             {notice && (
-                <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: C.mintBg2, borderBottom: `1px solid #CFF3E9`, fontSize: 12, fontWeight: 700, color: C.mintDeep }}>
+                <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: C.mintBg2, borderBottom: `1px solid var(--mw-green-80)`, fontSize: 12, fontWeight: 700, color: C.mintDeep }}>
                     <Sparkle size={14} color={C.mint} />
                     <span style={{ flex: 1, minWidth: 0 }}>{notice}</span>
                     {undoDays && (
-                        <button type="button" onClick={undoAll} style={{ flex: 'none', height: 28, padding: '0 10px', border: `1px solid ${C.mintLine}`, borderRadius: 8, background: '#FFFFFF', fontSize: 11, fontWeight: 700, color: C.mintDeep, cursor: 'pointer' }}>일정 되돌리기</button>
+                        <button type="button" onClick={undoAll} style={{ flex: 'none', height: 28, padding: '0 10px', border: `1px solid ${C.mintLine}`, borderRadius: 8, background: 'var(--mw-surface)', fontSize: 11, fontWeight: 700, color: C.mintDeep, cursor: 'pointer' }}>일정 되돌리기</button>
                     )}
                     <button type="button" aria-label="닫기" onClick={() => { setNotice(null); if (!aiInfo) { setUndoDays(null); setUndoRest(null); } }} style={{ ...iconBtn, width: 26, height: 26, color: C.mint }}>✕</button>
                 </div>
@@ -843,7 +843,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
             <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
                 {/* ── AI 초안 안내 카드 ── */}
                 {aiInfo && (
-                    <div style={{ background: '#FFFFFF', borderBottom: `1px solid ${C.line}` }}>
+                    <div style={{ background: 'var(--mw-surface)', borderBottom: `1px solid ${C.line}` }}>
                         <div style={{ maxWidth: 880, margin: '0 auto', padding: '14px 24px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 12 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <span style={{ flex: 'none', width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg,${C.mint} 0%,${C.mintHi} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={12} /></span>
@@ -860,7 +860,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     </span>
                                 </span>
                                 {undoDays && (
-                                    <button type="button" onClick={undoAll} className="qe-hbg" style={{ flex: 'none', height: 32, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, background: '#FFFFFF', fontSize: 12, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>되돌리기</button>
+                                    <button type="button" onClick={undoAll} className="qe-hbg" style={{ flex: 'none', height: 32, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 8, background: 'var(--mw-surface)', fontSize: 12, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>되돌리기</button>
                                 )}
                                 {(aiInfo.base || aiInfo.memos.length > 0 || aiInfo.checks.length > 0 || aiInfo.budget || aiInfo.budgetNote) && (
                                     <button type="button" onClick={() => setAiInfoOpen(v => !v)} style={{ flex: 'none', height: 32, padding: '0 10px', border: 0, borderRadius: 8, background: C.mintBg2, fontSize: 12, fontWeight: 700, color: C.mintDeep, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -999,7 +999,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                         </div>
                         {!templateMode && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,180px),1fr))', borderRadius: 16, overflow: 'hidden' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 18px', background: C.ink, color: '#FFFFFF' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '16px 18px', background: C.ink, color: 'var(--mw-on-dark)' }}>
                                     <span style={{ fontSize: 12, color: C.faint, whiteSpace: 'nowrap' }}>총액 · {people}명</span>
                                     <span style={{ fontFamily: EN, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}>¥{yen(total)}</span>
                                 </div>
@@ -1047,7 +1047,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                 {aiDraftQuoteId && !templateMode && (
                                     <button type="button" disabled={aiBusy} onClick={() => void runAiDraft(true)} className="qe-hdark"
                                         title="고객 견적 요청 내용으로 일정 초안을 새로 만듭니다 (지금 일정은 「되돌리기」로 되돌릴 수 있음)"
-                                        style={{ ...smallBtn, border: 0, background: C.ink, color: '#FFFFFF', fontWeight: 700, padding: '0 14px', opacity: aiBusy ? 0.6 : 1, cursor: aiBusy ? 'wait' : 'pointer' }}>
+                                        style={{ ...smallBtn, border: 0, background: C.ink, color: 'var(--mw-on-dark)', fontWeight: 700, padding: '0 14px', opacity: aiBusy ? 0.6 : 1, cursor: aiBusy ? 'wait' : 'pointer' }}>
                                         <Sparkle />{aiBusy ? '만드는 중…' : days.length ? 'AI로 다시 만들기' : 'AI 초안 만들기'}
                                     </button>
                                 )}
@@ -1055,7 +1055,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     const v = e.target.value; setProductId(v);
                                     const p = products.find(x => x.id === v);
                                     if (p) applyProduct(p);
-                                }} style={{ height: 38, maxWidth: 240, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 10, background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: C.ink }}>
+                                }} style={{ height: 38, maxWidth: 240, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 10, background: 'var(--mw-surface)', fontSize: 12, fontWeight: 600, color: C.ink }}>
                                     <option value="">{loadingProducts ? '상품 불러오는 중…' : '상품에서 불러오기'}</option>
                                     {products.map(p => { const st = productStats(p); return <option key={p.id} value={p.id}>{p.name} ({st.days}일)</option>; })}
                                 </select>
@@ -1064,7 +1064,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
 
                         {aiDraftQuoteId && !templateMode && days.length > 0 && (
                             // 「AI로 수정」 — 한국어로 적으면 AI 가 그 부분만 고친다 (사진·설명은 바뀌지 않은 줄 그대로)
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, borderRadius: 16, background: `linear-gradient(165deg,${C.mintBg2} 0%,#FFFFFF 100%)`, border: '1px solid #CFF3E9' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, borderRadius: 16, background: `linear-gradient(165deg,${C.mintBg2} 0%,var(--mw-surface) 100%)`, border: '1px solid var(--mw-green-80)' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                                     <span style={{ flex: 'none', width: 26, height: 26, borderRadius: 8, background: C.ink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkle size={14} /></span>
                                     <span style={{ flex: 'none', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700 }}>AI로 일정 수정</span>
@@ -1074,12 +1074,12 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     <textarea rows={2} value={reviseText} disabled={aiBusy} onChange={e => setReviseText(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void runAiRevise(); } }}
                                         placeholder="예: 2일차 테를지 대신 엘승타사르해로 바꾸고, 마지막 날 국영백화점 쇼핑 넣어 줘."
-                                        style={{ flex: 1, minWidth: 0, minHeight: 68, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 12, background: '#FFFFFF', fontSize: 13, lineHeight: 1.6, color: C.ink, resize: 'vertical', boxSizing: 'border-box' }} />
+                                        style={{ flex: 1, minWidth: 0, minHeight: 68, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 12, background: 'var(--mw-surface)', fontSize: 13, lineHeight: 1.6, color: C.ink, resize: 'vertical', boxSizing: 'border-box' }} />
                                     {(() => {
                                         const on = !!reviseText.trim() && !aiBusy;
                                         return (
                                             <button type="button" onClick={() => void runAiRevise()} disabled={!on} title="적은 부분만 고칩니다 (Ctrl+Enter)"
-                                                style={{ flex: 'none', width: 96, height: 68, border: 0, borderRadius: 12, background: on ? `linear-gradient(135deg,${C.mint} 0%,${C.mintHi} 100%)` : C.line, fontSize: 13, fontWeight: 700, color: on ? '#FFFFFF' : C.mute, cursor: on ? 'pointer' : 'not-allowed' }}>
+                                                style={{ flex: 'none', width: 96, height: 68, border: 0, borderRadius: 12, background: on ? `linear-gradient(135deg,${C.mint} 0%,${C.mintHi} 100%)` : C.line, fontSize: 13, fontWeight: 700, color: on ? 'var(--mw-surface)' : C.mute, cursor: on ? 'pointer' : 'not-allowed' }}>
                                                 {aiBusy ? '수정 중…' : 'AI로 수정'}
                                             </button>
                                         );
@@ -1103,13 +1103,13 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                     <div key={i}
                                         // 이 DAY 를 고치면 미리보기가 같은 DAY 로 이동해 펼쳐진다 (제목·여행지 고르기는 일정 사진 카드로)
                                         onFocusCapture={e => { if (!(e.target as HTMLElement).closest('[data-film-focus]')) focusDay(d.day); }}
-                                        style={{ borderRadius: 16, border: `1.5px solid ${isOpen ? C.mintHi : C.cardLine}`, background: '#FFFFFF', overflow: 'hidden', transition: 'border-color .2s' }}>
+                                        style={{ borderRadius: 16, border: `1.5px solid ${isOpen ? C.mintHi : C.cardLine}`, background: 'var(--mw-surface)', overflow: 'hidden', transition: 'border-color .2s' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px 10px 12px' }}>
                                             <button type="button" onClick={() => { setOpenDay(isOpen ? -1 : i); setTitlePick(null); setHotelPick(null); if (!isOpen) focusDay(d.day); }}
                                                 style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: C.ink }}>
                                                 <span style={{ flex: 'none', width: 44, height: 44, borderRadius: 12, background: isOpen ? C.ink : C.mintBg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                                     <span style={{ fontFamily: EN, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: isOpen ? C.glow : C.mintDeep }}>DAY</span>
-                                                    <span style={{ fontFamily: EN, fontSize: 16, fontWeight: 700, lineHeight: 1, color: isOpen ? '#FFFFFF' : C.ink }}>{d.day}</span>
+                                                    <span style={{ fontFamily: EN, fontSize: 16, fontWeight: 700, lineHeight: 1, color: isOpen ? 'var(--mw-surface)' : C.ink }}>{d.day}</span>
                                                 </span>
                                                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                                                     <span style={{ fontFamily: JP, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: d.title ? C.ink : C.mute }}>{d.title || '제목 없음'}</span>
@@ -1128,7 +1128,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.sub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14M6 13l6 6 6-6" /></svg>
                                                 </button>
                                                 {delDay === i ? (
-                                                    <button type="button" onClick={() => removeDay(i)} style={{ height: 32, padding: '0 10px', border: 0, borderRadius: 8, background: '#E5484D', fontSize: 11, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap' }}>삭제?</button>
+                                                    <button type="button" onClick={() => removeDay(i)} style={{ height: 32, padding: '0 10px', border: 0, borderRadius: 8, background: 'var(--mw-error)', fontSize: 11, fontWeight: 700, color: 'var(--mw-on-dark)', cursor: 'pointer', whiteSpace: 'nowrap' }}>삭제?</button>
                                                 ) : (
                                                     <button type="button" aria-label="DAY 삭제 (두 번 누르기)" title="DAY 삭제 (두 번 누르기)" onClick={() => removeDay(i)} className="qe-hred" style={iconBtn}>
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.mute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
@@ -1156,7 +1156,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                             {spotPool.length > 0 && (
                                                                 <button type="button" aria-label="여행지 목록 열기" onClick={() => { setTitlePick(picking ? null : i); focusDay(d.day, true); }}
                                                                     style={{ flex: 'none', width: 34, height: 34, border: 0, borderRadius: 10, background: picking ? C.ink : C.mintBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <Chevron open={picking} size={16} color={picking ? '#FFFFFF' : C.mintDeep} />
+                                                                    <Chevron open={picking} size={16} color={picking ? 'var(--mw-surface)' : C.mintDeep} />
                                                                 </button>
                                                             )}
                                                         </span>
@@ -1182,7 +1182,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                     <div data-film-focus="" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, borderRadius: 14, background: C.bg }}>
                                                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                             <span style={{ flex: 1, fontSize: 11, color: C.sub }}>고르면 DAY 제목과 견적서 일정 카드 사진이 함께 바뀌어요</span>
-                                                            {d.titleImage && <button type="button" onClick={() => { patchDay(i, { titleImage: undefined }); focusDay(d.day, true); }} style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: '#FFFFFF', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer' }}>사진 빼기</button>}
+                                                            {d.titleImage && <button type="button" onClick={() => { patchDay(i, { titleImage: undefined }); focusDay(d.day, true); }} style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: 'var(--mw-surface)', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer' }}>사진 빼기</button>}
                                                         </span>
                                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(76px,1fr))', gap: '12px 6px', maxHeight: 212, overflowY: 'auto', paddingTop: 2 }}>
                                                             {spotPool.map(sp => {
@@ -1191,7 +1191,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                     <button key={sp.id} type="button" title={`고객 화면: ${cleanSpotName(sp.name_kr)}`}
                                                                         onClick={() => { patchDay(i, { title: cleanSpotName(sp.name_kr), titleImage: sp.images![0] }); setTitlePick(null); focusDay(d.day, true); }}
                                                                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 0 0', border: 0, background: 'transparent', cursor: 'pointer' }}>
-                                                                        <span style={{ borderRadius: '50%', boxShadow: on ? `0 0 0 3px #FFFFFF,0 0 0 5px ${C.mintHi}` : 'none' }}><Thumb src={sp.images![0]} size={52} /></span>
+                                                                        <span style={{ borderRadius: '50%', boxShadow: on ? `0 0 0 3px var(--mw-surface),0 0 0 5px ${C.mintHi}` : 'none' }}><Thumb src={sp.images![0]} size={52} /></span>
                                                                         <span style={{ fontSize: 11, fontWeight: on ? 700 : 500, lineHeight: 1.3, color: on ? C.mintDeep : C.body, textAlign: 'center' }}>{koSpotName(sp.name_kr)}</span>
                                                                     </button>
                                                                 );
@@ -1243,7 +1243,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                         const img = (a.images || [])[0];
                                                                         const key = `${i}-${j}`;
                                                                         return (
-                                                                            <span key={j} style={{ display: 'flex', alignItems: 'center', maxWidth: '100%', height: 38, border: `1px solid ${img ? C.mintHi : C.line}`, borderRadius: 999, background: img ? C.mintBg2 : '#FFFFFF' }}>
+                                                                            <span key={j} style={{ display: 'flex', alignItems: 'center', maxWidth: '100%', height: 38, border: `1px solid ${img ? C.mintHi : C.line}`, borderRadius: 999, background: img ? C.mintBg2 : 'var(--mw-surface)' }}>
                                                                                 <button type="button" onClick={() => setSpotTarget({ d: i, a: j })}
                                                                                     style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, height: '100%', padding: `0 ${img ? 6 : 12}px 0 4px`, border: 0, background: 'transparent', cursor: 'pointer' }}>
                                                                                     <Thumb src={img} size={30} />
@@ -1274,14 +1274,14 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                             <span style={{ display: 'flex', gap: 4 }}>
                                                                 {!templateMode && onAssignAccommodation && (
                                                                     <button type="button" title="예약의 숙소 배정 (가이드·숙소 관리와 연결)" onClick={() => onAssignAccommodation(d.day)}
-                                                                        style={{ flex: 'none', height: 26, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 999, background: '#FFFFFF', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>배정</button>
+                                                                        style={{ flex: 'none', height: 26, padding: '0 10px', border: `1px solid ${C.line}`, borderRadius: 999, background: 'var(--mw-surface)', fontSize: 11, fontWeight: 700, color: C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>배정</button>
                                                                 )}
                                                                 {assigned && !templateMode && onUnassignAccommodation && (
                                                                     <button type="button" title="숙소 배정 해제" onClick={() => onUnassignAccommodation(d.day)}
-                                                                        style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: '#FFF1F0', fontSize: 11, fontWeight: 700, color: '#B42318', cursor: 'pointer', whiteSpace: 'nowrap' }}>배정 해제</button>
+                                                                        style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: 'var(--mw-error-soft)', fontSize: 11, fontWeight: 700, color: 'var(--mw-error-ink)', cursor: 'pointer', whiteSpace: 'nowrap' }}>배정 해제</button>
                                                                 )}
                                                                 <button type="button" onClick={() => setHotelPick(hpicking ? null : i)}
-                                                                    style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: hpicking ? C.ink : C.mintBg, fontSize: 11, fontWeight: 700, color: hpicking ? '#FFFFFF' : C.mintDeep, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                                    style={{ flex: 'none', height: 26, padding: '0 10px', border: 0, borderRadius: 999, background: hpicking ? C.ink : C.mintBg, fontSize: 11, fontWeight: 700, color: hpicking ? 'var(--mw-surface)' : C.mintDeep, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                                     {hpicking ? '닫기' : '숙소에서 고르기'}
                                                                 </button>
                                                             </span>
@@ -1310,7 +1310,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                 const known = !v || isO || MEAL_KO.some(([ja]) => ja === v);
                                                                 const shown = !v ? '없음' : isO ? '포함' : (KO_OF.get(v) || v);
                                                                 const editing = mealEdit === `${d.day}-${k}`;
-                                                                const tile: React.CSSProperties = { position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, height: 46, padding: '0 10px', border: `1px solid ${v ? C.mintLine : C.line}`, borderRadius: 12, background: v ? C.mintBg2 : '#FFFFFF', boxSizing: 'border-box', cursor: 'pointer', minWidth: 0 };
+                                                                const tile: React.CSSProperties = { position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, height: 46, padding: '0 10px', border: `1px solid ${v ? C.mintLine : C.line}`, borderRadius: 12, background: v ? C.mintBg2 : 'var(--mw-surface)', boxSizing: 'border-box', cursor: 'pointer', minWidth: 0 };
                                                                 if (editing) {
                                                                     return (
                                                                         // 직접 입력 — 고객 화면에 그대로 나가므로 일본어. Enter·칸 밖 클릭으로 확정
@@ -1353,7 +1353,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                 <div style={{ display: 'flex', gap: 4 }}>
                                                                     {([['all', '전체'], ['ger', '게르'], ['premium', '고급 게르'], ['hotel', '호텔']] as const).map(([k, label]) => {
                                                                         const on = hotelKindTab === k;
-                                                                        return <button key={k} type="button" onClick={() => setHotelKindTab(k)} style={{ height: 28, padding: '0 10px', border: 0, borderRadius: 999, background: on ? C.ink : '#FFFFFF', fontSize: 11, fontWeight: 700, color: on ? '#FFFFFF' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>{label}</button>;
+                                                                        return <button key={k} type="button" onClick={() => setHotelKindTab(k)} style={{ height: 28, padding: '0 10px', border: 0, borderRadius: 999, background: on ? C.ink : 'var(--mw-surface)', fontSize: 11, fontWeight: 700, color: on ? 'var(--mw-surface)' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>{label}</button>;
                                                                     })}
                                                                 </div>
                                                             </div>
@@ -1363,7 +1363,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                     const [tl, tb, tf] = HOTEL_KIND[hotelKindOf(h)];
                                                                     return (
                                                                         <button key={h.id} type="button" onClick={() => { fillFromHotel(i, h); setHotelPick(null); focusDay(d.day); }}
-                                                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, border: `1.5px solid ${on ? C.mintHi : '#FFFFFF'}`, borderRadius: 14, background: on ? C.mintBg2 : '#FFFFFF', textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, border: `1.5px solid ${on ? C.mintHi : 'var(--mw-surface)'}`, borderRadius: 14, background: on ? C.mintBg2 : 'var(--mw-surface)', textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
                                                                             <Thumb src={h.images?.[0]} size={52} round={false} radius={10} />
                                                                             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                                                                                 <span style={{ fontFamily: `${EN},'Noto Sans JP',sans-serif`, fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.name_kr}</span>
@@ -1381,7 +1381,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                                     const [tl, tb, tf] = HOTEL_KIND.self;
                                                                     return (
                                                                         <button key={nm} type="button" onClick={() => pickSelf(nm)}
-                                                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, border: `1.5px solid ${on ? C.mintHi : '#FFFFFF'}`, borderRadius: 14, background: on ? C.mintBg2 : '#FFFFFF', textAlign: 'left', cursor: 'pointer' }}>
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, border: `1.5px solid ${on ? C.mintHi : 'var(--mw-surface)'}`, borderRadius: 14, background: on ? C.mintBg2 : 'var(--mw-surface)', textAlign: 'left', cursor: 'pointer' }}>
                                                                             <span style={{ flex: 'none', width: 52, height: 52, borderRadius: 10, background: C.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.amberFg }}>—</span>
                                                                             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                                                                                 <span style={{ fontFamily: JP, fontSize: 13, fontWeight: 700, color: C.ink }}>{nm}</span>
@@ -1424,8 +1424,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                         const isInc = kind === 'inc';
                                         return (
                                             <button key={t} type="button" title={`고객 화면: ${t}`} aria-pressed={on} onClick={() => { setFocus({ section: 'q-inc', at: Date.now() }); toggleInc(kind, t); }}
-                                                style={{ display: 'flex', alignItems: 'center', gap: 6, height: 36, padding: '0 12px 0 8px', border: `1px solid ${on ? (isInc ? C.mintHi : C.ink) : C.line}`, borderRadius: 999, background: on ? (isInc ? C.mintBg2 : C.grayBg) : '#FFFFFF', fontSize: 12, fontWeight: on ? 700 : 500, color: on ? C.ink : C.mute, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .15s' }}>
-                                                <span style={{ width: 18, height: 18, borderRadius: '50%', background: on ? (isInc ? C.mint : C.ink) : C.line2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: on ? '#FFFFFF' : C.mute }}>{on ? (isInc ? '✓' : '✕') : '+'}</span>
+                                                style={{ display: 'flex', alignItems: 'center', gap: 6, height: 36, padding: '0 12px 0 8px', border: `1px solid ${on ? (isInc ? C.mintHi : C.ink) : C.line}`, borderRadius: 999, background: on ? (isInc ? C.mintBg2 : C.grayBg) : 'var(--mw-surface)', fontSize: 12, fontWeight: on ? 700 : 500, color: on ? C.ink : C.mute, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .15s' }}>
+                                                <span style={{ width: 18, height: 18, borderRadius: '50%', background: on ? (isInc ? C.mint : C.ink) : C.line2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: on ? 'var(--mw-surface)' : C.mute }}>{on ? (isInc ? '✓' : '✕') : '+'}</span>
                                                 {ko || t}
                                                 {!ko && <span style={{ height: 16, padding: '0 5px', borderRadius: 4, background: C.amberBg, fontSize: 9, fontWeight: 700, color: C.amberFg, display: 'inline-flex', alignItems: 'center' }}>일본어</span>}
                                             </button>
@@ -1470,7 +1470,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                             const n = r === 'all' ? spotsPicked.length : spotPool.filter(sp => (sp.region || '') === r && spotsPicked.includes(sp.id)).length;
                                             return (
                                                 <button key={r} type="button" onClick={() => setSpotRegion(r)}
-                                                    style={{ flex: 'none', height: 34, padding: '0 14px', border: 0, borderRadius: 999, background: on ? C.ink : C.grayBg, fontSize: 12, fontWeight: 700, color: on ? '#FFFFFF' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                    style={{ flex: 'none', height: 34, padding: '0 14px', border: 0, borderRadius: 999, background: on ? C.ink : C.grayBg, fontSize: 12, fontWeight: 700, color: on ? 'var(--mw-surface)' : C.sub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                     {label}{n > 0 && <span style={{ marginLeft: 5, color: on ? C.glow : C.mint }}>{n}</span>}
                                                 </button>
                                             );
@@ -1484,9 +1484,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                                                 <button key={sp.id} type="button" aria-pressed={on} title={`고객 화면: ${cleanSpotName(sp.name_kr)}`}
                                                     onClick={() => { setFocus({ section: 'q-spot', at: Date.now() }); toggleSpot(sp.id); }}
                                                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '4px 0 0', border: 0, background: 'transparent', cursor: 'pointer' }}>
-                                                    <span style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', boxShadow: on ? `0 0 0 3px #FFFFFF,0 0 0 5px ${C.mintHi}` : 'none', transition: 'box-shadow .2s' }}>
+                                                    <span style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', boxShadow: on ? `0 0 0 3px var(--mw-surface),0 0 0 5px ${C.mintHi}` : 'none', transition: 'box-shadow .2s' }}>
                                                         <Thumb src={sp.images![0]} size={64} />
-                                                        {on && <span style={{ position: 'absolute', right: -3, top: -3, minWidth: 22, height: 22, padding: '0 4px', boxSizing: 'border-box', borderRadius: 999, background: C.mint, border: '2px solid #FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: EN, fontSize: 11, fontWeight: 700, color: '#FFFFFF' }}>{order + 1}</span>}
+                                                        {on && <span style={{ position: 'absolute', right: -3, top: -3, minWidth: 22, height: 22, padding: '0 4px', boxSizing: 'border-box', borderRadius: 999, background: C.mint, border: '2px solid var(--mw-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: EN, fontSize: 11, fontWeight: 700, color: 'var(--mw-on-dark)' }}>{order + 1}</span>}
                                                     </span>
                                                     <span style={{ fontSize: 12, fontWeight: on ? 700 : 500, lineHeight: 1.35, color: on ? C.mintDeep : C.body, textAlign: 'center' }}>{koSpotName(sp.name_kr)}</span>
                                                 </button>
@@ -1505,8 +1505,8 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
 
             {/* ── 미리보기 (「고객 화면 보기」) ── */}
             {previewOpen && (
-                <aside style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 'min(440px,100%)', zIndex: 5, display: 'flex', flexDirection: 'column', background: '#E9EEED', borderLeft: `1px solid ${C.line}`, boxShadow: '-12px 0 32px rgba(18,59,58,0.12)' }}>
-                    <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, height: 56, padding: '0 12px 0 16px', background: '#FFFFFF', borderBottom: `1px solid ${C.line}` }}>
+                <aside style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 'min(440px,100%)', zIndex: 5, display: 'flex', flexDirection: 'column', background: 'var(--mw-gray-100)', borderLeft: `1px solid ${C.line}`, boxShadow: '-12px 0 32px rgba(18,59,58,0.12)' }}>
+                    <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, height: 56, padding: '0 12px 0 16px', background: 'var(--mw-surface)', borderBottom: `1px solid ${C.line}` }}>
                         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: 13, fontWeight: 700 }}>고객이 받는 화면</span>
                             <span style={{ fontSize: 11, color: C.mute }}>입력하면 바로 반영 · 저장 전 내용</span>
@@ -1520,7 +1520,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                         </button>
                     </div>
                     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 12px 20px' }}>
-                        <div style={{ margin: '0 auto', width: '100%', maxWidth: 390, overflow: 'hidden', borderRadius: 22, border: '1px solid #CBD5D3', background: '#FFFFFF', boxShadow: '0 10px 30px rgba(18,59,58,0.12)' }}>
+                        <div style={{ margin: '0 auto', width: '100%', maxWidth: 390, overflow: 'hidden', borderRadius: 22, border: '1px solid var(--mw-gray-300)', background: 'var(--mw-surface)', boxShadow: '0 10px 30px rgba(18,59,58,0.12)' }}>
                             <TripDocument doc={preview.doc} images={preview.images} focusTarget={focus} />
                         </div>
                     </div>

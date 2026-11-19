@@ -7,9 +7,9 @@ import type { InquiryRecord, InquiryStatus } from '../types/inquiry';
 type StatusFilter = InquiryStatus | 'all';
 
 const STATUS_META: Record<InquiryStatus, { label: string; tone: string }> = {
-    new: { label: '신규', tone: 'b-red' },
-    answered: { label: '답변 완료', tone: 'b-green' },
-    closed: { label: '종료', tone: 'b-gray' },
+    new: { label: '신규', tone: 'b-wait' },
+    answered: { label: '답변 완료', tone: 'b-confirmed' },
+    closed: { label: '종료', tone: 'b-new' },
 };
 const STATUS_ORDER: InquiryStatus[] = ['new', 'answered', 'closed'];
 
@@ -45,7 +45,7 @@ const MigrationNotice: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
     <div
         style={{
             display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '14px 16px', marginBottom: 16,
-            background: '#FFF3DC', border: '1px solid #F3DDAE', borderRadius: 'var(--r-md)', color: '#8A5A12', fontSize: 13.5, fontWeight: 600, lineHeight: 1.55,
+            background: 'var(--mw-warn-soft)', border: '1px solid var(--mw-line)', borderRadius: 'var(--r-md)', color: 'var(--mw-gray-800)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.55,
         }}
     >
         <Icon name="warning" style={{ fontSize: 20, flex: 'none' }} />
@@ -316,7 +316,7 @@ export const AdminInquiryManage: React.FC = () => {
                     <div>
                         <h3>
                             문의 목록
-                            {counts.new > 0 && <span className="badge b-red" style={{ marginLeft: 10, verticalAlign: 'middle' }}>미처리 {counts.new}건</span>}
+                            {counts.new > 0 && <span className="badge b-wait" style={{ marginLeft: 10, verticalAlign: 'middle' }}>미처리 {counts.new}건</span>}
                         </h3>
                         <div className="cell-muted" style={{ fontSize: 13 }}>고객 화면 「お問い合わせ」(/contact) 폼으로 접수된 문의입니다. 최신순으로 표시됩니다.</div>
                     </div>

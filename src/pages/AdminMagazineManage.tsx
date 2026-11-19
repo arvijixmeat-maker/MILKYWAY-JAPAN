@@ -923,7 +923,7 @@ export const AdminMagazineManage: React.FC = () => {
                                                             e.stopPropagation();
                                                             setFormData(prev => ({ ...prev, image: '' }));
                                                         }}
-                                                        style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                        style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.5)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                                     >
                                                         <Icon name="close" style={{ fontSize: 16 }} />
                                                     </button>

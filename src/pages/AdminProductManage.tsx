@@ -1,5 +1,7 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
 import { AdminLayout } from '../components/admin/AdminLayout';
+import { ChevronLeft, ChevronRight, Copy, Eye, GripVertical, Luggage, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Button, ChipFilter, EmptyState } from '../components/admin/ui';
 import { Icon } from '../components/admin/console/Icon';
 import { DesignTemplateBlockEditor } from '../components/admin/DesignTemplateBlockEditor';
 import { designTemplates } from '../components/product/designTemplates/registry';
@@ -322,123 +324,79 @@ export const AdminProductManage: React.FC = () => {
         }
     };
 
-    const getStatusBadge = (status: string) => {
-        const tones = {
-            active: 'b-green',
-            inactive: 'b-gray',
-            soldout: 'b-red'
-        };
-        const labels = {
-            active: '판매중',
-            inactive: '비활성',
-            soldout: '품절'
-        };
-        return (
-            <span className={`badge ${tones[status as keyof typeof tones]}`}>
-                {labels[status as keyof typeof labels]}
-            </span>
-        );
-    };
-
-    const STAT_CARDS = [
-        { key: 'total', label: '전체 상품', value: stats.total, ico: 'inventory_2', tint: 'tint-blue' },
-        { key: 'active', label: '판매중', value: stats.active, ico: 'check_circle', tint: 'tint-green' },
-        { key: 'inactive', label: '비활성', value: stats.inactive, ico: 'cancel', tint: 'tint-ink' },
-        { key: 'soldout', label: '품절', value: stats.soldout, ico: 'remove_shopping_cart', tint: 'tint-red' },
-        { key: 'featured', label: '추천 상품', value: stats.featured, ico: 'star', tint: 'tint-amber' },
-    ];
+    const STATUS_TONES: Record<string, string> = { active: 'b-sent', inactive: 'b-new', soldout: 'b-cancel' };
+    const STATUS_NAMES: Record<string, string> = { active: '판매중', inactive: '비활성', soldout: '품절' };
+    const getStatusBadge = (status: string) => (
+        <span className={`badge ${STATUS_TONES[status] || 'b-new'}`}>{STATUS_NAMES[status] || status}</span>
+    );
+    const priceText = (value: unknown) => `₩${typeof value === 'number' ? value.toLocaleString() : (value || 0)}`;
+    const countText = (value: unknown) => (typeof value === 'number' ? value.toLocaleString() : `${value || 0}`);
+    const openEditor = (product: TourProduct) => { setSelectedProduct(product); setIsModalOpen(true); };
+    const pageNumbers = (() => {
+        const last = Math.max(totalPages, 1);
+        const start = Math.max(1, Math.min(currentPage - 2, last - 4));
+        return Array.from({ length: Math.min(5, last) }, (_, i) => start + i);
+    })();
 
     return (
         <AdminLayout
             activePage="products"
             title={isModalOpen ? (selectedProduct ? '상품 수정' : '상품 추가') : '상품 관리'}
             actions={!isModalOpen && (
-                <button
-                    className="btn btn-ink"
-                    onClick={() => {
-                        setSelectedProduct(null);
-                        setIsModalOpen(true);
-                    }}
-                >
-                    <Icon name="add" />상품 추가
-                </button>
+                <Button variant="primary" icon={<Plus />} onClick={() => { setSelectedProduct(null); setIsModalOpen(true); }}>
+                    상품 추가
+                </Button>
             )}
         >
-            <div className="route-anim" style={{ display: isModalOpen ? 'none' : undefined }}>
-                {/* Statistics Cards */}
-                <div className="prod-stats">
-                    {STAT_CARDS.map((s) => (
-                        <div className="metric" key={s.key} style={{ padding: '16px 18px' }}>
-                            <div className="row" style={{ gap: 12 }}>
-                                <span className={`metric-ico ${s.tint}`} style={{ width: 40, height: 40 }}>
-                                    <Icon name={s.ico} fill />
-                                </span>
-                                <div>
-                                    <div className="metric-label">{s.label}</div>
-                                    <div className="metric-value" style={{ fontSize: 22 }}>{s.value}</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Filters / Toolbar */}
-                <div className="toolbar" style={{ marginTop: 18 }}>
+            <div className="prod route-anim" style={{ display: isModalOpen ? 'none' : undefined }}>
+                <div className="filterbar">
                     <label className="tb-search">
-                        <Icon name="search" />
-                        <input
-                            type="text"
-                            placeholder="상품명 검색"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                        <Search size={18} strokeWidth={1.5} aria-hidden="true" />
+                        <span className="sr-only">상품 검색</span>
+                        <input type="search" placeholder="상품명 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </label>
-                    <select
-                        className="select"
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                    >
-                        <option value="all">전체 카테고리</option>
+                    <select aria-label="카테고리" className="select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                        <option value="all">카테고리: 전체</option>
                         {categories.map((cat) => (
                             <option key={cat.id} value={cat.name}>{cat.name}</option>
                         ))}
                     </select>
-                    <select
-                        className="select"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                        <option value="all">전체 상태</option>
-                        <option value="active">판매중</option>
-                        <option value="inactive">비활성</option>
-                        <option value="soldout">품절</option>
-                    </select>
-                    <select
-                        className="select"
-                        value={featuredFilter}
-                        onChange={(e) => setFeaturedFilter(e.target.value)}
-                    >
-                        <option value="all">추천 전체</option>
-                        <option value="featured">추천 상품</option>
+                    <select aria-label="추천" className="select" value={featuredFilter} onChange={(e) => setFeaturedFilter(e.target.value)}>
+                        <option value="all">추천: 전체</option>
+                        <option value="featured">추천 상품 ({stats.featured})</option>
                         <option value="normal">일반 상품</option>
                     </select>
                 </div>
 
-                {/* Products Table */}
-                <div className="card">
+                <ChipFilter
+                    label="판매 상태"
+                    value={statusFilter}
+                    onChange={(v) => setStatusFilter(v)}
+                    options={[
+                        { value: 'all', label: '전체', count: stats.total },
+                        { value: 'active', label: '판매중', count: stats.active },
+                        { value: 'soldout', label: '품절', count: stats.soldout },
+                        { value: 'inactive', label: '비활성', count: stats.inactive },
+                    ]}
+                />
+
+                <div className="prod-count"><span>{filteredProducts.length}개</span><span>조회 / 예약</span></div>
+
+                {/* PC: 표 (줄을 끌어서 순서 변경) */}
+                <div className="tbl-card d-only">
                     <div className="tbl-wrap">
-                        <table className="tbl">
+                        <table className="tbl static" style={{ minWidth: 960 }}>
                             <thead>
                                 <tr>
-                                    <th>상품</th>
-                                    <th>카테고리</th>
-                                    <th>기간</th>
-                                    <th className="r">가격</th>
-                                    <th>상태</th>
-                                    <th className="c">추천</th>
-                                    <th className="c">인기</th>
-                                    <th className="c">조회/예약</th>
-                                    <th className="r">액션</th>
+                                    <th scope="col">상품</th>
+                                    <th scope="col">카테고리</th>
+                                    <th scope="col">기간</th>
+                                    <th scope="col" className="r">가격</th>
+                                    <th scope="col">상태</th>
+                                    <th scope="col" className="c">추천</th>
+                                    <th scope="col" className="c">인기</th>
+                                    <th scope="col" className="r">조회 / 예약</th>
+                                    <th scope="col" className="r">관리</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -450,79 +408,46 @@ export const AdminProductManage: React.FC = () => {
                                         onDragOver={(e) => handleProductDragOver(e, index)}
                                         onDrop={handleProductDragEnd}
                                         onDragEnd={handleProductDragEnd}
-                                        style={draggedProductIndex === index ? { opacity: 0.5, cursor: 'move' } : { cursor: 'move' }}
+                                        className={`prod-tr${draggedProductIndex === index ? ' dragging' : ''}`}
                                     >
-                                        <td style={{ maxWidth: 340 }}>
+                                        <td className="prod-name-cell">
                                             <div className="av-cell">
-                                                <Icon name="drag_indicator" className="drag-handle" style={{ fontSize: 18 }} />
-                                                <span className="thumb sq" style={{ overflow: 'hidden' }}>
-                                                    <img
-                                                        src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')}
-                                                        alt={product.name}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    />
-                                                </span>
-                                                <div style={{ minWidth: 0 }}>
-                                                    <div className="cell-strong" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</div>
-                                                    <div className="cell-muted" style={{ fontSize: 11.5 }}>{product.id}</div>
+                                                <GripVertical className="drag-handle" size={18} strokeWidth={1.5} aria-hidden="true" />
+                                                <img className="thumb sq" src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')} alt="" />
+                                                <div className="cell-2">
+                                                    <b>{product.name}</b>
+                                                    <span>{product.id}</span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="cell-muted">{product.category}</td>
-                                        <td className="cell-muted">{product.duration}</td>
-                                        <td className="r">
-                                            <div className="cell-price">₩{typeof product.price === 'number' ? product.price.toLocaleString() : (product.price || 0)}</div>
-                                            {product.originalPrice ? (
-                                                <div className="cell-muted" style={{ fontSize: 11.5, textDecoration: 'line-through' }}>₩{typeof product.originalPrice === 'number' ? product.originalPrice.toLocaleString() : (product.originalPrice || 0)}</div>
-                                            ) : null}
+                                        <td>{product.category}</td>
+                                        <td>{product.duration}</td>
+                                        <td className="r tnum">
+                                            <div className="cell-price">{priceText(product.price)}</div>
+                                            {product.originalPrice ? <div className="prod-was">{priceText(product.originalPrice)}</div> : null}
                                         </td>
                                         <td>
-                                            <button
-                                                onClick={() => toggleStatus(product.id)}
-                                                style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
-                                            >
+                                            <button type="button" className="prod-status-btn" title="눌러서 판매 상태 바꾸기" onClick={() => toggleStatus(product.id)}>
                                                 {getStatusBadge(product.status)}
                                             </button>
                                         </td>
                                         <td className="c">
-                                            <button onClick={() => toggleFeatured(product.id)} className="star-btn" title="추천">
-                                                <Icon
-                                                    name={product.isFeatured ? 'star' : 'star_border'}
-                                                    fill={product.isFeatured}
-                                                    style={{ color: product.isFeatured ? 'var(--mrt-star)' : 'var(--mrt-gray-300)' }}
-                                                />
-                                            </button>
+                                            <button type="button" className="sw" aria-pressed={!!product.isFeatured} aria-label="추천" title="추천" onClick={() => toggleFeatured(product.id)} />
                                         </td>
                                         <td className="c">
-                                            <button onClick={() => togglePopular(product.id)} className="star-btn" title="인기">
-                                                <Icon
-                                                    name={product.isPopular ? 'favorite' : 'favorite_border'}
-                                                    fill={product.isPopular}
-                                                    style={{ color: product.isPopular ? '#FF4F8B' : 'var(--mrt-gray-300)' }}
-                                                />
-                                            </button>
+                                            <button type="button" className="sw" aria-pressed={!!product.isPopular} aria-label="인기" title="인기" onClick={() => togglePopular(product.id)} />
                                         </td>
-                                        <td className="c">
-                                            <div className="cell-mono" style={{ fontSize: 12.5 }}>{typeof product.viewCount === 'number' ? product.viewCount.toLocaleString() : (product.viewCount || 0)}</div>
-                                            <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--mrt-blue-strong)' }}>예약 {product.bookingCount || 0}</div>
-                                        </td>
+                                        <td className="r tnum">{countText(product.viewCount)} / {countText(product.bookingCount)}</td>
                                         <td className="r">
                                             <div className="row-actions">
-                                                <button onClick={() => duplicateProduct(product)} className="act-btn" title="복제">
-                                                    <Icon name="content_copy" />
+                                                <button type="button" onClick={() => duplicateProduct(product)} className="act-btn" title="복제" aria-label="복제">
+                                                    <Copy size={16} strokeWidth={1.5} />
                                                 </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedProduct(product);
-                                                        setIsModalOpen(true);
-                                                    }}
-                                                    className="act-btn"
-                                                    title="수정"
-                                                >
-                                                    <Icon name="edit" />
+                                                <button type="button" onClick={() => openEditor(product)} className="act-btn" title="수정" aria-label="수정">
+                                                    <Pencil size={16} strokeWidth={1.5} />
                                                 </button>
-                                                <button onClick={() => deleteProduct(product.id)} className="act-btn danger" title="삭제">
-                                                    <Icon name="delete" />
+                                                <button type="button" onClick={() => deleteProduct(product.id)} className="act-btn danger" title="삭제" aria-label="삭제">
+                                                    <Trash2 size={16} strokeWidth={1.5} />
                                                 </button>
                                             </div>
                                         </td>
@@ -530,48 +455,55 @@ export const AdminProductManage: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
-                        {paginatedProducts.length === 0 && (
-                            <div className="empty">
-                                <Icon name="inventory_2" />
-                                <p>조건에 맞는 상품이 없습니다.</p>
-                            </div>
-                        )}
                     </div>
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="card-pad" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)' }}>
-                            <p className="cell-muted" style={{ fontSize: 13 }}>
-                                총 {filteredProducts.length}개 상품 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredProducts.length)}개 표시
-                            </p>
-                            <div className="row" style={{ gap: 6 }}>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="btn btn-ghost btn-sm"
-                                >
-                                    이전
-                                </button>
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`btn btn-sm ${page === currentPage ? 'btn-ink' : 'btn-ghost'}`}
-                                    >
-                                        {page}
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="btn btn-ghost btn-sm"
-                                >
-                                    다음
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
+
+                {/* 휴대폰: 카드 목록 */}
+                <div className="m-only prod-cards">
+                    {paginatedProducts.map((product) => (
+                        <article key={product.id} className="pcard">
+                            <a href="#" onClick={(e) => { e.preventDefault(); openEditor(product); }}>
+                                <img className="pcard-img" src={getOptimizedImageUrl(product.mainImages[0], 'productThumbnail')} alt="" />
+                                <div className="pcard-text">
+                                    <div className="pcard-top">{getStatusBadge(product.status)}<span>{[product.category, product.duration].filter(Boolean).join(' · ')}</span></div>
+                                    <b>{product.name}</b>
+                                    <span className="pcard-price tnum">{priceText(product.price)}<small> ~ / 1인</small></span>
+                                </div>
+                            </a>
+                            <div className="pcard-foot">
+                                <button type="button" className="sw-label" aria-pressed={!!product.isFeatured} onClick={() => toggleFeatured(product.id)}><span className="sw" aria-hidden="true" />추천</button>
+                                <button type="button" className="sw-label" aria-pressed={!!product.isPopular} onClick={() => togglePopular(product.id)}><span className="sw" aria-hidden="true" />인기</button>
+                                <span className="pcard-stat tnum"><Eye size={14} strokeWidth={1.5} aria-hidden="true" />{countText(product.viewCount)} / {countText(product.bookingCount)}</span>
+                            </div>
+                            <div className="pcard-actions">
+                                <button type="button" className="btn btn-outline" onClick={() => toggleStatus(product.id)}>상태 바꾸기</button>
+                                <button type="button" className="btn btn-outline btn-icon" aria-label="복제" onClick={() => duplicateProduct(product)}><Copy /></button>
+                                <button type="button" className="btn btn-danger btn-icon" aria-label="삭제" onClick={() => deleteProduct(product.id)}><Trash2 /></button>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+
+                {paginatedProducts.length === 0 && (
+                    <div className="card"><EmptyState icon={<Luggage strokeWidth={1.5} />}>조건에 맞는 상품이 없습니다.</EmptyState></div>
+                )}
+
+                {totalPages > 1 && (
+                    <div className="pager prod-pager">
+                        <span>{filteredProducts.length}개 중 {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredProducts.length)}</span>
+                        <div className="pager-btns">
+                            <button type="button" aria-label="이전 페이지" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                <ChevronLeft size={16} strokeWidth={1.5} />
+                            </button>
+                            {pageNumbers.map(page => (
+                                <button key={page} type="button" aria-current={page === currentPage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>
+                            ))}
+                            <button type="button" aria-label="다음 페이지" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                <ChevronRight size={16} strokeWidth={1.5} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Add/Edit Modal */}
@@ -1826,7 +1758,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                     </div>
 
                                                     {/* Image Number Badge */}
-                                                    <div style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 6 }}>
+                                                    <div style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', color: 'var(--mw-on-dark)', fontSize: 11, padding: '2px 8px', borderRadius: 6 }}>
                                                         {imgIndex + 1} / {formData.mainImages?.length || 0}
                                                     </div>
                                                 </div>
@@ -2128,7 +2060,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                                 <button
                                                                                     type="button"
                                                                                     onClick={() => removeSlideBlockImage(index, imgIdx)}
-                                                                                    style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                                                    style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mw-error)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                                                                 >
                                                                                     <Icon name="close" style={{ fontSize: 14 }} />
                                                                                 </button>
@@ -2154,7 +2086,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                         {(block.content as TimelineContent).images.map((img, imgIdx) => (
                                                                             <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
                                                                                 <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`TL Img ${imgIdx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
-                                                                                <button type="button" onClick={() => removeTimelineBlockImage('detail', index, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 14 }} /></button>
+                                                                                <button type="button" onClick={() => removeTimelineBlockImage('detail', index, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mw-error)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 14 }} /></button>
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -2301,7 +2233,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                 {c.images.map((img, imgIdx) => (
                                                                     <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
                                                                         <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`일정 사진 ${imgIdx + 1}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
-                                                                        <button type="button" onClick={() => removeTimelineBlockImage('itinerary', flatIndex, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
+                                                                        <button type="button" onClick={() => removeTimelineBlockImage('itinerary', flatIndex, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mw-error)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -2337,7 +2269,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                 {c.images.map((img, imgIdx) => (
                                                                     <div key={imgIdx} style={{ position: 'relative', flex: 'none' }}>
                                                                         <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`갤러리 ${imgIdx + 1}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
-                                                                        <button type="button" onClick={() => removeItinerarySlideBlockImage(flatIndex, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
+                                                                        <button type="button" onClick={() => removeItinerarySlideBlockImage(flatIndex, imgIdx)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mw-error)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -2368,7 +2300,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                         <div className="row" style={{ gap: 6 }}><Icon name="info" /><span className="cell-strong" style={{ fontSize: 12.5 }}>일차가 지정되지 않은 기존 항목</span></div>
                                                         <p className="muted" style={{ fontSize: 11, margin: 0 }}>DAY를 추가하면 이 항목들은 첫째 날 일정으로 정리할 수 있습니다.</p>
                                                         {pre.map((ev) => (
-                                                            <div key={ev.block.id} data-itinerary-block={ev.block.id} className="edit-row" style={{ background: 'var(--mrt-gray-50, #f8f9fa)', borderRadius: 'var(--r-md)', padding: 10 }}>
+                                                            <div key={ev.block.id} data-itinerary-block={ev.block.id} className="edit-row" style={{ background: 'var(--mw-gray-50)', borderRadius: 'var(--r-md)', padding: 10 }}>
                                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                                     <div className="row" style={{ gap: 8, marginBottom: 8 }}><span className="badge b-gray">{typeLabel(ev.block.type)}</span></div>
                                                                     {renderEventBody(ev.block, ev.flatIndex)}
@@ -2392,9 +2324,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                     const showAdv = advancedDays.has(day.dayInfo.id);
                                                     const eventCount = day.events.filter((e) => e.block.type === 'timeline').length;
                                                     return (
-                                                        <div key={day.dayInfo.id} data-itinerary-block={day.dayInfo.id} style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: '#fff' }}>
+                                                        <div key={day.dayInfo.id} data-itinerary-block={day.dayInfo.id} style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--mw-surface)' }}>
                                                             {/* Day header */}
-                                                            <div className="row" style={{ gap: 8, alignItems: 'center', padding: '12px 14px', background: 'var(--mrt-gray-50, #f8f9fa)', borderBottom: collapsed ? 'none' : '1px solid var(--border-subtle)' }}>
+                                                            <div className="row" style={{ gap: 8, alignItems: 'center', padding: '12px 14px', background: 'var(--mw-gray-50)', borderBottom: collapsed ? 'none' : '1px solid var(--border-subtle)' }}>
                                                                 <button type="button" className="act-btn" onClick={() => toggleDayCollapsed(day.dayInfo.id)} title={collapsed ? '펼치기' : '접기'}><Icon name={collapsed ? 'expand_more' : 'expand_less'} /></button>
                                                                 <span className="badge b-amber" style={{ flex: 'none' }}>{dc.dayLabel || `${dayIdx + 1}일차`}</span>
                                                                 <input type="text" className="inp" style={{ flex: 1, fontWeight: 700 }} value={dc.title || ''} onChange={(e) => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, title: e.target.value })} placeholder="일정 제목 (예: 울란바토르 → 테렐지)" />
@@ -2449,7 +2381,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                         <div className="row" style={{ gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                                                                             <div>
                                                                                 <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>히어로 배경</div>
-                                                                                <label title={dc.heroImage ? '사진 변경' : '사진 업로드'} style={{ display: 'block', position: 'relative', width: 120, height: 72, borderRadius: 'var(--r-md)', overflow: 'hidden', border: dc.heroImage ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', background: 'var(--bg-muted, #f8f9fa)' }}>
+                                                                                <label title={dc.heroImage ? '사진 변경' : '사진 업로드'} style={{ display: 'block', position: 'relative', width: 120, height: 72, borderRadius: 'var(--r-md)', overflow: 'hidden', border: dc.heroImage ? '2px solid var(--mw-green-700)' : '2px dashed var(--border-default)', cursor: 'pointer', background: 'var(--mw-gray-50)' }}>
                                                                                     {dc.heroImage
                                                                                         ? <img src={getOptimizedImageUrl(dc.heroImage, 'productThumbnail')} alt="히어로" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                                                         : <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-muted)' }}><Icon name="add_a_photo" style={{ fontSize: 18 }} /></span>}
@@ -2465,11 +2397,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                                     {(dc.galleryImages || []).map((img, gi) => (
                                                                                         <div key={gi} style={{ position: 'relative', flex: 'none' }}>
                                                                                             <img src={getOptimizedImageUrl(img, 'productThumbnail')} alt={`상단 사진 ${gi + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--border-default)' }} />
-                                                                                            <button type="button" onClick={() => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, galleryImages: (dc.galleryImages || []).filter((_, k) => k !== gi) })} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
+                                                                                            <button type="button" onClick={() => updateItineraryBlockContent(day.dayInfoFlatIndex, { ...dc, galleryImages: (dc.galleryImages || []).filter((_, k) => k !== gi) })} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mw-error)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Icon name="close" style={{ fontSize: 13 }} /></button>
                                                                                         </div>
                                                                                     ))}
                                                                                     {(dc.galleryImages || []).length < 5 && (
-                                                                                        <label title="사진 추가" style={{ width: 72, height: 72, borderRadius: 'var(--r-md)', border: '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', background: 'var(--bg-muted, #f8f9fa)' }}>
+                                                                                        <label title="사진 추가" style={{ width: 72, height: 72, borderRadius: 'var(--r-md)', border: '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', background: 'var(--mw-gray-50)' }}>
                                                                                             <Icon name="add_a_photo" style={{ fontSize: 18 }} />
                                                                                             <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => { handleDayInfoDesignImages(day.dayInfoFlatIndex, 'gallery', e.target.files); e.target.value = ''; }} />
                                                                                         </label>
@@ -2485,7 +2417,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                                                         )}
                                                                         <div className="stack" style={{ gap: 10 }}>
                                                                             {day.events.map((ev, evIdx) => (
-                                                                                <div key={ev.block.id} data-itinerary-block={ev.block.id} className="edit-row" style={{ background: 'var(--mrt-gray-50, #f8f9fa)', borderRadius: 'var(--r-md)', padding: 10 }}>
+                                                                                <div key={ev.block.id} data-itinerary-block={ev.block.id} className="edit-row" style={{ background: 'var(--mw-gray-50)', borderRadius: 'var(--r-md)', padding: 10 }}>
                                                                                     <div className="edit-move">
                                                                                         <button type="button" onClick={() => moveItineraryEvent(dayIdx, evIdx, -1)} disabled={evIdx === 0}><Icon name="expand_less" /></button>
                                                                                         <button type="button" onClick={() => moveItineraryEvent(dayIdx, evIdx, 1)} disabled={evIdx === day.events.length - 1}><Icon name="expand_more" /></button>
@@ -2683,13 +2615,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                                 {/* Excluded */}
                                 <section className="edit-sec">
                                     <div className="edit-sec-head">
-                                        <Icon name="cancel" style={{ color: 'var(--mrt-red)' }} />
+                                        <Icon name="cancel" style={{ color: 'var(--mw-error-ink)' }} />
                                         <h4>불포함 사항</h4>
                                     </div>
                                     <div className="stack" style={{ gap: 8 }}>
                                         {formData.excluded?.map((item, index) => (
                                             <div className="row" style={{ gap: 8 }} key={index}>
-                                                <Icon name="cancel" style={{ color: 'var(--mrt-red)', fontSize: 18, flex: 'none' }} />
+                                                <Icon name="cancel" style={{ color: 'var(--mw-error-ink)', fontSize: 18, flex: 'none' }} />
                                                 <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text-body)' }}>{item}</span>
                                                 <button type="button" className="act-btn danger" onClick={() => removeExcluded(index)} title="삭제"><Icon name="close" /></button>
                                             </div>
@@ -2713,7 +2645,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, categories,
                     </div>
 
                     {/* Footer — 페이지 스크롤 중에도 항상 보이는 저장 바 */}
-                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)', position: 'sticky', bottom: 0, background: 'var(--bg-card, #fff)', zIndex: 5 }}>
+                    <div className="card-pad row" style={{ justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-subtle)', position: 'sticky', bottom: 0, background: 'var(--mw-surface)', zIndex: 5 }}>
                         <button type="button" onClick={onClose} className="btn btn-ghost">
                             취소
                         </button>
@@ -2806,7 +2738,7 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
                     borderRadius: 'var(--r-lg)',
                     border: '1.5px dashed',
                     borderColor: drag ? 'var(--mrt-blue)' : 'var(--border-strong)',
-                    background: drag ? 'var(--mrt-blue-50)' : (uploading ? 'var(--mrt-gray-50)' : '#fff'),
+                    background: drag ? 'var(--mrt-blue-50)' : (uploading ? 'var(--mrt-gray-50)' : 'var(--mw-surface)'),
                     cursor: uploading ? 'wait' : 'pointer',
                     padding: '24px',
                     transition: 'all var(--dur-fast)',
@@ -2847,13 +2779,13 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
             </div>
 
             {/* ─── 일정표 불러오기 ─── */}
-            <div className="row" style={{ gap: 12, flexWrap: 'wrap', padding: 16, borderRadius: 'var(--r-lg)', background: '#E6FAF4', border: '1px solid #B5E9D9' }}>
+            <div className="row" style={{ gap: 12, flexWrap: 'wrap', padding: 16, borderRadius: 'var(--r-lg)', background: 'var(--mw-green-50)', border: '1px solid var(--mw-line)' }}>
                 <span className="metric-ico tint-green" style={{ width: 40, height: 40, flex: 'none' }}>
                     <Icon name="content_copy" />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="cell-strong" style={{ color: '#0f6b58' }}>일정표 불러오기</div>
-                    <div style={{ fontSize: 12, color: '#2a7d6a', marginTop: 2 }}>
+                    <div className="cell-strong" style={{ color: 'var(--mw-green-700)' }}>일정표 불러오기</div>
+                    <div style={{ fontSize: 12, color: 'var(--mw-green-700)', marginTop: 2 }}>
                         기존 상품의 일정표를 사진·내용 그대로 가져옵니다. 가져온 뒤 이 상품에 맞게 편집만 하면 됩니다.
                     </div>
                 </div>
@@ -2863,18 +2795,18 @@ const ItineraryQuickActions: React.FC<ItineraryQuickActionsProps> = ({
             </div>
 
             {/* ─── N-day skeleton macro ─── */}
-            <div className="row" style={{ gap: 12, flexWrap: 'wrap', padding: 16, borderRadius: 'var(--r-lg)', background: '#FFF3DC', border: '1px solid #F0DBA8' }}>
+            <div className="row" style={{ gap: 12, flexWrap: 'wrap', padding: 16, borderRadius: 'var(--r-lg)', background: 'var(--mw-gray-50)', border: '1px solid var(--mw-line)' }}>
                 <span className="metric-ico tint-amber" style={{ width: 40, height: 40, flex: 'none' }}>
                     <Icon name="calendar_view_day" />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="cell-strong" style={{ color: '#8a5a12' }}>N일 일정 골격 만들기</div>
-                    <div style={{ fontSize: 12, color: '#9a6a22', marginTop: 2 }}>
+                    <div className="cell-strong" style={{ color: 'var(--mw-gray-800)' }}>N일 일정 골격 만들기</div>
+                    <div style={{ fontSize: 12, color: 'var(--mw-muted)', marginTop: 2 }}>
                         1日目 ~ N日目 헤더와 구분선을 한 번에 생성합니다. 각 날짜는 펼쳐서 내용 채우세요.
                     </div>
                 </div>
                 <div className="row" style={{ gap: 8, flex: 'none' }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: '#8a5a12' }}>일수</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--mw-gray-800)' }}>일수</label>
                     <select
                         value={skeletonDays}
                         onChange={(e) => setSkeletonDays(Number(e.target.value))}

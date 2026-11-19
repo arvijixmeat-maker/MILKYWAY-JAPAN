@@ -386,7 +386,7 @@ export const AdminReviewManage: React.FC = () => {
                                                 <button
                                                     onClick={() => removeImage(idx)}
                                                     title="삭제"
-                                                    style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', display: 'grid', placeItems: 'center', cursor: 'pointer', boxShadow: 'var(--shadow-xs)' }}
+                                                    style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: 'var(--mw-on-dark)', display: 'grid', placeItems: 'center', cursor: 'pointer', boxShadow: 'var(--shadow-xs)' }}
                                                 >
                                                     <Icon name="close" style={{ fontSize: 13 }} />
                                                 </button>
