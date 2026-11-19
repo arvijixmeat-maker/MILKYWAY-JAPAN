@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { requireAdmin } from '../lib/adminAuth';
 import { autoFillSpots, collectCandidates, loadExistingSpots } from '../lib/spotAutoFill';
+import { seedSpotsOnce } from '../lib/spotSeed';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -56,6 +57,8 @@ app.get('/', async (c) => {
     const q = (c.req.query('q') || '').trim();
     const onlyActive = c.req.query('active') !== '0';
     const region = (c.req.query('region') || '').trim();
+    // 기본 관광지(사진 없는 설명 글) — 아직 안 넣었으면 이때 한 번 넣는다. 실패해도 목록은 그대로 보여 준다.
+    try { await seedSpotsOnce(db); } catch (e) { console.error('[tourist-spots seed] failed', e); }
     try {
         const where: string[] = [];
         const bind: any[] = [];
