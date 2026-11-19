@@ -1,94 +1,125 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
-import { Icon } from './console/Icon';
+import { StrokeIcon } from './console/StrokeIcon';
+import { ADMIN_NAV, navCount, type AdminPending } from './adminNav';
+import { AdminAlerts } from './AdminAlerts';
 
 interface AdminSidebarProps {
     activePage: string;
+    pending?: AdminPending | null;
+    /** 검색창(Ctrl/⌘+K) 열기 */
+    onOpenSearch?: () => void;
+    /** 모바일 서랍으로 열렸을 때 닫기 */
+    onClose?: () => void;
     /** kept for backward-compat with existing call sites; the redesign is light-only */
     isDarkMode?: boolean;
     toggleTheme?: () => void;
 }
 
-interface NavItem {
-    id: string;
-    icon: string;
-    label: string;
-    href: string;
-    count?: number;
-}
+const CLOSED_KEY = 'mw-admin-nav-closed';
+const readClosed = (): Record<string, boolean> => {
+    try { return JSON.parse(localStorage.getItem(CLOSED_KEY) || '{}') || {}; } catch { return {}; }
+};
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
 
-const primaryItems: NavItem[] = [
-    { id: 'dashboard', icon: 'dashboard', label: '대시보드', href: '/admin' },
-    { id: 'reservations', icon: 'assignment', label: '통합 예약 관리', href: '/admin/reservations' },
-    { id: 'accommodation-ops', icon: 'night_shelter', label: 'Байр захиалга · 숙소배정', href: '/admin/accommodation-ops' },
-    { id: 'calendar', icon: 'calendar_today', label: '투어 캘린더', href: '/admin/calendar' },
-    { id: 'products', icon: 'inventory_2', label: '상품 관리', href: '/admin/products' },
-    { id: 'magazines', icon: 'menu_book', label: '매거진 관리', href: '/admin/magazines' },
-    { id: 'templates', icon: 'folder_special', label: '템플릿 관리', href: '/admin/templates' },
-    { id: 'reviews', icon: 'reviews', label: '후기 관리', href: '/admin/reviews' },
-    { id: 'faq', icon: 'help', label: 'FAQ 관리', href: '/admin/faq' },
-    { id: 'inquiries', icon: 'mail', label: '문의 관리', href: '/admin/inquiries' },
-];
-
-const settingItems: NavItem[] = [
-    { id: 'banners', icon: 'ad_units', label: '홈 화면 관리', href: '/admin/banners' },
-    { id: 'promotions', icon: 'campaign', label: '여행기획전 관리', href: '/admin/promotions' },
-    { id: 'categories', icon: 'category', label: '카테고리 관리', href: '/admin/categories' },
-    { id: 'hotels', icon: 'hotel', label: '호텔 마스터', href: '/admin/hotels' },
-    { id: 'tourist-spots', icon: 'location_on', label: '관광지 마스터', href: '/admin/tourist-spots' },
-    { id: 'design-spots', icon: 'photo_library', label: '여행지 사진', href: '/admin/design-spots' },
-    { id: 'guide-intro', icon: 'translate', label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
-];
-
-export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage }) => {
+export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, pending = null, onOpenSearch, onClose }) => {
     const navigate = useNavigate();
     let logout: undefined | (() => void | Promise<void>);
     try { logout = useUser().logout; } catch { logout = undefined; }
+
+    // 접어 둔 분류는 브라우저에 기억한다. 지금 보고 있는 메뉴가 든 분류는 항상 펼친다.
+    const [closed, setClosed] = useState<Record<string, boolean>>(() => {
+        const saved = readClosed();
+        const current = ADMIN_NAV.find((g) => g.items.some((i) => i.id === activePage));
+        if (current) delete saved[current.key];
+        return saved;
+    });
+    const toggleGroup = (key: string) => setClosed((prev) => {
+        const next = { ...prev, [key]: !prev[key] };
+        try { localStorage.setItem(CLOSED_KEY, JSON.stringify(next)); } catch { /* 기억 못 해도 무방 */ }
+        return next;
+    });
 
     const handleLogout = async () => {
         try { await logout?.(); } catch { /* ignore */ }
         navigate('/admin/login');
     };
 
-    const renderItem = (item: NavItem) => {
-        const isActive = activePage === item.id;
-        return (
-            <a key={item.id} href={item.href} className={`nav-item${isActive ? ' active' : ''}`} aria-current={isActive ? 'page' : undefined}>
-                <Icon name={item.icon} fill={isActive} />
-                <span>{item.label}</span>
-                {item.count ? <span className="nav-count">{item.count}</span> : null}
-            </a>
-        );
-    };
-
     return (
-        <aside className="side">
-            <a href="/admin" className="side-brand" aria-label="MILKYWAY 관리자 홈">
-                <span className="brand-mark"><Icon name="flight_takeoff" /></span>
-                <div>
-                    <div className="brand-name">MILKYWAY</div>
-                    <div className="brand-sub">Admin Console</div>
-                </div>
-            </a>
+        <aside className="side" aria-label="관리자 메뉴">
+            <div className="side-head">
+                <a href="/admin" className="side-brand" aria-label="MILKYWAY 관리자 홈">
+                    <span className="brand-mark">M</span>
+                    <span className="brand-text">
+                        <span className="brand-name">MILKYWAY</span>
+                        <span className="brand-sub">Admin Console</span>
+                    </span>
+                </a>
+                <AdminAlerts pending={pending} className="side-alerts" />
+                {onClose && (
+                    <button type="button" className="side-icon-btn side-close" aria-label="메뉴 닫기" onClick={onClose}>
+                        <StrokeIcon name="uiCross" />
+                    </button>
+                )}
+            </div>
+
+            <div className="side-search-wrap">
+                <button type="button" className="side-search" onClick={onOpenSearch}>
+                    <StrokeIcon name="uiSearch" size={18} />
+                    <span className="side-search-label">예약번호, 고객명, 메뉴 검색</span>
+                    <kbd>{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+                </button>
+            </div>
 
             <nav className="side-nav">
-                {primaryItems.map(renderItem)}
-                <div className="nav-group-label">사이트 설정</div>
-                {settingItems.map(renderItem)}
+                {ADMIN_NAV.map((group) => {
+                    const open = !closed[group.key];
+                    return (
+                        <div key={group.key} className="nav-group">
+                            <button
+                                type="button" className="nav-group-label" aria-expanded={open}
+                                onClick={() => toggleGroup(group.key)}
+                            >
+                                <span>{group.label}</span>
+                                <span className={`nav-group-arrow${open ? '' : ' shut'}`}><StrokeIcon name="uiChevDown" size={14} /></span>
+                            </button>
+                            {open && (
+                                <div className="nav-group-items">
+                                    {group.items.map((item) => {
+                                        const isActive = activePage === item.id;
+                                        const count = navCount(item.id, pending);
+                                        return (
+                                            <a
+                                                key={item.id} href={item.href}
+                                                className={`nav-item${isActive ? ' active' : ''}`}
+                                                aria-current={isActive ? 'page' : undefined}
+                                            >
+                                                <StrokeIcon name={item.icon} />
+                                                <span className="nav-label">
+                                                    {item.label}
+                                                    {item.sub && <span className="nav-sub">{item.sub}</span>}
+                                                </span>
+                                                {count > 0 && <span className="nav-count" aria-label={`처리 대기 ${count}건`}>{count}</span>}
+                                            </a>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </nav>
 
             <div className="side-foot">
-                <div className="side-account">
-                    <span className="av">관</span>
-                    <div className="who">
-                        <b>관리자</b>
-                        <span>운영 계정 · 마스터</span>
-                    </div>
-                    <button className="out" title="로그아웃" onClick={handleLogout}>
-                        <Icon name="logout" />
-                    </button>
-                </div>
+                <span className="av">관</span>
+                <span className="who">
+                    <b>관리자</b>
+                    <span>운영 계정 · 마스터</span>
+                </span>
+                <button type="button" className="side-icon-btn" aria-label="로그아웃" title="로그아웃" onClick={handleLogout}>
+                    <StrokeIcon name="uiSignOut" size={18} />
+                </button>
             </div>
         </aside>
     );
