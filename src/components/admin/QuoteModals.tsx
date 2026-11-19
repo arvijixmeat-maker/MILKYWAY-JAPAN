@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { STATUS_META, toneClass } from './ui';
+import { Icon } from './console/Icon';
 
 import { api } from '../../lib/api';
 import { ReservationDocumentEditor, type ReservationDocContent, type DocPricing } from './ReservationDocumentEditor';
@@ -159,11 +161,11 @@ export const ConvertSelectionModal: React.FC<{
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">sync_alt</span>
+                        <Icon name="sync_alt" className="text-primary" />
                         예약 확정 및 전환
                     </h3>
                     <button onClick={onClose} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">
-                        <span className="material-symbols-outlined text-slate-500">close</span>
+                        <Icon name="close" className="text-slate-500" />
                     </button>
                 </div>
 
@@ -174,12 +176,12 @@ export const ConvertSelectionModal: React.FC<{
                     </div>
                     {convertDays > 0 ? (
                         <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
-                            <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                            <Icon name="task_alt" className="text-[16px]" />
                             <span>고객정보·인원·금액과 견적서 일정 <b>{convertDays}일</b>(관광지·숙소 사진 포함)이 <b>확정일정표로 그대로</b> 옮겨집니다. 전환 후 새 예약이 열리면 바로 발송할 수 있습니다.</span>
                         </div>
                     ) : (
                         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
-                            <span className="material-symbols-outlined text-[16px]">warning</span>
+                            <Icon name="warning" className="text-[16px]" />
                             <span>아직 견적서 일정이 없습니다. 전환은 되지만 확정일정표는 예약 화면에서 새로 작성해야 합니다. 먼저 「견적 제안서 작성」을 하는 것을 권장합니다.</span>
                         </div>
                     )}
@@ -701,7 +703,7 @@ export const QuoteDetailModal: React.FC<{
         setCopiedEstimateUrl(true);
         setTimeout(() => setCopiedEstimateUrl(false), 1500);
     };
-    const statusTone: Record<string, string> = { new: 'b-red', processing: 'b-amber', answered: 'b-blue', reservation_requested: 'b-purple', converted: 'b-gray', completed: 'b-green' };
+    const statusTone: Record<string, string> = Object.fromEntries(Object.entries(STATUS_META).map(([key, meta]) => [key, toneClass(meta.tone)]));
     const nextAction = (() => {
         if (request.status === 'converted' || request.status === 'completed') return null;
         if (request.status === 'reservation_requested') return { label: '예약으로 전환', desc: '고객이 예약을 요청했습니다 — 확정 내용으로 전환하세요.', icon: 'sync_alt', onClick: onOpenConvert };
@@ -724,7 +726,7 @@ export const QuoteDetailModal: React.FC<{
                         <div className="page-title" style={{ fontSize: 17, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{request.destination || '맞춤 견적'} · {request.name}</div>
                     </div>
                     <span className={`badge ${statusTone[request.status] || 'b-gray'}`}>{statusMeta.label}</span>
-                    <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={onClose}><span className="material-symbols-outlined">close</span></button>
+                    <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={onClose}><Icon name="close" /></button>
                 </div>
 
                 {/* NEXT — 견적 워크플로의 다음 할 일 */}
@@ -733,13 +735,13 @@ export const QuoteDetailModal: React.FC<{
                     {nextAction ? (
                         <>
                             <button className="btn btn-sm btn-ink" onClick={nextAction.onClick}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{nextAction.icon}</span>{nextAction.label}
+                                <Icon name={nextAction.icon} style={{ fontSize: 16 }} />{nextAction.label}
                             </button>
                             <span className="nb-desc">{nextAction.desc}</span>
                         </>
                     ) : (
                         <span className="row" style={{ gap: 6, fontSize: 13, fontWeight: 800, color: 'var(--mrt-green)' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>check_circle</span>예약 전환까지 완료된 견적입니다
+                            <Icon name="check_circle" style={{ fontSize: 17 }} />예약 전환까지 완료된 견적입니다
                         </span>
                     )}
                     <span className="step-dots">
@@ -763,7 +765,7 @@ export const QuoteDetailModal: React.FC<{
                         <div className="stack" style={{ gap: 14 }}>
                         <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
                             <div className="card">
-                                <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>person</span><h2>신청자 정보</h2></div>
+                                <div className="card-head"><Icon name="person" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }} /><h2>신청자 정보</h2></div>
                                 <div className="card-pad" style={{ paddingTop: 12 }}>
                                     <div className="kv"><span>이름</span><b>{request.name}</b></div>
                                     <div className="kv"><span>연락처</span><b style={{ fontVariantNumeric: 'tabular-nums' }}>{request.phone || '—'}</b></div>
@@ -771,7 +773,7 @@ export const QuoteDetailModal: React.FC<{
                                 </div>
                             </div>
                             <div className="card">
-                                <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>explore</span><h2>여행 조건</h2>
+                                <div className="card-head"><Icon name="explore" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }} /><h2>여행 조건</h2>
                                     <div className="spacer" style={{ flex: 1 }} />
                                     <button className="link-action" onClick={() => isEditing ? handleSaveEdit() : setIsEditing(true)}>{isEditing ? '저장 완료' : '정보 수정'}</button>
                                 </div>
@@ -784,7 +786,7 @@ export const QuoteDetailModal: React.FC<{
                             </div>
                         </div>
                         <div className="card">
-                            <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>format_list_bulleted</span><h2>상세 요청</h2></div>
+                            <div className="card-head"><Icon name="format_list_bulleted" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }} /><h2>상세 요청</h2></div>
                             <div className="card-pad" style={{ paddingTop: 12 }}>
                                 <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                                     {(request.travelTypes || []).map(t => <span key={t} className="badge b-blue">{t}</span>)}
@@ -798,10 +800,10 @@ export const QuoteDetailModal: React.FC<{
 
                     <section id="qsec-quote" style={{ scrollMarginTop: 8 }}>
                         <div className="card">
-                            <div className="card-head"><span className="material-symbols-outlined" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }}>edit_note</span><h2>견적 제안서 작성 — 일정·금액</h2>
+                            <div className="card-head"><Icon name="edit_note" style={{ fontSize: 17, color: 'var(--mrt-gray-600)' }} /><h2>견적 제안서 작성 — 일정·금액</h2>
                                 <div className="spacer" style={{ flex: 1 }} />
                                 <button className="btn btn-sm btn-ghost" onClick={saveQuoteBasics}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>일정·금액 저장
+                                    <Icon name="save" style={{ fontSize: 16 }} />일정·금액 저장
                                 </button>
                             </div>
                             <div className="card-pad" style={{ paddingTop: 12 }}>
@@ -880,12 +882,12 @@ export const QuoteDetailModal: React.FC<{
                     <div className="action-rail-stack">
                         <section className="action-doc active">
                             <button type="button" className="action-doc-title">
-                                <span className="action-doc-icon tint-blue"><span className="material-symbols-outlined">request_quote</span></span>
+                                <span className="action-doc-icon tint-blue"><Icon name="request_quote" /></span>
                                 <span>
                                     <b>견적 제안서</b>
                                     <small>{quoteDocStatusText}</small>
                                 </span>
-                                <span className="material-symbols-outlined">{quoteSent ? 'check_circle' : 'chevron_right'}</span>
+                                <Icon name={quoteSent ? 'check_circle' : 'chevron_right'} />
                             </button>
                             {!quoteSent && (
                                 <select className="inp" value={itineraryTemplateId} onChange={(e) => handleTemplateChange(e.target.value)}>
@@ -897,31 +899,31 @@ export const QuoteDetailModal: React.FC<{
                                 {!quoteSent ? (
                                     <>
                                         <button className="btn btn-sm btn-blue" onClick={handleSend} title={!canSendEstimate ? `확인 필요: ${missingSendItems.join(', ')}` : undefined}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>send</span>고객에게 발송
+                                            <Icon name="send" style={{ fontSize: 16 }} />고객에게 발송
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>{request.documentContent || request.document_content ? '편집' : '견적서 만들기'}
+                                            <Icon name="edit_document" style={{ fontSize: 16 }} />{request.documentContent || request.document_content ? '편집' : '견적서 만들기'}
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={handlePreview} disabled={previewSaving}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>{previewSaving ? '저장 중…' : '미리보기'}
+                                            <Icon name="visibility" style={{ fontSize: 16 }} />{previewSaving ? '저장 중…' : '미리보기'}
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={copyEstimatePageUrl}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{copiedEstimateUrl ? 'check' : 'content_copy'}</span>{copiedEstimateUrl ? '복사됨' : '링크'}
+                                            <Icon name={copiedEstimateUrl ? 'check' : 'content_copy'} style={{ fontSize: 16 }} />{copiedEstimateUrl ? '복사됨' : '링크'}
                                         </button>
                                     </>
                                 ) : (
                                     <>
                                         <button className="btn btn-sm btn-blue" onClick={handlePreview} disabled={previewSaving}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>{previewSaving ? '저장 중…' : '미리보기'}
+                                            <Icon name="visibility" style={{ fontSize: 16 }} />{previewSaving ? '저장 중…' : '미리보기'}
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={() => setDocEditorOpen(true)}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_document</span>편집
+                                            <Icon name="edit_document" style={{ fontSize: 16 }} />편집
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={copyEstimatePageUrl}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{copiedEstimateUrl ? 'check' : 'content_copy'}</span>{copiedEstimateUrl ? '복사됨' : '링크'}
+                                            <Icon name={copiedEstimateUrl ? 'check' : 'content_copy'} style={{ fontSize: 16 }} />{copiedEstimateUrl ? '복사됨' : '링크'}
                                         </button>
                                         <button className="btn btn-sm btn-ghost" onClick={handleSend}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>forward_to_inbox</span>재발송
+                                            <Icon name="forward_to_inbox" style={{ fontSize: 16 }} />재발송
                                         </button>
                                     </>
                                 )}
@@ -931,7 +933,7 @@ export const QuoteDetailModal: React.FC<{
                         {/* 사이트 예약 요청뿐 아니라 LINE·메일로 확정한 경우에도 바로 전환할 수 있게 발송된 견적에도 표시 */}
                         {(request.status === 'reservation_requested' || request.status === 'answered') && (
                             <button className="btn btn-blue action-send-all" onClick={onOpenConvert} title="견적서 일정·사진·금액을 그대로 옮겨 예약과 확정일정표를 만듭니다">
-                                <span className="material-symbols-outlined" style={{ fontSize: 17 }}>sync_alt</span>예약으로 전환
+                                <Icon name="sync_alt" style={{ fontSize: 17 }} />예약으로 전환
                             </button>
                         )}
                     </div>
@@ -939,14 +941,14 @@ export const QuoteDetailModal: React.FC<{
                     <div className="action-rail-group">
                         <h3>고객 공유</h3>
                         <button className="action-link" onClick={copyEstimateCustomerMessage}>
-                            <span className="material-symbols-outlined">content_copy</span>
+                            <Icon name="content_copy" />
                             <span><b>고객 안내문 복사</b><small>견적 페이지 링크와 확인 안내를 함께 복사합니다.</small></span>
-                            <span className="material-symbols-outlined">chevron_right</span>
+                            <Icon name="chevron_right" />
                         </button>
                         <button className="action-link" onClick={copyEstimatePageUrl}>
-                            <span className="material-symbols-outlined">link</span>
+                            <Icon name="link" />
                             <span><b>고객 페이지 링크</b><small>고객이 견적 내용과 일정을 확인하는 페이지입니다.</small></span>
-                            <span className="material-symbols-outlined">chevron_right</span>
+                            <Icon name="chevron_right" />
                         </button>
                     </div>
 
@@ -970,7 +972,7 @@ export const QuoteDetailModal: React.FC<{
                         {checklistItems.map((item) => (
                             <div key={item.label} className="row" style={{ justifyContent: 'space-between', padding: '4px 0' }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>{item.label}{item.optional && <span style={{ marginLeft: 4, fontSize: 10.5, color: 'var(--text-tertiary)' }}>선택</span>}</span>
-                                <span className="material-symbols-outlined" style={{ fontSize: 17, color: item.done ? 'var(--mrt-green)' : 'var(--mrt-gray-300)' }}>{item.done ? 'check_circle' : 'radio_button_unchecked'}</span>
+                                <Icon name={item.done ? 'check_circle' : 'radio_button_unchecked'} style={{ fontSize: 17, color: item.done ? 'var(--mrt-green)' : 'var(--mrt-gray-300)' }} />
                             </div>
                         ))}
                     </div>

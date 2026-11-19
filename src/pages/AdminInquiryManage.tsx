@@ -7,9 +7,9 @@ import type { InquiryRecord, InquiryStatus } from '../types/inquiry';
 type StatusFilter = InquiryStatus | 'all';
 
 const STATUS_META: Record<InquiryStatus, { label: string; tone: string }> = {
-    new: { label: '신규', tone: 'b-red' },
-    answered: { label: '답변 완료', tone: 'b-green' },
-    closed: { label: '종료', tone: 'b-gray' },
+    new: { label: '신규', tone: 'b-wait' },
+    answered: { label: '답변 완료', tone: 'b-confirmed' },
+    closed: { label: '종료', tone: 'b-new' },
 };
 const STATUS_ORDER: InquiryStatus[] = ['new', 'answered', 'closed'];
 
@@ -316,7 +316,7 @@ export const AdminInquiryManage: React.FC = () => {
                     <div>
                         <h3>
                             문의 목록
-                            {counts.new > 0 && <span className="badge b-red" style={{ marginLeft: 10, verticalAlign: 'middle' }}>미처리 {counts.new}건</span>}
+                            {counts.new > 0 && <span className="badge b-wait" style={{ marginLeft: 10, verticalAlign: 'middle' }}>미처리 {counts.new}건</span>}
                         </h3>
                         <div className="cell-muted" style={{ fontSize: 13 }}>고객 화면 「お問い合わせ」(/contact) 폼으로 접수된 문의입니다. 최신순으로 표시됩니다.</div>
                     </div>

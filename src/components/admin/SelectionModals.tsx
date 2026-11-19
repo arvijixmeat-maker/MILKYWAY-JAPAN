@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Icon } from './console/Icon';
 import { api } from '../../lib/api';
 
 interface Guide {
@@ -74,7 +75,7 @@ export const GuideSelectionModal: React.FC<GuideSelectionModalProps> = ({ isOpen
                             onClick={onClose}
                             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                         >
-                            <span className="material-symbols-outlined">close</span>
+                            <Icon name="close" />
                         </button>
                     </div>
                     <input
@@ -89,7 +90,7 @@ export const GuideSelectionModal: React.FC<GuideSelectionModalProps> = ({ isOpen
                 <div className="flex-1 overflow-y-auto p-6">
                     {filteredGuides.length === 0 ? (
                         <div className="text-center py-12">
-                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4">person_off</span>
+                            <Icon name="person_off" className="text-6xl text-slate-300 dark:text-slate-600 mb-4" />
                             <p className="text-slate-500 dark:text-slate-400">등록된 가이드가 없습니다</p>
                         </div>
                     ) : (
@@ -111,7 +112,7 @@ export const GuideSelectionModal: React.FC<GuideSelectionModalProps> = ({ isOpen
                                             <img src={guide.image} alt={guide.name} className="w-16 h-16 rounded-full object-cover" />
                                         ) : (
                                             <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-3xl text-slate-400">person</span>
+                                                <Icon name="person" className="text-3xl text-slate-400" />
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">
@@ -198,7 +199,7 @@ export const AccommodationSelectionModal: React.FC<AccommodationSelectionModalPr
                             onClick={onClose}
                             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                         >
-                            <span className="material-symbols-outlined">close</span>
+                            <Icon name="close" />
                         </button>
                     </div>
                     <input
@@ -213,7 +214,7 @@ export const AccommodationSelectionModal: React.FC<AccommodationSelectionModalPr
                 <div className="flex-1 overflow-y-auto p-6">
                     {filteredAccommodations.length === 0 ? (
                         <div className="text-center py-12">
-                            <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4">hotel</span>
+                            <Icon name="hotel" className="text-6xl text-slate-300 dark:text-slate-600 mb-4" />
                             <p className="text-slate-500 dark:text-slate-400">등록된 숙소가 없습니다</p>
                         </div>
                     ) : (
@@ -234,7 +235,7 @@ export const AccommodationSelectionModal: React.FC<AccommodationSelectionModalPr
                                         <img src={accommodation.images[0]} alt={accommodation.name} className="w-full h-32 object-cover" />
                                     ) : (
                                         <div className="w-full h-32 bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-5xl text-slate-400">hotel</span>
+                                            <Icon name="hotel" className="text-5xl text-slate-400" />
                                         </div>
                                     )}
                                     <div className="p-3">
@@ -245,7 +246,7 @@ export const AccommodationSelectionModal: React.FC<AccommodationSelectionModalPr
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                                            <span className="material-symbols-outlined text-sm">location_on</span>
+                                            <Icon name="location_on" className="text-sm" />
                                             <span className="truncate">{accommodation.location}</span>
                                         </div>
                                     </div>

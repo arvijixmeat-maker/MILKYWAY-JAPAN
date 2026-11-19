@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Icon } from './console/Icon';
 import { api } from '../../lib/api';
 import { getOptimizedImageUrl } from '../../utils/cloudflareImage';
 import { splitItineraryDays, toItinerarySource, type DaySource, type ItinerarySource } from './itineraryImport';
@@ -28,7 +29,7 @@ export const ItineraryImportModal: React.FC<ItineraryImportModalProps> = ({ open
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">다른 상품의 일정을 일차 단위로 골라 가져옵니다. 여러 상품의 일차를 섞어서 선택할 수 있고, 일차 번호는 자동으로 다시 매겨집니다.</p>
                     </div>
                     <button type="button" onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center" aria-label="닫기">
-                        <span className="material-symbols-outlined text-slate-500">close</span>
+                        <Icon name="close" className="text-slate-500" />
                     </button>
                 </div>
                 {/* 열릴 때마다 새로 마운트되어 목록을 다시 읽는다 */}

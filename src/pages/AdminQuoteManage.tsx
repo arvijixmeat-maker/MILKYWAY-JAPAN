@@ -253,12 +253,12 @@ export const AdminQuoteManage: React.FC = () => {
 
     // Map a quote status to a badge tone + label
     const STATUS_META: Record<string, { tone: string; label: string }> = {
-        new: { tone: 'b-purple', label: '신규' },
-        reservation_requested: { tone: 'b-purple', label: '예약 요청' },
-        processing: { tone: 'b-amber', label: '작성중' },
-        answered: { tone: 'b-blue', label: '발송됨' },
-        converted: { tone: 'b-gray', label: '전환됨' },
-        completed: { tone: 'b-gray', label: '답변완료' },
+        new: { tone: 'b-new', label: '신규' },
+        reservation_requested: { tone: 'b-wait', label: '예약 요청' },
+        processing: { tone: 'b-new', label: '작성중' },
+        answered: { tone: 'b-sent', label: '발송됨' },
+        converted: { tone: 'b-new', label: '전환됨' },
+        completed: { tone: 'b-new', label: '답변완료' },
     };
     const statusMeta = (status: string) => STATUS_META[status] || { tone: 'b-gray', label: status };
 

@@ -477,7 +477,7 @@ const TemplatesTab: React.FC = () => {
                                 <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B45]/95 via-[#16275F]/70 to-transparent" />
                                 <div className="absolute left-5 top-4 text-white">
                                     <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[24px]">nights_stay</span>
+                                        <Icon name="nights_stay" className="text-[24px]" />
                                         <div>
                                             <p className="text-[11px] font-black">モンゴル銀河旅行社</p>
                                             <p className="text-[8px] font-bold tracking-widest text-white/70">DOCUMENT PACKAGE</p>
@@ -498,7 +498,7 @@ const TemplatesTab: React.FC = () => {
                                         { icon: 'qr_code_2', label: '안내/QR' },
                                     ].map(item => (
                                         <div key={item.label} className="rounded-xl border border-[#9CC5FF]/80 bg-[#F7FAFA] px-2 py-2 text-center text-[#1656D6]">
-                                            <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                                            <Icon name={item.icon} className="text-[20px]" />
                                             <p className="mt-1 text-[10px] font-black">{item.label}</p>
                                         </div>
                                     ))}
@@ -764,7 +764,7 @@ const AccommodationsTab: React.FC = () => {
                         <div className="picker-list" style={{ padding: '20px 22px' }}>
                             <div className="field">
                                 <label>이미지</label>
-                                {form.images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-2">{form.images.map((img, i) => <div key={i} className="relative aspect-video"><img src={img} className="w-full h-full object-cover rounded-lg" /><button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"><span className="material-symbols-outlined text-xs">close</span></button></div>)}</div>}
+                                {form.images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-2">{form.images.map((img, i) => <div key={i} className="relative aspect-video"><img src={img} className="w-full h-full object-cover rounded-lg" /><button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"><Icon name="close" className="text-xs" /></button></div>)}</div>}
                                 <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
                                     <Icon name="add_photo_alternate" /> 이미지 추가 <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                                 </label>

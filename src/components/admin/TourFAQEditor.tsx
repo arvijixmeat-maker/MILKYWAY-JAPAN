@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Icon } from './console/Icon';
 import { api } from '../../lib/api';
 
 /**
@@ -98,7 +99,7 @@ export const TourFAQEditor: React.FC = () => {
         <div className="space-y-4">
             <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <div className="flex gap-3 items-start text-sm text-blue-800 dark:text-blue-200">
-                    <span className="material-symbols-outlined text-base mt-0.5">info</span>
+                    <Icon name="info" className="text-base mt-0.5" />
                     <div>
                         <div className="font-semibold mb-1">상품 페이지 하단 FAQ — 한 번 작성하면 모든 상품에 적용</div>
                         <ul className="space-y-1 text-xs leading-relaxed">
@@ -143,7 +144,7 @@ export const TourFAQEditor: React.FC = () => {
                                     className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
                                     title="위로"
                                 >
-                                    <span className="material-symbols-outlined text-base">arrow_upward</span>
+                                    <Icon name="arrow_upward" className="text-base" />
                                 </button>
                                 <button
                                     type="button"
@@ -152,7 +153,7 @@ export const TourFAQEditor: React.FC = () => {
                                     className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
                                     title="아래로"
                                 >
-                                    <span className="material-symbols-outlined text-base">arrow_downward</span>
+                                    <Icon name="arrow_downward" className="text-base" />
                                 </button>
                                 <button
                                     type="button"
@@ -160,7 +161,7 @@ export const TourFAQEditor: React.FC = () => {
                                     className="w-8 h-8 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 flex items-center justify-center"
                                     title="삭제"
                                 >
-                                    <span className="material-symbols-outlined text-base">delete</span>
+                                    <Icon name="delete" className="text-base" />
                                 </button>
                             </div>
                         </div>
@@ -200,7 +201,7 @@ export const TourFAQEditor: React.FC = () => {
                     onClick={addRow}
                     className="w-full py-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-500 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50/40 dark:hover:bg-teal-900/20 transition-colors flex items-center justify-center gap-2"
                 >
-                    <span className="material-symbols-outlined text-base">add</span>
+                    <Icon name="add" className="text-base" />
                     질문 추가
                 </button>
             </div>

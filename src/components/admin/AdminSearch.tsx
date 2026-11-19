@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
-import { StrokeIcon, type StrokeIconName } from './console/StrokeIcon';
+import { ReceiptText, Search, Ticket, X, type LucideIcon } from 'lucide-react';
 import { ADMIN_NAV } from './adminNav';
 
-interface Hit { key: string; icon: StrokeIconName; title: string; meta?: string; href: string; group: string }
+interface Hit { key: string; icon: LucideIcon; title: string; meta?: string; href: string; group: string }
 
 const norm = (v: unknown) => String(v ?? '').toLowerCase().replace(/\s+/g, '');
 
@@ -30,7 +30,7 @@ export const AdminSearch: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const hits = useMemo<Hit[]>(() => {
         const key = norm(q);
         const menus: Hit[] = ADMIN_NAV.flatMap((g) => g.items
-            .filter((i) => !key || norm(i.label).includes(key) || norm(i.sub).includes(key) || norm(g.label).includes(key))
+            .filter((i) => !key || norm(i.label).includes(key) || norm(g.label).includes(key))
             .map((i) => ({ key: `m-${i.id}`, icon: i.icon, title: i.label, meta: g.label, href: i.href, group: '메뉴' })));
         if (!key || !records) return menus;
 
@@ -44,7 +44,7 @@ export const AdminSearch: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             .filter((r) => r.id && (norm(r.no).includes(key) || norm(r.name).includes(key) || norm(r.product).includes(key) || norm(r.id).startsWith(key)))
             .slice(0, 6)
             .map((r) => ({
-                key: `r-${r.id}`, icon: 'navBooking' as const, title: r.name || '이름 없음',
+                key: `r-${r.id}`, icon: Ticket, title: r.name || '이름 없음',
                 meta: [r.no ? `#${r.no}` : `#${r.id.slice(0, 6)}`, r.product].filter(Boolean).join(' · '),
                 href: `/admin/reservations?open=${encodeURIComponent(r.id)}`, group: '예약',
             }));
@@ -52,7 +52,7 @@ export const AdminSearch: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             .filter((x) => x?.id && (norm(x.name).includes(key) || norm(x.destination).includes(key) || norm(x.id).startsWith(key)))
             .slice(0, 4)
             .map((x) => ({
-                key: `q-${x.id}`, icon: 'uiDoc' as const, title: x.name || '이름 없음',
+                key: `q-${x.id}`, icon: ReceiptText, title: x.name || '이름 없음',
                 meta: [`#${String(x.id).slice(0, 6)}`, x.destination].filter(Boolean).join(' · '),
                 href: `/admin/reservations?open=${encodeURIComponent(x.id)}`, group: '견적',
             }));
@@ -74,12 +74,12 @@ export const AdminSearch: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="cmdk-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="cmdk" role="dialog" aria-modal="true" aria-label="검색" onKeyDown={onKeyDown}>
                 <label className="cmdk-input">
-                    <StrokeIcon name="uiSearch" />
+                    <Search size={20} strokeWidth={1.5} />
                     <input
                         ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)}
-                        placeholder="예약번호, 고객명, 메뉴 검색" aria-label="검색어"
+                        placeholder="예약번호·고객명·메뉴 검색" aria-label="검색어"
                     />
-                    <button type="button" className="side-icon-btn" aria-label="검색 닫기" onClick={onClose}><StrokeIcon name="uiCross" size={18} /></button>
+                    <button type="button" className="side-icon-btn" aria-label="검색 닫기" onClick={onClose}><X size={20} strokeWidth={1.5} /></button>
                 </label>
                 <div className="cmdk-list">
                     {hits.length === 0 && (
@@ -95,7 +95,7 @@ export const AdminSearch: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     href={hit.href} className={`cmdk-row${i === cursor ? ' on' : ''}`}
                                     onMouseEnter={() => setCursor(i)}
                                 >
-                                    <span className="cmdk-ico"><StrokeIcon name={hit.icon} size={18} /></span>
+                                    <span className="cmdk-ico"><hit.icon size={18} strokeWidth={1.5} /></span>
                                     <span className="cmdk-title">{hit.title}</span>
                                     {hit.meta && <span className="cmdk-meta">{hit.meta}</span>}
                                 </a>

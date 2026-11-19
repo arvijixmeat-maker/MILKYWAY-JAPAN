@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Icon } from './console/Icon';
 import { api } from '../../lib/api';
 import type { Hotel } from '../../types/hotel';
 
@@ -84,7 +85,7 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
                         onClick={onClose}
                         className="w-9 h-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
                     >
-                        <span className="material-symbols-outlined text-slate-500">close</span>
+                        <Icon name="close" className="text-slate-500" />
                     </button>
                 </div>
 
@@ -135,7 +136,7 @@ export const HotelPickerModal: React.FC<HotelPickerModalProps> = ({
                                                     {thumb ? (
                                                         <img src={thumb} alt={h.name_kr} loading="lazy" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="material-symbols-outlined text-slate-400 text-sm">hotel</span>
+                                                        <Icon name="hotel" className="text-slate-400 text-sm" />
                                                     )}
                                                 </div>
                                             </td>

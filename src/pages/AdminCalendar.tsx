@@ -106,7 +106,7 @@ const getEventTone = (item: CalendarItem): 'blue' | 'green' | 'amber' => {
 
 const getNextAction = (item: CalendarItem): { label: string; tone: string; icon: string } => {
     if (item.itemType === 'quote') {
-        if (item.status === 'new') return { label: '요청 검토', tone: 'b-red', icon: 'fiber_new' };
+        if (item.status === 'new') return { label: '요청 검토', tone: 'b-new', icon: 'fiber_new' };
         if (item.status === 'processing') return { label: '견적 작성', tone: 'b-amber', icon: 'edit_note' };
         if (item.status === 'answered') return { label: '고객 확인 대기', tone: 'b-blue', icon: 'mark_email_read' };
         if (item.status === 'reservation_requested') return { label: '예약 전환', tone: 'b-purple', icon: 'sync_alt' };

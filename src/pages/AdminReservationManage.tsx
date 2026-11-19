@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { STATUS_META, toneClass } from '../components/admin/ui';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -247,18 +248,10 @@ const getWorkflowMeta = (reservation: Reservation) => {
 };
 
 // status → design-system badge tone (b-*) for the new admin console look
-const STATUS_TONE: Record<string, string> = {
-    new: 'b-purple',
-    reservation_requested: 'b-purple',
-    processing: 'b-amber',
-    pending_payment: 'b-amber',
-    answered: 'b-blue',
-    paid: 'b-blue',
-    confirmed: 'b-green',
-    cancelled: 'b-gray',
-    completed: 'b-gray',
-    converted: 'b-gray',
-};
+// 톤은 관리자 UI 키트의 상태표(ui/status.ts) 하나를 따른다.
+const STATUS_TONE: Record<string, string> = Object.fromEntries(
+    Object.entries(STATUS_META).map(([key, meta]) => [key, toneClass(meta.tone)]),
+);
 
 // 「곧 출발하는 투어」에 노출할 확정 상태 — 입금 대기(pending_payment)는 제외한다.
 const CONFIRMED_TOUR_STATUSES = new Set(['confirmed', 'paid']);

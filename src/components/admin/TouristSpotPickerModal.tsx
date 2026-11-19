@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Icon } from './console/Icon';
 import { api } from '../../lib/api';
 import type { SpotRegion, TouristSpot } from '../../types/touristSpot';
 import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
@@ -109,7 +110,7 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
                         onClick={onClose}
                         className="w-9 h-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
                     >
-                        <span className="material-symbols-outlined text-slate-500">close</span>
+                        <Icon name="close" className="text-slate-500" />
                     </button>
                 </div>
 
@@ -190,7 +191,7 @@ export const TouristSpotPickerModal: React.FC<TouristSpotPickerModalProps> = ({
                                                     {thumb ? (
                                                         <img src={thumb} alt={s.name_kr} loading="lazy" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="material-symbols-outlined text-slate-400 text-sm">image</span>
+                                                        <Icon name="image" className="text-slate-400 text-sm" />
                                                     )}
                                                 </div>
                                             </td>

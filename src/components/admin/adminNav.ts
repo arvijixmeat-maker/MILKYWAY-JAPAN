@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
+import {
+    BedDouble, CalendarDays, CircleHelp, ContactRound, FolderTree, Hotel, House, Images, Inbox, LayoutDashboard,
+    LayoutTemplate, Luggage, Megaphone, MountainSnow, Newspaper, Star, Ticket, type LucideIcon,
+} from 'lucide-react';
 import { api } from '../../lib/api';
-import type { StrokeIconName } from './console/StrokeIcon';
 
-/** 관리자 메뉴 — 사이드바 · 모바일 서랍 · 검색창이 모두 이 목록을 쓴다. */
+/** 관리자 메뉴 — 사이드바 · 모바일 「더보기」 · 검색창이 모두 이 목록을 쓴다. */
 export interface AdminNavItem {
     id: string;
-    icon: StrokeIconName;
+    icon: LucideIcon;
     label: string;
-    /** 라벨 옆 작은 보조 글씨 (예: 몽골어 이름) */
-    sub?: string;
     href: string;
 }
 export interface AdminNavGroup { key: string; label: string; items: AdminNavItem[] }
@@ -16,42 +17,45 @@ export interface AdminNavGroup { key: string; label: string; items: AdminNavItem
 export const ADMIN_NAV: AdminNavGroup[] = [
     {
         key: 'ops', label: '운영', items: [
-            { id: 'dashboard', icon: 'navDash', label: '대시보드', href: '/admin' },
-            { id: 'reservations', icon: 'navBooking', label: '통합 예약 관리', href: '/admin/reservations' },
-            { id: 'accommodation-ops', icon: 'navBed', label: '숙소배정', sub: 'Байр захиалга', href: '/admin/accommodation-ops' },
-            { id: 'calendar', icon: 'navCal', label: '투어 캘린더', href: '/admin/calendar' },
-        ],
-    },
-    {
-        key: 'catalog', label: '카탈로그', items: [
-            { id: 'products', icon: 'navBox', label: '상품 관리', href: '/admin/products' },
+            { id: 'dashboard', icon: LayoutDashboard, label: '대시보드', href: '/admin' },
+            { id: 'reservations', icon: Ticket, label: '통합 예약 관리', href: '/admin/reservations' },
+            { id: 'accommodation-ops', icon: BedDouble, label: 'Байр захиалга · 숙소배정', href: '/admin/accommodation-ops' },
+            { id: 'calendar', icon: CalendarDays, label: '투어 캘린더', href: '/admin/calendar' },
         ],
     },
     {
         key: 'content', label: '콘텐츠', items: [
-            { id: 'magazines', icon: 'navMagazine', label: '매거진 관리', href: '/admin/magazines' },
-            { id: 'templates', icon: 'navLayers', label: '템플릿 관리', href: '/admin/templates' },
-            { id: 'reviews', icon: 'navStar', label: '후기 관리', href: '/admin/reviews' },
-            { id: 'faq', icon: 'navHelp', label: 'FAQ 관리', href: '/admin/faq' },
-            { id: 'inquiries', icon: 'navMail', label: '문의 관리', href: '/admin/inquiries' },
+            { id: 'products', icon: Luggage, label: '상품 관리', href: '/admin/products' },
+            { id: 'magazines', icon: Newspaper, label: '매거진 관리', href: '/admin/magazines' },
+            { id: 'templates', icon: LayoutTemplate, label: '템플릿 관리', href: '/admin/templates' },
+            { id: 'reviews', icon: Star, label: '후기 관리', href: '/admin/reviews' },
+            { id: 'faq', icon: CircleHelp, label: 'FAQ 관리', href: '/admin/faq' },
+            { id: 'inquiries', icon: Inbox, label: '문의 관리', href: '/admin/inquiries' },
         ],
     },
     {
         key: 'site', label: '사이트 설정', items: [
-            { id: 'banners', icon: 'navScreen', label: '홈 화면 관리', href: '/admin/banners' },
-            { id: 'promotions', icon: 'navHorn', label: '여행기획전 관리', href: '/admin/promotions' },
-            { id: 'categories', icon: 'navTag', label: '카테고리 관리', href: '/admin/categories' },
-            { id: 'hotels', icon: 'navBuilding', label: '호텔 마스터', href: '/admin/hotels' },
-            { id: 'tourist-spots', icon: 'navPin', label: '관광지 마스터', href: '/admin/tourist-spots' },
-            { id: 'design-spots', icon: 'navPhoto', label: '여행지 사진', href: '/admin/design-spots' },
-            { id: 'guide-intro', icon: 'navGlobe', label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
+            { id: 'banners', icon: House, label: '홈 화면 관리', href: '/admin/banners' },
+            { id: 'promotions', icon: Megaphone, label: '여행기획전 관리', href: '/admin/promotions' },
+            { id: 'categories', icon: FolderTree, label: '카테고리 관리', href: '/admin/categories' },
+            { id: 'hotels', icon: Hotel, label: '호텔 마스터', href: '/admin/hotels' },
+            { id: 'tourist-spots', icon: MountainSnow, label: '관광지 마스터', href: '/admin/tourist-spots' },
+            { id: 'design-spots', icon: Images, label: '여행지 사진', href: '/admin/design-spots' },
+            { id: 'guide-intro', icon: ContactRound, label: '가이드 소개 (공통)', href: '/admin/guide-intro' },
         ],
     },
 ];
 
-/** 메뉴 id → 페이지 제목 위 분류 라벨 */
+/** 휴대폰 하단 탭 — 자주 쓰는 세 화면 + 「더보기」(전체 메뉴) */
+export const MOBILE_TABS: { id: string; icon: LucideIcon; label: string; href: string }[] = [
+    { id: 'reservations', icon: Ticket, label: '예약', href: '/admin/reservations' },
+    { id: 'accommodation-ops', icon: BedDouble, label: '숙소배정', href: '/admin/accommodation-ops' },
+    { id: 'products', icon: Luggage, label: '상품', href: '/admin/products' },
+];
+
+/** 메뉴 id → 상단 바에 보여 줄 분류 이름 (대시보드는 분류 없이 이름만) */
 export const navGroupLabel = (pageId: string): string | undefined => {
-    if (pageId === 'dashboard') return '관리자 콘솔';
+    if (pageId === 'dashboard') return undefined;
     return ADMIN_NAV.find((g) => g.items.some((i) => i.id === pageId))?.label;
 };
 
