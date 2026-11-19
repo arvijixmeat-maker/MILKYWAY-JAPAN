@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { STATUS_META, toneClass } from '../components/admin/ui';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Download, FilePen, Plus, ReceiptText, RefreshCw, Search, Trash2, Users } from 'lucide-react';
+import { Button, ChipFilter, EmptyState, Modal, STATUS_META, toneClass } from '../components/admin/ui';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { Icon } from '../components/admin/console/Icon';
 import { api } from '../lib/api';
@@ -109,17 +110,7 @@ const SOURCE_OPTIONS: Array<{ v: string; l: string }> = [
     { v: 'other', l: '기타' },
 ];
 const sourceLabel = (s?: string) => SOURCE_OPTIONS.find(o => o.v === s)?.l || (s === 'quote' ? '견적 전환' : (s || ''));
-const sourceColor = (s?: string): { bg: string; fg: string } => ({
-    instagram: { bg: '#FBEAF0', fg: '#993556' },
-    facebook: { bg: '#E6F1FB', fg: '#185FA5' },
-    quote: { bg: '#E8FAF5', fg: '#007F75' },
-    line: { bg: '#E4F7EC', fg: '#0F7A43' },
-    email: { bg: '#E8F2FF', fg: '#0B6FE0' },
-    phone: { bg: '#FEF6E7', fg: '#B45309' },
-    website: { bg: '#F1F2F4', fg: '#5F636B' },
-    visit: { bg: '#EEEDFE', fg: '#534AB7' },
-    other: { bg: '#F1F2F4', fg: '#8A8F99' },
-}[s || ''] || { bg: '#F1F2F4', fg: '#8A8F99' });
+const sourceColor = (_s?: string): { bg: string; fg: string } => ({ bg: 'var(--mw-gray-100)', fg: 'var(--mw-gray-800)' });
 const BLANK_ADD = { customerName: '', phone: '', email: '', source: 'line', productName: '', startDate: '', endDate: '', people: '1', totalAmount: '', deposit: '', status: 'pending_payment', notes: '' };
 // 견적 직접 만들기 (인스타·페이스북·메일 문의)
 const BLANK_QUOTE = { name: '', source: 'instagram', contact: '', email: '', destination: '', people: '2', startDate: '', endDate: '', memo: '' };
@@ -253,6 +244,28 @@ const STATUS_TONE: Record<string, string> = Object.fromEntries(
     Object.entries(STATUS_META).map(([key, meta]) => [key, toneClass(meta.tone)]),
 );
 
+/** 목록 위 단계 칩 — value 는 예전 상태 필터 값 그대로 */
+const STAGE_CHIPS: { value: string; label: string; status?: string }[] = [
+    { value: '전체 상태', label: '전체' },
+    { value: '신규 견적', label: '신규 요청', status: 'new' },
+    { value: '견적 작성 중', label: '견적 작성 중', status: 'processing' },
+    { value: '견적 발송 완료', label: '견적 발송 완료', status: 'answered' },
+    { value: '예약 요청', label: '예약 요청', status: 'reservation_requested' },
+    { value: '입금 대기', label: '입금 대기', status: 'pending_payment' },
+    { value: '결제 완료', label: '결제 완료', status: 'paid' },
+    { value: '예약 확정', label: '예약 확정', status: 'confirmed' },
+    { value: '취소됨', label: '취소됨', status: 'cancelled' },
+];
+const reservationNoOf = (res: Reservation) => res.reservationNumber || `#${res.id.slice(0, 8).toUpperCase()}`;
+const typeLabelOf = (res: Reservation) => (res.type === 'quote' ? '맞춤견적' : res.type === 'custom' ? '맞춤예약' : '일반상품');
+const amountOf = (res: Reservation) => (typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) && res.totalAmount > 0 ? `₩${res.totalAmount.toLocaleString()}` : '–');
+/** 지금 쪽 둘레로 최대 다섯 쪽 번호 */
+const pageWindow = (current: number, total: number): number[] => {
+    const last = Math.max(total, 1);
+    const start = Math.max(1, Math.min(current - 2, last - 4));
+    return Array.from({ length: Math.min(5, last) }, (_, i) => start + i);
+};
+
 // 「곧 출발하는 투어」에 노출할 확정 상태 — 입금 대기(pending_payment)는 제외한다.
 const CONFIRMED_TOUR_STATUSES = new Set(['confirmed', 'paid']);
 
@@ -271,10 +284,10 @@ const STATUS_LABELS: Record<string, string> = {
 // 숙소 배정 보드(Байр захиалга)의 수배 상태(몽골어 저장값) → 한국어 라벨·색.
 // 상세에서는 읽기 전용 표시만 — 상태의 원천은 보드(몽골 현지 스태프).
 const BOOKING_STATUS_KO: Record<string, { label: string; bg: string; fg: string }> = {
-    'Илгээгээгүй': { label: '수배 미발송', bg: '#EEF1F5', fg: '#5F636B' },
-    'Имэйл илгээсэн': { label: '메일 발송됨', bg: '#E8F2FF', fg: '#0B6FE0' },
-    'Хариу ирсэн': { label: '회신 수신', bg: '#FEF6E7', fg: '#B45309' },
-    'Баталгаажсан': { label: '수배 확정', bg: '#E4F7EC', fg: '#0F7A43' },
+    'Илгээгээгүй': { label: '수배 미발송', bg: 'var(--mw-gray-100)', fg: 'var(--mw-gray-800)' },
+    'Имэйл илгээсэн': { label: '메일 발송됨', bg: 'var(--mw-accent-soft)', fg: 'var(--mw-accent)' },
+    'Хариу ирсэн': { label: '회신 수신', bg: 'var(--mw-warn-soft)', fg: 'var(--mw-accent)' },
+    'Баталгаажсан': { label: '수배 확정', bg: 'var(--mw-accent)', fg: 'var(--mw-on-dark)' },
 };
 
 const StatusDropdown = ({ status, onChange }: { status: string, onChange: (s: Reservation['status']) => void }) => {
@@ -1411,7 +1424,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                 <div className="drawer-head">
                     {productImage && (
                         <img src={productImage} alt={reservation.productName} loading="lazy"
-                            style={{ width: 52, height: 52, flex: 'none', borderRadius: 12, objectFit: 'cover', border: '1px solid var(--mrt-gray-200, #E6E8EC)' }} />
+                            style={{ width: 52, height: 52, flex: 'none', borderRadius: 12, objectFit: 'cover', border: '1px solid var(--mw-gray-200)' }} />
                     )}
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="row" style={{ gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
@@ -1562,7 +1575,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                                                 <b style={{ textAlign: 'right' }}>{contractAgreement.name || '—'}</b>
                                                 {contractAgreement.signature && (
-                                                    <img src={contractAgreement.signature} alt="고객 전자서명" style={{ height: 56, maxWidth: 220, objectFit: 'contain', border: '1px solid var(--mrt-gray-100)', borderRadius: 8, background: '#fff' }} />
+                                                    <img src={contractAgreement.signature} alt="고객 전자서명" style={{ height: 56, maxWidth: 220, objectFit: 'contain', border: '1px solid var(--mrt-gray-100)', borderRadius: 8, background: 'var(--mw-surface)' }} />
                                                 )}
                                             </span>
                                         </div>
@@ -1580,7 +1593,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                     <div className="ring">
                                         <svg width="62" height="62" viewBox="0 0 62 62">
                                             <circle cx="31" cy="31" r="26" fill="none" stroke="var(--mrt-gray-100)" strokeWidth="6" />
-                                            <circle cx="31" cy="31" r="26" fill="none" stroke="#0f766e" strokeWidth="6" strokeLinecap="round"
+                                            <circle cx="31" cy="31" r="26" fill="none" stroke="var(--mw-green-600)" strokeWidth="6" strokeLinecap="round"
                                                 strokeDasharray={2 * Math.PI * 26}
                                                 strokeDashoffset={2 * Math.PI * 26 * (1 - paidPercent / 100)}
                                                 transform="rotate(-90 31 31)"
@@ -1779,7 +1792,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                                             <div style={{ minWidth: 0, flex: 1 }}>
                                                                 <div className="cell-strong">
                                                                     {assigned.accommodation.name}
-                                                                    {overNights && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 999, background: '#FFECEC', color: '#D0342C' }}>박수 초과 · 출발일</span>}
+                                                                    {overNights && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 999, background: 'var(--mw-error-soft)', color: 'var(--mw-error-ink)' }}>박수 초과 · 출발일</span>}
                                                                 </div>
                                                                 <div className="cell-muted" style={{ fontSize: 12 }}>{assigned.accommodation.location || '—'}</div>
                                                                 {(() => {
@@ -2138,7 +2151,7 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                         </div>
                                     )}
                                 </div>
-                                <Icon name="add_circle" style={{ color: 'var(--mrt-blue)' }} />
+                                <Icon name="add_circle" style={{ color: 'var(--mw-green-700)' }} />
                             </button>
                         ))}
                     </div>
@@ -2172,13 +2185,13 @@ const ReservationDetailModal = ({ reservation, onClose, onUpdate, products = [] 
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                     <div className="cell-strong">
                                         {acc.name}
-                                        {acc._fromHotelMaster && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#eef4ff', color: '#1656d6' }}>호텔 마스터</span>}
+                                        {acc._fromHotelMaster && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'var(--mw-accent-soft)', color: 'var(--mw-accent)' }}>호텔 마스터</span>}
                                         {acc._fromItinerary && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'var(--mrt-gray-100)', color: 'var(--mrt-gray-500)' }}>이 상품 일정</span>}
                                     </div>
                                     {acc.type && <div className="cell-muted" style={{ fontSize: 12 }}>{acc.type}</div>}
                                     {acc.location && <div className="cell-muted" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.location}</div>}
                                 </div>
-                                <Icon name="add_circle" style={{ color: 'var(--mrt-blue)' }} />
+                                <Icon name="add_circle" style={{ color: 'var(--mw-green-700)' }} />
                             </button>
                         ))}
                     </div>
@@ -3047,269 +3060,192 @@ export const AdminReservationManage: React.FC = () => {
             <AdminLayout
                 activePage="reservations"
                 title="통합 예약 관리"
-                description="상품 예약, 맞춤 견적 전환, 결제 상태를 한 화면에서 관리합니다."
+                description="견적 요청부터 예약 확정·출발까지 한 목록에서 관리해요"
                 isDarkMode={isDarkMode}
                 toggleTheme={toggleTheme}
                 actions={
                     <>
-                        <button
-                            type="button"
-                            onClick={() => { setQuoteForm({ ...BLANK_QUOTE }); setShowQuoteModal(true); }}
-                            className="btn btn-blue"
-                            title="인스타·페이스북·메일 등으로 온 견적 문의를 등록하고 새 디자인 견적서를 바로 작성"
-                        >
-                            <Icon name="request_quote" />
-                            견적 직접 만들기
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setAddForm({ ...BLANK_ADD }); setShowAddModal(true); }}
-                            className="btn btn-ink"
-                            title="LINE·메일·전화 등 사이트 외 주문을 수동으로 예약에 추가"
-                        >
-                            <Icon name="add" />
-                            수동 예약 추가
-                        </button>
-                        <button
-                            type="button"
-                            onClick={downloadConfirmedReservationsExcel}
-                            className="btn btn-soft"
+                        <Button iconOnly aria-label="새로고침" title="새로고침" icon={<RefreshCw />} onClick={fetchReservations} />
+                        <Button
+                            icon={<Download />} onClick={downloadConfirmedReservationsExcel}
                             title="예약 확정 상태의 모든 주문을 일차별 숙소 수배 Excel로 다운로드"
                         >
-                            <Icon name="table_view" />
-                            예약확정 Excel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={fetchReservations}
-                            className="btn btn-ghost"
+                            엑셀 다운로드
+                        </Button>
+                        <Button
+                            variant="soft" icon={<ReceiptText />}
+                            onClick={() => { setQuoteForm({ ...BLANK_QUOTE }); setShowQuoteModal(true); }}
+                            title="인스타·페이스북·메일 등으로 온 견적 문의를 등록하고 견적서를 바로 작성"
                         >
-                            <Icon name="refresh" />
-                            새로고침
-                        </button>
+                            견적 작성
+                        </Button>
+                        <Button
+                            variant="primary" icon={<Plus />}
+                            onClick={() => { setAddForm({ ...BLANK_ADD }); setShowAddModal(true); }}
+                            title="LINE·메일·전화 등 사이트 외 주문을 수동으로 예약에 추가"
+                        >
+                            예약 등록
+                        </Button>
                     </>
                 }
             >
-                <div className="stack route-anim" style={{ gap: 18, fontFamily: 'var(--font-sans)' }}>
-                    {/* Summary Cards */}
-                    <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+                <div className="resv route-anim">
+                    {/* 단계 필터 — 알약 칩 (휴대폰에서는 가로로 밀어서 본다) */}
+                    <ChipFilter
+                        label="단계"
+                        value={filterStatus}
+                        onChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}
+                        options={STAGE_CHIPS.map((c) => ({
+                            value: c.value, label: c.label,
+                            count: c.status ? reservations.filter((r) => r.status === c.status).length : reservations.length,
+                        }))}
+                    />
+
+                    {/* 요약 */}
+                    <div className="stat-row">
                         {[
-                            { label: '전체 예약 건수', value: stats.total, icon: 'folder_managed', tint: 'tint-blue' },
-                            { label: '입금 대기', value: stats.pending, icon: 'payments', tint: 'tint-amber' },
-                            { label: '예약 확정', value: stats.confirmed, icon: 'verified', tint: 'tint-green' },
-                            { label: '맞춤 견적 진행중', value: stats.quoteTodo, icon: 'request_quote', tint: 'tint-blue' },
-                            { label: '계약서 발송 완료', value: stats.contractSent, icon: 'contract', tint: 'tint-purple' },
-                            { label: '여행 출발 예정', value: stats.departingSoon, icon: 'flight_takeoff', tint: 'tint-red' },
-                        ].map(card => (
-                            <div key={card.label} className="metric">
-                                <div className="metric-top">
-                                    <span className={`metric-ico ${card.tint}`}><Icon name={card.icon} fill /></span>
-                                </div>
-                                <div className="metric-label">{card.label}</div>
-                                <div className="metric-value">{card.value}<small>건</small></div>
+                            { label: '입금 대기', value: stats.pending },
+                            { label: '예약 확정', value: stats.confirmed },
+                            { label: '맞춤 견적 진행중', value: stats.quoteTodo },
+                            { label: '계약서 발송 완료', value: stats.contractSent },
+                            { label: '30일 내 출발', value: stats.departingSoon },
+                        ].map((card) => (
+                            <div key={card.label} className="stat">
+                                <span>{card.label}</span>
+                                <b>{card.value}<small> 건</small></b>
                             </div>
                         ))}
                     </div>
 
-                    {/* Upcoming tours — operational departure radar */}
-                    <section className="card upcoming-tours" aria-labelledby="upcoming-tours-title">
-                        <div className="card-head">
-                            <span className="metric-ico tint-red upcoming-tours-icon"><Icon name="flight_takeoff" fill /></span>
-                            <div style={{ minWidth: 0 }}>
-                                <h2 id="upcoming-tours-title">곧 출발하는 투어</h2>
-                                <div className="sub">30일 이내 출발 · 확정 팀만 · 가까운 날짜순</div>
+                    {/* 곧 출발하는 투어 */}
+                    {upcomingTours.length > 0 && (
+                        <section className="card card-clip" aria-labelledby="upcoming-tours-title">
+                            <div className="card-head">
+                                <div style={{ minWidth: 0 }}>
+                                    <h2 id="upcoming-tours-title">곧 출발하는 투어</h2>
+                                    <div className="sub">30일 이내 출발 · 확정 팀만 · 가까운 날짜순</div>
+                                </div>
+                                <div className="spacer" />
+                                <span className="badge b-new">{upcomingTours.length}건 예정</span>
                             </div>
-                            <div className="spacer" />
-                            <span className="badge b-red"><span className="pulse" />{upcomingTours.length}건 예정</span>
-                        </div>
-                        {upcomingTours.length > 0 ? (
-                            <div className="upcoming-tour-list">
+                            <div className="rows">
                                 {upcomingTours.slice(0, 5).map(({ reservation, daysUntil }) => {
-                                    const dueTone = daysUntil <= 3 ? 'due-now' : daysUntil <= 7 ? 'due-week' : 'due-later';
                                     const peopleText = reservation.headcount || (reservation.totalPeople ? `${reservation.totalPeople}명` : '인원 미정');
                                     return (
-                                        <div className="upcoming-tour-row" key={reservation.id}>
-                                            <div className={`upcoming-tour-due ${dueTone}`}>
-                                                <strong>{daysUntil === 0 ? '오늘 출발' : `D-${daysUntil}`}</strong>
+                                        <a key={reservation.id} href="#" onClick={(e) => { e.preventDefault(); openReservation(reservation); }}>
+                                            <div className="date-chip wide">
                                                 <span>{formatUpcomingDate(reservation.startDate)}</span>
+                                                <b>{daysUntil === 0 ? '오늘' : `D-${daysUntil}`}</b>
                                             </div>
-                                            <div className="upcoming-tour-product">
-                                                <strong>{reservation.productName || '상품명 미정'}</strong>
-                                                <span>#{reservation.reservationNumber || reservation.id.slice(0, 8).toUpperCase()}</span>
+                                            <div className="row-text">
+                                                <b>{reservation.productName || '상품명 미정'}</b>
+                                                <span>{reservation.customerName || '고객명 미정'} · {peopleText}{reservation.phone ? ` · ${reservation.phone}` : ''}</span>
                                             </div>
-                                            <div className="upcoming-tour-customer">
-                                                <strong>{reservation.customerName || '고객명 미정'}</strong>
-                                                <span>{peopleText}{reservation.phone ? ` · ${reservation.phone}` : ''}</span>
-                                            </div>
-                                            <div className="upcoming-tour-actions">
-                                                <span className={`badge ${STATUS_TONE[reservation.status] || 'b-gray'}`}>
-                                                    <span className="pulse" />{STATUS_LABELS[reservation.status] || reservation.status}
-                                                </span>
-                                                <button type="button" className="btn btn-sm btn-ghost" onClick={() => openReservation(reservation)}>
-                                                    <Icon name="visibility" />상세
-                                                </button>
-                                            </div>
-                                        </div>
+                                            <span className={`badge ${STATUS_TONE[reservation.status] || 'b-new'}`}>
+                                                {STATUS_LABELS[reservation.status] || reservation.status}
+                                            </span>
+                                        </a>
                                     );
                                 })}
-                                {upcomingTours.length > 5 && (
-                                    <div className="upcoming-tour-more">가까운 5건을 표시 중입니다. 이후 일정이 {upcomingTours.length - 5}건 더 있습니다.</div>
-                                )}
                             </div>
-                        ) : (
-                            <div className="upcoming-tour-empty">
-                                <Icon name="event_available" />
-                                <div><strong>30일 이내 출발 예정인 확정 투어가 없습니다.</strong><span>예약이 확정(입금 완료)되고 출발일이 등록되면 이곳에 자동으로 표시됩니다.</span></div>
-                            </div>
-                        )}
-                    </section>
+                            {upcomingTours.length > 5 && (
+                                <div className="resv-more">가까운 5건을 표시 중입니다. 이후 일정이 {upcomingTours.length - 5}건 더 있습니다.</div>
+                            )}
+                        </section>
+                    )}
 
-                    {/* Filter Section */}
-                    <div className="card card-pad">
-                        <div className="row" style={{ marginBottom: 16 }}>
-                            <div style={{ minWidth: 0 }}>
-                                <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: 'var(--text-strong)' }}>검색 및 필터</h2>
-                                <p className="cell-muted" style={{ fontSize: 12, marginTop: 4 }}>고객명, 이메일, 전화번호, 예약번호, 여행상품으로 검색할 수 있습니다.</p>
-                            </div>
-                            <div className="spacer" style={{ flex: 1 }} />
-                            <button
-                                onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setFilterPayment('전체 결제'); setFilterType('전체 유형'); setFilterDeparture(''); setCurrentPage(1); }}
-                                className="btn btn-soft btn-sm"
-                            >
-                                <Icon name="restart_alt" />
-                                초기화
-                            </button>
-                        </div>
-                        <div className="toolbar" style={{ marginBottom: 0 }}>
-                            <label className="tb-search" style={{ flex: 1, minWidth: 240 }}>
-                                <Icon name="search" />
+                    {/* 필터 + 목록 */}
+                    <section className="card card-clip">
+                        <div className="resv-filters">
+                            <label className="tb-search">
+                                <Search size={18} strokeWidth={1.5} aria-hidden="true" />
+                                <span className="sr-only">예약 검색</span>
                                 <input
-                                    type="text"
-                                    placeholder="고객명 / 이메일 / 전화번호 / 예약번호 / 상품명"
+                                    type="search"
+                                    placeholder="예약번호, 고객명, 연락처, 상품명"
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
                             </label>
-                            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="select">
-                                <option>전체 상태</option>
-                                <option value="입금 대기">입금 대기</option>
-                                <option value="결제 완료">결제 완료</option>
-                                <option value="예약 확정">예약 확정</option>
-                                <option value="신규 견적">신규 견적</option>
-                                <option value="견적 작성 중">견적 작성 중</option>
-                                <option value="견적 발송 완료">견적 발송 완료</option>
-                                <option value="예약 요청">예약 요청</option>
-                                <option value="취소됨">취소됨</option>
+                            <select aria-label="유형" value={filterType} onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }} className="select">
+                                <option value="전체 유형">유형: 전체</option>
+                                <option value="일반 상품">일반 상품</option>
+                                <option value="맞춤 견적">맞춤 견적</option>
                             </select>
-                            <select value={filterPayment} onChange={(e) => { setFilterPayment(e.target.value); setCurrentPage(1); }} className="select">
-                                <option>전체 결제</option>
+                            <select aria-label="결제" value={filterPayment} onChange={(e) => { setFilterPayment(e.target.value); setCurrentPage(1); }} className="select">
+                                <option value="전체 결제">결제: 전체</option>
                                 <option>예약금 미입금</option>
                                 <option>예약금 입금</option>
                                 <option>잔금 미입금</option>
                                 <option>잔금 입금</option>
                             </select>
-                            <input type="date" value={filterDeparture} onChange={(e) => { setFilterDeparture(e.target.value); setCurrentPage(1); }} className="select" style={{ paddingRight: 13 }} />
-                            <select value={filterSource} onChange={(e) => { setFilterSource(e.target.value); setCurrentPage(1); }} className="select" title="주문 경로">
-                                <option value="전체 경로">전체 경로</option>
+                            <select aria-label="주문 경로" value={filterSource} onChange={(e) => { setFilterSource(e.target.value); setCurrentPage(1); }} className="select">
+                                <option value="전체 경로">경로: 전체</option>
                                 {SOURCE_OPTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
                             </select>
+                            <input aria-label="출발일" type="date" value={filterDeparture} onChange={(e) => { setFilterDeparture(e.target.value); setCurrentPage(1); }} className="inp" />
+                            <Button
+                                variant="link" size="sm"
+                                onClick={() => { setSearchTerm(''); setFilterStatus('전체 상태'); setFilterPayment('전체 결제'); setFilterType('전체 유형'); setFilterSource('전체 경로'); setFilterDeparture(''); setCurrentPage(1); }}
+                            >
+                                초기화
+                            </Button>
                         </div>
-                        <div className="chip-row" style={{ marginTop: 14 }}>
-                            {['전체 유형', '일반 상품', '맞춤 견적'].map(type => (
-                                <button key={type} onClick={() => { setFilterType(type); setCurrentPage(1); }} className={`chip${filterType === type ? ' active' : ''}`}>
-                                    {type}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
 
-                    {/* Reservation List */}
-                    <div className="card">
-                        <div className="card-head">
-                            <h2>예약 · 견적 목록</h2>
-                            <span className="cell-muted" style={{ fontSize: 13 }}>{filteredReservations.length}건</span>
-                            <div className="spacer" />
-                            <div className="seg">
-                                <button className={filterType === '전체 유형' ? 'active' : ''} onClick={() => { setFilterType('전체 유형'); setCurrentPage(1); }}>전체</button>
-                                <button className={filterType === '일반 상품' ? 'active' : ''} onClick={() => { setFilterType('일반 상품'); setCurrentPage(1); }}>예약</button>
-                                <button className={filterType === '맞춤 견적' ? 'active' : ''} onClick={() => { setFilterType('맞춤 견적'); setCurrentPage(1); }}>견적</button>
-                            </div>
-                        </div>
-                        <div className="tbl-wrap">
-                            <table className="tbl">
+                        {/* PC: 표 */}
+                        <div className="tbl-wrap d-only">
+                            <table className="tbl" style={{ minWidth: 900 }}>
                                 <thead>
                                     <tr>
-                                        <th>예약번호</th>
-                                        <th>고객 / 연락처</th>
-                                        <th>상품</th>
-                                        <th className="c">인원</th>
-                                        <th>투어일</th>
-                                        <th>상태</th>
-                                        <th className="r">금액</th>
-                                        <th className="r">관리</th>
+                                        <th scope="col">예약번호</th>
+                                        <th scope="col">고객 / 연락처</th>
+                                        <th scope="col">상품</th>
+                                        <th scope="col" className="c">인원</th>
+                                        <th scope="col">투어일</th>
+                                        <th scope="col">상태</th>
+                                        <th scope="col" className="r">금액</th>
+                                        <th scope="col" className="r">관리</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {displayedReservations.map((res) => {
                                         const workflow = getWorkflowMeta(res);
                                         const nextAction = getQuoteAction(res);
-                                        const reservationNo = res.reservationNumber || res.id.slice(0, 8).toUpperCase();
-                                        const statusTone = STATUS_TONE[res.status] || 'b-gray';
+                                        const runAction = () => {
+                                            if (nextAction.nextStatus) handleStatusChange(res.id, nextAction.nextStatus, res.type);
+                                            else openReservation(res);
+                                        };
                                         return (
                                             <tr key={res.id} onClick={() => openReservation(res)}>
                                                 <td>
-                                                    <div className="cell-mono">#{reservationNo}</div>
-                                                    <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                                        <span className={`tag-type ${res.type === 'quote' || res.type === 'custom' ? 'quote' : 'reservation'}`}>
-                                                            {res.type === 'quote' ? '맞춤견적' : res.type === 'custom' ? '맞춤예약' : '일반상품'}
-                                                        </span>
-                                                        {res.source && (
-                                                            <span style={{ display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 10, fontWeight: 800, background: sourceColor(res.source).bg, color: sourceColor(res.source).fg }}>
-                                                                {sourceLabel(res.source)}
-                                                            </span>
-                                                        )}
+                                                    <div className="cell-2">
+                                                        <b className="resv-no">{reservationNoOf(res)}</b>
+                                                        <span>{typeLabelOf(res)}{res.source ? ` · ${sourceLabel(res.source)}` : ''}</span>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div>
-                                                        <div className="cell-strong">{res.customerName}</div>
-                                                        <div className="cell-muted" style={{ fontSize: 12 }}>{res.email || res.phone || '연락처 미입력'}</div>
+                                                    <div className="cell-2">
+                                                        <b>{res.customerName}</b>
+                                                        <span>{res.phone || res.email || '연락처 미입력'}</span>
                                                     </div>
                                                 </td>
-                                                <td className="cell-muted" style={{ maxWidth: 240 }}>
-                                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={res.productName}>{res.productName}</div>
-                                                </td>
-                                                <td className="c cell-mono">{res.headcount || '미정'}</td>
-                                                <td className="cell-muted">{res.date}</td>
-                                                <td>
-                                                    <span className={`badge ${statusTone}`}>
-                                                        <Icon name={workflow.icon} style={{ fontSize: 14 }} />
-                                                        {workflow.label}
-                                                    </span>
-                                                </td>
-                                                <td className="r cell-price">{typeof res.totalAmount === 'number' && !isNaN(res.totalAmount) && res.totalAmount > 0 ? `₩${res.totalAmount.toLocaleString()}` : '–'}</td>
+                                                <td className="wrap">{res.productName}</td>
+                                                <td className="c">{res.headcount || '미정'}</td>
+                                                <td className="tnum date">{res.date}</td>
+                                                <td><span className={`badge ${STATUS_TONE[res.status] || 'b-new'}`}>{workflow.label}</span></td>
+                                                <td className="r cell-price tnum">{amountOf(res)}</td>
                                                 <td className="r" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+                                                    <div className="row-actions">
                                                         <button
                                                             type="button"
-                                                            className={`btn btn-sm ${nextAction.primary ? 'btn-blue' : 'btn-ghost'}`}
-                                                            onClick={() => {
-                                                                if (nextAction.nextStatus) {
-                                                                    handleStatusChange(res.id, nextAction.nextStatus, res.type);
-                                                                } else {
-                                                                    openReservation(res);
-                                                                }
-                                                            }}
+                                                            className={`btn btn-sm ${nextAction.primary ? 'btn-soft' : 'btn-outline'}`}
+                                                            onClick={runAction}
                                                             title={nextAction.description}
                                                         >
-                                                            <Icon name={nextAction.icon} />
                                                             {nextAction.label}
                                                         </button>
-                                                        <button className="act-btn" title="상세" onClick={() => openReservation(res)}>
-                                                            <Icon name="visibility" />
-                                                        </button>
-                                                        <button className="act-btn danger" title="삭제" onClick={() => handleDelete(res.id, res.type)}>
-                                                            <Icon name="delete" />
+                                                        <button type="button" className="act-btn danger" aria-label="삭제" title="삭제" onClick={() => handleDelete(res.id, res.type)}>
+                                                            <Trash2 size={16} strokeWidth={1.5} />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -3318,40 +3254,80 @@ export const AdminReservationManage: React.FC = () => {
                                     })}
                                 </tbody>
                             </table>
-                            {displayedReservations.length === 0 && (
-                                <div className="empty"><Icon name="manage_search" /><p>검색 결과가 없습니다.</p></div>
-                            )}
                         </div>
 
-                        {/* Pagination */}
-                        <div className="row" style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)' }}>
-                            <span className="cell-muted" style={{ fontSize: 12 }}>
-                                총 {filteredReservations.length}건 중 {filteredReservations.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredReservations.length)} 표시
+                        {/* 휴대폰: 카드 목록 */}
+                        <div className="m-only resv-cards">
+                            {displayedReservations.map((res) => {
+                                const workflow = getWorkflowMeta(res);
+                                const nextAction = getQuoteAction(res);
+                                return (
+                                    <article key={res.id} className="rcard">
+                                        <a href="#" onClick={(e) => { e.preventDefault(); openReservation(res); }}>
+                                            <div className="rcard-top">
+                                                <span className="tnum">{reservationNoOf(res)}</span>
+                                                <span className={`badge ${STATUS_TONE[res.status] || 'b-new'}`}>{workflow.label}</span>
+                                            </div>
+                                            <div className="rcard-mid"><b>{res.customerName}</b><b className="tnum">{amountOf(res)}</b></div>
+                                            <span className="rcard-product">{res.productName}</span>
+                                            <div className="rcard-meta">
+                                                <span><CalendarDays size={14} strokeWidth={1.5} aria-hidden="true" />{res.date}</span>
+                                                <span><Users size={14} strokeWidth={1.5} aria-hidden="true" />{res.headcount || '미정'}</span>
+                                            </div>
+                                        </a>
+                                        <div className="rcard-actions">
+                                            {nextAction.nextStatus && (
+                                                <button
+                                                    type="button" className="btn btn-soft"
+                                                    onClick={() => handleStatusChange(res.id, nextAction.nextStatus!, res.type)}
+                                                >
+                                                    {nextAction.label}
+                                                </button>
+                                            )}
+                                            <button type="button" className="btn btn-outline" onClick={() => openReservation(res)}>상세</button>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+
+                        {displayedReservations.length === 0 && (
+                            <EmptyState icon={<Search strokeWidth={1.5} />}>검색 결과가 없습니다.</EmptyState>
+                        )}
+
+                        {/* 페이지 */}
+                        <div className="pager">
+                            <span>
+                                {filteredReservations.length}건 중 {filteredReservations.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredReservations.length)}
                             </span>
-                            <div className="spacer" style={{ flex: 1 }} />
-                            <div className="row" style={{ gap: 8 }}>
-                                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="act-btn">
-                                    <Icon name="chevron_left" />
+                            <div className="pager-btns">
+                                <button type="button" aria-label="이전 페이지" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+                                    <ChevronLeft size={16} strokeWidth={1.5} />
                                 </button>
-                                <span className="cell-mono" style={{ fontSize: 12 }}>{Math.min(currentPage, Math.max(totalPages, 1))} / {Math.max(totalPages, 1)}</span>
-                                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(totalPages, 1)))} disabled={currentPage >= totalPages || totalPages === 0} className="act-btn">
-                                    <Icon name="chevron_right" />
+                                {pageWindow(currentPage, totalPages).map((p) => (
+                                    <button key={p} type="button" aria-current={p === currentPage ? 'page' : undefined} onClick={() => setCurrentPage(p)}>{p}</button>
+                                ))}
+                                <button type="button" aria-label="다음 페이지" onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(totalPages, 1)))} disabled={currentPage >= totalPages || totalPages === 0}>
+                                    <ChevronRight size={16} strokeWidth={1.5} />
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </AdminLayout>
 
-            {showAddModal && (
-                <div onClick={() => !creating && setShowAddModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-                    <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 20px 60px rgba(0,0,0,.25)', fontFamily: 'var(--font-sans)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                            <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--text-strong)' }}>수동 예약 추가</h2>
-                            <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setShowAddModal(false)}><Icon name="close" /></button>
-                        </div>
-                        <p className="cell-muted" style={{ fontSize: 12, margin: '0 0 16px' }}>LINE·메일·전화 등 사이트 외 주문을 직접 등록합니다.</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Modal
+                open={showAddModal}
+                onClose={() => { if (!creating) setShowAddModal(false); }}
+                title="예약 등록"
+                description="LINE·메일·전화 등 사이트 외 주문을 직접 등록합니다."
+                lockBackdrop={creating}
+                footer={<>
+                    <Button onClick={() => setShowAddModal(false)} disabled={creating}>취소</Button>
+                    <Button variant="primary" icon={<Check />} onClick={handleCreateReservation} disabled={creating}>{creating ? '추가 중…' : '예약 추가'}</Button>
+                </>}
+            >
+                <div className="form-grid">
                             {[
                                 { k: 'customerName', label: '고객명 *', el: <input className="inp" style={{ width: '100%' }} value={addForm.customerName} onChange={e => setAddForm(f => ({ ...f, customerName: e.target.value }))} placeholder="고객명" /> },
                                 { k: 'source', label: '주문 경로', el: <select className="select" style={{ width: '100%' }} value={addForm.source} onChange={e => setAddForm(f => ({ ...f, source: e.target.value }))}>{SOURCE_OPTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}</select> },
@@ -3366,29 +3342,26 @@ export const AdminReservationManage: React.FC = () => {
                                 { k: 'deposit', label: '예약금 (₩)', el: <input type="number" min={0} className="inp" style={{ width: '100%' }} value={addForm.deposit} onChange={e => setAddForm(f => ({ ...f, deposit: e.target.value }))} placeholder="0" /> },
                                 { k: 'notes', label: '메모', full: true, el: <textarea className="inp" style={{ width: '100%', minHeight: 60, resize: 'vertical' }} value={addForm.notes} onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))} placeholder="주문 메모 (LINE ID 등)" /> },
                             ].map(field => (
-                                <div key={field.k} style={field.full ? { gridColumn: '1 / -1' } : undefined}>
-                                    <label className="cell-muted" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 5 }}>{field.label}</label>
+                                <div key={field.k} className={`field${field.full ? ' full' : ''}`}>
+                                    <span className="field-label">{field.label}</span>
                                     {field.el}
                                 </div>
                             ))}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-                            <button className="btn btn-ghost" onClick={() => setShowAddModal(false)} disabled={creating}>취소</button>
-                            <button className="btn btn-ink" onClick={handleCreateReservation} disabled={creating}><Icon name="check" />{creating ? '추가 중…' : '예약 추가'}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            </Modal>
 
-            {showQuoteModal && (
-                <div onClick={() => !creating && setShowQuoteModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-                    <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 20px 60px rgba(0,0,0,.25)', fontFamily: 'var(--font-sans)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                            <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: 'var(--text-strong)' }}>견적 직접 만들기</h2>
-                            <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setShowQuoteModal(false)}><Icon name="close" /></button>
-                        </div>
-                        <p className="cell-muted" style={{ fontSize: 12, margin: '0 0 16px' }}>인스타·페이스북·메일로 온 문의를 등록합니다. 만들면 바로 견적서 편집기가 열립니다.</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Modal
+                open={showQuoteModal}
+                onClose={() => { if (!creating) setShowQuoteModal(false); }}
+                title="견적 작성"
+                description="인스타·페이스북·메일로 온 문의를 등록합니다. 만들면 바로 견적서 편집기가 열립니다."
+                lockBackdrop={creating}
+                footer={<>
+                    <Button onClick={() => setShowQuoteModal(false)} disabled={creating}>취소</Button>
+                    <Button variant="primary" icon={<FilePen />} onClick={handleCreateQuote} disabled={creating}>{creating ? '만드는 중…' : '만들고 견적서 작성'}</Button>
+                </>}
+            >
+                <div className="form-grid">
                             {[
                                 { k: 'name', label: '고객 이름 *', el: <input className="inp" style={{ width: '100%' }} value={quoteForm.name} onChange={e => setQuoteForm(f => ({ ...f, name: e.target.value }))} placeholder="山田 太郎" autoFocus /> },
                                 { k: 'source', label: '문의 경로', el: <select className="select" style={{ width: '100%' }} value={quoteForm.source} onChange={e => setQuoteForm(f => ({ ...f, source: e.target.value }))}>{SOURCE_OPTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}</select> },
@@ -3400,19 +3373,13 @@ export const AdminReservationManage: React.FC = () => {
                                 { k: 'endDate', label: '도착일', el: <input type="date" className="inp" style={{ width: '100%' }} min={quoteForm.startDate || undefined} value={quoteForm.endDate} onChange={e => setQuoteForm(f => ({ ...f, endDate: e.target.value }))} /> },
                                 { k: 'memo', label: '요청 메모', full: true, el: <textarea className="inp" style={{ width: '100%', minHeight: 60, resize: 'vertical' }} value={quoteForm.memo} onChange={e => setQuoteForm(f => ({ ...f, memo: e.target.value }))} placeholder="DM에서 받은 요청 내용 (乗馬したい、高級ゲル希望 등)" /> },
                             ].map(field => (
-                                <div key={field.k} style={field.full ? { gridColumn: '1 / -1' } : undefined}>
-                                    <label className="cell-muted" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 5 }}>{field.label}</label>
+                                <div key={field.k} className={`field${field.full ? ' full' : ''}`}>
+                                    <span className="field-label">{field.label}</span>
                                     {field.el}
                                 </div>
                             ))}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-                            <button className="btn btn-ghost" onClick={() => setShowQuoteModal(false)} disabled={creating}>취소</button>
-                            <button className="btn btn-ink" onClick={handleCreateQuote} disabled={creating}><Icon name="edit_document" />{creating ? '만드는 중…' : '만들고 견적서 작성'}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            </Modal>
 
             {selectedReservation && selectedReservation.type !== 'quote' && (
                 <ReservationDetailModal
