@@ -105,6 +105,8 @@ export const api = {
         list: async () => request(`${API_BASE}/quotes`),
         get: async (id: string) => request(`${API_BASE}/quotes/${id}`),
         /** AI 견적 초안 (관리자 전용) — 저장하지 않고 편집기에 넣을 일정 초안을 돌려준다 */
+        /** 고객 요청을 한국어로 옮기고 정리 (관리자 — 견적 편집기 일정표 위 카드) */
+        requestSummary: async (id: string) => request(`${API_BASE}/quotes/${id}/request-summary`, { method: 'POST' }),
         aiDraft: async (id: string, body: { people?: number; startDate?: string; endDate?: string; revise?: { instruction: string; current: { title: string; days: unknown[]; included: string[]; excluded: string[] } } }) => request(`${API_BASE}/quotes/${id}/ai-draft`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
