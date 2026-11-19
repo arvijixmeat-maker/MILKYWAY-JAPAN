@@ -78,16 +78,36 @@ function paint(ctx: CanvasRenderingContext2D, it: KoItinerary, dry: boolean): nu
             yy += 34;
             if (rq.headline) { font(800, 18); for (const l of wrap(ctx, rq.headline, tw)) { t(l, cx + ip, yy, C.ink); yy += 26; } }
             if (rq.who) { font(500, 13); for (const l of wrap(ctx, rq.who, tw)) { t(l, cx + ip, yy, C.sub); yy += 20; } }
-            for (const [k, items] of rq.groups) {
-                if (!items.length) continue;
-                yy += 10;
-                font(800, 13); t(k, cx + ip, yy, C.mint); yy += 22;
+            // 묶음마다 색 상자 — 편집기 카드처럼 두 칸으로 나란히
+            const tones: [string, string][] = [[C.mintBg, '#007F75'], [C.amberBg, C.amber], ['#FFF1F0', '#B42318'], ['#F3F6F5', C.sub]];
+            const boxes = rq.groups.map((g, i) => ({ k: g[0], items: g[1], tone: tones[i % tones.length] })).filter(g => g.items.length);
+            const gap = 10, bp = 14;
+            const box = (g: typeof boxes[number], x: number, top2: number, w: number, h: number) => {
+                // h 가 0 이면 높이만 잰다
+                const go = on && h > 0;
+                if (go) { ctx.beginPath(); ctx.roundRect(x, top2, w, h, 12); ctx.fillStyle = g.tone[0]; ctx.fill(); }
+                let by = top2 + bp;
+                font(800, 13); if (go) { ctx.fillStyle = g.tone[1]; ctx.fillText(`${g.k} ${g.items.length}`, x + bp, by); } by += 24;
                 font(500, 14);
-                for (const item of items) {
-                    wrap(ctx, item, tw - 16).forEach((l, i) => { if (i === 0) t('·', cx + ip + 2, yy, C.faint); t(l, cx + ip + 16, yy, C.ink); yy += 22; });
+                for (const item of g.items) {
+                    wrap(ctx, item, w - bp * 2 - 14).forEach((l, i) => {
+                        if (go) { if (i === 0) { ctx.fillStyle = g.tone[1]; ctx.fillText('·', x + bp + 1, by); } ctx.fillStyle = C.ink; ctx.fillText(l, x + bp + 14, by); }
+                        by += 22;
+                    });
+                    by += 2;
                 }
+                return by + bp - 6 - top2;
+            };
+            if (boxes.length) yy += 12;
+            for (let i = 0; i < boxes.length; i += 2) {
+                const pair = boxes.slice(i, i + 2);
+                const w = pair.length === 2 ? (tw - gap) / 2 : tw;
+                const h = Math.max(...pair.map(g => box(g, 0, 0, w, 0)));
+                pair.forEach((g, k) => box(g, cx + ip + k * (w + gap), yy, w, h));
+                yy += h + gap;
             }
-            return yy + ip - 4 - top;
+            if (boxes.length) yy -= gap;
+            return yy + ip - top;
         };
         const h = body(false, y);
         rect(cx, y, cw, h, 16, C.card, C.line);
