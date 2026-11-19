@@ -18,12 +18,14 @@ export interface KoItinerary {
     included: string[];
     excluded: string[];
     note?: string;
+    /** 고객 요청 정리 (한국어) — 있으면 일정 위에 상자로 그린다 */
+    request?: { headline: string; who: string; groups: [string, string[]][] };
 }
 
 const W = 900;          // 그림 폭 (CSS px) — 2배로 그려 선명하게
 const PAD = 40;
 const FONT = '"Pretendard", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
-const C = { ink: '#0F2A2A', sub: '#5B6B6B', faint: '#94A3A3', line: '#E3ECEB', mint: '#00A88B', mintBg: '#EAF7F4', dark: '#123B3A', card: '#FFFFFF', bg: '#F6F9F9' };
+const C = { ink: '#0F2A2A', sub: '#5B6B6B', faint: '#94A3A3', line: '#E3ECEB', mint: '#00A88B', mintBg: '#EAF7F4', amber: '#8A5A00', amberBg: '#FFF4D6', dark: '#123B3A', card: '#FFFFFF', bg: '#F6F9F9' };
 
 /** 글을 폭에 맞게 줄바꿈 (한국어·일본어는 글자 단위, 영어는 단어가 끊길 수 있음 — 관리자용이라 충분) */
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
@@ -62,8 +64,58 @@ function paint(ctx: CanvasRenderingContext2D, it: KoItinerary, dry: boolean): nu
     if (!dry) { ctx.fillStyle = C.line; ctx.fillRect(PAD, y, W - PAD * 2, 1); }
     y += 20;
 
-    // DAY 카드
     const cx = PAD, cw = W - PAD * 2, ip = 22, tw = cw - ip * 2;
+
+    // 고객 요청 정리
+    const rq = it.request;
+    if (rq && (rq.headline || rq.groups.some(g => g[1].length))) {
+        const body = (draw: boolean, top: number) => {
+            const on = draw && !dry; let yy = top + ip;
+            const t = (s: string, x: number, yv: number, color: string) => { if (on) { ctx.fillStyle = color; ctx.fillText(s, x, yv); } };
+            font(800, 12); const lw = ctx.measureText('고객 요청 정리').width + 18;
+            if (on) { ctx.beginPath(); ctx.roundRect(cx + ip, yy, lw, 24, 12); ctx.fillStyle = C.amberBg; ctx.fill(); }
+            t('고객 요청 정리', cx + ip + 9, yy + 6, C.amber);
+            yy += 34;
+            if (rq.headline) { font(800, 18); for (const l of wrap(ctx, rq.headline, tw)) { t(l, cx + ip, yy, C.ink); yy += 26; } }
+            if (rq.who) { font(500, 13); for (const l of wrap(ctx, rq.who, tw)) { t(l, cx + ip, yy, C.sub); yy += 20; } }
+            // 묶음마다 색 상자 — 편집기 카드처럼 두 칸으로 나란히
+            const tones: [string, string][] = [[C.mintBg, '#007F75'], [C.amberBg, C.amber], ['#FFF1F0', '#B42318'], ['#F3F6F5', C.sub]];
+            const boxes = rq.groups.map((g, i) => ({ k: g[0], items: g[1], tone: tones[i % tones.length] })).filter(g => g.items.length);
+            const gap = 10, bp = 14;
+            const box = (g: typeof boxes[number], x: number, top2: number, w: number, h: number) => {
+                // h 가 0 이면 높이만 잰다
+                const go = on && h > 0;
+                if (go) { ctx.beginPath(); ctx.roundRect(x, top2, w, h, 12); ctx.fillStyle = g.tone[0]; ctx.fill(); }
+                let by = top2 + bp;
+                font(800, 13); if (go) { ctx.fillStyle = g.tone[1]; ctx.fillText(`${g.k} ${g.items.length}`, x + bp, by); } by += 24;
+                font(500, 14);
+                for (const item of g.items) {
+                    wrap(ctx, item, w - bp * 2 - 14).forEach((l, i) => {
+                        if (go) { if (i === 0) { ctx.fillStyle = g.tone[1]; ctx.fillText('·', x + bp + 1, by); } ctx.fillStyle = C.ink; ctx.fillText(l, x + bp + 14, by); }
+                        by += 22;
+                    });
+                    by += 2;
+                }
+                return by + bp - 6 - top2;
+            };
+            if (boxes.length) yy += 12;
+            for (let i = 0; i < boxes.length; i += 2) {
+                const pair = boxes.slice(i, i + 2);
+                const w = pair.length === 2 ? (tw - gap) / 2 : tw;
+                const h = Math.max(...pair.map(g => box(g, 0, 0, w, 0)));
+                pair.forEach((g, k) => box(g, cx + ip + k * (w + gap), yy, w, h));
+                yy += h + gap;
+            }
+            if (boxes.length) yy -= gap;
+            return yy + ip - top;
+        };
+        const h = body(false, y);
+        rect(cx, y, cw, h, 16, C.card, C.line);
+        body(true, y);
+        y += h + 14;
+    }
+
+    // DAY 카드
     for (const d of it.days) {
         // 높이를 먼저 재고(draw=false) 카드·박스 배경을 깐 뒤 내용을 그린다(draw=true)
         const body = (draw: boolean, top: number) => {

@@ -8,6 +8,7 @@ import { getSessionUser } from '../lib/userAuth';
 import { sendEmail, baseLayout } from '../lib/mailer';
 import { requireAdmin } from '../lib/adminAuth';
 import { generateQuoteDraft, summarizeProducts } from '../lib/aiQuoteDraft';
+import { summarizeRequest } from '../lib/requestSummary';
 import { inferActivityType, periodDates } from '../../src/constants/quoteOptions';
 
 // Define Env locally if global scope is not picked up
@@ -297,6 +298,23 @@ app.delete('/:id', async (c) => {
 // POST /api/quotes/:id/ai-draft — AI 견적 초안 (관리자 전용). 저장하지 않고 편집기에 돌려준다.
 // body: { people?, startDate?, endDate?, revise?: { instruction, current: { title, days, included, excluded } } }
 //   — 날짜·인원은 편집기에서 관리자가 고친 값이 있으면 그걸 우선. revise 가 있으면 지금 일정을 한국어 수정 요청대로 고친다 (「AI로 수정」)
+// POST /api/quotes/:id/request-summary — 고객 요청(일본어)을 한국어로 옮기고 정리 (관리자 전용). 저장하지 않는다.
+app.post('/:id/request-summary', requireAdmin, async (c) => {
+    const apiKey = String(c.env.ANTHROPIC_API_KEY || '').replace(/\s+/g, '');
+    if (!apiKey.startsWith('sk-ant-')) return c.json({ error: 'AI 키(ANTHROPIC_API_KEY)가 설정되지 않았습니다.' }, 503);
+    const row: any = await c.env.DB.prepare('SELECT * FROM quotes WHERE id = ?').bind(c.req.param('id')).first();
+    if (!row) return c.json({ error: '견적을 찾을 수 없습니다.' }, 404);
+    if (!String(row.additional_request || '').trim()) return c.json({ summary: null, empty: true });
+    try {
+        return c.json({ summary: await summarizeRequest(apiKey, row) });
+    } catch (e: any) {
+        const status = Number(e?.status) || 0;
+        const msg = status === 401 ? 'AI 키가 올바르지 않습니다.' : status === 429 ? 'AI 요청이 잠시 많습니다. 1분 뒤 다시 시도해 주세요.'
+            : status === 402 || e?.type === 'billing_error' ? 'AI 크레딧(결제)에 문제가 있습니다.' : `요청 정리 실패: ${String(e?.message || e).slice(0, 200)}`;
+        return c.json({ error: msg }, 500);
+    }
+});
+
 app.post('/:id/ai-draft', requireAdmin, async (c) => {
     // 키를 붙여 넣을 때 섞인 줄바꿈·공백 제거 (키 안에는 원래 공백이 없다 — 줄바꿈이 섞이면 「Invalid header value」로 실패)
     const apiKey = String(c.env.ANTHROPIC_API_KEY || '').replace(/\s+/g, '');

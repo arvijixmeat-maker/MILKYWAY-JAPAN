@@ -17,6 +17,7 @@ import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
 import { buildTripDoc, yen, DEFAULT_INCLUDED, DEFAULT_EXCLUDED } from '../trip-doc/tripDocModel';
 import { MEAL_KO, INC_OPTS, EXC_OPTS, inferActivityType } from '../../constants/quoteOptions';
 import { downloadKoItineraryImage } from './koItineraryImage';
+import { RequestSummaryCard, savedRequestSummary } from './RequestSummaryCard';
 import { useTripSources, resolveTripImages, fallbackSpots, cleanSpotName } from '../trip-doc/tripDocSources';
 
 /**
@@ -699,6 +700,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         try {
             await downloadKoItineraryImage({
                 title: nameKo || name || '일정표',
+                request: (aiDraftQuoteId && savedRequestSummary(aiDraftQuoteId)) || undefined,
                 meta: [
                     customer?.name ? `고객 ${customer.name}` : '',
                     `인원 ${people}명`,
@@ -1030,6 +1032,9 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
                     </section>
 
                     {/* 03 일정표 */}
+                    {/* 고객 요청 정리 (한국어) — 일정표 바로 위, 접이식 */}
+                    {aiDraftQuoteId && !templateMode && <RequestSummaryCard quoteId={aiDraftQuoteId} />}
+
                     <section id="qe-plan" style={{ ...sectionStyle, gap: 16 }}>
                         <SecHead n={templateMode ? '02' : '03'} title="일정표" hint={`${days.length}일`} right={
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
