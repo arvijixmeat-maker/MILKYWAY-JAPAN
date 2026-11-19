@@ -153,7 +153,7 @@ export const AdminDesignSpotManage: React.FC = () => {
             actions={saving ? <span className="cell-muted" style={{ fontSize: 12 }}>저장 중…</span> : undefined}
         >
             {converted.length > 0 && (
-                <div className="card" style={{ padding: '10px 14px', marginBottom: 12, fontSize: 13, borderLeft: '3px solid #06C4A0' }}>
+                <div className="card" style={{ padding: '10px 14px', marginBottom: 12, fontSize: 13, borderLeft: '3px solid var(--mw-green-700)' }}>
                     영어로 등록돼 있던 이름을 공식 일본어 표기로 바꿨습니다: {converted.join(', ')}
                 </div>
             )}
@@ -161,9 +161,9 @@ export const AdminDesignSpotManage: React.FC = () => {
             {/* 새 여행지 등록 */}
             <div className="card" style={{ padding: 16, marginBottom: 16 }}>
                 <div className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <label title="사진 업로드" style={{ flex: 'none', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: newImage ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--bg-muted, #f8f9fa)' }}>
+                    <label title="사진 업로드" style={{ flex: 'none', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', border: newImage ? '2px solid var(--mw-primary)' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--bg-muted, var(--mw-gray-50))' }}>
                         {uploadingNew
-                            ? <Icon name="progress_activity" style={{ fontSize: 20, color: '#06C4A0' }} />
+                            ? <Icon name="progress_activity" style={{ fontSize: 20, color: 'var(--mw-green-700)' }} />
                             : newImage
                                 ? <img src={newImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : <Icon name="add_a_photo" style={{ fontSize: 22, color: 'var(--text-muted)' }} />}
@@ -184,7 +184,7 @@ export const AdminDesignSpotManage: React.FC = () => {
                         />
                     )}
                     {previewName && (
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0f766e', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--mw-green-700)', whiteSpace: 'nowrap' }}>
                             페이지 표시: {previewName}
                         </span>
                     )}
@@ -203,9 +203,9 @@ export const AdminDesignSpotManage: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
                     {spots.map(s => (
                         <div key={s.id} className="card" style={{ overflow: 'hidden' }}>
-                            <label title="사진 변경" style={{ display: 'block', position: 'relative', aspectRatio: '4/3', cursor: 'pointer', background: 'var(--bg-muted, #f0f1f3)' }}>
+                            <label title="사진 변경" style={{ display: 'block', position: 'relative', aspectRatio: '4/3', cursor: 'pointer', background: 'var(--bg-muted, var(--mw-gray-100))' }}>
                                 {uploadingId === s.id
-                                    ? <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><Icon name="progress_activity" style={{ fontSize: 22, color: '#06C4A0' }} /></span>
+                                    ? <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><Icon name="progress_activity" style={{ fontSize: 22, color: 'var(--mw-green-700)' }} /></span>
                                     : <img src={s.image} alt={s.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
                                 <input type="file" accept="image/*" style={{ display: 'none' }}
                                     onChange={(e) => { replaceImage(s.id, e.target.files?.[0]); e.target.value = ''; }} />

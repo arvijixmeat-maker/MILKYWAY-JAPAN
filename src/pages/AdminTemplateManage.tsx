@@ -475,16 +475,16 @@ const TemplatesTab: React.FC = () => {
                             <div className="relative h-36 overflow-hidden">
                                 <img src={mongoliaHero} alt="" className="h-full w-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B45]/95 via-[#16275F]/70 to-transparent" />
-                                <div className="absolute left-5 top-4 text-white">
+                                <div className="absolute left-5 top-4 text-[color:var(--mw-on-dark)]">
                                     <div className="flex items-center gap-2">
                                         <Icon name="nights_stay" className="text-[24px]" />
                                         <div>
                                             <p className="text-[11px] font-black">モンゴル銀河旅行社</p>
-                                            <p className="text-[8px] font-bold tracking-widest text-white/70">DOCUMENT PACKAGE</p>
+                                            <p className="text-[8px] font-bold tracking-widest text-[color:var(--mw-on-dark)]">DOCUMENT PACKAGE</p>
                                         </div>
                                     </div>
                                     <h3 className="mt-4 max-w-[420px] truncate text-xl font-black tracking-tight">{t.name}</h3>
-                                    {t.description && <p className="mt-1 max-w-[420px] truncate text-xs font-semibold text-white/80">{t.description}</p>}
+                                    {t.description && <p className="mt-1 max-w-[420px] truncate text-xs font-semibold text-[color:var(--mw-on-dark)]">{t.description}</p>}
                                 </div>
                                 <span className="absolute right-4 top-4 rounded-xl bg-white/90 px-3 py-1 text-xs font-black text-[#1656D6] shadow-sm">{Math.max(0, t.days.length - 1)}박{t.days.length}일</span>
                             </div>
@@ -504,17 +504,17 @@ const TemplatesTab: React.FC = () => {
                                     ))}
                                 </div>
 
-                                <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                                    <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">문서에 들어갈 일정 내용</p>
+                                <div className="mb-4 rounded-xl border border-[color:var(--mw-line)] bg-[var(--mw-gray-50)] p-3">
+                                    <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-[color:var(--mw-gray-500)]">문서에 들어갈 일정 내용</p>
                                     <div className="space-y-1">
                                         {t.days.slice(0, 3).map(d => (
-                                            <div key={d.day} className="flex items-center gap-2 text-xs text-slate-500">
+                                            <div key={d.day} className="flex items-center gap-2 text-xs text-[color:var(--mw-muted)]">
                                                 <span className="flex h-7 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#287DFA]/15 text-[11px] font-black text-[#1656D6]">{d.day}일</span>
                                                 <span className="truncate font-semibold">{d.region ? `${d.region} · ` : ''}{d.title || '제목 없음'}</span>
-                                                <span className="flex-shrink-0 text-slate-300">({d.activities.length})</span>
+                                                <span className="flex-shrink-0 text-[color:var(--mw-gray-300)]">({d.activities.length})</span>
                                             </div>
                                         ))}
-                                        {t.days.length > 3 && <p className="pl-11 text-xs text-slate-400">+ {t.days.length - 3}일 더...</p>}
+                                        {t.days.length > 3 && <p className="pl-11 text-xs text-[color:var(--mw-gray-500)]">+ {t.days.length - 3}일 더...</p>}
                                     </div>
                                 </div>
 
@@ -764,7 +764,7 @@ const AccommodationsTab: React.FC = () => {
                         <div className="picker-list" style={{ padding: '20px 22px' }}>
                             <div className="field">
                                 <label>이미지</label>
-                                {form.images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-2">{form.images.map((img, i) => <div key={i} className="relative aspect-video"><img src={img} className="w-full h-full object-cover rounded-lg" /><button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"><Icon name="close" className="text-xs" /></button></div>)}</div>}
+                                {form.images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-2">{form.images.map((img, i) => <div key={i} className="relative aspect-video"><img src={img} className="w-full h-full object-cover rounded-lg" /><button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))} className="absolute top-1 right-1 bg-[var(--mw-error-soft)] text-[color:var(--mw-on-dark)] rounded-full p-0.5"><Icon name="close" className="text-xs" /></button></div>)}</div>}
                                 <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
                                     <Icon name="add_photo_alternate" /> 이미지 추가 <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                                 </label>

@@ -204,12 +204,12 @@ export const AdminTouristSpotManage: React.FC = () => {
         >
             <div className="route-anim">
                 {autoMsg && (
-                    <div role="status" style={{ marginBottom: 12, padding: '12px 16px', borderRadius: 12, background: autoMsg.ok ? '#E8FAF5' : '#FFF1F0', color: autoMsg.ok ? '#007F75' : '#B42318', fontSize: 13, fontWeight: 700 }}>
+                    <div role="status" style={{ marginBottom: 12, padding: '12px 16px', borderRadius: 12, background: autoMsg.ok ? 'var(--mw-green-50)' : 'var(--mw-error-soft)', color: autoMsg.ok ? 'var(--mw-green-700)' : 'var(--mw-error-ink)', fontSize: 13, fontWeight: 700 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <span style={{ flex: 1 }}>{autoMsg.text}</span>
                             {!autoBusy && <button type="button" onClick={() => setAutoMsg(null)} style={{ border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', fontWeight: 700 }}>✕</button>}
                         </div>
-                        {!!autoMsg.names?.length && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 500, color: '#3F5856', lineHeight: 1.7 }}>{autoMsg.names.join('  ·  ')}</div>}
+                        {!!autoMsg.names?.length && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 500, color: 'var(--mw-gray-700)', lineHeight: 1.7 }}>{autoMsg.names.join('  ·  ')}</div>}
                     </div>
                 )}
                 {/* Toolbar: search + region select + 사용여부 select + add button */}
@@ -323,10 +323,10 @@ export const AdminTouristSpotManage: React.FC = () => {
                                                 <td>
                                                     <span className="cell-strong">{s.name_kr}</span>
                                                     {s.id.startsWith('spot-auto-') && (
-                                                        <span title="상품 일정의 사진·설명으로 자동 등록" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: '#E8FAF5', color: '#007F75', fontSize: 10.5, fontWeight: 700 }}>자동</span>
+                                                        <span title="상품 일정의 사진·설명으로 자동 등록" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: 'var(--mw-green-50)', color: 'var(--mw-green-700)', fontSize: 10.5, fontWeight: 700 }}>자동</span>
                                                     )}
                                                     {!thumb && (
-                                                        <span title="사진이 아직 없습니다 — 눌러서 사진을 올려 주세요" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: '#FFF4D6', color: '#8A5A00', fontSize: 10.5, fontWeight: 700 }}>사진 필요</span>
+                                                        <span title="사진이 아직 없습니다 — 눌러서 사진을 올려 주세요" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: 'var(--mw-warn-soft)', color: 'var(--mw-gray-800)', fontSize: 10.5, fontWeight: 700 }}>사진 필요</span>
                                                     )}
                                                     {s.name_local && (
                                                         <span className="cell-muted" style={{ marginLeft: 8, fontSize: 12.5 }}>
@@ -484,7 +484,7 @@ export const AdminTouristSpotManage: React.FC = () => {
                                                 type="button"
                                                 onClick={() => removeImage(i)}
                                                 title="삭제"
-                                                style={{ position: 'absolute', top: 4, right: 4, width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(255,79,79,0.92)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                style={{ position: 'absolute', top: 4, right: 4, width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(255,79,79,0.92)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                             >
                                                 <Icon name="close" style={{ fontSize: 16 }} />
                                             </button>

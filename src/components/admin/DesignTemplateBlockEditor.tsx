@@ -64,10 +64,10 @@ function SpotCardsField({ value, onChange }: { value: string; onChange: (next: s
             {lines.map((line, i) => {
                 const { title, img } = parseLine(line);
                 return (
-                    <div key={i} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
-                        <label title={img ? '사진 변경' : '사진 업로드'} style={{ flex: 'none', width: 44, height: 44, borderRadius: 8, overflow: 'hidden', border: img ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
+                    <div key={i} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, var(--mw-gray-50))' }}>
+                        <label title={img ? '사진 변경' : '사진 업로드'} style={{ flex: 'none', width: 44, height: 44, borderRadius: 8, overflow: 'hidden', border: img ? '2px solid var(--mw-primary)' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--mw-surface)' }}>
                             {uploadingIdx === i
-                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#06C4A0' }} />
+                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: 'var(--mw-green-700)' }} />
                                 : img
                                     ? <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     : <Icon name="add_a_photo" style={{ fontSize: 15, color: 'var(--text-muted)' }} />}
@@ -90,7 +90,7 @@ function SpotCardsField({ value, onChange }: { value: string; onChange: (next: s
             <div style={{ border: '1px dashed var(--border-default)', borderRadius: 8, padding: '8px 10px' }}>
                 <div className="cell-muted" style={{ fontSize: 12, marginBottom: 6 }}>
                     등록된 여행지 — 누르면 카드에 추가됩니다
-                    <a href="/admin/design-spots" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#06C4A0', fontWeight: 700 }}>여행지 등록 관리 ↗</a>
+                    <a href="/admin/design-spots" target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: 'var(--mw-green-700)', fontWeight: 700 }}>여행지 등록 관리 ↗</a>
                 </div>
                 {registered.length === 0 ? (
                     <div className="cell-muted" style={{ fontSize: 12 }}>아직 등록된 여행지가 없습니다. 「여행지 사진」 페이지에서 사진+이름을 등록해 주세요.</div>
@@ -178,12 +178,12 @@ function MapStopsField({ value, onChange }: { value: string; onChange: (next: st
             {lines.map((line, i) => {
                 const { ko, ja, img } = parseLine(line);
                 return (
-                    <div key={`${ko}-${i}`} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, #f8f9fa)' }}>
-                        <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: '#06C4A0', color: '#fff', fontSize: 11, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
+                    <div key={`${ko}-${i}`} className="row" style={{ gap: 6, alignItems: 'center', padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 8, background: 'var(--bg-muted, var(--mw-gray-50))' }}>
+                        <span style={{ flex: 'none', width: 20, height: 20, borderRadius: '50%', background: 'var(--mw-primary)', color: 'var(--mw-on-dark)', fontSize: 11, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
                         {/* 원형 버블에 표시될 사진 — 클릭해서 업로드/변경 */}
-                        <label title={img ? '사진 변경' : '사진 업로드 (지도 원형에 표시)'} style={{ flex: 'none', width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: img ? '2px solid #06C4A0' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: '#fff' }}>
+                        <label title={img ? '사진 변경' : '사진 업로드 (지도 원형에 표시)'} style={{ flex: 'none', width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: img ? '2px solid var(--mw-primary)' : '2px dashed var(--border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', background: 'var(--mw-surface)' }}>
                             {uploadingIdx === i
-                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: '#06C4A0' }} />
+                                ? <Icon name="progress_activity" style={{ fontSize: 16, color: 'var(--mw-green-700)' }} />
                                 : img
                                     ? <img src={img} alt={ko} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     : <Icon name="add_a_photo" style={{ fontSize: 15, color: 'var(--text-muted)' }} />}
@@ -267,7 +267,7 @@ function PresetChips({ presets, value, onPick }: { presets: DesignPreset[]; valu
                         style={{
                             padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                             border: '1px solid', ...(value === p.value
-                                ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                ? { borderColor: 'var(--mw-green-700)', background: 'var(--mw-green-50)', color: 'var(--mw-green-700)' }
                                 : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
                         }}
                     >
@@ -312,7 +312,7 @@ function PresetLineChips({ presetLines, value, onChange, separator = '\n' }: { p
                             style={{
                                 padding: '2px 8px', borderRadius: 500, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                                 border: '1px solid', ...(on
-                                    ? { borderColor: '#06C4A0', background: 'rgba(6,196,160,0.12)', color: '#029F85' }
+                                    ? { borderColor: 'var(--mw-green-700)', background: 'var(--mw-green-50)', color: 'var(--mw-green-700)' }
                                     : { borderColor: 'var(--border-default)', background: 'transparent', color: 'var(--text-muted)' }),
                             }}
                         >
@@ -565,7 +565,7 @@ export function DesignTemplateBlockEditor({
                             ? '이 상품에 직접 올린 사진이 없습니다'
                             : '미리보기에서 올린 사진들을 모든 상품이 함께 쓰는 공통 사진으로 저장합니다'
                     }
-                    style={ownImageKeys.length > 0 ? { borderColor: '#06C4A0', color: '#029F85' } : undefined}
+                    style={ownImageKeys.length > 0 ? { borderColor: 'var(--mw-green-700)', color: 'var(--mw-green-700)' } : undefined}
                 >
                     <Icon name="photo_library" style={{ fontSize: 16 }} />
                     {savingShared ? '저장 중…' : `올린 사진 ${ownImageKeys.length}장을 공통으로 저장`}
@@ -578,7 +578,7 @@ export function DesignTemplateBlockEditor({
                                 type="button"
                                 className="chip"
                                 onClick={() => setPreviewVariant(vt)}
-                                style={previewVariant === vt ? { background: 'var(--mrt-navy, #1a2b4a)', color: '#fff' } : undefined}
+                                style={previewVariant === vt ? { background: 'var(--mrt-navy, var(--mw-accent))', color: 'var(--mw-on-dark)' } : undefined}
                             >
                                 {vt === 'desktop' ? 'PC' : '모바일'}
                             </button>
@@ -592,7 +592,7 @@ export function DesignTemplateBlockEditor({
                 {/* 좌: 클릭 가능한 미리보기 */}
                 <div
                     ref={previewRef}
-                    style={{ flex: 1, minWidth: 0, maxHeight: '78vh', overflowY: 'auto', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', background: '#fff' }}
+                    style={{ flex: 1, minWidth: 0, maxHeight: '78vh', overflowY: 'auto', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', background: 'var(--mw-surface)' }}
                 >
                     <div style={{ maxWidth: previewVariant === 'mobile' ? 430 : undefined, margin: previewVariant === 'mobile' ? '0 auto' : undefined }}>
                         <DesignBlockView
@@ -603,7 +603,7 @@ export function DesignTemplateBlockEditor({
                             selectedField={selectedField}
                             valueOverrides={valueOverrides}
                             itinerarySlot={(
-                                <div style={{ padding: '28px 16px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: 12, margin: '8px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+                                <div style={{ padding: '28px 16px', background: 'var(--mw-gray-50)', border: '2px dashed var(--mw-gray-300)', borderRadius: 12, margin: '8px 0', textAlign: 'center', color: 'var(--mw-muted)', fontSize: 14 }}>
                                     📋 이 자리에 상품의 <b>일정탭</b>에서 작성한 일정표가 표시됩니다
                                 </div>
                             )}
@@ -619,7 +619,7 @@ export function DesignTemplateBlockEditor({
                     const repeatable = def.sectionDefs.find(s => s.id === sec.defId)?.repeatable;
                     return (
                         <div key={sec.instId} style={{ flex: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
-                            <div className="row" style={{ gap: 0, alignItems: 'stretch', background: open ? 'var(--bg-muted, #f6f7f8)' : 'transparent' }}>
+                            <div className="row" style={{ gap: 0, alignItems: 'stretch', background: open ? 'var(--bg-muted, var(--mw-gray-50))' : 'transparent' }}>
                                 <button
                                     type="button"
                                     onClick={() => setOpenSection(open ? null : sec.instId)}
@@ -662,7 +662,7 @@ export function DesignTemplateBlockEditor({
                                             {valueOverrides?.[baseKey(fk)] !== undefined ? (
                                                 <div
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
-                                                    style={{ border: '1px dashed var(--border-default)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg-muted, #f8fafc)' }}
+                                                    style={{ border: '1px dashed var(--border-default)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg-muted, var(--mw-gray-50))' }}
                                                 >
                                                     <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
                                                         「가격/옵션」 탭의 인원별 가격이 자동으로 반영됩니다. 수정은 그 탭에서 해 주세요.
@@ -673,7 +673,7 @@ export function DesignTemplateBlockEditor({
                                                 <div
                                                     ref={el => { if (el) fieldRefs.current.set(fk, el); else fieldRefs.current.delete(fk); }}
                                                     className="row"
-                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === fk ? { outline: '2px solid rgba(6,196,160,0.5)', outlineOffset: 4, borderRadius: 6 } : {}) }}
+                                                    style={{ gap: 10, alignItems: 'center', ...(selectedField === fk ? { outline: '2px solid var(--mw-green-50)', outlineOffset: 4, borderRadius: 6 } : {}) }}
                                                 >
                                                     {values[fk] ? (
                                                         <div style={{ position: 'relative', flex: 'none' }}>
@@ -686,7 +686,7 @@ export function DesignTemplateBlockEditor({
                                                                 type="button"
                                                                 onClick={() => setValue(fk, '')}
                                                                 title="이미지 제거"
-                                                                style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+                                                                style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'var(--mrt-red)', color: 'var(--mw-on-dark)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}
                                                             >
                                                                 <Icon name="close" style={{ fontSize: 14 }} />
                                                             </button>
@@ -697,11 +697,11 @@ export function DesignTemplateBlockEditor({
                                                             <img
                                                                 src={sharedAssets[baseKey(fk)]}
                                                                 alt={f.label}
-                                                                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid #06C4A0' }}
+                                                                style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', border: '1px solid var(--mw-green-700)' }}
                                                             />
                                                             <span
                                                                 title="공통 이미지를 사용 중입니다. 이 상품만 다르게 하려면 업로드하세요."
-                                                                style={{ position: 'absolute', left: -4, bottom: -6, padding: '1px 6px', borderRadius: 500, background: '#06C4A0', color: '#fff', fontSize: 10, fontWeight: 800 }}
+                                                                style={{ position: 'absolute', left: -4, bottom: -6, padding: '1px 6px', borderRadius: 500, background: 'var(--mw-primary)', color: 'var(--mw-on-dark)', fontSize: 10, fontWeight: 800 }}
                                                             >
                                                                 공통
                                                             </span>
@@ -757,7 +757,7 @@ export function DesignTemplateBlockEditor({
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(fk, e.target.value)}
                                                     onFocus={() => handleFieldFocus(fk)}
-                                                    style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
+                                                    style={selectedField === fk ? { borderColor: 'var(--mw-green-700)', boxShadow: 'var(--ring-[color:var(--mw-line)])' } : undefined}
                                                 />
                                                 </>
                                             ) : (
@@ -785,7 +785,7 @@ export function DesignTemplateBlockEditor({
                                                     placeholder={f.default || ''}
                                                     onChange={(e) => setValue(fk, e.target.value)}
                                                     onFocus={() => handleFieldFocus(fk)}
-                                                    style={selectedField === fk ? { borderColor: '#06C4A0', boxShadow: '0 0 0 2px rgba(6,196,160,0.25)' } : undefined}
+                                                    style={selectedField === fk ? { borderColor: 'var(--mw-green-700)', boxShadow: 'var(--ring-[color:var(--mw-line)])' } : undefined}
                                                 />
                                                 </>
                                             )}

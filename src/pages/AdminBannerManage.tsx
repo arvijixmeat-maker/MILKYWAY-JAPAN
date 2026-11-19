@@ -88,7 +88,7 @@ const DEFAULT_LINKS: QuickLink[] = [
 const DEFAULT_EVENT_BANNERS: EventBanner[] = [
     {
         id: 'event-1',
-        backgroundColor: '#0F766E', // teal-700
+        backgroundColor: 'var(--mw-green-700)', // teal-700
         tag: 'EVENT',
         title: '친구와 함께하면\n10만원 할인!',
         icon: 'redeem',
@@ -241,7 +241,7 @@ export const AdminBannerManage: React.FC = () => {
     const addEventBanner = () => {
         const newId = `event-${Date.now()}`;
         setEventBanners([...eventBanners, {
-            id: newId, backgroundColor: '#0F766E', tag: 'NEW', title: '새로운 이벤트', icon: 'campaign', link: '#', location: 'all'
+            id: newId, backgroundColor: 'var(--mw-green-700)', tag: 'NEW', title: '새로운 이벤트', icon: 'campaign', link: '#', location: 'all'
         }]);
         markUnsaved();
     };

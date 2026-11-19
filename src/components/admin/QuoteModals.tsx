@@ -157,30 +157,30 @@ export const ConvertSelectionModal: React.FC<{
     const convertDays = Array.isArray(convertDoc?.days) ? convertDoc.days.length : 0;
 
     return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <Icon name="sync_alt" className="text-primary" />
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-[rgba(0,0,0,0.45)] backdrop-blur-sm">
+            <div className="bg-[var(--mw-surface)] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-5 border-b border-[color:var(--mw-line)] flex items-center justify-between bg-[var(--mw-gray-50)]">
+                    <h3 className="text-lg font-bold text-[color:var(--mw-ink)] flex items-center gap-2">
+                        <Icon name="sync_alt" className="text-[color:var(--mw-green-700)]" />
                         예약 확정 및 전환
                     </h3>
-                    <button onClick={onClose} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">
-                        <Icon name="close" className="text-slate-500" />
+                    <button onClick={onClose} className="p-1 rounded hover:bg-[var(--mw-gray-200)]">
+                        <Icon name="close" className="text-[color:var(--mw-muted)]" />
                     </button>
                 </div>
 
                 <div className="p-6 space-y-4">
-                    <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-800 dark:text-teal-200 text-sm rounded-lg mb-4">
+                    <div className="p-3 bg-[var(--mw-green-50)] text-[color:var(--mw-green-700)] text-sm rounded-lg mb-4">
                         <b>{request.name}</b>님의 견적 요청을 정식 예약으로 전환합니다.<br />
                         견적 값이 미리 채워져 있으니 날짜·금액만 확인해 주세요.
                     </div>
                     {convertDays > 0 ? (
-                        <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
+                        <div className="flex items-start gap-2 rounded-lg border border-[color:var(--mw-line)] bg-[var(--mw-gray-100)] p-3 text-xs font-semibold text-[color:var(--mw-gray-800)]">
                             <Icon name="task_alt" className="text-[16px]" />
                             <span>고객정보·인원·금액과 견적서 일정 <b>{convertDays}일</b>(관광지·숙소 사진 포함)이 <b>확정일정표로 그대로</b> 옮겨집니다. 전환 후 새 예약이 열리면 바로 발송할 수 있습니다.</span>
                         </div>
                     ) : (
-                        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                        <div className="flex items-start gap-2 rounded-lg border border-[color:var(--mw-line)] bg-[var(--mw-gray-100)] p-3 text-xs font-semibold text-[color:var(--mw-gray-800)]">
                             <Icon name="warning" className="text-[16px]" />
                             <span>아직 견적서 일정이 없습니다. 전환은 되지만 확정일정표는 예약 화면에서 새로 작성해야 합니다. 먼저 「견적 제안서 작성」을 하는 것을 권장합니다.</span>
                         </div>
@@ -188,28 +188,28 @@ export const ConvertSelectionModal: React.FC<{
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">여행 시작일</label>
+                            <label className="block text-xs font-bold text-[color:var(--mw-muted)] mb-1">여행 시작일</label>
                             <input
                                 type="date"
                                 value={startDate}
                                 onChange={e => setStartDate(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-primary"
+                                className="w-full px-3 py-2 border rounded-lg bg-[var(--mw-surface)] border-[color:var(--mw-line)] focus:ring-2 focus:ring-[color:var(--mw-green-700)]"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1">여행 종료일</label>
+                            <label className="block text-xs font-bold text-[color:var(--mw-muted)] mb-1">여행 종료일</label>
                             <input
                                 type="date"
                                 value={endDate}
                                 onChange={e => setEndDate(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-primary"
+                                className="w-full px-3 py-2 border rounded-lg bg-[var(--mw-surface)] border-[color:var(--mw-line)] focus:ring-2 focus:ring-[color:var(--mw-green-700)]"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">총 확정 금액 (원)</label>
+                            <label className="block text-xs font-bold text-[color:var(--mw-muted)] mb-1 ml-1">총 확정 금액 (원)</label>
                             <div className="relative">
                                 <input
                                     type="text"
@@ -220,31 +220,31 @@ export const ConvertSelectionModal: React.FC<{
                                         setTotalAmount(val);
                                         if (deposit === 0) setDeposit(Math.floor(val * 0.1));
                                     }}
-                                    className="w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-primary font-bold text-right pr-8"
+                                    className="w-full px-3 py-2.5 border rounded-lg bg-[var(--mw-surface)] border-[color:var(--mw-line)] focus:ring-2 focus:ring-[color:var(--mw-green-700)] font-bold text-right pr-8"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">원</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[color:var(--mw-gray-500)]">원</span>
                             </div>
                             {totalAmount > 0 && (
-                                <p className="text-[10px] font-bold text-primary/70 ml-1">
+                                <p className="text-[10px] font-bold text-[color:var(--mw-green-700)] ml-1">
                                     ≈ {typeof totalAmount === 'number' && !isNaN(totalAmount) ? (totalAmount / 10000).toLocaleString() : 0}만원
                                 </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">예약금 (원)</label>
+                            <label className="block text-xs font-bold text-[color:var(--mw-muted)] mb-1 ml-1">예약금 (원)</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     placeholder="0"
                                     value={formatNumber(deposit)}
                                     onChange={e => setDeposit(unformatNumber(e.target.value))}
-                                    className="w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-primary font-bold text-right text-primary pr-8"
+                                    className="w-full px-3 py-2.5 border rounded-lg bg-[var(--mw-surface)] border-[color:var(--mw-line)] focus:ring-2 focus:ring-[color:var(--mw-green-700)] font-bold text-right text-[color:var(--mw-green-700)] pr-8"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">원</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[color:var(--mw-gray-500)]">원</span>
                             </div>
                             {deposit > 0 && (
-                                <p className="text-[10px] font-bold text-primary/70 ml-1">
+                                <p className="text-[10px] font-bold text-[color:var(--mw-green-700)] ml-1">
                                     ≈ {typeof deposit === 'number' && !isNaN(deposit) ? (deposit / 10000).toLocaleString() : 0}만원
                                 </p>
                             )}
@@ -252,23 +252,23 @@ export const ConvertSelectionModal: React.FC<{
                     </div>
 
                     {/* Balance Preview */}
-                    <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${totalAmount - deposit < 0 ? 'bg-red-50 border-red-100' : 'bg-primary/5 border-primary/10'}`}>
+                    <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${totalAmount - deposit < 0 ? 'bg-[var(--mw-error-soft)] border-[color:var(--mw-line)]' : 'bg-[var(--mw-green-50)] border-[color:var(--mw-green-700)]'}`}>
                         <div className="flex flex-col">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${totalAmount - deposit < 0 ? 'text-red-600' : 'text-primary'}`}>예상 현지 지불 잔금</span>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${totalAmount - deposit < 0 ? 'text-[color:var(--mw-error-ink)]' : 'text-[color:var(--mw-green-700)]'}`}>예상 현지 지불 잔금</span>
                             {totalAmount - deposit < 0 && (
-                                <span className="text-[9px] text-red-500 font-bold mt-0.5 animate-pulse">! 예약금이 총액을 초과했습니다</span>
+                                <span className="text-[9px] text-[color:var(--mw-error-ink)] font-bold mt-0.5 animate-pulse">! 예약금이 총액을 초과했습니다</span>
                             )}
                         </div>
-                        <span className={`text-base font-extrabold ${totalAmount - deposit < 0 ? 'text-red-600' : 'text-primary'}`}>
+                        <span className={`text-base font-extrabold ${totalAmount - deposit < 0 ? 'text-[color:var(--mw-error-ink)]' : 'text-[color:var(--mw-green-700)]'}`}>
                             {typeof totalAmount === 'number' && typeof deposit === 'number' && !isNaN(totalAmount) && !isNaN(deposit) ? (totalAmount - deposit).toLocaleString() : 0}원
                         </span>
                     </div>
                 </div>
 
-                <div className="p-5 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-2">
+                <div className="p-5 border-t border-[color:var(--mw-line)] bg-[var(--mw-gray-50)] flex justify-end gap-2">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg text-sm"
+                        className="px-4 py-2 text-[color:var(--mw-muted)] font-bold hover:bg-[var(--mw-gray-200)] rounded-lg text-sm"
                     >
                         취소
                     </button>
@@ -280,7 +280,7 @@ export const ConvertSelectionModal: React.FC<{
                             }
                             onConvert({ startDate, endDate, totalAmount, deposit });
                         }}
-                        className="px-4 py-2 bg-primary-dark hover:bg-primary-dark text-white font-bold rounded-lg text-sm shadow-lg shadow-primary/20"
+                        className="px-4 py-2 bg-[var(--mw-primary)] hover:bg-[var(--mw-primary-hover)] text-[color:var(--mw-accent)] font-bold rounded-lg text-sm shadow-lg "
                     >
                         예약 생성 및 확정
                     </button>
@@ -566,12 +566,12 @@ export const QuoteDetailModal: React.FC<{
     };
 
     const quoteStatusMeta: Record<string, { label: string; tone: string }> = {
-        new: { label: '신규 요청', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
-        processing: { label: '견적 작성 중', tone: 'bg-orange-50 text-orange-700 border-orange-200' },
-        answered: { label: '견적 발송 완료', tone: 'bg-blue-50 text-blue-700 border-blue-200' },
-        reservation_requested: { label: '예약 요청', tone: 'bg-purple-50 text-purple-700 border-purple-200' },
-        converted: { label: '예약 전환 완료', tone: 'bg-slate-100 text-slate-600 border-slate-200' },
-        completed: { label: '완료', tone: 'bg-teal-50 text-teal-700 border-teal-200' },
+        new: { label: '신규 요청', tone: 'bg-[var(--mw-gray-100)] text-[color:var(--mw-gray-800)] border-[color:var(--mw-line)]' },
+        processing: { label: '견적 작성 중', tone: 'bg-[var(--mw-gray-100)] text-[color:var(--mw-gray-800)] border-[color:var(--mw-line)]' },
+        answered: { label: '견적 발송 완료', tone: 'bg-[var(--mw-gray-100)] text-[color:var(--mw-gray-800)] border-[color:var(--mw-line)]' },
+        reservation_requested: { label: '예약 요청', tone: 'bg-[var(--mw-gray-100)] text-[color:var(--mw-gray-800)] border-[color:var(--mw-line)]' },
+        converted: { label: '예약 전환 완료', tone: 'bg-[var(--mw-gray-100)] text-[color:var(--mw-muted)] border-[color:var(--mw-line)]' },
+        completed: { label: '완료', tone: 'bg-[var(--mw-green-50)] text-[color:var(--mw-green-700)] border-[color:var(--mw-green-700)]' },
     };
 
     const workflowSteps = [

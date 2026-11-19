@@ -433,7 +433,7 @@ export const AdminHotelManage: React.FC = () => {
                                                     borderRadius: '50%',
                                                     border: 'none',
                                                     background: 'rgba(255,79,79,0.9)',
-                                                    color: '#fff',
+                                                    color: 'var(--mw-on-dark)',
                                                     cursor: 'pointer',
                                                     display: 'grid',
                                                     placeItems: 'center',
@@ -450,7 +450,7 @@ export const AdminHotelManage: React.FC = () => {
                                                         padding: '1px 7px',
                                                         borderRadius: 6,
                                                         background: 'var(--mrt-ink)',
-                                                        color: '#fff',
+                                                        color: 'var(--mw-on-dark)',
                                                         fontSize: 10,
                                                         fontWeight: 800,
                                                     }}
