@@ -1649,6 +1649,52 @@
   .admin-app-wrapper .acc-dirty { flex: 1 1 100%; }
 }
 
+/* ── 상품 관리 (목록) ── */
+.admin-app-wrapper .prod { display: flex; flex-direction: column; gap: 16px; }
+.admin-app-wrapper .prod .filterbar .tb-search { flex: 1 1 260px; min-width: 0; height: 40px; background: var(--mw-surface); }
+.admin-app-wrapper .prod .filterbar .select { height: 40px; font-size: 14px; background-color: var(--mw-surface); }
+.admin-app-wrapper .prod-count { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--mw-muted); }
+.admin-app-wrapper .prod-count span:last-child { display: none; font-size: 12px; }
+.admin-app-wrapper .prod-tr { cursor: move; }
+.admin-app-wrapper .prod-tr.dragging { opacity: 0.5; }
+.admin-app-wrapper .prod-name-cell { max-width: 340px; }
+.admin-app-wrapper .prod-name-cell .cell-2 { min-width: 0; }
+.admin-app-wrapper .prod-name-cell .cell-2 > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-app-wrapper .prod .drag-handle { flex: none; color: var(--mw-gray-300); }
+.admin-app-wrapper .prod .thumb.sq { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--mw-gray-100); }
+.admin-app-wrapper .prod-was { font-size: 12px; color: var(--mw-muted); text-decoration: line-through; }
+.admin-app-wrapper .prod-status-btn { padding: 0; border: 0; background: none; cursor: pointer; }
+.admin-app-wrapper .prod-pager { padding: 0; }
+
+/* 켜고 끄는 스위치 (켜짐 = 진녹색) */
+.admin-app-wrapper .sw { position: relative; display: inline-block; width: 36px; height: 20px; flex: none; padding: 0; border: 0; border-radius: 99px; background: var(--mw-gray-300); cursor: pointer; vertical-align: middle; transition: background var(--dur-fast); }
+.admin-app-wrapper .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 99px; background: var(--mw-surface); box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform var(--dur-fast); }
+.admin-app-wrapper .sw[aria-pressed="true"], .admin-app-wrapper [aria-pressed="true"] > .sw { background: var(--mw-accent); }
+.admin-app-wrapper .sw[aria-pressed="true"]::after, .admin-app-wrapper [aria-pressed="true"] > .sw::after { transform: translateX(16px); }
+.admin-app-wrapper .sw-label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; color: var(--mw-gray-800); cursor: pointer; }
+
+@media (max-width: 768px) {
+  .admin-app-wrapper .prod { gap: 12px; }
+  .admin-app-wrapper .prod .filterbar { gap: 8px; }
+  .admin-app-wrapper .prod .filterbar .tb-search { flex: 1 1 100%; height: 44px; }
+  .admin-app-wrapper .prod .filterbar .select { flex: 1 1 140px; width: auto; height: 44px; }
+  .admin-app-wrapper .prod-count span:last-child { display: inline; }
+  .admin-app-wrapper .prod-cards { display: flex; flex-direction: column; gap: 12px; }
+  .admin-app-wrapper .pcard { background: var(--mw-surface); border: 1px solid var(--mw-line); border-radius: 12px; overflow: hidden; }
+  .admin-app-wrapper .pcard > a { display: flex; gap: 12px; padding: 14px 16px; text-decoration: none; color: var(--mw-ink); }
+  .admin-app-wrapper .pcard-img { width: 84px; height: 84px; flex: none; border-radius: 8px; object-fit: cover; background: var(--mw-gray-100); }
+  .admin-app-wrapper .pcard-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .admin-app-wrapper .pcard-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .admin-app-wrapper .pcard-top > span:last-child { font-size: 12px; color: var(--mw-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-app-wrapper .pcard-text > b { font-size: 15px; font-weight: 700; }
+  .admin-app-wrapper .pcard-price { font-size: 16px; font-weight: 700; }
+  .admin-app-wrapper .pcard-price small { font-size: 12px; font-weight: 500; color: var(--mw-muted); }
+  .admin-app-wrapper .pcard-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; padding: 0 16px; border-top: 1px solid var(--mw-line); }
+  .admin-app-wrapper .pcard-stat { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--mw-muted); }
+  .admin-app-wrapper .pcard-actions { display: flex; gap: 8px; padding: 0 16px 14px; }
+  .admin-app-wrapper .pcard-actions .btn:first-child { flex: 1; }
+}
+
 /* 휴대폰 관리자: 하단 탭을 가리지 않게 플로팅 채팅 · LINE 버튼을 숨긴다 */
 @media (max-width: 768px) {
   body:has(.admin-app-wrapper .tabbar) .floating-line-btn,
