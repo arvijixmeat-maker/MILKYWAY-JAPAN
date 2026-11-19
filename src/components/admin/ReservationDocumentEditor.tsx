@@ -17,7 +17,7 @@ import { SPOT_REGION_OPTIONS } from '../../types/touristSpot';
 import { buildTripDoc, yen, DEFAULT_INCLUDED, DEFAULT_EXCLUDED } from '../trip-doc/tripDocModel';
 import { MEAL_KO, INC_OPTS, EXC_OPTS, inferActivityType } from '../../constants/quoteOptions';
 import { downloadKoItineraryImage } from './koItineraryImage';
-import { RequestSummaryCard } from './RequestSummaryCard';
+import { RequestSummaryCard, savedRequestSummary } from './RequestSummaryCard';
 import { useTripSources, resolveTripImages, fallbackSpots, cleanSpotName } from '../trip-doc/tripDocSources';
 
 /**
@@ -700,6 +700,7 @@ export const ReservationDocumentEditor: React.FC<Props> = ({
         try {
             await downloadKoItineraryImage({
                 title: nameKo || name || '일정표',
+                request: (aiDraftQuoteId && savedRequestSummary(aiDraftQuoteId)) || undefined,
                 meta: [
                     customer?.name ? `고객 ${customer.name}` : '',
                     `인원 ${people}명`,

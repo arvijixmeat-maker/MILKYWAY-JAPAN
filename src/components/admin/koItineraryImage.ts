@@ -18,12 +18,14 @@ export interface KoItinerary {
     included: string[];
     excluded: string[];
     note?: string;
+    /** 고객 요청 정리 (한국어) — 있으면 일정 위에 상자로 그린다 */
+    request?: { headline: string; who: string; groups: [string, string[]][] };
 }
 
 const W = 900;          // 그림 폭 (CSS px) — 2배로 그려 선명하게
 const PAD = 40;
 const FONT = '"Pretendard", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
-const C = { ink: '#0F2A2A', sub: '#5B6B6B', faint: '#94A3A3', line: '#E3ECEB', mint: '#00A88B', mintBg: '#EAF7F4', dark: '#123B3A', card: '#FFFFFF', bg: '#F6F9F9' };
+const C = { ink: '#0F2A2A', sub: '#5B6B6B', faint: '#94A3A3', line: '#E3ECEB', mint: '#00A88B', mintBg: '#EAF7F4', amber: '#8A5A00', amberBg: '#FFF4D6', dark: '#123B3A', card: '#FFFFFF', bg: '#F6F9F9' };
 
 /** 글을 폭에 맞게 줄바꿈 (한국어·일본어는 글자 단위, 영어는 단어가 끊길 수 있음 — 관리자용이라 충분) */
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
@@ -62,8 +64,38 @@ function paint(ctx: CanvasRenderingContext2D, it: KoItinerary, dry: boolean): nu
     if (!dry) { ctx.fillStyle = C.line; ctx.fillRect(PAD, y, W - PAD * 2, 1); }
     y += 20;
 
-    // DAY 카드
     const cx = PAD, cw = W - PAD * 2, ip = 22, tw = cw - ip * 2;
+
+    // 고객 요청 정리
+    const rq = it.request;
+    if (rq && (rq.headline || rq.groups.some(g => g[1].length))) {
+        const body = (draw: boolean, top: number) => {
+            const on = draw && !dry; let yy = top + ip;
+            const t = (s: string, x: number, yv: number, color: string) => { if (on) { ctx.fillStyle = color; ctx.fillText(s, x, yv); } };
+            font(800, 12); const lw = ctx.measureText('고객 요청 정리').width + 18;
+            if (on) { ctx.beginPath(); ctx.roundRect(cx + ip, yy, lw, 24, 12); ctx.fillStyle = C.amberBg; ctx.fill(); }
+            t('고객 요청 정리', cx + ip + 9, yy + 6, C.amber);
+            yy += 34;
+            if (rq.headline) { font(800, 18); for (const l of wrap(ctx, rq.headline, tw)) { t(l, cx + ip, yy, C.ink); yy += 26; } }
+            if (rq.who) { font(500, 13); for (const l of wrap(ctx, rq.who, tw)) { t(l, cx + ip, yy, C.sub); yy += 20; } }
+            for (const [k, items] of rq.groups) {
+                if (!items.length) continue;
+                yy += 10;
+                font(800, 13); t(k, cx + ip, yy, C.mint); yy += 22;
+                font(500, 14);
+                for (const item of items) {
+                    wrap(ctx, item, tw - 16).forEach((l, i) => { if (i === 0) t('·', cx + ip + 2, yy, C.faint); t(l, cx + ip + 16, yy, C.ink); yy += 22; });
+                }
+            }
+            return yy + ip - 4 - top;
+        };
+        const h = body(false, y);
+        rect(cx, y, cw, h, 16, C.card, C.line);
+        body(true, y);
+        y += h + 14;
+    }
+
+    // DAY 카드
     for (const d of it.days) {
         // 높이를 먼저 재고(draw=false) 카드·박스 배경을 깐 뒤 내용을 그린다(draw=true)
         const body = (draw: boolean, top: number) => {

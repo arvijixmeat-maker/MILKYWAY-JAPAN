@@ -14,6 +14,15 @@ const Chevron: React.FC<{ open: boolean }> = ({ open }) => (
         style={{ flex: 'none', transform: `rotate(${open ? 180 : 0}deg)`, transition: 'transform .2s' }}><path d="M6 9l6 6 6-6" /></svg>
 );
 
+/** 이 브라우저에 보관된 요청 정리 — 한국어 일정표 이미지에 같이 넣을 때 쓴다 (없으면 null) */
+export function savedRequestSummary(quoteId: string): { headline: string; who: string; groups: [string, string[]][] } | null {
+    try {
+        const s: Summary | null = JSON.parse(localStorage.getItem(`mw-req-ko:${quoteId}`) || 'null');
+        if (!s) return null;
+        return { headline: s.headlineKo || '', who: s.whoKo || '', groups: [['원하는 것', s.wantsKo || []], ['꼭 지켜야 할 조건', s.mustsKo || []], ['피하고 싶은 것', s.avoidsKo || []], ['답해 줘야 할 질문', s.questionsKo || []]] };
+    } catch { return null; }
+}
+
 export const RequestSummaryCard: React.FC<{ quoteId: string }> = ({ quoteId }) => {
     const key = `mw-req-ko:${quoteId}`;
     const [sum, setSum] = useState<Summary | null>(null);
