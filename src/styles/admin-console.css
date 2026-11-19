@@ -1538,6 +1538,117 @@
   .admin-app-wrapper .pager-btns button { min-width: 44px; height: 44px; }
 }
 
+/* ── Байр захиалга · 숙소배정 ── */
+.admin-app-wrapper .acc { display: flex; flex-direction: column; gap: 16px; }
+.admin-app-wrapper .acc .filterbar .tb-search { flex: 1 1 280px; min-width: 0; height: 40px; background: var(--mw-surface); }
+.admin-app-wrapper .acc .filterbar .select { height: 40px; font-size: 14px; background-color: var(--mw-surface); }
+.admin-app-wrapper .acc-year { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-app-wrapper .acc-year-nav { display: flex; align-items: center; gap: 4px; }
+.admin-app-wrapper .acc-year-nav b { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.admin-app-wrapper .acc-year-nav button { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--mw-gray-800); cursor: pointer; }
+.admin-app-wrapper .acc-year-nav button:hover { background: var(--mw-gray-100); }
+.admin-app-wrapper .acc-year-nav button:disabled { color: var(--mw-gray-300); cursor: not-allowed; background: transparent; }
+.admin-app-wrapper .acc-year-sum { font-size: 13px; color: var(--mw-muted); }
+.admin-app-wrapper .acc-year-sum b { color: var(--mw-ink); }
+.admin-app-wrapper .chip:disabled { color: var(--mw-gray-500); background: var(--mw-field); cursor: default; }
+.admin-app-wrapper .chip[aria-pressed="false"] .ct { color: var(--mw-green-700); opacity: 1; }
+.admin-app-wrapper .chip:disabled .ct { color: var(--mw-gray-500); }
+
+.admin-app-wrapper .acc-list { background: var(--mw-surface); border: 1px solid var(--mw-line); border-radius: 12px; overflow: hidden; }
+.admin-app-wrapper .acc-cols, .admin-app-wrapper .acc-line { display: grid; grid-template-columns: 28px 132px minmax(160px, 1.4fr) 190px 120px minmax(100px, 1fr) 64px 150px; align-items: center; gap: 12px; }
+.admin-app-wrapper .acc-cols { padding: 12px 16px; background: var(--mw-field); border-bottom: 1px solid var(--mw-line); font-size: 13px; font-weight: 600; color: var(--mw-muted); }
+.admin-app-wrapper .acc-item { border-bottom: 1px solid var(--mw-line); }
+.admin-app-wrapper .acc-item:last-child { border-bottom: 0; }
+.admin-app-wrapper .acc-row { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; font-size: 14px; color: var(--mw-ink); text-align: left; cursor: pointer; }
+.admin-app-wrapper .acc-row:hover, .admin-app-wrapper .acc-item.open > .acc-row { background: var(--mw-gray-50); }
+.admin-app-wrapper .acc-line { padding: 14px 16px; }
+.admin-app-wrapper .acc-line > span { min-width: 0; }
+.admin-app-wrapper .acc-line > span:first-child { display: flex; color: var(--mw-muted); }
+.admin-app-wrapper .acc-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+.admin-app-wrapper .acc-who b { font-weight: 600; }
+.admin-app-wrapper .acc-who > span:not(.badge) { font-size: 13px; color: var(--mw-muted); font-variant-numeric: tabular-nums; }
+.admin-app-wrapper .acc-region { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-app-wrapper .acc-progress { display: flex; align-items: center; gap: 10px; }
+.admin-app-wrapper .acc-bar { flex: 1; height: 6px; border-radius: 99px; background: var(--mw-gray-100); overflow: hidden; }
+.admin-app-wrapper .acc-bar > span { display: block; height: 100%; background: var(--mw-green-600); }
+.admin-app-wrapper .acc-progress b { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.admin-app-wrapper .acc-warn { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--mw-error-ink); }
+
+.admin-app-wrapper .acc-detail { border-top: 1px solid var(--mw-line); }
+.admin-app-wrapper .acc-sec-title { padding: 10px 16px; background: var(--mw-field); border-bottom: 1px solid var(--mw-line); font-size: 13px; font-weight: 700; color: var(--mw-gray-800); }
+.admin-app-wrapper .acc-sec-title:not(:first-child) { border-top: 1px solid var(--mw-line); }
+.admin-app-wrapper .acc-sec { padding: 16px; }
+.admin-app-wrapper .acc-flights { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.admin-app-wrapper .acc-flights > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--mw-field); border-radius: 8px; }
+.admin-app-wrapper .acc-flights span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mw-muted); }
+.admin-app-wrapper .acc-flights b { font-size: 14px; font-weight: 600; }
+.admin-app-wrapper .acc-travelers { margin-top: 12px; border: 1px solid var(--mw-line); border-radius: 12px; }
+.admin-app-wrapper .acc-note { margin: 12px 0 0; font-size: 13px; color: var(--mw-muted); }
+.admin-app-wrapper .acc-days > .acc-note { margin: 0; padding: 16px; text-align: center; }
+.admin-app-wrapper .acc-sign { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-app-wrapper .acc-sign b { color: var(--mw-ink); }
+.admin-app-wrapper .acc-sign img { height: 40px; max-width: 180px; object-fit: contain; }
+
+.admin-app-wrapper .acc-days { overflow-x: auto; }
+.admin-app-wrapper .acc-day { display: grid; grid-template-columns: 236px 120px minmax(200px, 1fr) 132px 72px 128px 156px 32px; align-items: center; gap: 8px; min-width: 1100px; padding: 10px 16px; border-bottom: 1px solid var(--mw-line); }
+.admin-app-wrapper .acc-day:last-child { border-bottom: 0; }
+.admin-app-wrapper .acc-day-head { padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--mw-muted); }
+.admin-app-wrapper .acc-day .inp, .admin-app-wrapper .acc-day .select { width: 100%; height: 40px; font-size: 14px; }
+.admin-app-wrapper .acc-day-no input::-webkit-inner-spin-button { display: none; }
+.admin-app-wrapper .acc-day-when { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.admin-app-wrapper .acc-day-no { display: flex; flex-direction: column; align-items: center; flex: none; }
+.admin-app-wrapper .acc-day-no span { font-size: 11px; font-weight: 700; color: var(--mw-muted); }
+.admin-app-wrapper .acc-day-no input { width: 40px; height: 28px; padding: 0; text-align: center; border: 1px solid var(--mw-line); border-radius: 0; background: var(--mw-field); font: inherit; font-size: 15px; font-weight: 700; color: var(--mw-ink); outline: none; }
+.admin-app-wrapper .acc-day-no input:focus { border-color: var(--mw-green-700); box-shadow: var(--ring-blue); }
+.admin-app-wrapper .acc-wd { flex: none; width: 22px; font-size: 12px; font-weight: 600; color: var(--mw-muted); }
+.admin-app-wrapper .acc-manual { display: flex; align-items: center; gap: 6px; }
+.admin-app-wrapper .acc-manual .inp { flex: 1; min-width: 0; }
+.admin-app-wrapper .acc-manual .act-btn { flex: none; }
+.admin-app-wrapper .select.acc-f-status { font-weight: 700; }
+.admin-app-wrapper .select.acc-f-status.b-new { background-color: var(--mw-gray-100); color: var(--mw-gray-800); }
+.admin-app-wrapper .select.acc-f-status.b-sent { background-color: var(--mw-accent-soft); color: var(--mw-accent); }
+.admin-app-wrapper .select.acc-f-status.b-wait { background-color: var(--mw-surface); color: var(--mw-accent); border-color: var(--mw-gray-300); box-shadow: inset 3px 0 0 var(--mw-warning); }
+.admin-app-wrapper .select.acc-f-status.b-confirmed { background-color: var(--mw-accent); color: var(--mw-on-dark); background-image: none; }
+.admin-app-wrapper .select.acc-f-status option { background: var(--mw-surface); color: var(--mw-ink); }
+.admin-app-wrapper .acc-day-tools { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--mw-line); padding: 12px 16px; }
+.admin-app-wrapper .acc-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px 16px; border-top: 1px solid var(--mw-line); }
+.admin-app-wrapper .acc-dirty { margin-right: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--mw-accent); }
+.admin-app-wrapper .acc-dirty::before { content: ''; width: 6px; height: 6px; border-radius: 99px; background: var(--mw-warning); }
+
+@media (max-width: 768px) {
+  .admin-app-wrapper .acc { gap: 12px; }
+  .admin-app-wrapper .acc .filterbar { gap: 8px; }
+  .admin-app-wrapper .acc .filterbar .tb-search { flex: 1 1 100%; height: 44px; }
+  .admin-app-wrapper .acc .filterbar .select { flex: 1 1 140px; width: auto; height: 44px; }
+  .admin-app-wrapper .acc-list { display: flex; flex-direction: column; gap: 12px; background: none; border: 0; border-radius: 0; overflow: visible; }
+  .admin-app-wrapper .acc-item, .admin-app-wrapper .acc-item:last-child { background: var(--mw-surface); border: 1px solid var(--mw-line); border-radius: 12px; overflow: hidden; }
+  .admin-app-wrapper .acc-item.open { border-color: var(--mw-green-700); }
+  .admin-app-wrapper .acc-row:hover, .admin-app-wrapper .acc-item.open > .acc-row { background: none; }
+  .admin-app-wrapper .acc-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
+  .admin-app-wrapper .acc-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--mw-muted); }
+  .admin-app-wrapper .acc-item.open .acc-card-top > svg { color: var(--mw-green-700); }
+  .admin-app-wrapper .acc-card .acc-who b { font-size: 17px; font-weight: 700; }
+  .admin-app-wrapper .acc-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--mw-muted); }
+  .admin-app-wrapper .acc-meta > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+  .admin-app-wrapper .acc-line, .admin-app-wrapper .acc-cols, .admin-app-wrapper .acc-day-head { display: none; }
+  .admin-app-wrapper .acc-days { overflow: visible; }
+  .admin-app-wrapper .acc-day { grid-template-columns: 1fr 1fr; min-width: 0; gap: 8px; padding: 12px 16px; }
+  .admin-app-wrapper .acc-day .inp, .admin-app-wrapper .acc-day .select { height: 44px; }
+  .admin-app-wrapper .acc-day { grid-template-areas: "when when" "name name" "loc grade" "rooms occ" "status del"; }
+  .admin-app-wrapper .acc-day-when { grid-area: when; }
+  .admin-app-wrapper .acc-f-name { grid-area: name; }
+  .admin-app-wrapper .acc-f-loc { grid-area: loc; }
+  .admin-app-wrapper .acc-f-grade { grid-area: grade; }
+  .admin-app-wrapper .acc-f-rooms { grid-area: rooms; }
+  .admin-app-wrapper .acc-f-occ { grid-area: occ; }
+  .admin-app-wrapper .acc-f-del { grid-area: del; }
+  .admin-app-wrapper .acc-day-when .inp { flex: 1; }
+  .admin-app-wrapper .acc-f-status { grid-area: status; }
+  .admin-app-wrapper .acc-f-del { justify-self: end; }
+  .admin-app-wrapper .acc-day-tools .btn, .admin-app-wrapper .acc-foot .btn { flex: 1 1 auto; }
+  .admin-app-wrapper .acc-dirty { flex: 1 1 100%; }
+}
+
 /* 휴대폰 관리자: 하단 탭을 가리지 않게 플로팅 채팅 · LINE 버튼을 숨긴다 */
 @media (max-width: 768px) {
   body:has(.admin-app-wrapper .tabbar) .floating-line-btn,
