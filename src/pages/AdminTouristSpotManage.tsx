@@ -325,6 +325,9 @@ export const AdminTouristSpotManage: React.FC = () => {
                                                     {s.id.startsWith('spot-auto-') && (
                                                         <span title="상품 일정의 사진·설명으로 자동 등록" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: '#E8FAF5', color: '#007F75', fontSize: 10.5, fontWeight: 700 }}>자동</span>
                                                     )}
+                                                    {!thumb && (
+                                                        <span title="사진이 아직 없습니다 — 눌러서 사진을 올려 주세요" style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 5, background: '#FFF4D6', color: '#8A5A00', fontSize: 10.5, fontWeight: 700 }}>사진 필요</span>
+                                                    )}
                                                     {s.name_local && (
                                                         <span className="cell-muted" style={{ marginLeft: 8, fontSize: 12.5 }}>
                                                             {s.name_local}
